@@ -28,6 +28,10 @@
     cena: null, tokens: new Map(), cenas: [], cenaAtiva: null, combate: null, registro: [], presenca: [], personagens: [], npcs: [], meusNpcs: [], npcEditando: null, npcMidia: undefined, retrato: null, meus: [],
     // A NET (M13): as arquiteturas da campanha (o mestre) e a que está aberta no editor.
     arquiteturas: [], arqEditando: null,
+    // Os pontos de acesso: o escolhido na ferramenta NET, o arrasto, o ponto que as opções mostram e o que está sob o mouse.
+    // A janela da NET: o netrun aberto, o netrunner, o andar escolhido no mapa, o netrun que espera o evento e os campos.
+    pontoSel: null, pontoPrevia: null, pontoArrastando: false, pontoForm: null, pontoSobre: null,
+    netAberto: null, netCorredor: null, netNo: null, netAbrir: null, netCampos: { mod: 0, sorte: 0, comando: '', virus: '' },
     // O Painel Tático: o token fixado, o painel de baixo aberto (perícias, equipamento), a busca, o HP sendo digitado.
     painel: { fixo: null, aberto: null, busca: '', segurando: false, pendente: false, roda: 0, rodaTimer: null, ultimoRetrato: '', mostra: null },
     // O estilo do painel: o padrão da mesa (do mestre), o rascunho da janela de estilo e a prévia que o painel mostra.
@@ -145,6 +149,7 @@
     on('audio', receberAudio);
     on('npcs', data => receberNpcs(data));
     on('arquiteturas', data => receberArquiteturas(data));
+    on('net', data => receberNet(data));
     on('estiloDaMesa', data => receberEstiloDaMesa(data));
     // A ficha de um personagem mudou (pela mesa, pela wiki ou pelo Foundry): o mestre recebe todas; o jogador, as dele.
     on('fichas', data => {
@@ -225,11 +230,13 @@
     }
     construirNevoa();
     prepararVisao();
-    if (!mesma) { S.paredeSel = null; S.tileSel = null; S.luzSel = null; S.notaSel = null; }
+    if (!mesma) { S.paredeSel = null; S.tileSel = null; S.luzSel = null; S.notaSel = null; S.pontoSel = null; S.netNo = null; }
     S.tilePrevia = null;
     S.luzPrevia = null;
     S.notaPrevia = null;
+    S.pontoPrevia = null;
     renderNotaOpcoes();
+    renderPontoOpcoes();
     atualizarNotaAberta();
     renderLuzOpcoes();
     renderParedeOpcoes();
@@ -933,6 +940,161 @@
     if (nota) abrirNota(nota);
   }
 
+  // ---------------- A NET no mapa (M13) ----------------
+  // O ponto de acesso: o marcador "NET" (como o do NET Architect no Foundry), que o mestre põe e configura pela ferramenta
+  // NET (K). O jogador recebe os que vê (o oculto, não) e, no Mover, clica num para conectar o token dele.
+  const pontosDaCena = () => (S.cena && S.cena.pontosNet) || [];
+  const runsDaCena = () => (S.cena && S.cena.net) || [];
+  const pontoNaTela = ponto => (S.pontoPrevia && S.pontoPrevia.id === ponto.id ? { ...ponto, ...S.pontoPrevia } : ponto);
+  const raioDoPonto = () => Math.max(15 / S.vista.escala, grade().tamanho * 0.3);
+  const pontoEm = mundo => [...pontosDaCena()].reverse().find(ponto => { const p = pontoNaTela(ponto); return Math.hypot(mundo.x - p.x, mundo.y - p.y) <= raioDoPonto(); }) || null;
+  const pontoEscolhido = () => pontosDaCena().find(ponto => ponto.id === S.pontoSel) || null;
+  // O mestre recebe os nomes de quem está conectado; o jogador, quantos.
+  const conectadosAoPonto = ponto => (Array.isArray(ponto.conectados) ? ponto.conectados.length : Number(ponto.conectados) || 0);
+  function hexagono(x, y, r) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i + Math.PI / 6;
+      if (i) ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); else ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    }
+    ctx.closePath();
+  }
+  // O alcance do ponto como o servidor conta: na grade, em quadrados (a diagonal conta 1, como a régua); sem grade, o círculo.
+  function desenharAlcance(ponto, px) {
+    const g = grade();
+    const alcance = Number(ponto.alcance) > 0 ? Number(ponto.alcance) : 2;
+    ctx.beginPath();
+    if (g.tipo === 'nenhuma') ctx.arc(ponto.x, ponto.y, (alcance / (g.metros || 2)) * g.tamanho, 0, Math.PI * 2);
+    else { const lado = (Math.floor(alcance / (g.metros || 2) + 1e-9) + 0.5) * g.tamanho; ctx.rect(ponto.x - lado, ponto.y - lado, lado * 2, lado * 2); }
+    ctx.fillStyle = 'rgba(0, 255, 210, .05)';
+    ctx.fill();
+    ctx.setLineDash([8 * px, 6 * px]);
+    ctx.strokeStyle = 'rgba(0, 255, 210, .5)';
+    ctx.lineWidth = 1.5 * px;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // O hexágono "NET": ciano com arquitetura (o mestre vê cinza o que ainda não tem), o anel magenta com alguém conectado e,
+  // para o mestre, tracejado o oculto. O alcance aparece na ferramenta NET e com o mouse em cima.
+  function desenharPontos(px) {
+    const r = raioDoPonto();
+    const naFerramenta = gm() && S.ferramenta === 'net';
+    for (const original of pontosDaCena()) {
+      const ponto = pontoNaTela(original);
+      if (naFerramenta || S.pontoSobre === ponto.id) desenharAlcance(ponto, px);
+      const escolhido = naFerramenta && S.pontoSel === ponto.id;
+      const oculto = gm() && ponto.oculto;
+      ctx.globalAlpha = oculto ? 0.6 : 1;
+      if (conectadosAoPonto(ponto)) {
+        hexagono(ponto.x, ponto.y, r * 1.3);
+        ctx.strokeStyle = 'rgba(255, 46, 136, .6)';
+        ctx.lineWidth = r * 0.16;
+        ctx.stroke();
+      }
+      hexagono(ponto.x, ponto.y, r);
+      ctx.fillStyle = 'rgba(7, 16, 18, .9)';
+      ctx.fill();
+      ctx.lineWidth = Math.max(2 * px, r * 0.1) * (escolhido ? 1.4 : 1);
+      ctx.strokeStyle = escolhido ? '#f8ef02' : !gm() || ponto.arquitetura ? '#00ffd2' : '#8a9696';
+      if (oculto) ctx.setLineDash([4 * px, 3 * px]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#e8fffb';
+      ctx.font = `700 ${r * 0.62}px Oxanium, 'Segoe UI', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('NET', ponto.x, ponto.y + r * 0.04);
+      ctx.globalAlpha = 1;
+      const extra = gm() ? [ponto.oculto && 'oculto', !ponto.arquitetura && 'sem arquitetura'].filter(Boolean).join(' · ') : '';
+      rotulo(`${ponto.nome}${extra ? ` · ${extra}` : ''}`, ponto.x, ponto.y + r * 1.15, px, { tamanho: 11, cor: '#00ffd2', borda: oculto ? '#ff9fbf' : '#00ffd2' });
+    }
+  }
+  // As opções do ponto escolhido. Quem está digitando num campo dele não perde o que escreve.
+  function renderPontoOpcoes() {
+    const ponto = pontoEscolhido();
+    $('#ponto-aviso').textContent = ponto ? 'Ponto de acesso escolhido (arraste para mover)' : 'Clique no mapa para pôr um ponto de acesso';
+    $('#ponto-escolhido').hidden = !ponto;
+    if (!ponto) return;
+    const nomes = Array.isArray(ponto.conectados) ? ponto.conectados : [];
+    $('#ponto-conectados').textContent = nomes.length ? `Na NET por aqui: ${nomes.join(', ')}.` : 'Ninguém conectado.';
+    $('#ponto-scanner-campo').hidden = !ponto.oculto;
+    const digitando = $('#net-opcoes').contains(document.activeElement) && document.activeElement.matches('input[type="text"], input[type="number"]');
+    if (digitando && S.pontoForm === ponto.id) return;
+    S.pontoForm = ponto.id;
+    $('#ponto-arquitetura').innerHTML = `<option value="">Escolha a arquitetura</option>${S.arquiteturas.map(arq => `<option value="${esc(arq.id)}"${arq.id === ponto.arquitetura ? ' selected' : ''}>${esc(arq.nome)}</option>`).join('')}`;
+    $('#ponto-nome').value = ponto.nome;
+    $('#ponto-alcance').value = ponto.alcance;
+    $('#ponto-dv').value = ponto.dv || 0;
+    $('#ponto-rank').value = ponto.rankMinimo;
+    $('#ponto-deck').checked = ponto.exigeDeck;
+    $('#ponto-oculto').checked = ponto.oculto;
+    $('#ponto-scanner').value = ponto.dvScanner;
+    $('#ponto-reiniciar').checked = ponto.reiniciar;
+  }
+  const editarPonto = mudancas => { const ponto = pontoEscolhido(); if (ponto) op('net.ponto.editar', { ponto: ponto.id, ...mudancas }).catch(() => { S.pontoForm = null; renderPontoOpcoes(); }); };
+  $('#ponto-nome').addEventListener('change', event => editarPonto({ nome: event.target.value }));
+  $('#ponto-arquitetura').addEventListener('change', event => {
+    const ponto = pontoEscolhido();
+    // Trocar a arquitetura recomeça o netrun: quem está conectado cai fora.
+    if (ponto && conectadosAoPonto(ponto) && !confirm('Trocar a arquitetura desconecta quem está na NET por este ponto. Trocar?')) { S.pontoForm = null; renderPontoOpcoes(); return; }
+    editarPonto({ arquitetura: event.target.value });
+  });
+  $('#ponto-alcance').addEventListener('change', event => editarPonto({ alcance: Number(event.target.value) || 0 }));
+  $('#ponto-dv').addEventListener('change', event => editarPonto({ dv: Number(event.target.value) || 0 }));
+  $('#ponto-rank').addEventListener('change', event => editarPonto({ rankMinimo: Number(event.target.value) || 0 }));
+  $('#ponto-scanner').addEventListener('change', event => editarPonto({ dvScanner: Number(event.target.value) || 10 }));
+  $('#ponto-deck').addEventListener('change', event => editarPonto({ exigeDeck: event.target.checked }));
+  $('#ponto-oculto').addEventListener('change', event => editarPonto({ oculto: event.target.checked }));
+  $('#ponto-reiniciar').addEventListener('change', event => editarPonto({ reiniciar: event.target.checked }));
+  function apagarPontoEscolhido() {
+    const ponto = pontoEscolhido();
+    if (!ponto || !confirm(`Apagar o ponto de acesso "${ponto.nome}"?${conectadosAoPonto(ponto) ? ' Quem está conectado cai da NET.' : ''}`)) return;
+    S.pontoSel = null;
+    renderPontoOpcoes();
+    op('net.ponto.apagar', { ponto: ponto.id }).catch(() => {});
+  }
+  $('#ponto-apagar').addEventListener('click', apagarPontoEscolhido);
+  $('#ponto-conectar').addEventListener('click', () => {
+    const ponto = pontoEscolhido();
+    const token = S.selecionado && S.tokens.get(S.selecionado);
+    if (!ponto) return;
+    if (!token) return aviso('Escolha um token no mapa (no Mover) e volte aqui para conectá-lo.');
+    op('net.conectar', { ponto: ponto.id, token: token.id }).then(() => abrirNet(ponto.id, token.id)).catch(() => {});
+  });
+  $('#ponto-abrir').addEventListener('click', () => {
+    const ponto = pontoEscolhido();
+    if (!ponto) return;
+    if (!runsDaCena().some(run => run.ponto === ponto.id)) return aviso('Ninguém conectou neste ponto ainda.');
+    abrirNet(ponto.id);
+  });
+  // Clicar no ponto (no Mover): conecta o token (o escolhido, se for seu; senão, o seu mais perto que não está na NET) e
+  // abre a aba NET; já conectado ali, só abre. O mestre conecta o token escolhido; sem um, abre o netrun do ponto.
+  function clicarNoPonto(ponto) {
+    const run = runsDaCena().find(item => item.ponto === ponto.id);
+    const escolhido = S.selecionado && S.tokens.get(S.selecionado);
+    const longe = token => Math.hypot(token.x - ponto.x, token.y - ponto.y);
+    const token = escolhido && (gm() || escolhido.meu) ? escolhido
+      : gm() ? null : [...S.tokens.values()].filter(item => item.meu).sort((a, b) => Boolean(a.naNet) - Boolean(b.naNet) || longe(a) - longe(b))[0];
+    if (!token) {
+      if (run) return abrirNet(ponto.id);
+      return aviso(gm() ? 'Escolha um token no mapa e clique no ponto de acesso para conectá-lo.' : 'Você não tem token nesta cena.');
+    }
+    if (run && run.corredores.some(corredor => corredor.token === token.id)) return abrirNet(ponto.id, token.id);
+    op('net.conectar', { ponto: ponto.id, token: token.id }).then(() => abrirNet(ponto.id, token.id)).catch(() => {});
+  }
+  // A NET mudou (os pontos que cada um vê, os netruns dele): o mapa, as opções e a aba acompanham. O ponto que o mestre
+  // está arrastando fica onde a mão está.
+  function receberNet(data) {
+    if (!S.cena || data.cena !== S.cena.id) return;
+    S.cena.pontosNet = data.pontos || [];
+    S.cena.net = data.runs || [];
+    if (!S.pontoArrastando) S.pontoPrevia = null;
+    renderPontoOpcoes();
+    renderNetruns();
+    if (S.netAbrir && runsDaCena().some(run => run.ponto === S.netAbrir)) abrirNet(S.netAbrir);
+    redesenhar();
+  }
+
   // ---------------- Tiles (mestre) ----------------
   // O tile como está na tela: o do servidor ou o arrasto que ainda não voltou dele.
   const tileVisto = tile => (S.tilePrevia && S.tilePrevia.id === tile.id ? { ...tile, ...S.tilePrevia } : tile);
@@ -1236,6 +1398,7 @@
     desenharAreas(px);
     if (gm() && S.ferramenta === 'paredes') desenharParedes(px);
     desenharNotas(px);
+    desenharPontos(px);
     desenharAgarroes(px);
     for (const token of tokensNaOrdem()) {
       if (S.arrasto && S.arrasto.token === token.id) continue;
@@ -1294,7 +1457,8 @@
   const estadosDoToken = token => [
     token.suprimido && ['SUPRIMIDO', '#ff8a3d'],
     token.inconsciente && ['INCONSCIENTE', '#a9aeaa'],
-    token.caido && ['CAÍDO', '#f8ef02']
+    token.caido && ['CAÍDO', '#f8ef02'],
+    token.naNet && ['NA NET', '#00ffd2']
   ].filter(Boolean);
   // O agarrão no mapa (M9b): uma faixa entre quem agarra e quem é agarrado, por baixo dos dois, e um rótulo só para o par,
   // no meio, acima dos outros estados dos dois (desenhado depois dos tokens).
@@ -1653,6 +1817,25 @@
       redesenhar();
       return;
     }
+    // Pontos de acesso: clique num escolhe (e arrastar move); com um escolhido, o clique fora solta; senão, põe um ali (no
+    // centro do quadrado; Shift solta da grade).
+    if (S.ferramenta === 'net' && gm()) {
+      const ponto = pontoEm(mundo);
+      if (ponto) {
+        S.pontoSel = ponto.id;
+        renderPontoOpcoes();
+        gesto = { tipo: 'ponto-mover', inicio: tela, ponto: ponto.id, desloc: { x: mundo.x - ponto.x, y: mundo.y - ponto.y } };
+        S.pontoArrastando = true;
+      } else if (S.pontoSel) {
+        S.pontoSel = null;
+        renderPontoOpcoes();
+        gesto = { tipo: 'pan-talvez', inicio: tela, vista: { ...S.vista } };
+      } else {
+        gesto = { tipo: 'ponto-novo', inicio: tela, vista: { ...S.vista }, lugar: event.shiftKey ? dentro(mundo) : encaixar(mundo) };
+      }
+      redesenhar();
+      return;
+    }
     if (S.ferramenta === 'tiles' && gm()) {
       const atual = tileEscolhido();
       if (atual && naAlca(tileVisto(atual), mundo)) { gesto = { tipo: 'tile-tamanho', inicio: tela, tile: atual.id }; return; }
@@ -1708,9 +1891,10 @@
       selecionar(token.id);
       gesto = { tipo: 'token-talvez', token: token.id, inicio: tela, pode: podeMover(token), desloc: { x: mundo.x - token.vx, y: mundo.y - token.vy }, origem: { x: token.x, y: token.y } };
     } else {
-      // Sem token: o clique (sem arrastar) num alfinete abre a nota.
-      const nota = notaEm(mundo);
-      gesto = { tipo: 'pan-talvez', inicio: tela, vista: { ...S.vista }, nota: nota ? nota.id : null };
+      // Sem token: o clique (sem arrastar) num ponto de acesso conecta; num alfinete, abre a nota.
+      const ponto = pontoEm(mundo);
+      const nota = ponto ? null : notaEm(mundo);
+      gesto = { tipo: 'pan-talvez', inicio: tela, vista: { ...S.vista }, nota: nota ? nota.id : null, pontoNet: ponto ? ponto.id : null };
     }
     // Segurar parado faz um ping (com Shift, o mestre traz todos).
     const shift = event.shiftKey;
@@ -1737,7 +1921,10 @@
     }
     if (!gesto) {
       const sobre = S.ferramenta === 'mover' && S.cena && tokenEm(mundo);
-      const clicavel = S.cena && ((S.ferramenta === 'mover' && (portaEm(mundo) || (!sobre && notaEm(mundo)))) || (S.ferramenta === 'notas' && notaEm(mundo)));
+      // O ponto de acesso sob o mouse mostra o alcance (no Mover e na ferramenta NET).
+      const ponto = S.cena && !sobre && (S.ferramenta === 'mover' || S.ferramenta === 'net') ? pontoEm(mundo) : null;
+      if ((ponto ? ponto.id : null) !== S.pontoSobre) { S.pontoSobre = ponto ? ponto.id : null; redesenhar(); }
+      const clicavel = S.cena && (ponto || (S.ferramenta === 'mover' && (portaEm(mundo) || (!sobre && notaEm(mundo)))) || (S.ferramenta === 'notas' && notaEm(mundo)));
       canvas.style.cursor = clicavel ? 'pointer' : sobre && podeMover(sobre) ? 'grab' : '';
       return;
     }
@@ -1754,6 +1941,13 @@
     if (gesto.tipo === 'pan-talvez' && gesto.moveu) gesto.tipo = 'pan';
     if (gesto.tipo === 'luz-nova' && gesto.moveu) gesto = { tipo: 'pan', inicio: gesto.inicio, vista: gesto.vista, moveu: true };
     if (gesto.tipo === 'nota-nova' && gesto.moveu) gesto = { tipo: 'pan', inicio: gesto.inicio, vista: gesto.vista, moveu: true };
+    if (gesto.tipo === 'ponto-novo' && gesto.moveu) gesto = { tipo: 'pan', inicio: gesto.inicio, vista: gesto.vista, moveu: true };
+    if (gesto.tipo === 'ponto-mover' && gesto.moveu) {
+      const solto = dentro({ x: mundo.x - gesto.desloc.x, y: mundo.y - gesto.desloc.y });
+      S.pontoPrevia = { id: gesto.ponto, ...(event.shiftKey ? solto : encaixar(solto)) };
+      redesenhar();
+      return;
+    }
     if (gesto.tipo === 'nota-mover' && gesto.moveu) {
       S.notaPrevia = { id: gesto.nota, ...dentro({ x: mundo.x - gesto.desloc.x, y: mundo.y - gesto.desloc.y }) };
       redesenhar();
@@ -1835,7 +2029,8 @@
       redesenhar();
     } else if (atual.tipo === 'pan-talvez' && !atual.moveu) {
       const nota = atual.nota && notasDaCena().find(item => item.id === atual.nota);
-      if (nota && !cancelar) abrirNota(nota); else selecionar(null);
+      const ponto = atual.pontoNet && pontosDaCena().find(item => item.id === atual.pontoNet);
+      if (nota && !cancelar) abrirNota(nota); else if (ponto && !cancelar) clicarNoPonto(ponto); else selecionar(null);
     } else if (atual.tipo === 'nota-nova' && !atual.moveu && !cancelar) {
       op('nota.criar', { cena: S.cena.id, x: atual.ponto.x, y: atual.ponto.y }).then(({ resultado }) => {
         S.notaSel = resultado.nota;
@@ -1846,6 +2041,19 @@
     } else if (atual.tipo === 'nota-mover' && S.notaPrevia && S.notaPrevia.id === atual.nota) {
       const { id, x, y } = S.notaPrevia;
       if (cancelar) { S.notaPrevia = null; redesenhar(); } else op('nota.editar', { nota: id, x, y }).catch(() => { S.notaPrevia = null; redesenhar(); });
+    } else if (atual.tipo === 'ponto-novo' && !atual.moveu && !cancelar) {
+      op('net.ponto.criar', { cena: S.cena.id, x: atual.lugar.x, y: atual.lugar.y }).then(({ resultado }) => {
+        S.pontoSel = resultado.ponto;
+        renderPontoOpcoes();
+        redesenhar();
+        $('#ponto-nome').select();
+      }).catch(() => {});
+    } else if (atual.tipo === 'ponto-mover') {
+      // A prévia fica até a NET nova chegar (sem pulo).
+      S.pontoArrastando = false;
+      const previa = S.pontoPrevia && S.pontoPrevia.id === atual.ponto ? S.pontoPrevia : null;
+      if (previa && !cancelar) op('net.ponto.editar', { ponto: previa.id, x: previa.x, y: previa.y }).catch(() => { S.pontoPrevia = null; redesenhar(); });
+      else { S.pontoPrevia = null; redesenhar(); }
     } else if (atual.tipo === 'area-nova') {
       S.areaArrastando = false;
       const previa = S.areaPrevia;
@@ -1923,6 +2131,7 @@
     if ((tecla === 't' || tecla === 'T') && gm()) return escolherFerramenta('tiles');
     if ((tecla === 'l' || tecla === 'L') && gm()) return escolherFerramenta('luzes');
     if ((tecla === 'j' || tecla === 'J') && gm()) return escolherFerramenta('notas');
+    if ((tecla === 'k' || tecla === 'K') && gm()) return escolherFerramenta('net');
     if (tecla === 'a' || tecla === 'A') return escolherFerramenta('areas');
     if (tecla === '0') return enquadrar();
     if (tecla === 'c' || tecla === 'C') return irAoMeuToken();
@@ -1933,6 +2142,7 @@
       if (S.notaAberta || !$('#nota-janela').hidden) return fecharNota();
       if (S.escolhendoAlvo) return escolherAlvoNoMapa(false);
       if (S.notaSel) { S.notaSel = null; renderNotaOpcoes(); redesenhar(); return; }
+      if (S.pontoSel) { S.pontoSel = null; renderPontoOpcoes(); redesenhar(); return; }
       if (S.areaSel) { S.areaSel = null; renderAreasOpcoes(); redesenhar(); return; }
       if (S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); redesenhar(); return; }
       if (S.tileSel) { S.tileSel = null; renderTileOpcoes(); redesenhar(); return; }
@@ -1943,6 +2153,7 @@
     if (S.ferramenta === 'tiles' && S.tileSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarTileEscolhido(); return; }
     if (S.ferramenta === 'luzes' && S.luzSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarLuzEscolhida(); return; }
     if (S.ferramenta === 'notas' && S.notaSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarNotaEscolhida(); return; }
+    if (S.ferramenta === 'net' && S.pontoSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarPontoEscolhido(); return; }
     if (S.ferramenta === 'areas' && S.areaSel && (tecla === 'Delete' || tecla === 'Backspace')) { event.preventDefault(); apagarAreaEscolhida(); return; }
     if (!token) return;
     const passos = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[tecla];
@@ -1981,7 +2192,7 @@
   // pede atenção na hora (escolher o alvo no mapa).
   function renderDicas() {
     const dicas = {
-      mover: ['Mover · V', gm() ? 'Arraste tokens e o mapa. A roda aproxima. Segure o clique para ping (Shift traz todos). Shift solta fora da grade. Clique na porta abre e fecha; Shift tranca. Clique num alfinete abre a nota.' : 'Arraste o seu token e o mapa. A roda ou a pinça aproxima. Segure o clique para ping. As setas movem um quadrado. Clique na porta abre e fecha. Clique num alfinete abre a nota.'],
+      mover: ['Mover · V', gm() ? 'Arraste tokens e o mapa. A roda aproxima. Segure o clique para ping (Shift traz todos). Shift solta fora da grade. Clique na porta abre e fecha; Shift tranca. Clique num alfinete abre a nota. Clique num ponto de acesso (NET) conecta o token escolhido.' : 'Arraste o seu token e o mapa. A roda ou a pinça aproxima. Segure o clique para ping. As setas movem um quadrado. Clique na porta abre e fecha. Clique num alfinete abre a nota. Clique num ponto de acesso (NET) conecta o seu token.'],
       regua: ['Régua · R', 'Arraste para medir: quadrados, metros e a DV por alcance. Shift mede fora da grade.'],
       ping: ['Ping · P', `Clique para chamar atenção para um ponto.${gm() ? ' Shift traz todos para ele.' : ''}`],
       nevoa: ['Névoa · N', 'Pinte para revelar; Alt cobre. Revelar tudo e Cobrir tudo ficam na aba Cena.'],
@@ -1990,6 +2201,7 @@
       luzes: ['Luzes · L', 'Clique no mapa para pôr uma luz; clique numa luz para escolher e arraste para mover. Delete apaga.'],
       areas: ['Áreas e desenhos · A', 'Arraste no mapa: o círculo (a explosão), o cone, a linha, o retângulo ou o traço livre. Clique num para escolher (mostra quem está dentro) e arraste para mover. Delete apaga. Todos na cena veem.'],
       notas: ['Notas · J', 'Clique no mapa para pôr uma nota (um handout ou uma página da wiki); clique numa para editar e arraste para mover. Delete apaga. "Quem vê" decide se os jogadores veem o alfinete.'],
+      net: ['Pontos de acesso da NET · K', 'Clique no mapa para pôr um ponto de acesso; clique num para escolher (a arquitetura, o alcance, quem pode conectar) e arraste para mover. Delete apaga. No Mover, o jogador clica no ponto para conectar.'],
       centralizar: ['A cena inteira · 0', 'Enquadra o mapa e os tokens na tela.'],
       'meu-token': ['O seu token · C', 'Leva a tela até o seu token e escolhe ele.']
     };
@@ -1999,7 +2211,7 @@
     }
   }
   function escolherFerramenta(nome) {
-    if (['nevoa', 'paredes', 'tiles', 'luzes', 'notas'].includes(nome) && !gm()) return;
+    if (['nevoa', 'paredes', 'tiles', 'luzes', 'notas', 'net'].includes(nome) && !gm()) return;
     S.ferramenta = nome;
     for (const botao of $$('[data-ferramenta]')) botao.classList.toggle('ativa', botao.dataset.ferramenta === nome);
     canvas.className = nome === 'mover' ? '' : nome;
@@ -2008,11 +2220,13 @@
     $('#tiles-opcoes').hidden = nome !== 'tiles';
     $('#luzes-opcoes').hidden = nome !== 'luzes';
     $('#notas-opcoes').hidden = nome !== 'notas';
+    $('#net-opcoes').hidden = nome !== 'net';
     $('#areas-opcoes').hidden = nome !== 'areas';
     if (nome !== 'areas' && S.areaSel) S.areaSel = null;
     if (nome === 'areas') renderAreasOpcoes();
     if (nome !== 'luzes' && S.luzSel) { S.luzSel = null; renderLuzOpcoes(); }
     if (nome !== 'notas' && S.notaSel) { S.notaSel = null; renderNotaOpcoes(); }
+    if (nome !== 'net' && S.pontoSel) { S.pontoSel = null; renderPontoOpcoes(); }
     if (nome !== 'paredes' && S.paredeSel) { S.paredeSel = null; renderParedeOpcoes(); }
     if (nome !== 'tiles' && S.tileSel) { S.tileSel = null; renderTileOpcoes(); }
     redesenhar();
@@ -2677,7 +2891,7 @@
     if (lembrar) store.set('barra', aberta ? 'aberta' : 'recolhida');
   }
   window.matchMedia('(max-width: 820px)').addEventListener('change', () => barraAberta(S.barraAberta, { lembrar: false }));
-  const nomeDaAba = nome => (nome === 'fichas' ? (gm() ? 'Fichas' : 'Personagem') : { rolagens: 'Chat', combate: 'Combate', token: 'Token', audio: 'Áudio', cena: 'Cena' }[nome] || '');
+  const nomeDaAba = nome => (nome === 'fichas' ? (gm() ? 'Fichas' : 'Personagem') : { rolagens: 'Chat', combate: 'Combate', token: 'Token', audio: 'Áudio', cena: 'Cena', net: 'NET' }[nome] || '');
   const abaVisivel = nome => barraVisivel() && $(`.abas [data-aba="${nome}"]`).classList.contains('ativa');
   // A bolinha da aba some quando a aba fica à vista.
   function limparSelos() {
@@ -2807,7 +3021,7 @@
     renderSom();
     renderCartao();
     escolherFerramenta(S.ferramenta === 'nevoa' && !gm() ? 'mover' : S.ferramenta);
-    if (!gm() && ($('.abas [data-aba="cena"]').classList.contains('ativa') || $('.abas [data-aba="net"]').classList.contains('ativa'))) abrirAba('rolagens', { expandir: false });
+    if (!gm() && $('.abas [data-aba="cena"]').classList.contains('ativa')) abrirAba('rolagens', { expandir: false });
   }
   // Um token que só andou não muda as listas: elas só são refeitas quando muda o que mostram (refazer a lista a cada
   // passo fecharia o seletor aberto e perderia a rolagem do painel).
@@ -2822,6 +3036,7 @@
     else if (id === S.painel.mostra || (!S.painel.mostra && !gm())) renderPainelTatico();
     const tokens = [...S.tokens.values()];
     if (mudou('quem', JSON.stringify(fontesDeRolagem()))) renderRolarQuem();
+    if (runsDaCena().some(run => run.corredores.some(corredor => corredor.token === id))) renderNetruns();
     if (mudou('fichas', JSON.stringify(gm() ? [S.cena && S.cena.id, tokens.map(token => token.personagem).filter(Boolean).sort()] : tokens.filter(token => token.meu).map(token => [token.personagem, token.hp])))) renderFichas();
     redesenhar();
   }
@@ -3008,10 +3223,10 @@
 
   // A luta (M9b): quem fez o quê em quem, as rolagens (o teste resistido traz as duas), o que aconteceu e o HP de quem
   // sofreu (o de NPC, só o mestre recebe).
-  const TAG_DA_LUTA = { agarrou: 'sucesso', escapou: 'sucesso', passou: 'sucesso', estrangulou: 'lesao', derrubou: 'lesao', desmaiou: 'falha', resistiu: 'secreta', segurou: 'secreta', falhou: 'falha' };
-  const NOME_DO_RESULTADO = { agarrou: 'Agarrou', escapou: 'Escapou', passou: 'Passou', estrangulou: 'Estrangulou', derrubou: 'Derrubou', desmaiou: 'Desmaiou', resistiu: 'Resistiu', segurou: 'Segurou', falhou: 'Não passou' };
-  function htmlLuta(entrada) {
-    const l = entrada.luta || {};
+  const TAG_DA_LUTA = { inseguro: 'falha', agarrou: 'sucesso', escapou: 'sucesso', passou: 'sucesso', estrangulou: 'lesao', derrubou: 'lesao', desmaiou: 'falha', resistiu: 'secreta', segurou: 'secreta', falhou: 'falha' };
+  const NOME_DO_RESULTADO = { inseguro: 'Insegura', agarrou: 'Agarrou', escapou: 'Escapou', passou: 'Passou', estrangulou: 'Estrangulou', derrubou: 'Derrubou', desmaiou: 'Desmaiou', resistiu: 'Resistiu', segurou: 'Segurou', falhou: 'Não passou' };
+  // A NET (M13) usa o mesmo cartão: o que o netrunner fez, a rolagem de Interface e o resultado.
+  function htmlLuta(entrada, l = entrada.luta || {}, classe = 'luta') {
     const rolagens = (l.rolagens || []).map(item => {
       const tags = tagsDoCritico(item.rolagem);
       return `<div class="reg-corpo"><span class="reg-rotulo">${esc(item.quem)} · ${esc(item.rotulo)}</span><span class="reg-total">${item.rolagem.total}</span></div>
@@ -3019,7 +3234,7 @@
     }).join('');
     const hp = l.hp ? ` <small>(HP ${l.hp.antes} → ${l.hp.depois})</small>` : '';
     const tags = [NOME_DO_RESULTADO[l.resultado] ? `<span class="tag ${TAG_DA_LUTA[l.resultado]}">${NOME_DO_RESULTADO[l.resultado]}</span>` : '', entrada.desfeito ? '<span class="tag secreta">Desfeito</span>' : ''].filter(Boolean);
-    return `<li class="luta${entrada.desfeito ? ' desfeito' : ''}" data-id="${esc(entrada.id)}" style="--cor:${esc(entrada.autor.cor)}">
+    return `<li class="${classe}${entrada.desfeito ? ' desfeito' : ''}" data-id="${esc(entrada.id)}" style="--cor:${esc(entrada.autor.cor)}">
       <div class="reg-topo"><span><b>${esc(l.quem)}</b>${l.alvo ? ` → ${esc(l.alvo)}` : ''} · ${esc(l.titulo || 'Luta')}</span><span>${esc(hora(entrada.quando))}</span></div>
       ${rolagens}<div class="reg-alvo">${esc(l.frase || '')}${hp}</div>${(l.notas || []).map(nota => `<div class="reg-nota">${esc(nota)}</div>`).join('')}
       ${tags.length ? `<div>${tags.join('')}</div>` : ''}${botaoDesfazer(entrada)}</li>`;
@@ -3028,6 +3243,7 @@
   function htmlEntrada(entrada) {
     if (entrada.tipo === 'sistema') return `<li class="sistema" data-id="${esc(entrada.id)}">${esc(hora(entrada.quando))} · ${esc(entrada.texto)}</li>`;
     if (entrada.tipo === 'luta') return htmlLuta(entrada);
+    if (entrada.tipo === 'net') return htmlLuta(entrada, entrada.net || {}, 'luta net');
     if (entrada.tipo === 'chat') {
       const para = Array.isArray(entrada.para) ? ` <small>→ ${esc(entrada.paraNome || 'Mestre')} (só vocês${entrada.paraNome === 'Mestre' ? '' : ' e o mestre'})</small>` : '';
       return `<li class="chat${entrada.para ? ' sussurro' : ''}" data-id="${esc(entrada.id)}" style="--cor:${esc(entrada.autor.cor)}"><div class="reg-topo"><span><b>${esc(entrada.autor.nome)}</b>${para}</span><span>${esc(hora(entrada.quando))}</span></div>
@@ -4258,6 +4474,7 @@
   }
   function renderNetPainel() {
     const painel = $('#net-painel');
+    renderNetruns();
     if (!gm()) { painel.innerHTML = ''; return; }
     const linhas = S.arquiteturas.map(arq => {
       const lida = NET.lerArquitetura(arq);
@@ -4266,7 +4483,7 @@
         <button class="botao vazado pequeno" type="button" data-arq-editar="${esc(arq.id)}">Editar</button></li>`;
     }).join('');
     painel.innerHTML = `<div class="grupo-npc">Arquiteturas da NET</div>
-      <p class="nota">Só você vê. Cada uma vira o ponto de acesso de um tile (a próxima fase).</p>
+      <p class="nota">Só você vê. Ponha um ponto de acesso no mapa pela ferramenta NET (K) e escolha nele a arquitetura.</p>
       <div class="cartao-acoes"><button class="botao pequeno" type="button" data-arq-nova>+ Nova</button></div>
       <div class="campo-linha"><label class="campo cresce">Gerar pelas tabelas do CORE <select data-arq-dificuldade>${Object.entries(NET.DIFICULDADES).map(([id, nome]) => `<option value="${id}">${nome}</option>`).join('')}</select></label>
         <button class="botao vazado pequeno" type="button" data-arq-gerar>Gerar</button></div>
@@ -4296,6 +4513,8 @@
   function receberArquiteturas(data) {
     S.arquiteturas = data.arquiteturas || [];
     renderNetPainel();
+    S.pontoForm = null;
+    renderPontoOpcoes();
     // A gerada agora: abre no editor. A aberta foi apagada (em outra aba): fecha.
     if (S.arqAbrir && S.arquiteturas.some(arq => arq.id === S.arqAbrir)) { abrirArquitetura(S.arqAbrir); S.arqAbrir = null; }
     if (S.arqEditando && S.arqEditando.id && !S.arquiteturas.some(arq => arq.id === S.arqEditando.id)) fecharArquitetura();
@@ -4500,6 +4719,250 @@
     return `<div class="net-cartao"><div class="grupo-npc">NET · Interface ${n.rank} · ${n.acoes} Ações NET por turno</div>${deck}
       ${programas ? `<ul class="lista net-programas">${programas}</ul>` : n.deck ? '<p class="nota">Nenhum programa no deck.</p>' : ''}${hardware ? `<div>${hardware}</div>` : ''}</div>`;
   }
+
+  // ---------------- A janela da NET (M13) ----------------
+  // A aba NET mostra o netrun aberto: o do ponto que a pessoa clicou, ou o primeiro em que ela está. O jogador vê o mapa
+  // que achou, o andar escolhido, as habilidades de Interface e o registro; o mestre vê a arquitetura inteira (o que eles
+  // ainda não acharam fica tracejado), revela e reinicia. É a janela do NET Architect no Foundry.
+  const CELULA_NET = { w: 66, h: 40, gx: 10, gy: 16 };
+  const posicaoDoNo = id => (id === NET.ENTRADA ? { coluna: 0, andar: 0 } : { coluna: Math.max(0, NET.RAMOS.indexOf(String(id).replace(/^\d+/, ''))), andar: parseInt(id, 10) || 0 });
+  const tituloDoNo = no => (no.id === NET.ENTRADA ? 'Ponto de acesso' : `Andar ${no.andar}${no.ramo !== 'a' ? ` · ramo ${no.ramo.toUpperCase()}` : ''}`);
+  const inimigoAtivo = conteudo => Boolean(conteudo.inimigo) && !conteudo.feito;
+  // O conteúdo como o mestre recebe, no formato do que vai para o jogador (o inimigo com os números da tabela).
+  function conteudoDoMestre(c) {
+    const base = { chave: c.chave, tipo: c.tipo, dv: c.dv, feito: c.feito, nome: c.nome, descricao: c.descricao };
+    if (c.tipo === 'ice') {
+      const ice = NET.iceDe(c.ice);
+      return { ...base, inimigo: { nome: c.nomeInimigo, classe: ice.classe, per: ice.per, spd: ice.spd, atk: ice.atk, def: ice.def, efeito: ice.efeito, rez: ice.rez, rezAtual: c.rezAtual } };
+    }
+    if (c.tipo === 'demonio') {
+      const demonio = NET.demonioDe(c.demonio);
+      return { ...base, inimigo: { nome: c.nomeInimigo, classe: 'Demônio', interface: demonio.interface, acoes: demonio.acoes, rez: demonio.rez, rezAtual: c.rezAtual } };
+    }
+    if (c.tipo === 'netrunner') return { ...base, inimigo: { nome: c.nomeInimigo, classe: 'Netrunner inimigo', ativo: !c.feito } };
+    return base;
+  }
+  // Os andares do netrun: os do jogador como vieram (o vizinho que ele não achou vem sem o conteúdo); os do mestre, todos,
+  // com visto = o que os netrunners já acharam.
+  function nosDoNetrun(run) {
+    if (!run.completa) return run.nos;
+    const vistos = new Set(run.vistos || []);
+    return run.completa.map(no => ({ ...no, visto: Boolean(run.mapa) || vistos.has(no.id), conteudos: no.conteudos.map(conteudoDoMestre) }));
+  }
+  const resumoDoNo = no => (!no.conteudos ? '?' : no.conteudos.map(c => (c.inimigo ? c.inimigo.nome : `${NET.TIPOS_DE_ANDAR[c.tipo] || c.tipo}${c.dv ? ` DV ${c.dv}` : ''}`)).join(', ') || 'Vazio');
+  // Os vizinhos de um andar: o de cima e os de baixo (para onde o netrunner vai).
+  const vizinhosNoNetrun = (nos, id) => [id === NET.ENTRADA ? null : (nos.find(no => no.id === id) || {}).pai || null, ...nos.filter(no => no.pai === id).map(no => no.id)].filter(Boolean);
+  function netrunAberto() {
+    const runs = runsDaCena();
+    return runs.find(run => run.ponto === S.netAberto) || runs.find(run => run.corredores.some(corredor => corredor.meu)) || runs[0] || null;
+  }
+  // O netrunner da janela: o escolhido (nas fichas de cima), o token escolhido no mapa ou o primeiro de quem olha.
+  function corredorAberto(run) {
+    const meus = run.corredores.filter(corredor => corredor.meu);
+    return meus.find(corredor => corredor.token === S.netCorredor) || meus.find(corredor => corredor.token === S.selecionado) || meus[0] || null;
+  }
+  function abrirNet(ponto, token = null) {
+    S.netAberto = ponto;
+    if (token) S.netCorredor = token;
+    S.netNo = null;
+    // O netrun novo ainda não chegou (a resposta veio antes do evento): abre quando ele chegar.
+    if (!runsDaCena().some(run => run.ponto === ponto)) { S.netAbrir = ponto; return; }
+    S.netAbrir = null;
+    renderNetruns();
+    abrirAba('net');
+  }
+  // A aba NET: o mestre sempre; o jogador, enquanto tem um token na NET.
+  function renderAbaDaNet() {
+    const botao = $('.abas [data-aba="net"]');
+    const mostra = gm() || runsDaCena().length > 0;
+    botao.hidden = !mostra;
+    if (!mostra && botao.classList.contains('ativa')) abrirAba('rolagens', { expandir: false });
+  }
+
+  function svgDoNetrun(run, nos, corredor, escolhido) {
+    const { w, h, gx, gy } = CELULA_NET;
+    const x = coluna => 6 + coluna * (w + gx);
+    const y = andar => 6 + andar * (h + gy);
+    const colunas = Math.max(1, ...nos.map(no => posicaoDoNo(no.id).coluna + 1));
+    const andares = Math.max(0, ...nos.map(no => no.andar));
+    const largura = x(colunas) - gx + 6;
+    const altura = y(andares + 1) - gy + 6;
+    const vizinhos = new Set(corredor ? vizinhosNoNetrun(nos, corredor.no) : []);
+    const linhas = nos.map(no => {
+      const de = posicaoDoNo(no.pai || NET.ENTRADA);
+      const para = posicaoDoNo(no.id);
+      return `<path${no.visto ? '' : ' class="nao-visto"'} d="M${x(de.coluna) + w / 2} ${y(de.andar) + h} V${y(para.andar) - gy / 2} H${x(para.coluna) + w / 2} V${y(para.andar)}"/>`;
+    }).join('');
+    const caixa = (no, rotuloDoNo) => {
+      const { coluna, andar } = posicaoDoNo(no.id);
+      const texto = no.id === NET.ENTRADA ? 'Entrada' : resumoDoNo(no);
+      const classes = ['net-no', no.id === NET.ENTRADA && 'entrada', no.visto === false && 'nao-visto', (no.conteudos || []).some(inimigoAtivo) && 'perigo',
+        corredor && corredor.no === no.id && 'aqui', vizinhos.has(no.id) && 'vizinho', escolhido === no.id && 'escolhido'].filter(Boolean).join(' ');
+      const curto = texto.length > 9 ? `${texto.slice(0, 8)}…` : texto;
+      // Quem está no andar: uma bolinha por netrunner (a de quem olha, em ciano).
+      const marcas = run.corredores.filter(item => item.no === no.id).map((item, i) => `<circle class="net-marca${item.meu ? ' meu' : ''}" cx="${x(coluna) + w - 8 - i * 12}" cy="${y(andar) + 9}" r="5"><title>${esc(item.nome)}</title></circle>`).join('');
+      return `<g class="${classes}" data-net-no="${esc(no.id)}" tabindex="0" role="button" aria-label="${esc(`${tituloDoNo(no)}: ${texto}`)}"><title>${esc(texto)}</title>
+        <rect x="${x(coluna)}" y="${y(andar)}" width="${w}" height="${h}" rx="4"/><text x="${x(coluna) + 5}" y="${y(andar) + 15}" class="arq-id">${esc(rotuloDoNo)}</text><text x="${x(coluna) + 5}" y="${y(andar) + 32}">${esc(curto)}</text>${marcas}</g>`;
+    };
+    return `<svg class="arq-svg net-svg" viewBox="0 0 ${largura} ${altura}" width="${largura}" height="${altura}" role="group" aria-label="O mapa da arquitetura">
+      <g class="arq-linhas-svg">${linhas}</g>${caixa({ id: NET.ENTRADA, andar: 0, ramo: 'a', visto: true }, 'Acesso')}${nos.map(no => caixa(no, `${no.andar}${no.ramo.toUpperCase()}`)).join('')}</svg>`;
+  }
+  // O andar escolhido no mapa: o que há nele (os inimigos com os números e a REZ) e, se for vizinho, o botão de ir.
+  function htmlDoAndar(nos, corredor, id) {
+    const no = id === NET.ENTRADA ? { id, andar: 0, ramo: 'a', visto: true, conteudos: [] } : nos.find(item => item.id === id);
+    if (!no) return '<p class="nota">Escolha um andar no mapa.</p>';
+    const vizinho = corredor && corredor.no !== id && vizinhosNoNetrun(nos, corredor.no).includes(id);
+    const ir = vizinho ? `<button class="botao pequeno" type="button" data-net-ir="${esc(id)}">${no.pai === corredor.no ? 'Descer para cá' : 'Subir para cá'}</button>` : '';
+    const cabeca = `<div class="net-andar-topo"><b>${esc(tituloDoNo(no))}</b>${gm() && no.visto === false ? '<span class="tag secreta">escondido deles</span>' : ''}${ir}</div>`;
+    if (id === NET.ENTRADA) return `<div class="net-andar">${cabeca}<p class="nota">Onde a conexão começa. Andar pela arquitetura não gasta Ação NET; em combate, conectar, desconectar e cada habilidade gastam 1.</p></div>`;
+    if (!no.conteudos) return `<div class="net-andar">${cabeca}<p class="nota">Ainda não revelado: chegue até ele ou use o Pathfinder.</p></div>`;
+    const itens = no.conteudos.map(c => {
+      if (c.inimigo) {
+        const i = c.inimigo;
+        const numeros = c.tipo === 'ice' ? [['PER', i.per], ['SPD', i.spd], ['ATK', i.atk], ['DEF', i.def]] : c.tipo === 'demonio' ? [['Interface', i.interface], ['Ações', i.acoes]] : [];
+        const barra = i.rez ? `<div class="net-barra"><span style="width:${Math.max(0, Math.min(100, (Math.max(0, i.rezAtual) / i.rez) * 100))}%"></span><em>${i.rezAtual > 0 ? `REZ ${i.rezAtual}/${i.rez}` : 'derrubado'}</em></div>` : '';
+        const texto = c.tipo === 'ice' ? i.efeito : c.tipo === 'demonio' ? 'Passa pelas senhas, sempre vence a velocidade e não se dribla com o Slide.' : c.feito ? 'Já caiu da NET.' : 'Defende com a Interface + 1d10 e ataca com o Zap.';
+        return `<li class="net-item perigo${c.feito ? ' feito' : ''}"><div><b>${esc(i.nome)}</b> <small>${esc(i.classe || '')}</small>${numeros.length ? ` <span class="net-stats">${numeros.map(([rotuloDoNumero, valor]) => `${rotuloDoNumero} <b>${valor}</b>`).join(' · ')}</span>` : ''}</div>${barra}${texto ? `<p class="nota">${esc(texto)}</p>` : ''}</li>`;
+      }
+      const situacao = { senha: c.feito ? 'quebrada' : 'trancada', arquivo: c.feito ? 'copiado' : 'por identificar', controle: c.feito ? 'tomado' : 'livre' }[c.tipo] || '';
+      // O que o arquivo guarda e o que o nó comanda: o jogador, depois de feito; o mestre, sempre.
+      const segredo = (c.nome || c.descricao) && (gm() || c.feito) ? `<p class="nota">${c.nome ? `<b>${esc(c.nome)}</b>${c.descricao ? ': ' : ''}` : ''}${esc(c.descricao || '')}</p>` : '';
+      return `<li class="net-item"><div><b>${esc(NET.TIPOS_DE_ANDAR[c.tipo] || c.tipo)}</b>${c.dv ? ` <small>DV ${c.dv}</small>` : ''}${situacao ? ` <span class="tag ${c.feito ? 'sucesso' : 'secreta'}">${situacao}</span>` : ''}</div>${segredo}</li>`;
+    }).join('');
+    return `<div class="net-andar">${cabeca}<ul class="net-itens">${itens || '<li class="nota">Andar vazio.</li>'}</ul></div>`;
+  }
+  // Quem está na NET: onde, as Ações NET (em combate, as que sobram neste turno; fora dele, livres), o HP e o Kraken.
+  function htmlDoCorredor(nos, corredor, token) {
+    const aqui = nos.find(no => no.id === corredor.no);
+    const onde = corredor.no === NET.ENTRADA ? 'no ponto de acesso' : aqui ? `no andar ${aqui.andar}${aqui.ramo !== 'a' ? aqui.ramo.toUpperCase() : ''}` : 'na arquitetura';
+    const pips = Array.from({ length: corredor.max }, (_, i) => `<i class="net-pip${i < corredor.acoes ? ' usado' : ''}"></i>`).join('');
+    const acoes = corredor.emCombate
+      ? `<span title="As Ações NET que sobram neste turno (voltam no turno do netrunner)">Ações NET <span class="net-pips">${pips}</span> <b>${Math.max(0, corredor.max - corredor.acoes)}/${corredor.max}</b></span>`
+      : `<span title="Fora de combate as Ações NET não contam; em combate são ${corredor.max} por turno">Ações NET <b>livres</b> <small>(${corredor.max} por turno em combate)</small></span>`;
+    const hp = token && token.hp && token.hp.max ? `<span>HP <b>${token.hp.atual}/${token.hp.max}</b></span>` : '';
+    const rank = token && token.netrunner ? `Interface ${token.netrunner.rank} · ` : '';
+    return `<div class="net-corredor"><div><b>${esc(corredor.nome)}</b> <small>${rank}${esc(onde)}</small></div><div class="net-numeros">${acoes}${hp}</div>
+      ${corredor.preso > 0 ? '<p class="net-aviso">Preso pelo Kraken: não avança nem desconecta com segurança até o fim do próximo turno.</p>' : ''}</div>`;
+  }
+  // As habilidades de Interface do andar onde o netrunner está (as que não dá, apagadas, com o porquê), o modificador e a
+  // Sorte da próxima rolagem, o vírus no fundo, o nó de controle tomado e a saída.
+  function htmlDaHud(nos, corredor, token) {
+    const aqui = nos.find(no => no.id === corredor.no);
+    const conteudos = (aqui && aqui.conteudos) || [];
+    const fundo = corredor.no !== NET.ENTRADA && Boolean(aqui) && !nos.some(no => no.pai === corredor.no);
+    const temInimigo = conteudos.some(inimigoAtivo);
+    const livre = tipo => conteudos.some(c => c.tipo === tipo && !c.feito);
+    const semCombate = temInimigo ? 'O combate na NET ainda não chegou à mesa: o mestre narra.' : 'Sem inimigo ativo neste andar.';
+    const pode = {
+      pathfinder: [true], cloak: [true],
+      backdoor: [livre('senha'), 'Sem senha trancada neste andar.'],
+      eyedee: [livre('arquivo'), 'Sem arquivo por identificar neste andar.'],
+      control: [livre('controle'), 'Sem nó de controle livre neste andar.'],
+      virus: [fundo, 'Só no andar mais fundo da arquitetura.'],
+      zap: [false, semCombate], slide: [false, semCombate]
+    };
+    const botoes = Object.entries(NET.HABILIDADES).map(([chave, info]) => {
+      const [ok, motivo] = pode[chave] || [false, ''];
+      return `<button class="botao pequeno${ok ? '' : ' vazado'}" type="button" data-net-hab="${chave}"${ok ? '' : ' disabled'} title="${esc(ok ? info.texto : motivo)}">${esc(info.nome)}</button>`;
+    }).join('');
+    const campos = S.netCampos;
+    const controles = conteudos.filter(c => c.tipo === 'controle' && c.feito);
+    return `<div class="net-hud"><div class="grupo-npc">Habilidades de Interface</div><div class="net-habilidades">${botoes}</div>
+      <div class="campo-linha"><label class="campo mod">Mod <input data-net-campo="mod" type="number" min="-30" max="30" value="${campos.mod}"></label>
+        ${token && token.sorte ? `<label class="campo mod" title="A Sorte gasta na próxima rolagem">Sorte <input data-net-campo="sorte" type="number" min="0" max="${token.sorte.atual}" value="${Math.min(campos.sorte, token.sorte.atual)}"></label>` : ''}</div>
+      ${fundo ? `<label class="campo">O vírus <input data-net-campo="virus" type="text" maxlength="120" placeholder="O que ele faz (o mestre define a DV e o custo)" value="${esc(campos.virus)}"></label>` : ''}
+      ${controles.length ? `<div class="net-controle"><div class="grupo-npc">Nó de controle tomado</div>
+        <div class="campo-linha"><label class="campo cresce"><input data-net-campo="comando" type="text" maxlength="200" placeholder="O comando (abrir a porta, girar a torreta…)" value="${esc(campos.comando)}"></label><button class="botao pequeno" type="button" data-net-comandar>Comandar</button></div></div>` : ''}
+      <div class="combate-acoes"><button class="botao vazado pequeno" type="button" data-net-desconectar${corredor.preso > 0 && !gm() ? ' disabled title="O Kraken te prende: só a desconexão insegura."' : ' title="Desconectar com segurança (1 Ação NET em combate)"'}>Desconectar</button>
+        <button class="botao vazado pequeno perigo" type="button" data-net-desconectar="inseguro" title="Arrancar o plugue: a desconexão insegura">${gm() ? 'Derrubar da NET' : 'Desconexão insegura'}</button></div></div>`;
+  }
+  function htmlDoMestreNaNet(run, nos, escolhido) {
+    const sel = nos.find(no => no.id === escolhido);
+    return `<div class="net-mestre"><div class="grupo-npc">Mestre</div><div class="combate-acoes">
+      ${sel && sel.visto === false ? `<button class="botao vazado pequeno" type="button" data-net-revelar="${esc(sel.id)}">Revelar este andar</button>` : ''}
+      ${run.mapa ? '' : '<button class="botao vazado pequeno" type="button" data-net-revelar="tudo">Revelar o mapa</button>'}
+      <button class="botao vazado pequeno perigo" type="button" data-net-reiniciar>Reiniciar a arquitetura</button></div></div>`;
+  }
+  // O registro do netrun (o mais novo em cima): o que cada um fez e, só aqui, o que o arquivo e o nó revelaram.
+  const htmlDoRegistroDaNet = run => `<div class="grupo-npc">Registro da NET</div><ol class="net-log">${run.log.slice(-15).reverse().map(item => `<li class="${esc(item.tipo)}"><small>${esc(hora(item.t))}</small> ${esc(item.texto)}</li>`).join('') || '<li class="nota">Nada ainda.</li>'}</ol>`;
+
+  function renderNetruns() {
+    const caixa = $('#net-runs');
+    renderAbaDaNet();
+    const runs = runsDaCena();
+    // Quem está digitando num campo da janela continua: o campo volta com o foco e o cursor no lugar.
+    const ativo = document.activeElement;
+    const campo = ativo && caixa.contains(ativo) ? ativo.dataset.netCampo : '';
+    const cursor = campo && ativo.type === 'text' ? [ativo.selectionStart, ativo.selectionEnd] : null;
+    if (!runs.length) {
+      caixa.innerHTML = gm() ? '<div class="grupo-npc">Netruns nesta cena</div><p class="nota">Ninguém na NET. Ponha um ponto de acesso pela ferramenta NET (K); o jogador conecta clicando nele.</p>' : '';
+      return;
+    }
+    const run = netrunAberto();
+    S.netAberto = run.ponto;
+    const nos = nosDoNetrun(run);
+    const corredor = corredorAberto(run);
+    if (corredor) S.netCorredor = corredor.token;
+    const escolhido = S.netNo && (S.netNo === NET.ENTRADA || nos.some(no => no.id === S.netNo)) ? S.netNo : corredor ? corredor.no : NET.ENTRADA;
+    const token = corredor && S.tokens.get(corredor.token);
+    const meus = run.corredores.filter(item => item.meu);
+    const outros = runs.length > 1 ? `<div class="net-chips">${runs.map(item => `<button class="${item === run ? 'ativo' : ''}" type="button" data-net-run="${esc(item.ponto)}">${esc(item.nome)} <small>${item.corredores.length}</small></button>`).join('')}</div>` : '';
+    const chips = meus.length > 1 ? `<div class="net-chips">${meus.map(item => `<button class="${corredor && item.token === corredor.token ? 'ativo' : ''}" type="button" data-net-corredor="${esc(item.token)}">${esc(item.nome)}</button>`).join('')}</div>` : '';
+    caixa.innerHTML = `${outros}<div class="net-topo"><b>${esc(run.arquitetura)}</b><span>DV ${run.dv}</span><small>${esc(run.nome)}</small>${run.mapa ? '<span class="tag sucesso">mapa revelado</span>' : ''}</div>
+      ${chips}${corredor ? htmlDoCorredor(nos, corredor, token) : '<p class="nota">Ninguém conectado neste ponto agora.</p>'}
+      <div class="net-mapa">${svgDoNetrun(run, nos, corredor, escolhido)}</div>
+      ${htmlDoAndar(nos, corredor, escolhido)}
+      ${corredor ? htmlDaHud(nos, corredor, token) : ''}
+      ${gm() ? htmlDoMestreNaNet(run, nos, escolhido) : ''}
+      ${htmlDoRegistroDaNet(run)}`;
+    if (campo) {
+      const novo = caixa.querySelector(`[data-net-campo="${campo}"]`);
+      if (novo) { novo.focus(); if (cursor) novo.setSelectionRange(...cursor); }
+    }
+  }
+  $('#net-runs').addEventListener('input', event => {
+    const campo = event.target.dataset.netCampo;
+    if (campo) S.netCampos[campo] = event.target.type === 'number' ? Number(event.target.value) || 0 : event.target.value;
+  });
+  $('#net-runs').addEventListener('keydown', event => {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[data-net-no]')) { event.preventDefault(); event.target.closest('[data-net-no]').dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+    if (event.key === 'Enter' && event.target.dataset.netCampo === 'comando') $('#net-runs [data-net-comandar]').click();
+  });
+  $('#net-runs').addEventListener('click', event => {
+    const alvo = event.target.closest('[data-net-run], [data-net-corredor], [data-net-no], [data-net-ir], [data-net-hab], [data-net-comandar], [data-net-desconectar], [data-net-revelar], [data-net-reiniciar]');
+    const run = alvo && netrunAberto();
+    if (!run) return;
+    const corredor = corredorAberto(run);
+    const pedir = (tipo, dados = {}) => op(tipo, { ponto: run.ponto, token: corredor && corredor.token, ...dados });
+    if (alvo.dataset.netRun) { S.netAberto = alvo.dataset.netRun; S.netNo = null; renderNetruns(); return; }
+    if (alvo.dataset.netCorredor) { S.netCorredor = alvo.dataset.netCorredor; S.netNo = null; renderNetruns(); return; }
+    if (alvo.dataset.netNo) { S.netNo = alvo.dataset.netNo; renderNetruns(); return; }
+    if (alvo.dataset.netRevelar) { op('net.revelar', { ponto: run.ponto, ...(alvo.dataset.netRevelar === 'tudo' ? { tudo: true } : { no: alvo.dataset.netRevelar }) }).catch(() => {}); return; }
+    if (alvo.hasAttribute('data-net-reiniciar')) {
+      if (confirm('Reiniciar a arquitetura? O Black ICE e as senhas voltam, o mapa some e quem está conectado volta ao ponto de acesso.')) op('net.reiniciar', { ponto: run.ponto }).catch(() => {});
+      return;
+    }
+    if (!corredor) return;
+    if (alvo.dataset.netIr) { S.netNo = null; pedir('net.mover', { destino: alvo.dataset.netIr }).catch(() => renderNetruns()); return; }
+    if (alvo.dataset.netHab) {
+      const habilidade = alvo.dataset.netHab;
+      const { mod, sorte, virus } = S.netCampos;
+      pedir('net.habilidade', { habilidade, mod, sorte, ...(habilidade === 'virus' ? { texto: virus } : {}) })
+        .then(() => { Object.assign(S.netCampos, { mod: 0, sorte: 0 }, habilidade === 'virus' ? { virus: '' } : {}); renderNetruns(); }).catch(() => {});
+      return;
+    }
+    if (alvo.hasAttribute('data-net-comandar')) {
+      const texto = S.netCampos.comando.trim();
+      if (!texto) { aviso('Escreva o comando.'); return; }
+      pedir('net.comandar', { texto }).then(() => { S.netCampos.comando = ''; renderNetruns(); }).catch(() => {});
+      return;
+    }
+    if (alvo.hasAttribute('data-net-desconectar')) {
+      const inseguro = alvo.dataset.netDesconectar === 'inseguro';
+      if (inseguro && !confirm(gm() ? `Derrubar ${corredor.nome} da NET (desconexão insegura)?` : 'Arrancar o plugue (desconexão insegura)?')) return;
+      pedir('net.desconectar', { inseguro }).catch(() => {});
+    }
+  });
 
   // ---------------- Áudio ----------------
   // O tocador (mesa-tocador.js) toca o que o servidor manda; aqui ficam o que cada um vê na aba Áudio e o botão de som

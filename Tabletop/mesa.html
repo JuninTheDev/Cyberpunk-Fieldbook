@@ -48,6 +48,7 @@
         <button type="button" data-ferramenta="tiles" class="so-mestre" aria-label="Tiles (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg></button>
         <button type="button" data-ferramenta="luzes" class="so-mestre" aria-label="Luzes (L)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
         <button type="button" data-ferramenta="notas" class="so-mestre" aria-label="Notas (J)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 11h6M9 14h6M9 17h4"/></svg></button>
+        <button type="button" data-ferramenta="net" class="so-mestre" aria-label="Pontos de acesso da NET (K)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z"/><path d="M12 7.5v4M8.5 16l3.5-4.5 3.5 4.5"/></svg></button>
         <span class="ferramentas-sep" aria-hidden="true"></span>
         <button type="button" data-acao="centralizar" aria-label="A cena inteira (0)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
         <button type="button" data-acao="meu-token" class="so-jogador" aria-label="O seu token (C)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg></button>
@@ -116,6 +117,29 @@
             <button id="nota-abrir" class="botao vazado pequeno" type="button">Abrir</button>
             <button id="nota-mostrar-todos" class="botao pequeno" type="button" title="Abre a nota na tela de todos os jogadores (como o Show Players do Foundry)">Mostrar a todos</button>
             <button id="nota-apagar" class="botao vazado pequeno perigo" type="button">Apagar</button>
+          </div>
+        </div>
+      </div>
+      <!-- O ponto de acesso da NET escolhido na ferramenta (K): a arquitetura, o alcance e quem pode conectar. -->
+      <div id="net-opcoes" class="nevoa-opcoes notas-opcoes net-opcoes" hidden>
+        <p id="ponto-aviso" class="luz-titulo">Clique no mapa para pôr um ponto de acesso</p>
+        <div id="ponto-escolhido" class="nota-form" hidden>
+          <label class="campo">Nome <input id="ponto-nome" type="text" maxlength="40"></label>
+          <label class="campo">Arquitetura <select id="ponto-arquitetura"></select></label>
+          <div class="campo-linha">
+            <label class="campo">Alcance (m) <input id="ponto-alcance" type="number" min="0" max="100" step="0.5"></label>
+            <label class="campo" title="0: a DV da arquitetura">DV <input id="ponto-dv" type="number" min="0" max="20"></label>
+            <label class="campo" title="O rank de Interface mínimo para conectar">Interface <input id="ponto-rank" type="number" min="0" max="10"></label>
+          </div>
+          <label class="marcar"><input id="ponto-deck" type="checkbox"> Pede o cyberdeck equipado</label>
+          <label class="marcar"><input id="ponto-oculto" type="checkbox"> Oculto (os jogadores não veem; o Scanner acha)</label>
+          <label id="ponto-scanner-campo" class="campo">DV do Scanner <input id="ponto-scanner" type="number" min="2" max="30"></label>
+          <label class="marcar"><input id="ponto-reiniciar" type="checkbox"> Sem ninguém conectado, as defesas reiniciam</label>
+          <p id="ponto-conectados" class="nota"></p>
+          <div class="combate-acoes">
+            <button id="ponto-conectar" class="botao pequeno" type="button" title="Conecta o token escolhido no mapa (o mestre conecta de qualquer distância)">Conectar o token escolhido</button>
+            <button id="ponto-abrir" class="botao vazado pequeno" type="button">Abrir na aba NET</button>
+            <button id="ponto-apagar" class="botao vazado pequeno perigo" type="button">Apagar</button>
           </div>
         </div>
       </div>
@@ -227,8 +251,9 @@
         <div id="cena-painel"></div>
       </section>
 
-      <section class="aba so-mestre" data-aba="net">
-        <div id="net-painel"></div>
+      <section class="aba" data-aba="net">
+        <div id="net-runs"></div>
+        <div id="net-painel" class="so-mestre"></div>
       </section>
       </div>
 
@@ -252,7 +277,7 @@
           <button type="button" role="tab" data-aba="cena" class="so-mestre" aria-selected="false" title="Cena">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2.5 6 2.5 6-2.5v14l-6 2.5-6-2.5-6 2.5z"/><path d="M9 3.5v14M15 6v14"/></svg><span class="aba-nome">Cena</span>
           </button>
-          <button type="button" role="tab" data-aba="net" class="so-mestre" aria-selected="false" title="NET: as arquiteturas">
+          <button type="button" role="tab" data-aba="net" aria-selected="false" title="NET" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="4.5" rx="1"/><rect x="3" y="16.5" width="6" height="4.5" rx="1"/><rect x="15" y="16.5" width="6" height="4.5" rx="1"/><path d="M12 7v4.5M6 16.5V13h12v3.5"/></svg><span class="aba-nome">NET</span>
           </button>
         </div>

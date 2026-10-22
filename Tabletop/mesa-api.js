@@ -393,6 +393,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (token.morto) view.morto = true;
     if (token.suprimido) view.suprimido = true;
     // A luta (M9b), que todos veem: caído, inconsciente e o agarrão (o papel, o outro, o escudo humano, o Aperto de ferro).
+    if (token.netConexao) view.naNet = true;
     if (token.caido) view.caido = true;
     if (token.inconsciente) view.inconsciente = true;
     if (token.agarrao) {
@@ -471,9 +472,24 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       // Tile escondido (no Foundry, o que o mestre ainda não revelou) só vai para o mestre.
       tiles: (scene.tiles || []).filter(tile => gm || !tile.escondido).map(({ midia, ...tile }) => ({ ...tile, imagem: mediaUrl(viewer, campaignId, midia), video: VIDEO_FILE.test(midia || '') })),
       tokens, visao: Boolean(scene.visao), paredes: wallsFor(viewer, scene),
-      luz: luzDaCena(scene), luzes, notas, desenhos: desenhosFor(viewer, scene),
+      luz: luzDaCena(scene), luzes, notas, desenhos: desenhosFor(viewer, scene), ...netDaCena(viewer, scene, campaignId, connection),
       ...(gm ? { origem: scene.origem || null, musica: scene.musica || null } : {})
     };
+  }
+  // A NET (M13): os pontos de acesso que cada um vê e os netruns dele. connection.netVisto: o último que foi (só manda o que mudou).
+  function netDaCena(viewer, scene, campaignId, connection) {
+    const dados = { pontosNet: netFlow.pontosFor(viewer, scene), net: netFlow.netFor(viewer, tableOf(campaignId).state, scene) };
+    if (connection) connection.netVisto = JSON.stringify(dados);
+    return dados;
+  }
+  function enviarNet(connection, state) {
+    const scene = sceneById(state, sceneIdOf(connection, state));
+    if (!scene) return;
+    const dados = netDaCena(connection.viewer, scene, connection.campanha);
+    const texto = JSON.stringify(dados);
+    if (connection.netVisto === texto) return;
+    connection.netVisto = texto;
+    sendEvent(connection, 'net', { cena: scene.id, pontos: dados.pontosNet, runs: dados.net });
   }
   // As paredes: o mestre recebe todas (para ver e editar). O jogador recebe as portas (para abrir e fechar) e, com a
   // visão ligada, as paredes que bloqueiam a vista agora; a porta secreta fechada chega como parede (ele não sabe que é
@@ -632,6 +648,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const notas = scene ? JSON.stringify(notasFor(connection.viewer, scene, connection.campanha)) : '[]';
     if (scene && connection.notasVistas !== notas) sendEvent(connection, 'notas', { cena: scene.id, notas: JSON.parse(notas) });
     connection.notasVistas = notas;
+    enviarNet(connection, state);
   }
   // Depois de cada operação: para cada conexão da campanha, só o que mudou para ela.
   function broadcast(campaignId, effects) {
@@ -652,6 +669,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
         if (effects.paredes && effects.paredes === sceneId) sendEvent(connection, 'paredes', { cena: sceneId, paredes: wallsFor(viewer, sceneById(state, sceneId)) });
         if (effects.desenhos && effects.desenhos === sceneId) sendEvent(connection, 'desenhos', { cena: sceneId, desenhos: desenhosFor(viewer, sceneById(state, sceneId)) });
         if (effects.tokens || effects.nevoa || effects.paredes) diffTokens(connection, state);
+        else if (effects.net || effects.combate) enviarNet(connection, state);
       }
       if (effects.cenas && isGm(viewer)) sendEvent(connection, 'cenas', { cenas: scenesList(state), cenaAtiva: state.cenaAtiva });
       if (effects.combate || ((effects.tokens || effects.nevoa || effects.paredes || full) && state.combate)) sendEvent(connection, 'combate', combatFor(viewer, state, campaignId));
@@ -1144,7 +1162,12 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     regras: () => wikiData().regras, ptOf: en => (wikiData().ptOf ? wikiData().ptOf(en) : en),
     critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
   });
-  const netFlow = createNet({ fail, int, line, block, newId, pool });
+  // O ponto de acesso que o jogador vê: a névoa não cobre e, com a visão ligada, um token dele vê o ponto (como as notas).
+  const vePonto = (viewer, scene, ponto) => fogShows(scene, ponto.x, ponto.y) && (!scene.visao || pontoVisto(olhosDe(viewer, scene), ponto, scene.paredes || [], ambienteDe(viewer, scene)));
+  const netFlow = createNet({
+    fail, int, line, block, newId, pool, isGm, canControl, tokenArg, sceneArg, naCena, writeSheet, addEntry, authorOf, atravessa, vePonto,
+    ajuda: combatFlow.ajuda, distanciaAoPonto: (scene, token, ponto) => combatFlow.ajuda.distancia(scene, token, ponto)
+  });
   const lutaFlow = createLuta({
     fail, int, isGm, canControl, tokenArg, tokenFor, writeSheet, addEntry, authorOf, ajuda: combatFlow.ajuda,
     critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
@@ -1185,13 +1208,15 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       for (const item of (Array.isArray(input.tokens) ? input.tokens : []).slice(0, MAX_TOKENS)) {
         try { scene.tokens.push(buildToken(scene, campaignId, item, { fallback: true })); } catch (error) { if (!error.status) throw error; }
       }
+      // Os pontos de acesso da NET (os tiles do NET Architect), com a arquitetura importada do mesmo mundo.
+      scene.pontosNet = netFlow.importarPontos(state, scene, input.pontosNet, origem && origem.mundo);
       if (anterior) {
         state.cenas[state.cenas.indexOf(anterior)] = scene;
         if (state.combate && state.combate.cena === scene.id) state.combate = null;
       } else {
         state.cenas.push(scene);
       }
-      return { cenas: true, cena: scene.id, combate: Boolean(anterior), resultado: { cena: scene.id, tokens: scene.tokens.length, tiles: scene.tiles.length, paredes: scene.paredes.length, luzes: scene.luzes.length } };
+      return { cenas: true, cena: scene.id, combate: Boolean(anterior), resultado: { cena: scene.id, tokens: scene.tokens.length, tiles: scene.tiles.length, paredes: scene.paredes.length, luzes: scene.luzes.length, pontos: scene.pontosNet.length } };
     } },
     'cena.editar': { mestre: true, run({ state, body, campaignId }) {
       const scene = sceneArg(state, body.cena);
@@ -1270,6 +1295,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       }
       // Os metros andados no combate (a Voadora pede 4 m neste turno).
       combatFlow.registrarPasso(state, scene.id, token, combatFlow.ajuda.distancia(scene, origem, destino));
+      // Na NET: fora do alcance do ponto de acesso, ou com uma parede no meio, cai (desconexão insegura).
+      netFlow.conferirAlcance(state, scene, token);
       return { tokens: true };
     } },
     // Veículos (M17). Embarcar: { token, veiculo }. O jogador, com o token dele perto (até 2 quadrados da borda); o mestre,
@@ -1367,6 +1394,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const { scene, token } = tokenArg(state, viewer, body.token);
       for (const ocupante of ocupantesDe(scene, token)) { tirarDoVeiculo(scene, ocupante); Object.assign(ocupante, ladoDoVeiculo(scene, token)); }
       if (token.dentro) tirarDoVeiculo(scene, token);
+      netFlow.tirarToken(state, scene, token.id);
       scene.tokens = scene.tokens.filter(item => item !== token);
       return { tokens: true, cenas: true, combate: dropFromCombat(state, token.id) };
     } },
@@ -1566,6 +1594,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       // turnos: conta as vezes que passaram (o Suprimido sai no fim da vez seguinte de quem foi suprimido).
       state.combate = { id: newId(), cena: scene.id, rodada: 1, vez: 0, ordem, turnos: 0, inicioDaVez: 0, deathSave: null };
       combatFlow.aoPassarAVez(state, null);
+      netFlow.aoPassarAVez(state);
       return { combate: true, registro: systemEntry(state, 'Começou o combate. Rodada 1.') };
     } },
     // Passar a vez: o mestre, sempre; o jogador, só na vez do token dele (o Fim do turno do Painel Tático). Quem passa
@@ -1593,6 +1622,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
         if (!morto(combat.ordem[combat.vez])) break;
       }
       combatFlow.aoPassarAVez(state, anterior);
+      netFlow.aoPassarAVez(state);
       const atual = combat.deathSave && scene && scene.tokens.find(item => item.id === combat.deathSave);
       const aviso = atual ? systemEntry(state, `${atual.nome} está Mortalmente Ferido: Death Save no começo da vez.`) : null;
       return { combate: true, tokens: true, ...(aviso || entry ? { registro: aviso || entry } : {}) };

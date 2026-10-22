@@ -238,3 +238,204 @@ test('o netrunner no token: o rank de Interface da Role, o deck equipado, os pro
   assert.equal((await tokens())[jax].netrunner, undefined, 'o Solo sem deck não é netrunner');
   assert.deepEqual((await tokens())[npc].netrunner, { rank: 4, acoes: 3, deck: null, programas: [], hardware: [] }, 'o Netrunner do livro: Interface 4');
 });
+
+// ---------------- A fase 2: o ponto de acesso e o netrun ----------------
+// A cena de 100 px = 2 m: a Nyx (Interface 6, deck, Range Upgrade) em (150, 150), o Jax (sem deck) ao lado, e o ponto de
+// acesso do apartamento do fixer 2 quadrados à direita da Nyx (4 m; o alcance é 6, mais 2 do Range Upgrade).
+async function netrun(t, { arquitetura = N.EXEMPLOS[1] } = {}) {
+  const m = await montar(t);
+  const bruno = await m.jogador('Bruno', fichaDaNetrunner);
+  const ana = await m.jogador('Ana', fichaDoSolo);
+  const arq = (await m.op('arquitetura.salvar', { arquitetura })).json.resultado.id;
+  const cena = (await m.op('cena.criar', { nome: 'Prédio', largura: 2000, altura: 1000, grade: { tamanho: 100 } })).json.resultado.cena;
+  const nyx = (await m.op('token.criar', { cena, personagem: bruno.personagem.id, x: 150, y: 150 })).json.resultado.token;
+  const jax = (await m.op('token.criar', { cena, personagem: ana.personagem.id, x: 250, y: 150 })).json.resultado.token;
+  await m.op('cena.ativar', { cena });
+  const ponto = (await m.op('net.ponto.criar', { cena, x: 350, y: 150, ponto: { nome: 'Terminal do fixer', arquitetura: arq } })).json.resultado.ponto;
+  const estado = async cookie => (await m.pedir('/api/mesa/estado', { cookie })).json;
+  const run = async cookie => (await estado(cookie)).cena.net.find(item => item.ponto === ponto);
+  const ultima = async cookie => { const registro = (await estado(cookie)).registro; return registro[registro.length - 1]; };
+  const acao = (tipo, corpo = {}, cookie = bruno.cookie) => m.op(tipo, { ponto, token: nyx, ...corpo }, cookie);
+  return { m, bruno, ana, arq, cena, nyx, jax, ponto, estado, run, ultima, acao };
+}
+
+test('o ponto de acesso: só o mestre põe; o jogador vê o marcador (o oculto, não) e conecta perto, com o deck', async t => {
+  const r = await netrun(t);
+  assert.equal((await r.m.op('net.ponto.criar', { cena: r.cena, x: 10, y: 10 }, r.bruno.cookie)).status, 403);
+  assert.match((await r.m.op('net.ponto.criar', { cena: r.cena, x: 10, y: 10, ponto: { arquitetura: 'arq:nada' } })).json.erro, /Arquitetura não encontrada/);
+  const pontos = (await r.estado(r.ana.cookie)).cena.pontosNet;
+  assert.deepEqual(pontos, [{ id: r.ponto, x: 350, y: 150, nome: 'Terminal do fixer', alcance: 6, conectados: 0 }], 'o jogador vê o marcador, sem a configuração');
+  assert.equal((await r.estado()).cena.pontosNet[0].arquitetura, r.arq, 'o mestre vê a configuração');
+  // O oculto: o jogador nem vê, nem conecta.
+  const oculto = (await r.m.op('net.ponto.criar', { cena: r.cena, x: 150, y: 250, ponto: { arquitetura: r.arq, oculto: true } })).json.resultado.ponto;
+  assert.equal((await r.estado(r.bruno.cookie)).cena.pontosNet.some(p => p.id === oculto), false);
+  assert.equal((await r.m.op('net.conectar', { ponto: oculto, token: r.nyx }, r.bruno.cookie)).status, 404);
+  // Os requisitos: o Jax não tem deck; o Bruno não conecta o token da Ana.
+  assert.match((await r.m.op('net.conectar', { ponto: r.ponto, token: r.jax }, r.ana.cookie)).json.erro, /cyberdeck equipado/);
+  assert.equal((await r.m.op('net.conectar', { ponto: r.ponto, token: r.jax }, r.bruno.cookie)).status, 403);
+  // Longe: 9 quadrados = 18 m.
+  await r.m.op('net.ponto.editar', { ponto: r.ponto, x: 1050, y: 150 });
+  assert.match((await r.acao('net.conectar')).json.erro, /Longe demais do ponto de acesso: 18 m \(alcance 8 m\)/, 'o alcance com o Range Upgrade');
+  // Perto, mas com uma parede no meio.
+  await r.m.op('net.ponto.editar', { ponto: r.ponto, x: 350, y: 150 });
+  const parede = (await r.m.op('parede.criar', { cena: r.cena, paredes: [{ c: [300, 50, 300, 300] }] })).json;
+  assert.match((await r.acao('net.conectar')).json.erro, /parede/);
+  await r.m.op('parede.apagar', { cena: r.cena, parede: parede.resultado.paredes[0] });
+  const conectou = await r.acao('net.conectar');
+  assert.equal(conectou.status, 200, conectou.text);
+  assert.equal((await r.estado(r.ana.cookie)).cena.tokens.find(token => token.id === r.nyx).naNet, true, 'todos veem que a Nyx está na NET');
+  const cartao = await r.ultima(r.ana.cookie);
+  assert.deepEqual([cartao.tipo, cartao.net.frase], ['net', 'Iris "Nyx" Tanaka conectou em Terminal do fixer (Apartamento de um fixer).']);
+  // O netrun: o Bruno vê o mapa que achou (o andar 1 como vizinho, sem o conteúdo); a Ana, nada; o mestre, tudo.
+  const doBruno = await r.run(r.bruno.cookie);
+  assert.deepEqual(doBruno.nos, [{ id: '1a', andar: 1, ramo: 'a', pai: 'entrada', visto: false }]);
+  assert.deepEqual(doBruno.corredores.map(c => [c.nome, c.no, c.acoes, c.max, c.meu]), [['Iris "Nyx" Tanaka', 'entrada', 0, 3, true]]);
+  assert.equal(doBruno.completa, undefined, 'o jogador não recebe a arquitetura inteira');
+  assert.equal(await r.run(r.ana.cookie), undefined, 'quem não está na NET não vê o netrun');
+  assert.equal((await r.run()).completa.length, 3, 'o mestre vê todos os andares');
+  assert.equal((await r.estado(r.ana.cookie)).cena.pontosNet[0].conectados, 1);
+});
+
+test('andar e as habilidades: a senha trava, o Breach quebra, o Eye-Dee e o Control revelam só na janela, o Pathfinder', async t => {
+  const r = await netrun(t);
+  await r.acao('net.conectar');
+  assert.equal((await r.acao('net.mover', { destino: '2a' })).status, 409, 'só um andar vizinho');
+  assert.equal((await r.acao('net.mover', { destino: '1a' })).status, 200);
+  let run = await r.run(r.bruno.cookie);
+  assert.deepEqual(run.nos.find(no => no.id === '1a').conteudos, [{ chave: '1a.0', tipo: 'senha', dv: 6, feito: false }]);
+  assert.match((await r.acao('net.mover', { destino: '2a' })).json.erro, /senha deste andar \(DV 6\) trava a descida/);
+  assert.match((await r.acao('net.habilidade', { habilidade: 'eyedee' })).json.erro, /Não há arquivo/);
+  // Breach: Interface 6 + 2 = 8 contra DV 6.
+  r.m.fila.push(2);
+  const breach = await r.acao('net.habilidade', { habilidade: 'backdoor' });
+  assert.equal(breach.status, 200, breach.text);
+  assert.deepEqual(breach.json.resultado, { total: 8, ok: true });
+  const cartao = await r.ultima(r.ana.cookie);
+  assert.deepEqual([cartao.net.titulo, cartao.net.rolagens[0].rolagem.total, cartao.net.resultado], ['Breach', 8, 'passou'], 'o cartão no chat, para todos');
+  assert.equal((await r.acao('net.mover', { destino: '2a' })).status, 200, 'sem a senha, desce');
+  // Eye-Dee: 6 + 2 = 8 > 6. O que o arquivo guarda fica na janela da NET, não no chat.
+  r.m.fila.push(2);
+  await r.acao('net.habilidade', { habilidade: 'eyedee' });
+  run = await r.run(r.bruno.cookie);
+  const arquivo = run.nos.find(no => no.id === '2a').conteudos[0];
+  assert.match(arquivo.descricao, /Agenda de contatos/);
+  assert.match(run.log[run.log.length - 1].texto, /Agenda de contatos/);
+  assert.doesNotMatch(JSON.stringify(await r.ultima(r.ana.cookie)), /Agenda de contatos/, 'o chat não leva o segredo');
+  // A falha não toma o nó: 6 + 1 (a falha crítica tira mais 1d10 = 4) = 3 contra DV 6.
+  await r.acao('net.mover', { destino: '3a' });
+  r.m.fila.push(1, 4);
+  assert.deepEqual((await r.acao('net.habilidade', { habilidade: 'control' })).json.resultado, { total: 3, ok: false });
+  assert.match((await r.acao('net.comandar', { texto: 'Abrir a porta' })).json.erro, /nó de controle tomado/);
+  r.m.fila.push(3);
+  await r.acao('net.habilidade', { habilidade: 'control' });
+  assert.equal((await r.acao('net.comandar', { texto: 'Abrir a porta do corredor' })).status, 200);
+  run = await r.run(r.bruno.cookie);
+  assert.match(run.log.map(linha => linha.texto).join(' | '), /comanda o nó de controle: “Abrir a porta do corredor”/);
+  // O Virus vai no andar mais fundo (o 3a): 6 + 5 = 11 contra a DV da arquitetura (6).
+  assert.equal((await r.acao('net.habilidade', { habilidade: 'virus', texto: 'Apagar as câmeras' })).json.resultado.ok, true);
+  await r.acao('net.mover', { destino: '2a' });
+  assert.match((await r.acao('net.habilidade', { habilidade: 'virus' })).json.erro, /andar mais fundo/);
+});
+
+test('o Pathfinder, o mapa revelado pelo mestre e o Black ICE que segura a descida', async t => {
+  const r = await netrun(t, { arquitetura: N.EXEMPLOS[2] });
+  await r.acao('net.conectar');
+  // 6 + 1 (… a falha crítica tira 1d10 = 1) = 6: a senha DV 8 do andar 1 segura o resto.
+  r.m.fila.push(1, 1);
+  await r.acao('net.habilidade', { habilidade: 'pathfinder' });
+  assert.deepEqual((await r.run(r.bruno.cookie)).nos.filter(no => no.visto).map(no => no.id), ['1a']);
+  // 6 + 5 = 11: desce em largura, a partir do ponto de acesso, até o 4b (a senha DV 10 não segura 11).
+  await r.acao('net.habilidade', { habilidade: 'pathfinder' });
+  assert.deepEqual((await r.run(r.bruno.cookie)).nos.filter(no => no.visto).map(no => no.id), ['1a', '2a', '3a', '3b', '4a', '4b', '5a', '5b']);
+  await r.m.op('net.revelar', { ponto: r.ponto, tudo: true });
+  assert.equal((await r.run(r.bruno.cookie)).nos.length, 8);
+  // O Wisp do andar 2 segura a descida (o Black ICE ativo).
+  r.m.fila.push(9);
+  await r.acao('net.mover', { destino: '1a' });
+  await r.acao('net.habilidade', { habilidade: 'backdoor' });
+  await r.acao('net.mover', { destino: '2a' });
+  assert.match((await r.acao('net.mover', { destino: '3a' })).json.erro, /O Wisp deste andar te segura/);
+  assert.equal((await r.acao('net.mover', { destino: '1a' })).status, 200, 'subir é livre');
+});
+
+test('as Ações NET no combate, desconectar, sair do alcance e o reinício das defesas', async t => {
+  const r = await netrun(t);
+  await r.m.op('combate.iniciar', { tokens: [r.nyx, r.jax] });
+  await r.m.op('combate.iniciativa', { token: r.nyx, valor: 30 });
+  let combate = (await r.estado()).combate;
+  while (combate.vez !== r.nyx) { await r.m.op('combate.proximo'); combate = (await r.estado()).combate; }
+  await r.acao('net.conectar');
+  const acoes = async () => (await r.run(r.bruno.cookie)).corredores[0].acoes;
+  assert.equal(await acoes(), 1, 'conectar gasta 1 Ação NET');
+  await r.acao('net.mover', { destino: '1a' });
+  assert.equal(await acoes(), 1, 'andar não gasta');
+  await r.acao('net.habilidade', { habilidade: 'cloak' });
+  await r.acao('net.habilidade', { habilidade: 'backdoor' });
+  assert.equal(await acoes(), 3);
+  assert.match((await r.acao('net.habilidade', { habilidade: 'pathfinder' })).json.erro, /Sem Ações NET neste turno \(3 de 3\)/);
+  assert.equal((await r.m.op('net.habilidade', { ponto: r.ponto, token: r.nyx, habilidade: 'pathfinder' })).status, 200, 'o mestre passa do limite');
+  // A vez passa e volta: as Ações NET voltam.
+  await r.m.op('combate.proximo');
+  await r.m.op('combate.proximo');
+  assert.equal(await acoes(), 0);
+  // Desconectar com segurança gasta 1; sem ninguém, as defesas reiniciam (a senha tranca; o arquivo copiado fica).
+  await r.acao('net.mover', { destino: '2a' });
+  r.m.fila.push(2);
+  await r.acao('net.habilidade', { habilidade: 'eyedee' });
+  assert.equal((await r.acao('net.desconectar')).status, 200);
+  assert.equal(await acoes().catch(() => null), null, 'fora da NET, o Bruno não vê o netrun');
+  assert.equal((await r.estado(r.ana.cookie)).cena.tokens.find(token => token.id === r.nyx).naNet, undefined);
+  await r.acao('net.conectar');
+  const mestre = await r.run();
+  assert.deepEqual(mestre.completa.map(no => no.conteudos[0].feito), [false, true, false], 'a senha tranca de novo; o arquivo copiado fica');
+  assert.match(mestre.log.map(linha => linha.texto).join(' | '), /reiniciou as defesas/);
+  // Sair do alcance: a Nyx anda 6 quadrados para baixo (12 m).
+  await r.m.op('combate.encerrar');
+  assert.equal((await r.m.op('token.mover', { token: r.nyx, x: 150, y: 750 }, r.bruno.cookie)).status, 200);
+  assert.equal((await r.estado(r.ana.cookie)).cena.tokens.find(token => token.id === r.nyx).naNet, undefined, 'caiu da NET');
+  assert.match((await r.run()).log.slice(-3).map(linha => linha.texto).join(' | '), /saiu do alcance/);
+  // A insegura não gasta nada; trocar a arquitetura derruba quem estava; tirar o token da cena tira da NET.
+  await r.m.op('token.mover', { token: r.nyx, x: 150, y: 150 }, r.bruno.cookie);
+  await r.acao('net.conectar');
+  assert.equal((await r.acao('net.desconectar', { inseguro: true })).status, 200);
+  assert.equal((await r.ultima()).net.resultado, 'inseguro', 'o cartão diz que foi insegura');
+  await r.acao('net.conectar');
+  const outra = (await r.m.op('arquitetura.salvar', { arquitetura: N.EXEMPLOS[0] })).json.resultado.id;
+  await r.m.op('net.ponto.editar', { ponto: r.ponto, arquitetura: outra });
+  await r.m.op('net.revelar', { ponto: r.ponto, no: '1a' });
+  assert.equal((await r.acao('net.mover', { destino: '1a' })).status, 409, 'trocar a arquitetura derruba quem estava');
+  await r.acao('net.conectar');
+  await r.m.op('token.apagar', { token: r.nyx });
+  assert.equal((await r.run()).corredores.length, 0, 'sem o token, ninguém no netrun');
+});
+
+test('importar: o tile com o ponto de acesso (Foundry 12 e 14) vira o marcador, com a arquitetura que veio do mesmo mundo', async t => {
+  const { converter, converterArquiteturas } = require('./importar-foundry');
+  const m = await montar(t);
+  // A arquitetura do mundo (o item netarch), importada antes da cena.
+  const [{ arquitetura, origem }] = converterArquiteturas([{ _id: 'arq12', name: 'Armazém', type: 'netarch', system: { floors: [{ floor: '1', branch: 'a', content: 'CPR.netArchitecture.floor.options.password', dv: '8', blackice: '--', description: '' }] } }], 'mundo');
+  const arq = (await m.op('arquitetura.salvar', { arquitetura, origem })).json.resultado.id;
+  // Margem de 25%: o mapa começa em (300, 200) no canvas do Foundry. O tile de 100 × 100 em (500, 300): o centro, (250, 150).
+  const cena = { _id: 'c1', name: 'Armazém', width: 1000, height: 800, padding: 0.25, grid: { size: 100, type: 1, distance: 2, units: 'm' }, background: { src: '' } };
+  const tiles = [
+    { _id: 'k1', x: 500, y: 300, width: 100, height: 100, texture: { src: '' }, flags: { 'net-architect': { pontoDeAcesso: { ativo: true, nome: 'Terminal', arquitetura: 'Compendium.world.arquiteturas-net.Item.arq12', dv: null, alcance: 4, exigeDeck: false, rankMinimo: 3, oculto: false, dvScanner: 12, reiniciar: false, revelados: ['userA'] } } } },
+    { _id: 'k2', x: 700, y: 500, width: 200, height: 100, hidden: true, texture: { src: '' }, flags: { 'cpr-fieldbook': { pontoDeAcesso: { ativo: true, nome: 'Câmera', arquitetura: 'Item.outra', dv: 9 } } } },
+    { _id: 'k3', x: 300, y: 200, width: 100, height: 100, texture: { src: '' }, flags: { 'net-architect': { pontoDeAcesso: { ativo: false, nome: 'Desligado' } } } },
+    { _id: 'k4', x: 300, y: 200, width: 100, height: 100, texture: { src: '' } }
+  ];
+  const { cena: convertida } = converter(cena, { tokens: [], tiles, paredes: [], luzes: [], deltas: new Map() }, new Map(), 'mundo');
+  assert.deepEqual(convertida.pontosNet.map(p => [p.nome, p.x, p.y, p.arqOrigem, p.oculto]), [['Terminal', 250, 150, 'arq12', false], ['Câmera', 500, 350, 'outra', true]], 'o centro do tile; o desligado não vem; o tile escondido deixa o ponto oculto');
+  const importada = await m.op('cena.importar', { cena: convertida });
+  assert.equal(importada.status, 200, importada.text);
+  assert.equal(importada.json.resultado.pontos, 2);
+  const id = importada.json.resultado.cena;
+  await m.op('cena.ativar', { cena: id });
+  const [terminal, camera] = (await m.pedir('/api/mesa/estado')).json.cena.pontosNet;
+  assert.deepEqual([terminal.nome, terminal.arquitetura, terminal.alcance, terminal.dv, terminal.exigeDeck, terminal.rankMinimo, terminal.dvScanner, terminal.reiniciar, terminal.revelados],
+    ['Terminal', arq, 4, 0, false, 3, 12, false, []], 'a configuração do NET Architect; a DV vazia é a da arquitetura; quem o Scanner achou no Foundry não vem');
+  assert.deepEqual([camera.arquitetura, camera.dv, camera.oculto], ['', 9, true], 'a arquitetura que não veio do mundo: o ponto fica sem (o mestre escolhe)');
+  // Em outro mundo, o mesmo item não serve.
+  const deOutro = await m.op('cena.importar', { cena: { ...convertida, origem: { mundo: 'outro', id: 'c1' } } });
+  await m.op('cena.ativar', { cena: deOutro.json.resultado.cena });
+  assert.equal((await m.pedir('/api/mesa/estado')).json.cena.pontosNet[0].arquitetura, '');
+});

@@ -530,7 +530,7 @@ test('importar uma cena: tiles escondidos só para o mestre, tokens viram person
   };
   const feita = await m.op('cena.importar', { cena });
   assert.equal(feita.status, 200, feita.text);
-  assert.deepEqual(feita.json.resultado, { cena: feita.json.resultado.cena, tokens: 4, tiles: 2, paredes: 1, luzes: 1 });
+  assert.deepEqual(feita.json.resultado, { cena: feita.json.resultado.cena, tokens: 4, tiles: 2, paredes: 1, luzes: 1, pontos: 0 });
   assert.equal((await m.op('cena.importar', { cena })).status, 409, 'a mesma cena do mesmo mundo duas vezes, não');
   assert.equal((await m.op('cena.importar', { cena, substituir: true })).status, 200, 'com substituir, troca');
   await m.op('cena.ativar', { cena: feita.json.resultado.cena });

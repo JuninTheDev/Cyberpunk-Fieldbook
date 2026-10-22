@@ -280,9 +280,200 @@
   const HARDWARE = { rangeUpgrade: ['core_upgrades:range-upgrade', 'Range Upgrade'], isolado: ['core_upgrades:insulated-wiring', 'Insulated Wiring'], krash: ['core_upgrades:krash-barrier', 'KRASH Barrier'] };
   const hardwareDe = lista => Object.fromEntries(Object.entries(HARDWARE).map(([chave, [catalogo, nome]]) => [chave, lista.some(item => item.catalogo === catalogo || item.nome === nome)]));
 
+  // ---------------- O netrun (a wiki, "Netrunning", RED p. 197–201; o NET Architect e as regras da NET do Foundry 14) ----------------
+  // As habilidades de Interface na arquitetura, com o alvo de cada uma: a arquitetura inteira, o andar mais fundo (o
+  // Virus), o que há no andar (a senha, o arquivo, o nó de controle) ou o inimigo dele (o Zap em qualquer um; o Slide, só
+  // no Black ICE). O Scanner é fora da NET.
+  const HABILIDADES = {
+    pathfinder: { nome: 'Pathfinder', alvo: 'arquitetura', texto: 'Revela os andares abaixo, tantos quanto o resultado; uma DV maior que o resultado segura o que vem depois.' },
+    backdoor: { nome: 'Breach', alvo: 'senha', texto: 'Quebra a senha deste andar (contra a DV dela). É o Backdoor do RED.' },
+    eyedee: { nome: 'Eye-Dee', alvo: 'arquivo', texto: 'Identifica e copia o arquivo deste andar (contra a DV dele).' },
+    control: { nome: 'Control', alvo: 'controle', texto: 'Toma o nó de controle deste andar (contra a DV dele).' },
+    cloak: { nome: 'Cloak', alvo: 'arquitetura', texto: 'Esconde os rastros: o resultado vira a DV para achá-los.' },
+    virus: { nome: 'Virus', alvo: 'fundo', texto: 'Deixa um vírus no andar mais fundo (contra a DV da arquitetura).' },
+    zap: { nome: 'Zap', alvo: 'inimigo', texto: 'Ataca o inimigo do andar: 1d6, se passar da defesa dele.' },
+    slide: { nome: 'Slide', alvo: 'ice', texto: 'Escapa do Black ICE do andar (contra a PER dele).' }
+  };
+  // O ponto de acesso (o marcador no mapa): o alcance (RED: 6 m; o Range Upgrade, mais 2), a DV (0: a da arquitetura), os
+  // requisitos (o deck equipado e a Interface mínima), oculto (até o Scanner achar) e se as defesas reiniciam sem ninguém.
+  const PONTO_PADRAO = { nome: 'Ponto de acesso', arquitetura: '', alcance: 6, dv: 0, exigeDeck: true, rankMinimo: 1, oculto: false, dvScanner: 10, reiniciar: true };
+  const RANGE_UPGRADE = 2;
+  const alcanceDoPonto = (ponto, netrunner = null) => (Number(ponto.alcance) > 0 ? Number(ponto.alcance) : 2) + (netrunner && netrunner.rangeUpgrade ? RANGE_UPGRADE : 0);
+  // O que falta ao netrunner para conectar aqui (o mestre conecta assim mesmo).
+  function faltasPara(ponto, netrunner) {
+    const faltas = [];
+    if (ponto.exigeDeck !== false && !(netrunner && netrunner.deck)) faltas.push('um cyberdeck equipado');
+    const minimo = Number(ponto.rankMinimo) || 0;
+    const rank = netrunner ? netrunner.rank : 0;
+    if (minimo > 0 && rank < minimo) faltas.push(`Interface ${minimo} (tem ${rank})`);
+    return faltas;
+  }
+
+  // O estado do netrun num ponto: os andares vistos, os conteúdos feitos (a senha quebrada, o arquivo copiado, o nó
+  // tomado), a REZ que sobrou de cada inimigo (ices), os netrunners inimigos que caíram (fora), o mapa todo revelado, os
+  // corredores (os netrunners conectados) e o registro. assinatura: a arquitetura de quando começou (mudou, recomeça).
+  const assinaturaDe = arquitetura => JSON.stringify([limparAndares(arquitetura.andares), Number(arquitetura.dv) || 0]);
+  const estadoNovo = arquitetura => ({ arquitetura: arquitetura.id, assinatura: assinaturaDe(arquitetura), vistos: [], feitos: [], ices: [], fora: [], mapa: false, corredores: [], log: [] });
+  // O corredor (o netrunner na NET): onde está, as Ações NET gastas no turno e o máximo, quem ele encontrou no andar
+  // (engajado), de quem escapou com o Slide, os Skunks que o acertaram, o rastro do Cloak e as prisões do turno.
+  const novoCorredor = ({ token, nome, dono = null, rank }) => ({ token, nome, dono, no: ENTRADA, acoes: 0, max: acoesPorRank(rank), engajado: [], escapou: [], skunks: [], rastro: null, programasNaRodada: [], preso: 0, menosAcoes: 0, slides: 0 });
+  const LOG_MAX = 60;
+  const registrar = (est, texto, tipo = 'info', quando = Date.now()) => { est.log = [...est.log, { t: quando, texto, tipo }].slice(-LOG_MAX); };
+
+  // ---------------- Os inimigos no andar ----------------
+  // O Black ICE e o demônio têm a REZ da tabela, menos o dano guardado (est.ices); em 0, caem. O netrunner inimigo cai da
+  // NET quando o HP dele chega a 0 (est.fora).
+  const INIMIGOS = ['ice', 'demonio', 'netrunner'];
+  const ehInimigo = conteudo => INIMIGOS.includes(conteudo.tipo);
+  const rezMaxDe = conteudo => (conteudo.tipo === 'ice' ? iceDe(conteudo.ice).rez : conteudo.tipo === 'demonio' ? demonioDe(conteudo.demonio).rez : null);
+  function rezDe(est, conteudo) {
+    if (conteudo.tipo === 'netrunner') return null;
+    const salvo = est.ices.find(item => item.chave === conteudo.chave);
+    return salvo ? salvo.rez : rezMaxDe(conteudo);
+  }
+  const inimigoAtivo = (est, conteudo) => (conteudo.tipo === 'netrunner' ? !(est.fora || []).includes(conteudo.chave) : rezDe(est, conteudo) > 0);
+  const conteudosDoNo = (arq, id) => (id === ENTRADA || !arq.nos[id] ? [] : arq.nos[id].conteudos);
+  const inimigosAtivos = (arq, est, id) => conteudosDoNo(arq, id).filter(conteudo => ehInimigo(conteudo) && inimigoAtivo(est, conteudo));
+  // nomeDaFicha: o nome da ficha do netrunner inimigo (pelo id dela), quando a linha não tem nome.
+  function nomeDoInimigo(conteudo, nomeDaFicha = () => '') {
+    if (conteudo.tipo === 'ice') return iceDe(conteudo.ice).nome;
+    if (conteudo.tipo === 'demonio') return conteudo.nome || demonioDe(conteudo.demonio).nome;
+    return conteudo.nome || nomeDaFicha(conteudo.npc) || 'Netrunner inimigo';
+  }
+  // Quem segura a descida: o Black ICE ativo (menos o que o netrunner driblou com o Slide) e o demônio. O netrunner
+  // inimigo não segura.
+  const quemSegura = (arq, est, corredor) => inimigosAtivos(arq, est, corredor.no)
+    .filter(conteudo => conteudo.tipo === 'demonio' || (conteudo.tipo === 'ice' && !(corredor.escapou || []).includes(conteudo.chave)));
+  function mudarRez(est, conteudo, rez) {
+    const valor = Math.max(0, Math.min(rezMaxDe(conteudo), rez));
+    est.ices = [...est.ices.filter(item => item.chave !== conteudo.chave), { chave: conteudo.chave, rez: valor }];
+    return valor;
+  }
+  function acharConteudo(arq, chave) {
+    for (const no of Object.values(arq.nos)) {
+      const conteudo = no.conteudos.find(item => item.chave === chave);
+      if (conteudo) return { no, conteudo };
+    }
+    return null;
+  }
+  // O que o netrunner sabe do inimigo que vê: os números da tabela e a REZ que sobra.
+  function inimigoPublico(est, conteudo, nomeDaFicha) {
+    const nome = nomeDoInimigo(conteudo, nomeDaFicha);
+    if (conteudo.tipo === 'ice') {
+      const ice = iceDe(conteudo.ice);
+      return { nome, classe: ice.classe, per: ice.per, spd: ice.spd, atk: ice.atk, def: ice.def, efeito: ice.efeito, rez: rezMaxDe(conteudo), rezAtual: rezDe(est, conteudo) };
+    }
+    if (conteudo.tipo === 'demonio') {
+      const d = demonioDe(conteudo.demonio);
+      return { nome, classe: 'Demônio', interface: d.interface, acoes: d.acoes, rez: d.rez, rezAtual: rezDe(est, conteudo) };
+    }
+    return { nome, classe: 'Netrunner inimigo', ativo: inimigoAtivo(est, conteudo) };
+  }
+
+  // ---------------- O mapa que o netrunner vê ----------------
+  // Os andares vistos (com o conteúdo; com est.mapa, todos) e os vizinhos de quem está na NET, sem o conteúdo ("?"). O que
+  // o arquivo guarda e o que o nó comanda (o nome e a descrição) só aparecem depois de feitos.
+  function vistaPublica(arq, est, nomeDaFicha) {
+    const vistos = new Set(est.vistos);
+    if (est.mapa) for (const id of Object.keys(arq.nos)) vistos.add(id);
+    const feitos = new Set(est.feitos);
+    const desconhecidos = new Set();
+    for (const corredor of est.corredores) for (const id of vizinhos(arq, corredor.no)) if (id !== ENTRADA && !vistos.has(id)) desconhecidos.add(id);
+    return [...vistos, ...desconhecidos].filter(id => arq.nos[id]).map(id => {
+      const no = arq.nos[id];
+      if (!vistos.has(id)) return { id, andar: no.andar, ramo: no.ramo, pai: no.pai, visto: false };
+      return {
+        id, andar: no.andar, ramo: no.ramo, pai: no.pai, visto: true,
+        conteudos: no.conteudos.map(conteudo => {
+          const publico = { chave: conteudo.chave, tipo: conteudo.tipo, dv: conteudo.dv, feito: feitos.has(conteudo.chave) };
+          if (ehInimigo(conteudo)) Object.assign(publico, { inimigo: inimigoPublico(est, conteudo, nomeDaFicha), feito: !inimigoAtivo(est, conteudo) });
+          if (publico.feito && (conteudo.tipo === 'arquivo' || conteudo.tipo === 'controle')) Object.assign(publico, { nome: conteudo.nome, descricao: conteudo.descricao });
+          return publico;
+        })
+      };
+    });
+  }
+
+  // ---------------- Andar e as habilidades contra os andares ----------------
+  // O que há num andar, para o registro: "Senha DV 8, Hellhound".
+  const resumoDoAndar = (arq, id, nomeDaFicha) => conteudosDoNo(arq, id).map(c => (ehInimigo(c) ? nomeDoInimigo(c, nomeDaFicha) : `${TIPOS_DE_ANDAR[c.tipo]}${c.dv ? ` DV ${c.dv}` : ''}`)).join(', ') || 'vazio';
+  // Por que o netrunner não vai daqui para o destino (null: vai). Andar não é Ação NET; subir é livre; descer, só até a
+  // obstrução: a senha que ainda não foi quebrada e o Black ICE ou o demônio que seguram. O Kraken prende.
+  function motivoParaNaoAndar(arq, est, corredor, destino) {
+    if (!vizinhos(arq, corredor.no).includes(destino)) return 'Só dá para ir a um andar vizinho.';
+    if (!filhosDe(arq, corredor.no).includes(destino)) return null;
+    if (corredor.preso > 0) return 'O Kraken te prende: até o fim do seu próximo turno, não dá para avançar.';
+    const senha = conteudosDoNo(arq, corredor.no).find(conteudo => conteudo.tipo === 'senha' && !est.feitos.includes(conteudo.chave));
+    if (senha) return `A senha deste andar (DV ${senha.dv}) trava a descida: use Breach.`;
+    const preso = quemSegura(arq, est, corredor)[0];
+    if (!preso) return null;
+    return preso.tipo === 'demonio' ? `O demônio ${nomeDoInimigo(preso)} te segura: derrube a REZ dele (o Slide não funciona contra demônios).` : `O ${nomeDoInimigo(preso)} deste andar te segura: derrube a REZ dele ou use o Slide.`;
+  }
+  const SEM_ALVO = {
+    senha: 'Não há senha trancada neste andar.', arquivo: 'Não há arquivo por identificar neste andar.', controle: 'Não há nó de controle livre neste andar.',
+    inimigo: 'Não há inimigo ativo neste andar.', ice: 'Não há Black ICE ativo neste andar (o Slide não funciona contra demônios nem netrunners).'
+  };
+  // O alvo da habilidade aqui (o pedido, se houver). Devolve { alvo } ou { erro }.
+  function alvoDaHabilidade(arq, est, corredor, chave, pedido = '') {
+    const info = HABILIDADES[chave];
+    if (!info) return { erro: 'Habilidade desconhecida.' };
+    if (info.alvo === 'arquitetura') return { alvo: null };
+    if (info.alvo === 'fundo') return ehFundo(arq, corredor.no) ? { alvo: null } : { erro: 'O Virus só vai no andar mais fundo da arquitetura.' };
+    const candidatos = info.alvo === 'inimigo' || info.alvo === 'ice'
+      ? inimigosAtivos(arq, est, corredor.no).filter(conteudo => info.alvo === 'inimigo' || conteudo.tipo === 'ice')
+      : conteudosDoNo(arq, corredor.no).filter(conteudo => conteudo.tipo === info.alvo && !est.feitos.includes(conteudo.chave));
+    const alvo = candidatos.find(conteudo => conteudo.chave === pedido) || candidatos[0];
+    return alvo ? { alvo } : { erro: SEM_ALVO[info.alvo] };
+  }
+  // As Ações NET: em combate, as do rank por turno; fora dele, não contam. O mestre passa do limite. Gasta e devolve null,
+  // ou devolve o motivo de não poder.
+  function gastarAcoes(corredor, { emCombate, mestre = false, quantas = 1 }) {
+    if (!emCombate) return null;
+    if (!mestre && corredor.acoes + quantas > corredor.max) return `Sem Ações NET neste turno (${corredor.acoes} de ${corredor.max}).`;
+    corredor.acoes += quantas;
+    return null;
+  }
+  // O resultado da habilidade contra os andares (Interface + 1d10 > DV): o que muda no estado e a linha do registro
+  // ({ texto, tipo, segredo }). segredo: o que o arquivo e o nó revelam (vai para a janela da NET, não para o chat).
+  function resolverHabilidade(arq, est, corredor, { chave, alvo = null, total, texto = '' }) {
+    const nome = corredor.nome;
+    if (chave === 'pathfinder') {
+      const revelados = revelarPathfinder(arq, corredor.no, total).filter(id => !est.vistos.includes(id));
+      est.vistos = [...est.vistos, ...revelados];
+      return revelados.length ? { texto: `Pathfinder (${total}): ${nome} revelou ${revelados.length} ${revelados.length > 1 ? 'andares' : 'andar'}.`, tipo: 'ok' }
+        : { texto: `Pathfinder (${total}): nada novo à vista.`, tipo: 'falha' };
+    }
+    if (chave === 'cloak') {
+      corredor.rastro = total;
+      return { texto: `Cloak (${total}): ${nome} escondeu os rastros (DV ${total} para achá-los).`, tipo: 'ok' };
+    }
+    if (chave === 'virus') {
+      return total > arq.dv ? { texto: `Virus (${total} contra DV ${arq.dv}): ${nome} deixou um vírus${texto ? ` (“${texto}”)` : ''}; DV ${total} para tirá-lo.`, tipo: 'ok' }
+        : { texto: `Virus (${total} contra DV ${arq.dv}): o vírus não pegou.`, tipo: 'falha' };
+    }
+    const dv = alvo.dv || 0;
+    const contra = `${HABILIDADES[chave].nome} (${total} contra DV ${dv})`;
+    if (total <= dv) return { texto: `${contra}: ${nome} não passou ${{ backdoor: 'a senha', eyedee: 'o arquivo', control: 'o nó de controle' }[chave]}.`, tipo: 'falha' };
+    est.feitos = [...est.feitos, alvo.chave];
+    const segredo = chave === 'backdoor' ? '' : [alvo.nome, alvo.descricao].filter(Boolean).join(': ');
+    return { texto: `${contra}: ${nome} ${{ backdoor: 'quebrou a senha', eyedee: 'identificou o arquivo', control: 'tomou o nó de controle' }[chave]}.`, tipo: 'ok', segredo };
+  }
+  // O começo do turno do netrunner: as Ações NET voltam (com o Wisp, 1 a menos, mas no mínimo 2 livres), a prisão do
+  // Kraken anda e o Slide e os programas do turno voltam. Devolve as Ações NET já gastas no começo.
+  function comecoDoTurno(corredor) {
+    const acoes = corredor.menosAcoes ? Math.min(corredor.menosAcoes, Math.max(0, corredor.max - 2)) : 0;
+    Object.assign(corredor, { acoes, menosAcoes: 0, preso: Math.max(0, (corredor.preso || 0) - 1), slides: 0, programasNaRodada: [] });
+    return acoes;
+  }
+  // A desconexão segura com o Kraken: só a insegura.
+  const motivoParaNaoDesconectar = corredor => (corredor.preso > 0 ? 'O Kraken te prende: até o fim do seu próximo turno, só a desconexão insegura.' : null);
+
   return {
     ENTRADA, RAMOS, ANDAR_MAX, MAX_LINHAS, TIPOS_DE_ANDAR, COM_DV, DV_SEM_ANDARES, DIFICULDADES, BLACK_ICE, ICE_GENERICO, iceDe, DEMONIOS, demonioDe, TABELAS,
     limparLinha, limparAndares, lerArquitetura, filhosDe, paiDoNo, vizinhos, ehFundo, revelarPathfinder, gerarAndares,
-    novaLinha, lerPosicao, moverAndar, criarAndar, EXEMPLOS, acoesPorRank, PROGRAMAS, CLASSES_DE_PROGRAMA, programaDe, HARDWARE, hardwareDe
+    novaLinha, lerPosicao, moverAndar, criarAndar, EXEMPLOS, acoesPorRank, PROGRAMAS, CLASSES_DE_PROGRAMA, programaDe, HARDWARE, hardwareDe,
+    HABILIDADES, PONTO_PADRAO, RANGE_UPGRADE, alcanceDoPonto, faltasPara, assinaturaDe, estadoNovo, novoCorredor, registrar,
+    ehInimigo, rezMaxDe, rezDe, inimigoAtivo, conteudosDoNo, inimigosAtivos, nomeDoInimigo, quemSegura, mudarRez, acharConteudo, inimigoPublico,
+    vistaPublica, resumoDoAndar, motivoParaNaoAndar, alvoDaHabilidade, gastarAcoes, resolverHabilidade, comecoDoTurno, motivoParaNaoDesconectar
   };
 });

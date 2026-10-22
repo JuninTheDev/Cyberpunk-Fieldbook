@@ -183,6 +183,17 @@ function converter(cena, embutidos, atores, mundo) {
     midia: usar(tile.texture.src), x: tile.x - origemX, y: tile.y - origemY, largura: tile.width, altura: tile.height,
     rotacao: tile.rotation || 0, alpha: tile.alpha ?? 1, escondido: Boolean(tile.hidden)
   }));
+  // Os pontos de acesso da NET (M13): o tile com o ponto do NET Architect (Foundry 12) ou do sistema cpr-fieldbook (Foundry
+  // 14, o mesmo formato) vira o marcador da mesa, no centro do tile. A arquitetura vai pelo id do item (do uuid): a mesa
+  // troca pela que veio dele. O tile escondido deixa o ponto oculto; quem o Scanner achou no Foundry não vem.
+  const pontosNet = embutidos.tiles.map(tile => [tile, tile.flags && ((tile.flags['net-architect'] || {}).pontoDeAcesso || (tile.flags['cpr-fieldbook'] || {}).pontoDeAcesso)])
+    .filter(([, ponto]) => ponto && typeof ponto === 'object' && ponto.ativo !== false)
+    .map(([tile, ponto]) => ({
+      x: tile.x - origemX + (Number(tile.width) || 0) / 2, y: tile.y - origemY + (Number(tile.height) || 0) / 2,
+      nome: ponto.nome || 'Ponto de acesso', arqOrigem: ponto.arquitetura ? idDoAtor(ponto.arquitetura) : '',
+      alcance: ponto.alcance ?? 6, dv: Number(ponto.dv) || 0, exigeDeck: ponto.exigeDeck !== false, rankMinimo: ponto.rankMinimo ?? 1,
+      oculto: Boolean(ponto.oculto || tile.hidden), dvScanner: ponto.dvScanner ?? 10, reiniciar: ponto.reiniciar !== false
+    }));
   const paredes = embutidos.paredes.filter(parede => Array.isArray(parede.c) && parede.c.length === 4).map(parede => ({
     c: [parede.c[0] - origemX, parede.c[1] - origemY, parede.c[2] - origemX, parede.c[3] - origemY],
     porta: parede.door || 0, estado: parede.ds || 0, movimento: parede.move ?? 20, visao: parede.sight ?? 20, luz: parede.light ?? 20
@@ -209,7 +220,7 @@ function converter(cena, embutidos, atores, mundo) {
       grade: { tamanho, tipo: tipo === 0 ? 'nenhuma' : 'quadrada', metros: Number(grid.distance) || 2, unidade: grid.units || 'm', visivel: tipo !== 0, x: resto(deslocX, tamanho), y: resto(deslocY, tamanho) },
       // A visão liga como no Foundry (tokenVision) se ela muda alguma coisa: a cena tem paredes ou está no escuro. Com
       // luz global e sem paredes, ela só deixaria sem ver nada quem não tem token na cena.
-      nevoa: false, visao: Boolean(cena.tokenVision) && (paredes.length > 0 || !luz.global), luz, tokens, tiles, paredes, luzes, origem: { mundo, id: cena._id },
+      nevoa: false, visao: Boolean(cena.tokenVision) && (paredes.length > 0 || !luz.global), luz, tokens, tiles, paredes, luzes, pontosNet, origem: { mundo, id: cena._id },
       // A música da cena, com os ids do Foundry: a importação troca pelos da mesa depois de importar as playlists.
       musica: cena.playlist ? { playlist: cena.playlist, faixa: cena.playlistSound || null } : null
     }
@@ -437,7 +448,7 @@ async function importar(opcoes) {
     }, atores, mundo));
     if (opcoes.listar) {
       for (const { cena, avisos } of convertidas) {
-        log(`${cena.nome.padEnd(34)} ${cena.largura}×${cena.altura}  grade ${cena.grade.tipo === 'nenhuma' ? 'nenhuma' : `${cena.grade.tamanho}px = ${cena.grade.metros} ${cena.grade.unidade}`}  ${cena.tokens.length} tokens, ${cena.tiles.length} tiles, ${cena.paredes.length} paredes, ${cena.luzes.length} luzes${cena.musica ? ', com música' : ''}${avisos.length ? `  (${avisos.join('; ')})` : ''}`);
+        log(`${cena.nome.padEnd(34)} ${cena.largura}×${cena.altura}  grade ${cena.grade.tipo === 'nenhuma' ? 'nenhuma' : `${cena.grade.tamanho}px = ${cena.grade.metros} ${cena.grade.unidade}`}  ${cena.tokens.length} tokens, ${cena.tiles.length} tiles, ${cena.paredes.length} paredes, ${cena.luzes.length} luzes${cena.pontosNet.length ? `, ${cena.pontosNet.length} ${cena.pontosNet.length === 1 ? 'ponto' : 'pontos'} de acesso` : ''}${cena.musica ? ', com música' : ''}${avisos.length ? `  (${avisos.join('; ')})` : ''}`);
       }
       for (const playlist of audio.playlists) log(`♪ ${playlist.nome.padEnd(32)} ${playlist.canal === 'ambiente' ? 'ambiente' : 'música'}, ${playlist.faixas.length} ${playlist.faixas.length === 1 ? 'faixa' : 'faixas'}${playlist.faixas[0] && playlist.faixas[0].youtube ? ' do YouTube' : ''}`);
       for (const aviso of audio.avisos) log(`  (${aviso})`);
@@ -549,7 +560,7 @@ async function importar(opcoes) {
       if (resposta.status !== 200) throw new Error(`${cena.nome}: ${(resposta.dados && resposta.dados.erro) || resposta.texto}`);
       const r = resposta.dados.resultado;
       const semMapa = cena.imagem && !pronta.imagem ? ' · SEM O MAPA' : '';
-      log(`  ${cena.nome}: ${r.tokens} tokens, ${r.tiles} tiles, ${r.paredes} paredes, ${r.luzes} luzes${musica ? ', com música' : ''}${semMapa}${avisos.length ? ` (${avisos.join('; ')})` : ''}`);
+      log(`  ${cena.nome}: ${r.tokens} tokens, ${r.tiles} tiles, ${r.paredes} paredes, ${r.luzes} luzes${r.pontos ? `, ${r.pontos} ${r.pontos === 1 ? 'ponto' : 'pontos'} de acesso` : ''}${musica ? ', com música' : ''}${semMapa}${avisos.length ? ` (${avisos.join('; ')})` : ''}`);
       resultado.push({ nome: cena.nome, status: 'ok', ...r });
     }
     for (const aviso of audio.avisos) log(`  (${aviso})`);
