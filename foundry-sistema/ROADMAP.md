@@ -12,7 +12,8 @@ de compêndio; entram só as partes do sistema.
 - **Fontes:** o código do CORE 0.92.4 que a mesa usa (`cyberpunk-red-core/modules` no master) e a comparação do ciclo 22.
 - **As listas P0 a P4** mais abaixo ficam como histórico. Os itens abertos delas apontam para os deste plano (→ Cn).
 - **Fora deste plano:**
-  - o conteúdo: Black Chrome, DLCs, NPCs, arquiteturas e macros do CORE;
+  - o conteúdo dos compêndios do CORE: Black Chrome, DLCs, NPCs, arquiteturas e macros (as funções do sistema para eles,
+    como o capanga, a arquitetura e as macros, estão no plano: C2, C7, C8 e C20);
   - (voltou ao plano) as armas de 2077 pelo Mission Kit: adiadas pelo usuário em 2026-10-12, entram no plano desde
     2026-10-17 (decisão do usuário, com a "regra só na mesa" da wiki): o C29, parte das armas de 2077.
 
@@ -314,6 +315,56 @@ agentes de IA ficam no `AGENTS.md` da raiz):
     base Meat Arm ou Meat Leg): ciclo 126 (também a opção que só entra na fundação do lado dela e a migração da mesa
     sem a Meat Arm e a Meat Leg).
 
+### Fase 7: o que a comparação de 2026-10-22 achou
+
+Pedido do usuário (2026-10-22): listar o que ainda falta e o que seria bom ter, e seguir melhorando o sistema com as
+funções do CORE. A comparação foi feita de novo, por partes (as configurações, os ganchos e o chat; os itens e as
+rolagens; os atores e as fichas; as regras da wiki sem automação), contra o CORE 0.92.4 (`cyberpunk-red-core/modules`
+do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "bom de ter".
+
+**O que o CORE 0.92.4 tem e o sistema não:**
+- [~] **C31. HP e Humanidade dentro do máximo** (sessão KouArt, 2026-10-22): o atual nunca passa do máximo (o CORE,
+  `cpr-actor.js:370-380`), e com o HP cheio, o máximo que sobe (BODY, WILL) leva o atual junto
+  (`cpr-character-sheet.js:162-169`). Hoje o Desfazer e a cura à mão deixam passar, e quem sobe o BODY fica ferido.
+- [~] **C32. A ficha do personagem, o que falta do CORE** (sessão KouArt, 2026-10-22): o "+" que cria um item em branco
+  em cada lista (`cpr-actor-sheet.js:1693-1702`); a busca de perícias e itens (`:1660-1683`); descarregar a arma
+  (`cpr-loadable.js:57-62`) e trocar a munição na ficha (hoje só no Painel Tático); e, ao apagar um item com o que está
+  instalado nele, perguntar se apaga junto ou só tira (`cpr-container.js:11-21`).
+- [~] **C33. A mesa e o chat** (sessão KouArt, 2026-10-22): o modo de rolagem do Foundry (pública, só o mestre, às
+  cegas, só para si) nos cartões do sistema (`cpr-chat.js:21-50`, `hide-blind-rolls.js`); "Mostrar aos jogadores" no
+  clique direito da imagem das fichas (`cpr-imageContextMenu.js`); fechar a ficha do token solto que foi apagado
+  (`close-unlinked-sheet-on-delete.js`).
+- [ ] **C34. Os detalhes do CORE**, um ciclo por grupo: a aba de efeitos do ator; o +1 à mão na penalidade do Death
+  Save; escolher a armadura de cada local (o "track" do CORE); expandir e recolher as listas; a lesão repetida como
+  configuração (desligado, avisar, rolar de novo: o `preventDuplicateCriticalInjuries`); as perícias do capanga por
+  nível, base ou total; a confirmação ao apagar item e o jogador que cria itens (configurações do CORE); a SP na barra do
+  token; a árvore dos instalados no diretório de itens; a imagem padrão de cada tipo.
+- [ ] **C35. Gerar a cena da arquitetura** com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de
+  acesso é um Tile numa cena que já existe.
+
+**As regras da wiki com número que o sistema ainda não aplica** (fonte: `system-rules.js`):
+- [ ] **C36. Estabilizar e a cura natural** (p. 222–223, `:552`): TECH + Primeiros Socorros ou Paramédico contra DV10,
+  13 ou 15 pelo ferimento; o mortal estabilizado volta a 1 HP, inconsciente por 1 minuto; descansar um dia devolve HP
+  igual ao BODY (o Skin Weave e o Subdermal Armor, +1 SP por dia; o Reinforced Antibodies, o dobro).
+- [ ] **C37. Arremessar** (p. 177, `:535`): DEX + Atletismo + 1d10, até 25 m, contra a DV da linha do lança-granadas;
+  a granada de mão pela área.
+- [ ] **C38. Os perigos do ambiente** (`:556-562`): a queda, o fogo pela intensidade (2, 4 ou 6), a eletrocução, o
+  afogamento e a asfixia, a radiação e o veneno; o mestre aplica pelo cartão.
+- [ ] **C39. Gastar IP** (p. 411, `:712`): o custo de subir perícia (20 × o nível novo, o dobro nas difíceis) e Rank
+  (60 × o Rank novo), um nível por vez, pelo extrato.
+- [ ] **C40. Veículos fora do dano** (`:538`): a direção sob pressão, as manobras, a batida e desviar a pé.
+- [ ] **C41. O resto:** correr (a Ação de Movimento a mais, `:501` e `:514`), o escudo humano (`:537`), a Reputação ao
+  conhecer alguém (`:539`), o hospital e a instalação de cyberware (`:564`), o Cryopump e o Cryotank
+  (`system-catalog.js:218-228`).
+
+**O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
+- [ ] **C42. Dice So Nice:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
+  `dice-so-nice-preset.js`).
+- [ ] **C43. Da 0.93:** o navegador de itens e atores (a loja da wiki já é o carrinho); os modificadores `red` e `dmg`
+  nas fórmulas (`/r 1d10red`); o crítico configurável por arma e munição; o upgrade com modificador negativo; os
+  marcadores de turno; o tema do sistema no resto do Foundry.
+- [ ] **C44. A régua com Andar e Correr** (o `drag-ruler.js` do CORE), junto da DV que ela já mostra.
+
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
 - o MIGRATION_STATUS com o ciclo.
@@ -417,7 +468,8 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [x] **A janela de rolagem no resto** (Ciclo 27): no computador do jogador, a esquiva e a Concentração que o mestre
   pede (dentro do prazo: a janela fecha quando ele desiste ou responde por ele), o dano que ele rola e o Death Save do
   começo do turno; na ficha, o botão do dano e o do Death Save. Com isso, o P1 fecha.
-- [ ] **Notado na divisão do combate** (ciclo 149, sem reprodução; conferir antes de mudar): o "Rolar a lesão" do cartão
+- [~] **Notado na divisão do combate** (sessão KouArt, 2026-10-22; confirmado lendo o código: o Desfazer soma o HP de
+  volta, então o clique duplo devolve duas vezes) (ciclo 149, sem reprodução; conferir antes de mudar): o "Rolar a lesão" do cartão
   marca o alvo mesmo quando a lesão não foi criada (uma criação recusada impede tentar de novo naquele cartão); o
   Desfazer confere o `desfeito` no começo e grava no fim (dois cliques ao mesmo tempo podem passar os dois).
 
