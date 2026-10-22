@@ -350,7 +350,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   a granada de mão pela área.
 - [ ] **C38. Os perigos do ambiente** (`:556-562`): a queda, o fogo pela intensidade (2, 4 ou 6), a eletrocução, o
   afogamento e a asfixia, a radiação e o veneno; o mestre aplica pelo cartão.
-- [ ] **C39. Gastar IP** (p. 411, `:712`): o custo de subir perícia (20 × o nível novo, o dobro nas difíceis) e Rank
+- [~] **C39. Gastar IP** (sessão KouArt, com o Codex, 2026-10-22) (p. 411, `:712`): o custo de subir perícia (20 × o nível novo, o dobro nas difíceis) e Rank
   (60 × o Rank novo), um nível por vez, pelo extrato.
 - [ ] **C40. Veículos fora do dano** (`:538`): a direção sob pressão, as manobras, a batida e desviar a pé.
 - [ ] **C41. O resto:** correr (a Ação de Movimento a mais, `:501` e `:514`), o escudo humano (`:537`), a Reputação ao
