@@ -8,6 +8,7 @@ sem ela, o painel para acrescentar. --}}
     <aside class="coluna-resumo">
       <section class="painel corte">
         <div class="titulo">{{#if principal}}ROLE{{else}}SEGUNDA ROLE{{/if}}<span>{{#if roleDaWiki}}{{roleDaWiki.habilidade}} · RANK {{rank}}{{else}}RANK {{rank}}{{/if}}</span></div>
+        {{#if @root.editavel}}{{#if nome}}{{#if (lt rank 10)}}<div class="botoes-resumo"><button type="button" class="acao" data-action="avancarComIp" data-role="{{chave}}" data-tooltip="Subir um Rank gastando IP">SUBIR RANK COM IP</button></div>{{/if}}{{/if}}{{/if}}
         {{#unless principal}}
         <p class="segunda-role-campos">
           <input type="text" name="{{caminho}}.nome" value="{{nome}}" placeholder="ROLE" list="cprf-roles-{{../ator.id}}" aria-label="Segunda Role">

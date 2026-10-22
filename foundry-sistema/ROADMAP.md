@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 155). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 156). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -353,7 +353,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   a granada de mão pela área.
 - [ ] **C38. Os perigos do ambiente** (`:556-562`): a queda, o fogo pela intensidade (2, 4 ou 6), a eletrocução, o
   afogamento e a asfixia, a radiação e o veneno; o mestre aplica pelo cartão.
-- [~] **C39. Gastar IP** (sessão KouArt, com o Codex, 2026-10-22) (p. 411, `:712`): o custo de subir perícia (20 × o nível novo, o dobro nas difíceis) e Rank
+- [x] **C39. Gastar IP:** feito no ciclo 155 (sessão KouArt, com o Codex, 2026-10-22) (p. 411, `:712`): o custo de subir perícia (20 × o nível novo, o dobro nas difíceis) e Rank
   (60 × o Rank novo), um nível por vez, pelo extrato.
 - [ ] **C40. Veículos fora do dano** (`:538`): a direção sob pressão, as manobras, a batida e desviar a pé.
 - [ ] **C41. O resto:** correr (a Ação de Movimento a mais, `:501` e `:514`), o escudo humano (`:537`), a Reputação ao

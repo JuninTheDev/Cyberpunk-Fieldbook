@@ -2162,6 +2162,134 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('gastar IP (C39, wiki p. 411): na ficha, Armas de uma Mão 4 → 5 custa 100 e 5 → 6 mais 120; cancelar e clicar duas vezes não gasta; sem saldo recusa; o Rank da Role principal e da segunda custa 300 para 4 → 5; o extrato e o chat guardam cada avanço; uma confirmação com saldo mudado recusa, e uma atualização parcial devolve os IP e o extrato', async () => {
+      // system-rules.js:242–246 e :712: os custos são do nível novo; os exemplos são 100, 120 e 300 IP.
+      // Handgun aparece como "Armas de uma Mão" na tabela da wiki (:97) e no catálogo do sistema.
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const aplicativos = new Set(foundry.applications.instances.keys()), mensagensAntes = new Set(game.messages.keys()), atores = [], avisos = [];
+        const texto = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const perguntas = () => [...document.querySelectorAll('.application.dialog.gastar-ip:not(.minimizing)')];
+        const pergunta = () => perguntas()[0];
+        let a, ganchoParcial;
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try {
+          a = await Actor.implementation.create({ name: 'Teste Gastar IP', type: 'personagem', system: {
+            pontosDeMelhoria: 230, pericias: { handgun: { nivel: 4 } },
+            role: { nome: 'Solo', rank: 4, habilidades: {} }, roleSecundaria: { nome: 'Fixer', rank: 4, habilidades: {} }
+          } });
+          atores.push(a);
+          const cartas = () => game.messages.filter(m => m.getFlag('${S}', 'avanco')?.ator === a.uuid);
+          const ler = () => {
+            const s = a._source.system;
+            return { saldo: s.pontosDeMelhoria, nivel: s.pericias.handgun.nivel, rank: s.role.rank, segunda: s.roleSecundaria.rank,
+              linhas: s.extratos.pontosDeMelhoria.map(l => ({ acao: l.acao, delta: l.delta, saldo: l.saldo, motivo: l.motivo, usuario: l.usuario })),
+              cartas: cartas().map(m => ({ ...m.getFlag('${S}', 'avanco'), texto: texto(new DOMParser().parseFromString(m.content, 'text/html').body), publica: !m.whisper.length && !m.blind }))
+            };
+          };
+          await a.sheet.render({ force: true });
+          const f = () => a.sheet.element;
+          const botao = seletor => f()?.querySelector('[data-action="avancarComIp"]' + seletor);
+          await esperar(() => botao('[data-pericia="handgun"]'));
+          const botoes = { pericia: Boolean(botao('[data-pericia="handgun"]')), principal: Boolean(botao('[data-role="role"]')), segunda: Boolean(botao('[data-role="roleSecundaria"]')) };
+          if (!Object.values(botoes).every(Boolean)) return { botoes, avisos };
+          // O segundo clique chega antes da resposta: só uma pergunta; cancelar deixa saldo, nível e histórico iguais.
+          botao('[data-pericia="handgun"]').click();
+          botao('[data-pericia="handgun"]').click();
+          await esperar(() => pergunta()?.querySelector('button[data-action="no"]'));
+          const nPerguntas = perguntas().length, cancelamento = texto(pergunta()?.querySelector('.dialog-content'));
+          for (const p of perguntas()) p.querySelector('button[data-action="no"]')?.click();
+          await esperar(() => !pergunta());
+          const cancelou = { ...ler(), perguntas: nPerguntas, confirmacao: cancelamento };
+          const avancar = async (seletor, saldo, nivel, linhas) => {
+            await esperar(() => botao(seletor));
+            botao(seletor)?.click();
+            await esperar(() => pergunta()?.querySelector('button[data-action="yes"]'));
+            const confirmacao = texto(pergunta()?.querySelector('.dialog-content'));
+            pergunta()?.querySelector('button[data-action="yes"]')?.click();
+            await esperar(() => !pergunta() && a._source.system.pontosDeMelhoria === saldo && a._source.system.pericias.handgun.nivel === nivel && cartas().length === linhas);
+            return { ...ler(), confirmacao };
+          };
+          const primeiro = await avancar('[data-pericia="handgun"]', 130, 5, 1);
+          const segundo = await avancar('[data-pericia="handgun"]', 10, 6, 2);
+          const nAvisos = avisos.length;
+          botao('[data-pericia="handgun"]')?.click();
+          await esperar(() => avisos.length > nAvisos || pergunta());
+          const semSaldo = { ...ler(), perguntou: Boolean(pergunta()), avisos: avisos.slice(nAvisos) };
+          // Se uma regressão abriu uma pergunta sem saldo, cancela para o restante do passo continuar e registrar o erro.
+          for (const p of perguntas()) p.querySelector('button[data-action="no"]')?.click();
+          await esperar(() => !pergunta());
+          await a.update({ 'system.pontosDeMelhoria': 600 }, { cprfExtrato: true });
+          a.sheet.changeTab('role', 'primary');
+          const principal = await avancar('[data-role="role"]', 300, 6, 3);
+          const segunda = await avancar('[data-role="roleSecundaria"]', 0, 6, 4);
+          // O saldo não fica reservado pela pergunta. Uma mudança durante o await invalida o preço confirmado.
+          await a.update({ 'system.pontosDeMelhoria': 600 }, { cprfExtrato: true });
+          a.sheet.changeTab('pericias', 'primary');
+          await esperar(() => botao('[data-pericia="handgun"]'));
+          botao('[data-pericia="handgun"]')?.click();
+          await esperar(() => pergunta()?.querySelector('button[data-action="yes"]'));
+          const confirmacaoAntiga = texto(pergunta()?.querySelector('.dialog-content')), nAvisosAntes = avisos.length;
+          await a.update({ 'system.pontosDeMelhoria': 500 }, { cprfExtrato: true });
+          pergunta()?.querySelector('button[data-action="yes"]')?.click();
+          await esperar(() => !pergunta() && avisos.length > nAvisosAntes);
+          const desatualizada = { ...ler(), confirmacao: confirmacaoAntiga, avisos: avisos.slice(nAvisosAntes) };
+          // client/data/client-backend.mjs:238–249: preUpdateActor pode alterar os dados antes da validação final.
+          // Retira só o nível 7; o débito e a linha chegam ao servidor, e a compensação precisa devolver ambos.
+          const cortes = [], nAvisosParcial = avisos.length;
+          ganchoParcial = Hooks.on('preUpdateActor', (ator, dados) => {
+            const lerCampo = caminho => foundry.utils.getProperty(dados, caminho) ?? dados[caminho];
+            if (ator !== a || lerCampo('system.pericias.handgun.nivel') !== 7) return;
+            cortes.push({ nivel: lerCampo('system.pericias.handgun.nivel'), saldo: lerCampo('system.pontosDeMelhoria'), linhas: lerCampo('system.extratos.pontosDeMelhoria')?.length });
+            if (dados.system?.pericias?.handgun) delete dados.system.pericias.handgun.nivel;
+            delete dados['system.pericias.handgun.nivel'];
+          });
+          const compraParcial = game.system.api.avanco.avancarComIp(a, { pericia: 'handgun' });
+          await esperar(() => pergunta()?.querySelector('button[data-action="yes"]'));
+          const confirmacaoParcial = texto(pergunta()?.querySelector('.dialog-content'));
+          pergunta()?.querySelector('button[data-action="yes"]')?.click();
+          const resultadoParcial = await compraParcial;
+          await esperar(() => !pergunta());
+          const parcial = { ...ler(), resultado: resultadoParcial, confirmacao: confirmacaoParcial, cortes, avisos: avisos.slice(nAvisosParcial) };
+          return { botoes, cancelou, primeiro, segundo, semSaldo, principal, segunda, desatualizada, parcial, avisos };
+        } finally {
+          if (ganchoParcial) Hooks.off('preUpdateActor', ganchoParcial);
+          delete ui.notifications.warn;
+          for (const app of [...foundry.applications.instances.values()]) if (!aplicativos.has(app.id) && (app.options.classes.includes('gastar-ip') || atores.some(ator => app === ator.sheet || app.ator === ator))) await app.close();
+          for (const ator of atores) {
+            const mensagens = game.messages.filter(m => !mensagensAntes.has(m.id) && (m.speaker.actor === ator.id || m.getFlag('${S}', 'avanco')?.ator === ator.uuid)).map(m => m.id);
+            if (mensagens.length) await ChatMessage.implementation.deleteDocuments(mensagens);
+            await ator.sheet?.close();
+            await ator.delete();
+          }
+        }
+      })()`);
+      const { cancelou, primeiro, segundo, semSaldo, principal, segunda, desatualizada, parcial } = info;
+      const igual = (valor, esperado) => JSON.stringify(valor) === JSON.stringify(esperado);
+      const linhas = [
+        { acao: 'subtrair', delta: -100, saldo: 130, motivo: 'Armas de uma Mão 4 → 5', usuario: 'Gamemaster' },
+        { acao: 'subtrair', delta: -120, saldo: 10, motivo: 'Armas de uma Mão 5 → 6', usuario: 'Gamemaster' },
+        { acao: 'subtrair', delta: -300, saldo: 300, motivo: 'Solo 4 → 5', usuario: 'Gamemaster' },
+        { acao: 'subtrair', delta: -300, saldo: 0, motivo: 'Fixer 4 → 5', usuario: 'Gamemaster' }
+      ];
+      const ok = Object.values(info.botoes).every(Boolean)
+        && cancelou?.perguntas === 1 && cancelou.confirmacao === 'Armas de uma Mão 4 → 5 por 100 IP? Você tem 230.'
+        && cancelou.saldo === 230 && cancelou.nivel === 4 && cancelou.rank === 4 && cancelou.segunda === 4 && cancelou.linhas.length === 0 && cancelou.cartas.length === 0
+        && primeiro?.saldo === 130 && primeiro.nivel === 5 && igual(primeiro.linhas, linhas.slice(0, 1)) && primeiro.confirmacao === cancelou.confirmacao
+        && segundo?.saldo === 10 && segundo.nivel === 6 && igual(segundo.linhas, linhas.slice(0, 2)) && segundo.confirmacao === 'Armas de uma Mão 5 → 6 por 120 IP? Você tem 130.'
+        && semSaldo?.saldo === 10 && semSaldo.nivel === 6 && !semSaldo.perguntou && semSaldo.avisos.length === 1 && /IP/.test(semSaldo.avisos[0]) && igual(semSaldo.linhas, linhas.slice(0, 2)) && semSaldo.cartas.length === 2
+        && principal?.saldo === 300 && principal.rank === 5 && principal.segunda === 4 && igual(principal.linhas, linhas.slice(0, 3)) && principal.confirmacao === 'Solo 4 → 5 por 300 IP? Você tem 600.'
+        && segunda?.saldo === 0 && segunda.rank === 5 && segunda.segunda === 5 && igual(segunda.linhas, linhas) && segunda.confirmacao === 'Fixer 4 → 5 por 300 IP? Você tem 300.'
+        && segunda.cartas.length === 4 && segunda.cartas.every((c, i) => c.publica && c.motivo === linhas[i].motivo && c.custo === -linhas[i].delta && c.saldo === linhas[i].saldo && c.texto.includes('Teste Gastar IP') && c.texto.includes(c.motivo) && c.texto.includes(String(c.custo)) && c.texto.includes(String(c.saldo)))
+        && desatualizada?.saldo === 500 && desatualizada.nivel === 6 && desatualizada.rank === 5 && desatualizada.segunda === 5
+        && desatualizada.confirmacao === 'Armas de uma Mão 6 → 7 por 140 IP? Você tem 600.' && desatualizada.avisos.length === 1 && igual(desatualizada.linhas, linhas) && desatualizada.cartas.length === 4
+        && parcial?.resultado === null && parcial.saldo === 500 && parcial.nivel === 6 && parcial.rank === 5 && parcial.segunda === 5
+        && parcial.confirmacao === 'Armas de uma Mão 6 → 7 por 140 IP? Você tem 500.' && igual(parcial.cortes, [{ nivel: 7, saldo: 360, linhas: 5 }])
+        && parcial.avisos.length === 1 && parcial.avisos[0] === 'O avanço foi recusado; nenhuma compra foi concluída.' && igual(parcial.linhas, linhas) && parcial.cartas.length === 4
+        && info.avisos.length === 3;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('inventário: o Agent vale carregando (+2 em Pesquisa em Biblioteca) e não guardado; o Medscanner, só equipado; o Boost liga pela ficha do item (+2 INT); a ficha lista e troca o uso, e muda a quantidade com − e + (sem passar de 0 e sem erro no 0); o "Usar" do equipamento ligado à mão liga e desliga o efeito (na linha e na ficha do item)', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();

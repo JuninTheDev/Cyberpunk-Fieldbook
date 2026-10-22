@@ -152,6 +152,17 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C39, gastar IP (2026-10-22, worker do Codex da sessão KouArt):** o CORE 0.92.4 só tem o ledger do IP
+  (`cpr-ledger-form.js:86-151`, `cpr-actor.js:754-795`), sem a compra do avanço: a regra é a da wiki (`system-rules.js:242-245`,
+  a tabela dos níveis e Ranks 1 a 10, e `:712`, p. 411, o avanço um por vez, a perícia nova no nível 1 e os exemplos de
+  100, 120 e 300 IP). A "Pistola" do exemplo da wiki é a perícia "Armas de uma Mão" do catálogo (`system-rules.js:97`).
+  As dúvidas:
+  - **o tempo no nível novo** ("passe um tempo no nível novo antes de subir de novo") fica com o mestre: a wiki não diz
+    quanto;
+  - **o teto da perícia** saiu da tabela de avanço, que termina no 10 (o Rank 10 é explícito na wiki, `:697`);
+  - **os campos de nível continuam editáveis** para os ajustes à mão, sem passar pelo IP;
+  - **a trava do clique duplo é deste cliente:** duas compras ao mesmo tempo em dois navegadores não se coordenam.
+
 - **C32, a ficha do personagem (2026-10-22, worker da sessão KouArt):** as referências são o CORE 0.92.4: o "+"
   (`cpr-actor-sheet.js:1693-1702`, `en.json:16`, "New {item}"), a busca (`:1660-1683` e `register-helpers.js:977-987`),
   descarregar e trocar (`cpr-loadable.js:57-62`, `:107-113` e `:131-134`) e o apagar (`cpr-container.js:11-21`;
@@ -7606,6 +7617,40 @@ sem conflito com os ciclos 152 e 153.
   o item novo só com o nome do tipo (M7), a busca sem todas as perícias (M8), o cyberware que não se desinstala (M9) e as
   duas descargas ao apagar (M11 e M12).
 - **Próximo:** o C39 (gastar IP, com o Codex).
+
+### Ciclo 155 (2026-10-22): o C39, gastar IP (sessão KouArt, com o Codex)
+
+Commit anterior: `e1343552` (o ciclo 154, o C32). O código e os testes saíram do Codex (`codex exec`, numa worktree
+própria a partir do `3f0be39e`), revisados e integrados aqui pelo patch. Na revisão, o "+IP" da perícia trocou a classe
+`tirar` (a do ✕ que tira a perícia: vermelha no hover, e os passos antigos do G4 acham o ✕ por `.tirar[data-pericia]`)
+pela `subir-ip`, com o estilo próprio no `tema.css`.
+
+- **O que muda:**
+  - **`scripts/regras-avanco.mjs` (novo):** `avancoComIp`, a conta pura: o custo pelo nível novo (20 × na perícia, 40 ×
+    na difícil, 60 × no Rank), um nível por vez, o teto 10 e o saldo;
+  - **`scripts/avanco.mjs` (novo):** `avancarComIp(ator, { pericia | role })`, um por ator neste cliente: a confirmação
+    com o custo e o saldo, a releitura depois dela (a perícia, a Role ou o saldo que mudou recusa), o nível, o débito e a
+    linha do extrato numa gravação só (como o `mudarComExtrato`), o cartão no chat; uma gravação que um gancho cortou
+    volta inteira (`compensarAvanco`, sem apagar o que mudou depois). A dificuldade vem de `system.pericia(id).dificil`
+    (o catálogo e as famílias), sem lista nova. O capanga é recusado (não tem extrato de IP);
+  - **a ficha:** o "+IP" de cada perícia (abaixo do nível 10) e o "SUBIR RANK COM IP" das duas Roles, para quem edita a
+    ficha; a ação `avancarComIp`; a API em `game.system.api.avanco`.
+- **Fica de fora:** ver as dúvidas. A tabela de ganho de IP por sessão (`system-rules.js:248` e `:713`) continua com o
+  mestre, pelo extrato.
+- **Testes:**
+  - **G3:** `avanco.test.mjs` (7 testes: os 30 custos contra a tabela da própria wiki, os exemplos, a perícia nova, o
+    saldo exato e o que falta, os saltos, o teto, a dificuldade do catálogo e das famílias) e `avanco-aplicacao.test.mjs`
+    (com o Foundry de mentira: as duas Roles, as permissões, o cancelar, a confirmação desatualizada, o clique duplo e a
+    gravação parcial desfeita);
+  - **G4:** um passo novo, depois do extrato: Armas de uma Mão 4 → 5 → 6 por 100 e 120 (saldos 130 e 10), a recusa sem
+    saldo, o Solo e o Fixer 4 → 5 por 300 cada, a confirmação, o extrato e os quatro cartões, o cancelar, o clique duplo,
+    o saldo mudado durante a confirmação e o gancho que grava o débito sem o nível, com a compra desfeita.
+- **Portões:** G1, 186 arquivos sem erro; G2, nenhum erro; G3, 388/388; G4 completo, 226/226, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito do Codex caíram no G3, uma por vez (a perícia pela metade, M1; a difícil sem o dobro, M2; a Role
+  pelo preço da perícia, M3; sem saldo, M4; o salto, M5; o teto, M6; o extrato que soma, M7; a compra recusada que não
+  volta, M8), e a M7 e a M8 também no G4.
+- **Próximo:** os itens abertos da Fase 7 (C34 a C38, C40 a C44); o C28 e as perguntas abertas são do usuário.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

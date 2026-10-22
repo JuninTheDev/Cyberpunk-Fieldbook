@@ -54,6 +54,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
           <a class="estrela {{#if favorita}}ligada{{/if}}" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Favorita: fica no painel Favoritos da aba Combate e na barra do Painel Tático" role="button" tabindex="0" aria-label="Perícia favorita: {{nome}}" aria-pressed="{{#if favorita}}true{{else}}false{{/if}}"><i class="fa-solid fa-star"></i></a>
           <a class="nome draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros" role="button" tabindex="0" aria-label="Rolar {{nome}}">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>
           {{#if tirar}}<a class="tirar" data-action="tirarPericia" data-pericia="{{id}}" data-tooltip="Tirar esta perícia da ficha" role="button" tabindex="0" aria-label="Tirar {{nome}} da ficha">✕</a>{{/if}}
+          {{#if (eq @root.ator.type "personagem")}}{{#if @root.editavel}}{{#if (lt nivel 10)}}<a class="subir-ip" data-action="avancarComIp" data-pericia="{{id}}" data-tooltip="Subir um nível gastando IP" role="button" tabindex="0" aria-label="Gastar IP para subir {{nome}}">+IP</a>{{/if}}{{/if}}{{/if}}
         </span>
         <span class="sigla">{{sigla}}</span>
         <input type="number" name="system.pericias.{{id}}.nivel" value="{{nivel}}" min="0" max="10" aria-label="Nível de {{nome}}">

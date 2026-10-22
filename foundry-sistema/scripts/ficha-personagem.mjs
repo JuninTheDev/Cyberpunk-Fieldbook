@@ -8,6 +8,7 @@ import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
+import { avancarComIp } from './avanco.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { levantar, movimentoDe } from './estados.mjs';
 import { levarItem } from './conteiner.mjs';
@@ -128,6 +129,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       prepararArmaVeicular: FichaPersonagem.#prepararArmaVeicular,
       prepararSorte: FichaPersonagem.#prepararSorte,
       abrirExtrato: FichaPersonagem.#abrirExtrato,
+      avancarComIp: FichaPersonagem.#avancarComIp,
       pagarMes: FichaPersonagem.#pagarMes,
       recarregarSorte: FichaPersonagem.#recarregarSorte,
       alternarCoronha: FichaPersonagem.#alternarCoronha,
@@ -670,6 +672,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #prepararSorte(evento, alvo) { return this.actor.prepararSorte(this.actor.sortePreparada + Number(alvo.dataset.delta)); }
   static #recarregarSorte() { return this.actor.recarregarSorte(); }
   static #abrirExtrato(evento, alvo) { return abrirExtrato(this.actor, alvo.dataset.campo); }
+  static #avancarComIp(evento, alvo) { return this.isEditable ? avancarComIp(this.actor, { pericia: alvo.dataset.pericia, role: alvo.dataset.role }) : null; }
   // "Pagar o mês" na aba Vida (o C22; a regra do criador da wiki, passo 6; o CORE só guarda os campos): no dia 1º de cada
   // mês, o aluguel, o estilo de vida e o Trauma Team saem dos Eurodólares, pelo extrato, depois da confirmação.
   static async #pagarMes() {

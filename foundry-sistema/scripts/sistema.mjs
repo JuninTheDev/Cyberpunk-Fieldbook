@@ -3,6 +3,7 @@
 // dos dados. A API fica em game.system.api (macros e testes).
 import * as agarrao from './agarrao.mjs';
 import * as artesMarciais from './artes-marciais.mjs';
+import * as avanco from './avanco.mjs';
 import { registrarArmasDoCyberware, sincronizarArmaMontada } from './armas-cyberware.mjs';
 import * as neuroport from './neuroport.mjs';
 import * as combate from './combate.mjs';
@@ -96,7 +97,7 @@ Hooks.once('init', () => {
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
   reguaDv.registrarReguaDv();
-  game.system.api = { agarrao, artesMarciais, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
+  game.system.api = { agarrao, artesMarciais, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });
