@@ -4,7 +4,8 @@
 // a imagem e o HP do ator.
 // Traz também o áudio: as playlists do Foundry (com as músicas), a biblioteca do yt-jukebox (os vídeos do YouTube) e a
 // música de cada cena. E os atores que não são a ficha da wiki viram fichas de NPC do mestre (antes das cenas: o token
-// do ator vira a ficha dele).
+// do ator vira a ficha dele). E as arquiteturas da NET: as do NET Architect (Foundry 12, o compêndio do mundo) e as do
+// sistema do Foundry 14 (os itens do mundo e os compêndios do mundo).
 //
 // Lê o banco do Foundry com o classic-level do próprio Foundry instalado (nada novo para instalar), numa cópia (o Foundry
 // pode estar aberto), e manda tudo pela API da mesa, como o mestre faria. Não muda nada no Foundry.
@@ -19,7 +20,8 @@
 //   --cenas "A; B"    só estas cenas (pelo nome)
 //   --sem-audio       sem as playlists (e sem a música das cenas)
 //   --sem-npcs        sem as fichas de NPC (os tokens viram a ficha da wiki pelo nome, ou token livre)
-//   --substituir      troca as cenas, as playlists e as fichas de NPC já importadas deste mundo
+//   --sem-net         sem as arquiteturas da NET
+//   --substituir      troca as cenas, as playlists, as fichas de NPC e as arquiteturas já importadas deste mundo
 //   --foundry-app DIR a pasta do Foundry instalado (de onde vem o classic-level)
 const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
@@ -82,7 +84,7 @@ async function lerBanco(ClassicLevel, pasta) {
 
 // ---------------- De onde vêm os arquivos: o .tar do backup ou a pasta Data do Foundry ----------------
 // Os bancos do mundo que a importação lê (o yt-jukebox guarda a biblioteca nas configurações do mundo).
-const BANCOS = ['scenes', 'actors', 'folders', 'playlists', 'settings'];
+const BANCOS = ['scenes', 'actors', 'folders', 'playlists', 'settings', 'items'];
 // No Windows, o tar do sistema: o do Git Bash (GNU) lê "C:" como outro computador.
 const TAR = process.platform === 'win32' && fs.existsSync(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe'))
   ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
@@ -102,9 +104,12 @@ function origemTar(tar, mundo, trabalho) {
   };
   fs.mkdirSync(path.join(trabalho, 'arquivos'), { recursive: true });
   extrair(BANCOS.map(nome => `${prefixo}worlds/${mundo}/data/${nome}`).filter(membro => existe.has(membro)));
+  // Os compêndios do mundo (o NET Architect guarda as arquiteturas no "Arquiteturas da NET").
+  extrair([`${prefixo}worlds/${mundo}/packs`].filter(membro => existe.has(membro)));
   const base = path.join(trabalho, 'arquivos', prefixo);
   return {
     banco: nome => path.join(base, 'worlds', mundo, 'data', nome),
+    pacotes: path.join(base, 'worlds', mundo, 'packs'),
     buscar(caminhos) { extrair(caminhos.filter(caminho => existe.has(`${prefixo}${caminho}`)).map(caminho => `${prefixo}${caminho}`)); },
     arquivo: caminho => path.join(base, caminho)
   };
@@ -116,7 +121,9 @@ function origemDados(dados, mundo, trabalho) {
     const de = path.join(dados, 'worlds', mundo, 'data', nome);
     if (fs.existsSync(de)) fs.cpSync(de, path.join(trabalho, nome), { recursive: true, filter: origem => path.basename(origem) !== 'LOCK' });
   }
-  return { banco: nome => path.join(trabalho, nome), buscar() {}, arquivo: caminho => path.join(dados, caminho) };
+  const pacotes = path.join(dados, 'worlds', mundo, 'packs');
+  if (fs.existsSync(pacotes)) fs.cpSync(pacotes, path.join(trabalho, 'packs'), { recursive: true, filter: origem => path.basename(origem) !== 'LOCK' });
+  return { banco: nome => path.join(trabalho, nome), pacotes: path.join(trabalho, 'packs'), buscar() {}, arquivo: caminho => path.join(dados, caminho) };
 }
 
 // ---------------- Da cena do Foundry para a da mesa ----------------
@@ -335,6 +342,49 @@ function converterAtores(atores, pastas, mundo) {
 }
 
 // ---------------- A mesa ----------------
+// ---------------- As arquiteturas da NET (M13) ----------------
+// Do Foundry 12: o item netarch do CORE (system.floors: o andar, o ramo, o conteúdo, a DV, o Black ICE e a descrição), com
+// os demônios e os netrunners inimigos nas flags do NET Architect (defensores). Do Foundry 14 (o sistema cpr-fieldbook): a
+// arquitetura já em linhas (system.andares, como a da mesa). O netrunner inimigo aponta para o ator (o uuid): a importação
+// troca pela ficha de NPC que veio dele (atorParaNpc), ou deixa só o nome.
+const CONTEUDO_DO_CORE = {
+  'CPR.netArchitecture.floor.options.password': 'senha', 'CPR.netArchitecture.floor.options.file': 'arquivo',
+  'CPR.netArchitecture.floor.options.controlnode': 'controle', 'CPR.global.programClass.blackice': 'ice'
+};
+const ICE_DO_CORE = 'CPR.netArchitecture.floor.options.blackIce.';
+// O texto sem o HTML: as marcas de dentro da frase (negrito, itálico, link) saem sem deixar espaço; os parágrafos viram espaço.
+const semHtml = texto => String(texto || '').replace(/<\/?(?:b|i|em|strong|u|span|a)\b[^>]*>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const idDoAtor = uuid => String(uuid || '').split('.').pop();
+function converterArquiteturas(itens, mundo) {
+  const arquiteturas = [];
+  for (const item of itens) {
+    if (!item || (item.type !== 'netarch' && item.type !== 'arquitetura')) continue;
+    let andares;
+    if (item.type === 'netarch') {
+      andares = ((item.system && item.system.floors) || []).map(andar => {
+        const tipo = CONTEUDO_DO_CORE[andar.content] || 'vazio';
+        const ice = tipo === 'ice' && String(andar.blackice || '').startsWith(ICE_DO_CORE) ? andar.blackice.slice(ICE_DO_CORE.length) : '';
+        return { andar: Number(andar.floor), ramo: andar.branch || 'a', tipo, dv: Number(andar.dv) || 0, ice, descricao: semHtml(andar.description) };
+      });
+      const defensores = (item.flags && item.flags['net-architect'] && item.flags['net-architect'].defensores) || [];
+      for (const def of defensores) {
+        andares.push({ andar: Number(def.andar), ramo: def.ramo || 'a', tipo: def.tipo === 'netrunner' ? 'netrunner' : 'demonio', demonio: def.modelo || 'imp', ator: idDoAtor(def.ator), nome: def.nome || '', descricao: semHtml(def.descricao) });
+      }
+    } else {
+      andares = ((item.system && item.system.andares) || []).map(linha => ({ ...linha, ator: idDoAtor(linha.ator), descricao: semHtml(linha.descricao) }));
+    }
+    andares = andares.filter(linha => Number.isInteger(linha.andar) && linha.andar >= 1);
+    if (!andares.length) continue;
+    arquiteturas.push({
+      arquitetura: { nome: String(item.name || 'Arquitetura').slice(0, 60), descricao: semHtml(item.system && (item.system.descricao || (item.system.description && item.system.description.value))), dv: Number(item.system && item.system.dv) || 0, andares },
+      origem: { mundo, id: item._id }
+    });
+  }
+  return arquiteturas;
+}
+// O netrunner inimigo vira a ficha de NPC que veio do mesmo ator; sem ela, fica só com o nome.
+const comNpcs = (arquitetura, atorParaNpc) => ({ ...arquitetura, andares: arquitetura.andares.map(({ ator, ...linha }) => (linha.tipo === 'netrunner' && ator && atorParaNpc.has(ator) ? { ...linha, npc: atorParaNpc.get(ator) } : linha)) });
+
 function cliente(mesa, cookie, campanha) {
   const comCampanha = caminho => `${mesa}${caminho}${campanha ? `${caminho.includes('?') ? '&' : '?'}campanha=${encodeURIComponent(campanha)}` : ''}`;
   return async (caminho, { method = 'GET', body, tipo } = {}) => {
@@ -365,6 +415,15 @@ async function importar(opcoes) {
     const atores = await lerSeHouver('actors');
     const elenco = opcoes['sem-npcs'] ? { npcs: [], retratos: [], fora: [], midias: new Set() } : converterAtores(atores, await lerSeHouver('folders'), mundo);
     const audio = opcoes['sem-audio'] ? { playlists: [], midias: new Set(), avisos: [] } : converterPlaylists(await lerSeHouver('playlists'), await lerSeHouver('settings'), mundo);
+    // As arquiteturas da NET: dos itens do mundo e dos compêndios do mundo (cada um é um banco).
+    const itens = [...(await lerSeHouver('items')).entries()].filter(([chave]) => chave.startsWith('!items!')).map(([, valor]) => valor);
+    if (!opcoes['sem-net'] && fonte.pacotes && fs.existsSync(fonte.pacotes)) {
+      for (const pacote of fs.readdirSync(fonte.pacotes, { withFileTypes: true }).filter(entrada => entrada.isDirectory())) {
+        const banco = await lerBanco(ClassicLevel, path.join(fonte.pacotes, pacote.name)).catch(() => new Map());
+        itens.push(...[...banco.entries()].filter(([chave]) => chave.startsWith('!items!')).map(([, valor]) => valor));
+      }
+    }
+    const arquiteturas = opcoes['sem-net'] ? [] : converterArquiteturas(itens, mundo);
     const de = (colecao, cenaId) => [...banco.entries()].filter(([chave]) => chave.startsWith(`!scenes.${colecao}!${cenaId}.`)).map(([, valor]) => valor);
     let cenas = [...banco.entries()].filter(([chave]) => chave.startsWith('!scenes!')).map(([, valor]) => valor)
       .sort((a, b) => (a.navOrder ?? a.sort ?? 0) - (b.navOrder ?? b.sort ?? 0) || String(a.name).localeCompare(String(b.name), 'pt'));
@@ -385,7 +444,8 @@ async function importar(opcoes) {
       for (const { npc } of elenco.npcs) log(`☺ ${npc.nome.padEnd(32)} ${npc.grupo}, ${npc.tipo === 'ice' ? 'Black ICE' : npc.tipo === 'veiculo' ? 'veículo' : `HP ${npc.hp}`}`);
       for (const { nome, retrato } of elenco.retratos) log(`▣ retrato de ${nome}: ${Object.keys(retrato.imagens).length} estado(s)`);
       for (const motivo of elenco.fora) log(`  (fora: ${motivo})`);
-      return { cenas: convertidas.map(item => item.cena), playlists: audio.playlists, npcs: elenco.npcs };
+      for (const { arquitetura } of arquiteturas) log(`⌗ ${arquitetura.nome.padEnd(32)} ${arquitetura.andares.length} linhas`);
+      return { cenas: convertidas.map(item => item.cena), playlists: audio.playlists, npcs: elenco.npcs, arquiteturas };
     }
 
     // Quem manda é o mestre: em casa, este computador; no servidor, com a senha.
@@ -401,7 +461,7 @@ async function importar(opcoes) {
 
     // Os arquivos: todos de uma vez do .tar; depois, um envio por arquivo (o mesmo arquivo em duas cenas sobe uma vez).
     const todas = [...new Set([...convertidas.flatMap(item => [...item.midias]), ...audio.midias, ...elenco.midias])];
-    log(`${convertidas.length} cenas, ${audio.playlists.length} playlists, ${elenco.npcs.length} fichas de NPC, ${todas.length} arquivos.`);
+    log(`${convertidas.length} cenas, ${audio.playlists.length} playlists, ${elenco.npcs.length} fichas de NPC, ${arquiteturas.length} arquiteturas, ${todas.length} arquivos.`);
     fonte.buscar(todas);
     const enviados = new Map();
     for (const caminho of todas) {
@@ -417,12 +477,24 @@ async function importar(opcoes) {
 
     // As fichas de NPC antes das cenas: o token do ator vira a ficha dele.
     const npcs = [];
+    // O ator do Foundry e a ficha de NPC que veio dele (o netrunner inimigo das arquiteturas aponta para ela).
+    const atorParaNpc = new Map(((estado.dados.meusNpcs) || []).filter(npc => npc.origem && npc.origem.mundo === mundo).map(npc => [npc.origem.id, npc.id]));
     for (const { npc, origem } of elenco.npcs) {
       const resposta = await pedir('/api/mesa/op', { method: 'POST', body: { tipo: 'npc.salvar', npc: { ...npc, midia: trocar(npc.midia) }, origem, substituir: Boolean(opcoes.substituir) } });
       if (resposta.status === 409) { log(`  ☺ ${npc.nome}: já importado (use --substituir para trocar).`); npcs.push({ nome: npc.nome, status: 'ja' }); continue; }
       if (resposta.status !== 200) throw new Error(`${npc.nome}: ${(resposta.dados && resposta.dados.erro) || resposta.texto}`);
       log(`  ☺ ${npc.nome} (${npc.grupo})`);
       npcs.push({ nome: npc.nome, status: 'ok', id: resposta.dados.resultado.id });
+      if (origem) atorParaNpc.set(origem.id, resposta.dados.resultado.id);
+    }
+    // As arquiteturas da NET, depois das fichas (o netrunner inimigo aponta para a ficha que veio do ator).
+    const importadas = [];
+    for (const { arquitetura, origem } of arquiteturas) {
+      const resposta = await pedir('/api/mesa/op', { method: 'POST', body: { tipo: 'arquitetura.salvar', arquitetura: comNpcs(arquitetura, atorParaNpc), origem, substituir: Boolean(opcoes.substituir) } });
+      if (resposta.status === 409) { log(`  ⌗ ${arquitetura.nome}: já importada (use --substituir para trocar).`); importadas.push({ nome: arquitetura.nome, status: 'ja' }); continue; }
+      if (resposta.status !== 200) throw new Error(`${arquitetura.nome}: ${(resposta.dados && resposta.dados.erro) || resposta.texto}`);
+      log(`  ⌗ ${arquitetura.nome}: ${arquitetura.andares.length} linhas`);
+      importadas.push({ nome: arquitetura.nome, status: 'ok', id: resposta.dados.resultado.id });
     }
     for (const motivo of elenco.fora) log(`  (fora: ${motivo})`);
     // O retrato do Painel Tático de cada personagem da wiki (o que não é desta campanha fica de fora).
@@ -481,7 +553,7 @@ async function importar(opcoes) {
       resultado.push({ nome: cena.nome, status: 'ok', ...r });
     }
     for (const aviso of audio.avisos) log(`  (${aviso})`);
-    return { cenas: resultado, playlists, npcs, retratos };
+    return { cenas: resultado, playlists, npcs, retratos, arquiteturas: importadas };
   } finally {
     fs.rmSync(trabalho, { recursive: true, force: true });
   }
@@ -496,4 +568,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { importar, converter, converterPlaylists, converterAtores, caminhoDe };
+module.exports = { importar, converter, converterPlaylists, converterAtores, converterArquiteturas, comNpcs, caminhoDe };

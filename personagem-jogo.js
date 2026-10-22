@@ -172,6 +172,45 @@
           .map(entrada => ({ id: entrada.id, nome: entrada.nome, qtd: entrada.qtd }));
       }
     }
+    // O que vai no cyberdeck (a NET da mesa): os programas e o hardware, cada um no deck em que está. Da criação e da loja:
+    // o deck escolhido na montagem (doc.montagem) ou no pedido (o encaixe), se ainda couber; senão, o primeiro deck com slot
+    // livre, como o criador monta; "-" fica solto. Do Foundry: o que está dentro do deck. em: o id do deck ('' solto). O
+    // que a mesa mudou em cada programa (doc.jogo.programas): ativo, a REZ perdida e destruído.
+    const noDeck = [];
+    if (mesa && Array.isArray(mesa.itens)) {
+      for (const entrada of mesa.itens) {
+        if (!entrada || !['program', 'itemUpgrade'].includes(entrada.tipo)) continue;
+        const deck = mesa.itens.find(outra => outra && outra.tipo === 'cyberdeck' && (outra.dentroIds || []).includes(entrada.id));
+        const cat = porNome(entrada.nome);
+        noDeck.push({ id: `foundry:${entrada.id}`, nome: String(entrada.nome || ''), tipo: entrada.tipo === 'program' ? 'programa' : 'hardware', catalogo: cat ? cat.id : '', qtd: 1, em: deck ? `foundry:${deck.id}` : '' });
+      }
+    } else {
+      const montagem = (doc && doc.montagem) || {};
+      const decks = itens.filter(entrada => entrada.tipo === 'deck').map(entrada => ({ id: entrada.id, livre: numero(((item(entrada.catalogo) || {}).deck || {}).slots) }));
+      const pedidos = [];
+      for (const linha of [...(Array.isArray(criado.itens) ? criado.itens : []), ...comprasDe(jogo)]) {
+        const cat = linha && item(linha.id);
+        const dados = cat && (cat.programa || cat.hardware);
+        if (!dados) continue;
+        const id = linha.uid || linha.id;
+        const qtd = Math.max(1, numero(linha.qtd ?? 1));
+        pedidos.push({ id, nome: linha.renomear || linha.nome || cat.nome, tipo: cat.programa ? 'programa' : 'hardware', catalogo: cat.id, qtd, em: '',
+          tamanho: Math.max(1, numero(dados.tamanho)) * qtd, escolha: String(linha.em || (montagem[id] || {}).em || '') });
+      }
+      const caber = (pedido, deck) => { if (!deck || deck.livre < pedido.tamanho) return false; deck.livre -= pedido.tamanho; pedido.em = deck.id; return true; };
+      for (const pedido of pedidos) if (pedido.escolha && pedido.escolha !== '-') caber(pedido, decks.find(deck => deck.id === pedido.escolha));
+      for (const pedido of pedidos) if (!pedido.em && pedido.escolha !== '-') decks.some(deck => caber(pedido, deck));
+      for (const { escolha, tamanho, ...resto } of pedidos) noDeck.push(resto);
+    }
+    const programasDoJogo = jogo.programas && typeof jogo.programas === 'object' ? jogo.programas : {};
+    for (const entrada of noDeck) {
+      const salvo = programasDoJogo[entrada.id];
+      if (entrada.tipo !== 'programa' || !salvo || typeof salvo !== 'object') continue;
+      if (salvo.ativo) entrada.ativo = true;
+      if (definido(salvo.rezPerdida)) entrada.rezPerdida = Math.max(0, Number(salvo.rezPerdida));
+      if (salvo.destruido) entrada.destruido = true;
+    }
+
     // Armas à mão (equipadas ou carregadas; guardada não vai para a mesa), com o uso (a equipada ocupa a mão).
     const armas = itens.filter(entrada => entrada.arma && entrada.uso !== 'guardado').map(entrada => (entrada.uso ? { ...entrada.arma, uso: entrada.uso } : entrada.arma));
 
@@ -201,7 +240,7 @@
     }));
     if (humanidade && (!mesa || definido(jogo.humanidade))) stats.EMP = Math.max(0, Math.floor(humanidade.atual / 10));
     return {
-      stats, hp: hp(doc), sp, armas, penalidade,
+      stats, hp: hp(doc), sp, armas, penalidade, noDeck,
       sorte: { atual: definido(jogo.sorte) ? Math.max(0, Math.min(sorteMax, Number(jogo.sorte))) : sorteBase, max: sorteMax },
       humanidade, cyber, ...valores(doc),
       // O inventário como a mesa mostra: a arma leva o pente e a munição carregada.
@@ -218,8 +257,8 @@
     const base = { ...(jogoValido(doc) || {}) };
     const novo = { ...base, ...mudancas, quando };
     if (mudancas.hp !== undefined && typeof mudancas.hp !== 'object') novo.hp = { atual: Math.round(Number(mudancas.hp) || 0) };
-    // Cada arma e cada item misturam com o que já tinham: gravar a carga não apaga o pente, nem o uso a quantidade.
-    for (const campo of ['armas', 'itens']) {
+    // Cada arma, item e programa misturam com o que já tinham: gravar a carga não apaga o pente, nem o uso a quantidade.
+    for (const campo of ['armas', 'itens', 'programas']) {
       if (!mudancas[campo]) continue;
       novo[campo] = { ...(base[campo] || {}) };
       for (const [id, valor] of Object.entries(mudancas[campo])) novo[campo][id] = { ...(novo[campo][id] || {}), ...valor };

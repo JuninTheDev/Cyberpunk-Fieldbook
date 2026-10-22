@@ -26,6 +26,8 @@
   const S = {
     eu: null, campanha: null, campanhas: [], conexao: null, fonte: null,
     cena: null, tokens: new Map(), cenas: [], cenaAtiva: null, combate: null, registro: [], presenca: [], personagens: [], npcs: [], meusNpcs: [], npcEditando: null, npcMidia: undefined, retrato: null, meus: [],
+    // A NET (M13): as arquiteturas da campanha (o mestre) e a que está aberta no editor.
+    arquiteturas: [], arqEditando: null,
     // O Painel Tático: o token fixado, o painel de baixo aberto (perícias, equipamento), a busca, o HP sendo digitado.
     painel: { fixo: null, aberto: null, busca: '', segurando: false, pendente: false, roda: 0, rodaTimer: null, ultimoRetrato: '', mostra: null },
     // O estilo do painel: o padrão da mesa (do mestre), o rascunho da janela de estilo e a prévia que o painel mostra.
@@ -142,6 +144,7 @@
     on('presenca', data => { S.presenca = data; renderPresenca(); });
     on('audio', receberAudio);
     on('npcs', data => receberNpcs(data));
+    on('arquiteturas', data => receberArquiteturas(data));
     on('estiloDaMesa', data => receberEstiloDaMesa(data));
     // A ficha de um personagem mudou (pela mesa, pela wiki ou pelo Foundry): o mestre recebe todas; o jogador, as dele.
     on('fichas', data => {
@@ -181,6 +184,7 @@
     S.personagens = data.personagens || [];
     S.npcs = data.npcs || [];
     S.meusNpcs = data.meusNpcs || [];
+    S.arquiteturas = data.arquiteturas || [];
     S.meus = data.meus || [];
     S.estiloDaMesa = data.estiloDaMesa || null;
     if (S.retrato && !fichaDoPersonagem(S.retrato.id)) fecharRetrato();
@@ -2127,6 +2131,7 @@
       token.agarrao ? `<span class="tag lesao" title="−2 em todas as ações para os dois.">${esc(textoDoAgarrao(token))}</span>` : ''].filter(Boolean);
     if (estados.length) partes.push(`<div>${estados.join('')}</div>`);
     if (gm() || token.meu) partes.push(htmlDaFichaDeCombate(token));
+    if (gm() || token.meu) partes.push(htmlDaNet(token));
     const acoes = [];
     if ((gm() || token.meu) && !token.morto) acoes.push(`<button class="botao pequeno" type="button" data-cartao="atacar">${S.ataque && S.ataque.token === token.id ? 'Fechar o ataque' : 'Atacar'}</button>`);
     if (gm() || token.meu) acoes.push('<button class="botao vazado pequeno" type="button" data-cartao="rolar">Rolar</button>');
@@ -2797,11 +2802,12 @@
     renderVez();
     renderFichas();
     renderCenaPainel();
+    renderNetPainel();
     renderAudio();
     renderSom();
     renderCartao();
     escolherFerramenta(S.ferramenta === 'nevoa' && !gm() ? 'mover' : S.ferramenta);
-    if (!gm() && $('.abas [data-aba="cena"]').classList.contains('ativa')) abrirAba('rolagens', { expandir: false });
+    if (!gm() && ($('.abas [data-aba="cena"]').classList.contains('ativa') || $('.abas [data-aba="net"]').classList.contains('ativa'))) abrirAba('rolagens', { expandir: false });
   }
   // Um token que só andou não muda as listas: elas só são refeitas quando muda o que mostram (refazer a lista a cada
   // passo fecharia o seletor aberto e perderia a rolagem do painel).
@@ -4232,6 +4238,267 @@
       if (!existe && !npcJanela.hidden) fecharNpc();
       else if (existe && npcJanela.hidden) renderNpcJanela();
     }
+  }
+
+  // ---------------- A NET (M13) ----------------
+  // A aba NET do mestre: as arquiteturas da campanha (Nova, Gerar pelas tabelas, os exemplos, Editar, Apagar). O editor
+  // abre numa janela: a grade de andares (linha = andar, coluna = ramo; o andar 1 do ramo A sai do ponto de acesso), o +
+  // cria, arrastar move (em cima de outro andar, os dois trocam), e o andar escolhido mostra o que há nele. A conta é a do
+  // servidor (mesa-net.js).
+  const NET = window.MesaNet;
+  // O resumo de uma linha da arquitetura: "Senha DV 8", "Hellhound", "Efreet", "Netrunner: Spider".
+  function resumoDaLinha(linha) {
+    if (linha.tipo === 'ice') return NET.iceDe(linha.ice).nome;
+    if (linha.tipo === 'demonio') return linha.nome || NET.demonioDe(linha.demonio).nome;
+    if (linha.tipo === 'netrunner') {
+      const ficha = [...S.meusNpcs, ...S.npcs].find(npc => npc.id === linha.npc);
+      return `Netrunner${linha.nome || ficha ? `: ${linha.nome || ficha.nome}` : ''}`;
+    }
+    return `${NET.TIPOS_DE_ANDAR[linha.tipo]}${linha.dv ? ` DV ${linha.dv}` : ''}`;
+  }
+  function renderNetPainel() {
+    const painel = $('#net-painel');
+    if (!gm()) { painel.innerHTML = ''; return; }
+    const linhas = S.arquiteturas.map(arq => {
+      const lida = NET.lerArquitetura(arq);
+      const andares = Object.keys(lida.nos).length;
+      return `<li><span class="info"><b>${esc(arq.nome)}</b><small>${andares} ${andares === 1 ? 'andar' : 'andares'} · ${lida.colunas} ${lida.colunas === 1 ? 'ramo' : 'ramos'} · DV ${lida.dv}${arq.origem ? ' · do Foundry' : ''}</small></span>
+        <button class="botao vazado pequeno" type="button" data-arq-editar="${esc(arq.id)}">Editar</button></li>`;
+    }).join('');
+    painel.innerHTML = `<div class="grupo-npc">Arquiteturas da NET</div>
+      <p class="nota">Só você vê. Cada uma vira o ponto de acesso de um tile (a próxima fase).</p>
+      <div class="cartao-acoes"><button class="botao pequeno" type="button" data-arq-nova>+ Nova</button></div>
+      <div class="campo-linha"><label class="campo cresce">Gerar pelas tabelas do CORE <select data-arq-dificuldade>${Object.entries(NET.DIFICULDADES).map(([id, nome]) => `<option value="${id}">${nome}</option>`).join('')}</select></label>
+        <button class="botao vazado pequeno" type="button" data-arq-gerar>Gerar</button></div>
+      <div class="campo-linha"><label class="campo cresce">Exemplo <select data-arq-exemplo>${NET.EXEMPLOS.map((exemplo, i) => `<option value="${i}">${esc(exemplo.nome)}</option>`).join('')}</select></label>
+        <button class="botao vazado pequeno" type="button" data-arq-por-exemplo>Pôr</button></div>
+      ${linhas ? `<ul class="lista arq-lista">${linhas}</ul>` : '<p class="nota">Nenhuma arquitetura ainda.</p>'}`;
+  }
+  $('#net-painel').addEventListener('click', event => {
+    const botao = event.target.closest('button');
+    if (!botao || !gm()) return;
+    if (botao.hasAttribute('data-arq-nova')) abrirArquitetura(null);
+    if (botao.dataset.arqEditar) abrirArquitetura(botao.dataset.arqEditar);
+    if (botao.hasAttribute('data-arq-gerar')) {
+      op('arquitetura.gerar', { dificuldade: $('#net-painel [data-arq-dificuldade]').value })
+        .then(resposta => {
+          const r = resposta.resultado;
+          aviso(`Gerada: ${r.total} andares.`);
+          // A lista nova pode chegar antes ou depois da resposta: abre agora, ou quando ela chegar.
+          if (S.arquiteturas.some(arq => arq.id === r.id)) abrirArquitetura(r.id); else S.arqAbrir = r.id;
+        }).catch(() => {});
+    }
+    if (botao.hasAttribute('data-arq-por-exemplo')) {
+      const exemplo = NET.EXEMPLOS[Number($('#net-painel [data-arq-exemplo]').value)];
+      if (exemplo) op('arquitetura.salvar', { arquitetura: exemplo }).then(() => aviso(`${exemplo.nome}: pronta.`)).catch(() => {});
+    }
+  });
+  function receberArquiteturas(data) {
+    S.arquiteturas = data.arquiteturas || [];
+    renderNetPainel();
+    // A gerada agora: abre no editor. A aberta foi apagada (em outra aba): fecha.
+    if (S.arqAbrir && S.arquiteturas.some(arq => arq.id === S.arqAbrir)) { abrirArquitetura(S.arqAbrir); S.arqAbrir = null; }
+    if (S.arqEditando && S.arqEditando.id && !S.arquiteturas.some(arq => arq.id === S.arqEditando.id)) fecharArquitetura();
+  }
+
+  // O editor. S.arqEditando: a cópia sendo editada (nome, descrição, DV, as linhas) e o andar escolhido ("3b").
+  function abrirArquitetura(id) {
+    const arq = id ? S.arquiteturas.find(item => item.id === id) : null;
+    S.arqEditando = arq
+      ? { id: arq.id, nome: arq.nome, descricao: arq.descricao || '', dv: arq.dv || 0, andares: arq.andares.map(linha => ({ ...linha })), sel: '1a' }
+      : { id: null, nome: 'Nova arquitetura', descricao: '', dv: 0, andares: [NET.novaLinha([])], sel: '1a' };
+    renderArqJanela();
+  }
+  function fecharArquitetura() {
+    S.arqEditando = null;
+    const janela = $('#arq-janela');
+    janela.hidden = true;
+    janela.innerHTML = '';
+  }
+  const CELULA = { w: 92, h: 46, gx: 16, gy: 24 };
+  // A grade em SVG: a entrada no alto, um retângulo por andar (com o resumo), a linha de cada andar até o pai, e um + em
+  // cada lugar vazio da grade (até um andar e um ramo além dos que existem).
+  function svgDaGrade(ed) {
+    const lida = NET.lerArquitetura({ andares: ed.andares });
+    const colunas = Math.min(NET.RAMOS.length, lida.colunas + 1);
+    const andares = Math.min(NET.ANDAR_MAX, lida.andares + 1);
+    const x = coluna => 8 + coluna * (CELULA.w + CELULA.gx);
+    const y = andar => 8 + andar * (CELULA.h + CELULA.gy);
+    const largura = x(colunas) - CELULA.gx + 8;
+    const altura = y(andares + 1) - CELULA.gy + 8;
+    const ondeEsta = id => (id === NET.ENTRADA ? { coluna: 0, andar: 0 } : { coluna: NET.RAMOS.indexOf(lida.nos[id].ramo), andar: lida.nos[id].andar });
+    const linhas = Object.values(lida.nos).map(no => {
+      const de = ondeEsta(no.pai);
+      const para = ondeEsta(no.id);
+      const x1 = x(de.coluna) + CELULA.w / 2;
+      const y1 = y(de.andar) + CELULA.h;
+      const x2 = x(para.coluna) + CELULA.w / 2;
+      const y2 = y(para.andar);
+      const meio = y2 - CELULA.gy / 2;
+      return `<path d="M${x1} ${y1} V${meio} H${x2} V${y2}" />`;
+    }).join('');
+    const nos = Object.values(lida.nos).map(no => {
+      const { coluna, andar } = ondeEsta(no.id);
+      const resumo = no.conteudos.map(resumoDaLinha).join(', ');
+      const curto = resumo.length > 15 ? `${resumo.slice(0, 14)}…` : resumo;
+      const perigo = no.conteudos.some(c => c.tipo === 'ice' || c.tipo === 'demonio' || c.tipo === 'netrunner');
+      return `<g class="arq-no${perigo ? ' perigo' : ''}${ed.sel === no.id ? ' escolhido' : ''}" data-pos="${no.id}" tabindex="0" role="button" aria-label="Andar ${no.andar}${no.ramo !== 'a' ? ` ramo ${no.ramo.toUpperCase()}` : ''}: ${esc(resumo)}">
+        <title>${esc(resumo)}</title><rect x="${x(coluna)}" y="${y(andar)}" width="${CELULA.w}" height="${CELULA.h}" rx="4"/>
+        <text x="${x(coluna) + 6}" y="${y(andar) + 15}" class="arq-id">${no.andar}${no.ramo.toUpperCase()}</text><text x="${x(coluna) + 6}" y="${y(andar) + 34}">${esc(curto)}</text></g>`;
+    }).join('');
+    const vazios = [];
+    for (let andar = 1; andar <= andares; andar++) {
+      for (let coluna = 0; coluna < colunas; coluna++) {
+        const id = `${andar}${NET.RAMOS[coluna]}`;
+        if (lida.nos[id]) continue;
+        vazios.push(`<g class="arq-mais" data-pos="${id}" tabindex="0" role="button" aria-label="Criar o andar ${andar}${coluna ? ` no ramo ${NET.RAMOS[coluna].toUpperCase()}` : ''}"><rect x="${x(coluna)}" y="${y(andar)}" width="${CELULA.w}" height="${CELULA.h}" rx="4"/><text x="${x(coluna) + CELULA.w / 2}" y="${y(andar) + 29}">+</text></g>`);
+      }
+    }
+    return `<svg class="arq-svg" viewBox="0 0 ${largura} ${altura}" width="${largura}" height="${altura}" role="group" aria-label="A grade de andares">
+      <g class="arq-linhas-svg">${linhas}</g>
+      <g class="arq-entrada"><rect x="${x(0)}" y="${y(0)}" width="${CELULA.w}" height="${CELULA.h}" rx="4"/><text x="${x(0) + 6}" y="${y(0) + 19}">Ponto de</text><text x="${x(0) + 6}" y="${y(0) + 34}">acesso</text></g>
+      ${vazios.join('')}${nos}</svg>`;
+  }
+  // O andar escolhido: cada conteúdo com o tipo e o que ele pede (a DV, o modelo do Black ICE ou do demônio, a ficha do
+  // netrunner inimigo), o nome e a descrição (o que o Eye-Dee e o Control revelam).
+  function htmlDaLinhaDeArquitetura(linha, i) {
+    const opcao = (valor, nome, atual) => `<option value="${esc(valor)}"${valor === atual ? ' selected' : ''}>${esc(nome)}</option>`;
+    const campos = [`<label class="campo">Tipo <select data-arq-campo="tipo">${Object.entries(NET.TIPOS_DE_ANDAR).map(([id, nome]) => opcao(id, nome, linha.tipo)).join('')}</select></label>`];
+    if (NET.COM_DV.includes(linha.tipo)) campos.push(`<label class="campo mod">DV <input data-arq-campo="dv" type="number" min="4" max="20" value="${linha.dv || NET.DV_SEM_ANDARES}"></label>`);
+    if (linha.tipo === 'ice') campos.push(`<label class="campo cresce">Black ICE <select data-arq-campo="ice">${opcao('', 'Sem modelo (o mestre ajusta)', linha.ice)}${Object.entries(NET.BLACK_ICE).map(([id, ice]) => opcao(id, `${ice.nome} · ${ice.classe}`, linha.ice)).join('')}</select></label>`);
+    if (linha.tipo === 'demonio') campos.push(`<label class="campo cresce">Demônio <select data-arq-campo="demonio">${Object.entries(NET.DEMONIOS).map(([id, d]) => opcao(id, `${d.nome} · REZ ${d.rez}`, linha.demonio)).join('')}</select></label>`);
+    if (linha.tipo === 'netrunner') campos.push(`<label class="campo cresce">Ficha <select data-arq-campo="npc">${opcao('', '— só o nome —', linha.npc)}${[...S.meusNpcs, ...S.npcs].map(npc => opcao(npc.id, npc.nome, linha.npc)).join('')}</select></label>`);
+    const comNome = ['demonio', 'netrunner', 'arquivo', 'controle'].includes(linha.tipo);
+    const ice = linha.tipo === 'ice' ? NET.iceDe(linha.ice) : null;
+    return `<li class="arq-linha" data-arq-linha="${i}"><div class="campo-linha">${campos.join('')}<button type="button" class="link" data-arq-tirar-linha aria-label="Tirar este conteúdo">×</button></div>
+      ${ice ? `<p class="nota">PER ${ice.per} · SPD ${ice.spd} · ATK ${ice.atk} · DEF ${ice.def} · REZ ${ice.rez}. ${esc(ice.efeito)}</p>` : ''}
+      ${comNome ? `<label class="campo">Nome <input data-arq-campo="nome" type="text" maxlength="60" value="${esc(linha.nome || '')}" placeholder="${linha.tipo === 'arquivo' ? 'Agenda do fixer' : linha.tipo === 'controle' ? 'Câmeras do pátio' : ''}"></label>` : ''}
+      ${linha.tipo !== 'vazio' ? `<label class="campo">Descrição <textarea data-arq-campo="descricao" rows="2" maxlength="500" placeholder="${linha.tipo === 'arquivo' ? 'O que o Eye-Dee revela.' : linha.tipo === 'controle' ? 'O que o nó comanda.' : 'Só você vê.'}">${esc(linha.descricao || '')}</textarea></label>` : ''}</li>`;
+  }
+  function htmlDoAndarEscolhido(ed) {
+    const pos = NET.lerPosicao(ed.sel);
+    const linhas = pos ? ed.andares.map((linha, i) => ({ linha, i })).filter(({ linha }) => Number(linha.andar) === pos.andar && (linha.ramo || 'a') === pos.ramo) : [];
+    if (!linhas.length) return '<p class="nota">Escolha um andar na grade, ou um + para criar. Arraste um andar para mover; em cima de outro, os dois trocam.</p>';
+    return `<div class="grupo-npc">Andar ${pos.andar}${pos.ramo !== 'a' ? ` · ramo ${pos.ramo.toUpperCase()}` : ''}</div>
+      <ul class="arq-linhas">${linhas.map(({ linha, i }) => htmlDaLinhaDeArquitetura(linha, i)).join('')}</ul>
+      <div class="cartao-acoes"><button class="botao vazado pequeno" type="button" data-arq-mais-linha>+ Conteúdo</button><button class="botao vazado pequeno perigo" type="button" data-arq-tirar-andar>Apagar o andar</button></div>`;
+  }
+  function renderArqJanela() {
+    const janela = $('#arq-janela');
+    const ed = S.arqEditando;
+    if (!gm() || !ed) { janela.hidden = true; janela.innerHTML = ''; return; }
+    const lida = NET.lerArquitetura({ andares: ed.andares, dv: ed.dv });
+    janela.innerHTML = `<form class="arq-form" novalidate>
+      <div class="nota-janela-topo"><h2 id="arq-janela-titulo">${ed.id ? esc(ed.nome) : 'Nova arquitetura'}</h2><button class="nota-janela-fechar" type="button" data-arq-fechar aria-label="Fechar">×</button></div>
+      <div class="campo-linha"><label class="campo cresce">Nome <input name="nome" type="text" maxlength="60" required value="${esc(ed.nome)}"></label>
+        <label class="campo mod">DV <input name="dv" type="number" min="0" max="20" value="${ed.dv || 0}" title="A DV do Pathfinder, do Cloak e do Virus. 0: a maior dos andares (agora, ${lida.dv})."></label></div>
+      <label class="campo">Descrição <textarea name="descricao" rows="2" maxlength="1000" placeholder="Só você vê.">${esc(ed.descricao)}</textarea></label>
+      <div class="arq-corpo"><div class="arq-grade">${svgDaGrade(ed)}</div><div class="arq-andar">${htmlDoAndarEscolhido(ed)}</div></div>
+      <div class="nota-janela-acoes"><button class="botao" type="submit">Salvar</button><button class="botao vazado" type="button" data-arq-fechar>Cancelar</button>${ed.id ? '<button class="botao vazado perigo" type="button" data-arq-apagar>Apagar</button>' : ''}</div>
+    </form>`;
+    janela.hidden = false;
+  }
+  // Refaz só a grade e o andar escolhido (o nome e a descrição não perdem o cursor).
+  function renderArqCorpo() {
+    const corpo = $('#arq-janela .arq-corpo');
+    if (!corpo || !S.arqEditando) return renderArqJanela();
+    corpo.innerHTML = `<div class="arq-grade">${svgDaGrade(S.arqEditando)}</div><div class="arq-andar">${htmlDoAndarEscolhido(S.arqEditando)}</div>`;
+  }
+  // O clique numa célula da grade: o andar escolhido, ou o andar novo no +.
+  function escolherCelula(pos) {
+    const ed = S.arqEditando;
+    if (!ed || !NET.lerPosicao(pos)) return;
+    if (!ed.andares.some(linha => `${linha.andar}${linha.ramo || 'a'}` === pos)) ed.andares = NET.criarAndar(ed.andares, pos);
+    ed.sel = pos;
+    renderArqCorpo();
+  }
+  const arqJanela = $('#arq-janela');
+  arqJanela.addEventListener('submit', event => {
+    event.preventDefault();
+    const ed = S.arqEditando;
+    if (!ed) return;
+    if (!ed.nome.trim()) { aviso('Dê um nome à arquitetura.', 'erro'); return; }
+    const arquitetura = { nome: ed.nome, descricao: ed.descricao, dv: Number(ed.dv) || 0, andares: ed.andares };
+    op('arquitetura.salvar', ed.id ? { id: ed.id, arquitetura } : { arquitetura }).then(() => { fecharArquitetura(); aviso(`${arquitetura.nome}: salva.`); }).catch(() => {});
+  });
+  arqJanela.addEventListener('input', event => {
+    const ed = S.arqEditando;
+    if (!ed) return;
+    if (['nome', 'descricao', 'dv'].includes(event.target.name)) ed[event.target.name] = event.target.value;
+    const campo = event.target.dataset.arqCampo;
+    const li = event.target.closest('[data-arq-linha]');
+    if (campo && li && ['nome', 'descricao', 'dv'].includes(campo)) ed.andares[Number(li.dataset.arqLinha)][campo] = campo === 'dv' ? Number(event.target.value) || 0 : event.target.value;
+  });
+  arqJanela.addEventListener('change', event => {
+    const ed = S.arqEditando;
+    const campo = event.target.dataset.arqCampo;
+    const li = event.target.closest('[data-arq-linha]');
+    if (!ed || !campo || !li) return;
+    const i = Number(li.dataset.arqLinha);
+    // O tipo, o modelo e a ficha mudam o que a linha mostra: confere a linha e refaz.
+    if (['tipo', 'ice', 'demonio', 'npc'].includes(campo)) {
+      ed.andares[i] = NET.limparLinha({ ...ed.andares[i], [campo]: event.target.value, ...(campo === 'tipo' ? { dv: ed.andares[i].dv || NET.DV_SEM_ANDARES } : {}) });
+      renderArqCorpo();
+    } else if (campo === 'dv') renderArqCorpo();
+  });
+  arqJanela.addEventListener('click', event => {
+    const ed = S.arqEditando;
+    const celula = event.target.closest('[data-pos]');
+    if (celula && ed && !S.arqArrastou) { escolherCelula(celula.dataset.pos); return; }
+    const botao = event.target.closest('button');
+    if (!botao || !ed) return;
+    const pos = NET.lerPosicao(ed.sel);
+    if (botao.hasAttribute('data-arq-fechar')) fecharArquitetura();
+    else if (botao.hasAttribute('data-arq-mais-linha') && pos) { ed.andares = [...ed.andares, NET.limparLinha({ ...pos, tipo: 'senha', dv: NET.DV_SEM_ANDARES })]; renderArqCorpo(); }
+    else if (botao.hasAttribute('data-arq-tirar-linha')) { ed.andares = ed.andares.filter((linha, i) => i !== Number(botao.closest('[data-arq-linha]').dataset.arqLinha)); renderArqCorpo(); }
+    else if (botao.hasAttribute('data-arq-tirar-andar') && pos) { ed.andares = ed.andares.filter(linha => !(Number(linha.andar) === pos.andar && (linha.ramo || 'a') === pos.ramo)); renderArqCorpo(); }
+    else if (botao.hasAttribute('data-arq-apagar') && ed.id && confirm(`Apagar a arquitetura ${ed.nome}?`)) op('arquitetura.apagar', { id: ed.id }).then(fecharArquitetura).catch(() => {});
+  });
+  arqJanela.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); fecharArquitetura(); return; }
+    const celula = event.target.closest && event.target.closest('[data-pos]');
+    if (celula && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); escolherCelula(celula.dataset.pos); }
+  });
+  // Arrastar um andar para outra célula da grade (em cima de outro andar, os dois trocam).
+  arqJanela.addEventListener('pointerdown', event => {
+    const no = event.target.closest('.arq-no');
+    if (!no || !S.arqEditando || event.button !== 0) return;
+    S.arqArrasto = { de: no.dataset.pos, x: event.clientX, y: event.clientY };
+    S.arqArrastou = false;
+  });
+  window.addEventListener('pointermove', event => {
+    const arrasto = S.arqArrasto;
+    if (!arrasto) return;
+    if (Math.hypot(event.clientX - arrasto.x, event.clientY - arrasto.y) > 6) S.arqArrastou = true;
+    for (const celula of arqJanela.querySelectorAll('[data-pos].alvo')) celula.classList.remove('alvo');
+    const sob = S.arqArrastou && document.elementFromPoint(event.clientX, event.clientY);
+    const alvo = sob && sob.closest && sob.closest('#arq-janela [data-pos]');
+    if (alvo && alvo.dataset.pos !== arrasto.de) alvo.classList.add('alvo');
+  });
+  window.addEventListener('pointerup', event => {
+    const arrasto = S.arqArrasto;
+    S.arqArrasto = null;
+    if (!arrasto || !S.arqArrastou || !S.arqEditando) return;
+    const sob = document.elementFromPoint(event.clientX, event.clientY);
+    const alvo = sob && sob.closest && sob.closest('#arq-janela [data-pos]');
+    if (alvo && alvo.dataset.pos !== arrasto.de) {
+      S.arqEditando.andares = NET.moverAndar(S.arqEditando.andares, arrasto.de, alvo.dataset.pos);
+      S.arqEditando.sel = alvo.dataset.pos;
+      renderArqCorpo();
+    }
+    // O clique que vem depois do arrasto não escolhe a célula.
+    setTimeout(() => { S.arqArrastou = false; }, 0);
+  });
+
+  // A NET no cartão: o rank de Interface, as Ações NET por turno, o cyberdeck equipado, os programas e o hardware.
+  function htmlDaNet(token) {
+    const n = token.netrunner;
+    if (!n) return '';
+    const programas = (n.programas || []).map(p => `<li><span class="info"><b>${esc(p.nome)}</b><small>${esc(NET.CLASSES_DE_PROGRAMA[p.classe] || 'Programa')}${p.atk ? ` · ATK ${p.atk}` : ''}${p.rez ? ` · REZ ${p.rezAtual}/${p.rez}` : ''}${p.qtd > 1 ? ` · ×${p.qtd}` : ''}</small></span>${p.destruido ? '<span class="tag falha">destruído</span>' : p.ativo ? '<span class="tag sucesso">ativo</span>' : ''}</li>`).join('');
+    const hardware = (n.hardware || []).map(h => `<span class="tag">${esc(h.nome)}</span>`).join('');
+    const deck = n.deck ? `<p class="nota"><b>${esc(n.deck.nome)}</b> · ${n.deck.slots} slots</p>` : token.tipo === 'pj' ? '<p class="nota">Sem cyberdeck equipado (na ficha, equipe um).</p>' : '';
+    return `<div class="net-cartao"><div class="grupo-npc">NET · Interface ${n.rank} · ${n.acoes} Ações NET por turno</div>${deck}
+      ${programas ? `<ul class="lista net-programas">${programas}</ul>` : n.deck ? '<p class="nota">Nenhum programa no deck.</p>' : ''}${hardware ? `<div>${hardware}</div>` : ''}</div>`;
   }
 
   // ---------------- Áudio ----------------

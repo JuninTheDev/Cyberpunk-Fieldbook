@@ -2,7 +2,8 @@
 // Rodar: node --test Tabletop/
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { converter, converterPlaylists } = require('./importar-foundry');
+const { converter, converterPlaylists, converterArquiteturas, comNpcs } = require('./importar-foundry');
+const N = require('./mesa-net');
 
 // Margem de 25% numa cena de 1000 × 800 com grade de 100: o mapa começa em (300, 200) no canvas do Foundry.
 const cena = (extra = {}) => ({ _id: 'cena1', name: 'Clínica', width: 1000, height: 800, padding: 0.25, grid: { size: 100, type: 1, distance: 2, units: 'm' }, background: { src: 'mapas/clinica.webp' }, ...extra });
@@ -78,4 +79,31 @@ test('as playlists do Foundry e a biblioteca do yt-jukebox viram playlists da me
   const intro = converter(cena({ playlist: 'plIntro', playlistSound: 's3' }), embutidos([]), new Map(), 'mundo').cena;
   assert.deepEqual(intro.musica, { playlist: 'plIntro', faixa: 's3' }, 'a música da cena, com os ids do Foundry');
   assert.equal(converter(cena(), embutidos([]), new Map(), 'mundo').cena.musica, null);
+});
+
+test('as arquiteturas da NET: o netarch do Foundry 12 (com os demônios do NET Architect) e a do Foundry 14, em linhas', () => {
+  const netarch = {
+    _id: 'arq12', name: 'Armazém', type: 'netarch',
+    system: { description: { value: '<p>Do livro.</p>' }, floors: [
+      { floor: '1', branch: 'a', content: 'CPR.global.programClass.blackice', dv: 'N/A', blackice: 'CPR.netArchitecture.floor.options.blackIce.hellhound', description: '' },
+      { floor: '2', branch: 'a', content: 'CPR.netArchitecture.floor.options.password', dv: '8', blackice: '--', description: '' },
+      { floor: '3', branch: 'b', content: 'CPR.netArchitecture.floor.options.controlnode', dv: '10', blackice: '--', description: '<p>A <b>torreta</b>.</p>' }
+    ] },
+    flags: { 'net-architect': { defensores: [{ id: '2a-1', tipo: 'demonio', andar: 2, ramo: 'a', modelo: 'efreet', nome: 'Guardião' }, { id: '3b-2', tipo: 'netrunner', andar: 3, ramo: 'b', ator: 'Actor.xyz', nome: 'Spider' }] } }
+  };
+  const doV14 = { _id: 'arq14', name: 'Clínica', type: 'arquitetura', system: { descricao: '<p>Dois ramos.</p>', dv: 12, andares: [{ andar: 1, ramo: 'a', tipo: 'senha', dv: 8, ice: '', demonio: '', ator: '', nome: '', descricao: '' }] } };
+  const lista = converterArquiteturas([netarch, doV14, { _id: 'x', type: 'weapon' }, { _id: 'vazia', name: 'Vazia', type: 'netarch', system: { floors: [] } }], 'mundo');
+  assert.equal(lista.length, 2, 'só as arquiteturas com andares');
+  const [doze, catorze] = lista;
+  assert.deepEqual(doze.origem, { mundo: 'mundo', id: 'arq12' });
+  assert.equal(doze.arquitetura.descricao, 'Do livro.');
+  const linhas = N.limparAndares(doze.arquitetura.andares);
+  assert.deepEqual(linhas.map(linha => [`${linha.andar}${linha.ramo}`, linha.tipo, linha.dv || linha.ice || linha.demonio || ''].join(':')), ['1a:ice:hellhound', '2a:senha:8', '3b:controle:10', '2a:demonio:efreet', '3b:netrunner:']);
+  assert.equal(linhas[2].descricao, 'A torreta.', 'a descrição sem o HTML');
+  assert.equal(doze.arquitetura.andares[4].ator, 'xyz', 'o netrunner inimigo aponta para o ator');
+  // O ator que virou ficha de NPC: o netrunner inimigo passa a apontar para ela.
+  const comFicha = N.limparAndares(comNpcs(doze.arquitetura, new Map([['xyz', 'meu:abc']])).andares);
+  assert.equal(comFicha[4].npc, 'meu:abc');
+  assert.equal(N.limparAndares(comNpcs(doze.arquitetura, new Map()).andares)[4].nome, 'Spider', 'sem a ficha, fica o nome');
+  assert.deepEqual([catorze.arquitetura.nome, catorze.arquitetura.dv, catorze.arquitetura.descricao, catorze.arquitetura.andares.length], ['Clínica', 12, 'Dois ramos.', 1]);
 });

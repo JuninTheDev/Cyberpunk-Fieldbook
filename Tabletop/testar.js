@@ -34,6 +34,7 @@ const files = {
   '/mesa-tocador.js': path.join(here, 'mesa-tocador.js'),
   '/mesa-painel.js': path.join(here, 'mesa-painel.js'),
   '/mesa-areas.js': path.join(here, 'mesa-areas.js'),
+  '/mesa-net.js': path.join(here, 'mesa-net.js'),
   '/mesa.css': path.join(here, 'mesa.css')
 };
 
@@ -44,7 +45,7 @@ function carregarPagina() {
   const pagina = new Map();
   for (const [rota, arquivo] of Object.entries(files)) pagina.set(rota, { conteudo: fs.readFileSync(arquivo), tipo: contentTypes[path.extname(arquivo)] });
   const hash = crypto.createHash('sha1');
-  const codigo = [...new Set(Object.values(files)), ...['mesa-api.js', 'mesa-combate.js', 'mesa-luta.js', 'mesa-regras.js', 'mesa-2077.js', 'mesa-audio.js'].map(nome => path.join(here, nome)), path.join(root, 'personagem-jogo.js')];
+  const codigo = [...new Set(Object.values(files)), ...['mesa-api.js', 'mesa-combate.js', 'mesa-luta.js', 'mesa-netrun.js', 'mesa-regras.js', 'mesa-2077.js', 'mesa-audio.js'].map(nome => path.join(here, nome)), path.join(root, 'personagem-jogo.js')];
   for (const arquivo of codigo) hash.update(fs.readFileSync(arquivo));
   return { pagina, versao: hash.digest('hex').slice(0, 12) };
 }
@@ -189,7 +190,7 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
         caixa('j13', 'core_ammo:shotgun-slug-basic', 'Balote de espingarda', 8), item('j14', 'core_gear:binoculars', 'Binóculos', 'carregando')]
     } },
     { conta: 'Bruno (teste)', personagem: {
-      nome: 'Iris "Nyx" Tanaka', apelido: 'Nyx', role: 'netrunner', metodo: 'pacote',
+      nome: 'Iris "Nyx" Tanaka', apelido: 'Nyx', role: 'netrunner', rankRole: 6, metodo: 'pacote',
       stats: { INT: 8, REF: 6, DEX: 6, TECH: 7, COOL: 5, WILL: 7, LUCK: 6, MOVE: 5, BODY: 5, EMP: 5 },
       pericias: [['Interface', 'INT', 6], ['Electronics/Security Tech', 'TECH', 6], ['Cryptography', 'INT', 6], ['Basic Tech', 'TECH', 4], ['Handgun', 'REF', 4], ['Evasion', 'DEX', 4], ['Perception', 'INT', 4], ['Library Search', 'INT', 4], ['Stealth', 'DEX', 4], ['Concentration', 'WILL', 4], ['Conceal/Reveal Object', 'INT', 4]],
       hp: 40, dinheiro: 800, humanidade: { max: 50, perda: 0, atual: 50, emp: 5 },
@@ -197,6 +198,9 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
         item('n2', 'armas-2077:kang-tao-a-22b-chao', 'Kang Tao A-22B Chao', 'carregando', 'n9'), caixa('n9', 'armas-2077:smart-melhorada-pistola-media', 'Smart melhorada (pistola média)', 50),
         item('n3', 'armas-2077:arasaka-jke-x2-kenshin', 'Arasaka JKE-X2 Kenshin', 'carregando', 'n10'), caixa('n10', 'core_ammo:medium-pistol-basic', 'Munição de pistola média', 40),
         item('n11', 'core_gear:agent', 'Agent', 'carregando'),
+        // A NET (M13): o cyberdeck equipado, quatro programas e o Range Upgrade (vão no deck pela montagem padrão).
+        item('n12', 'core_gear:cyberdeck', 'Cyberdeck', 'equipado'), item('n13', 'core_programs:sword', 'Sword', ''), item('n14', 'core_programs:armor', 'Armor', ''),
+        item('n15', 'core_programs:see-ya', 'See Ya', ''), item('n16', 'core_programs:worm', 'Worm', ''), item('n17', 'core_upgrades:range-upgrade', 'Range Upgrade', ''),
         { uid: 'gratis:cyberware-2077:neuroport', id: 'cyberware-2077:neuroport', nome: 'Neuroport', qtd: 1, origem: 'gratis2077' }]
     } }
   ];
@@ -209,7 +213,7 @@ async function seed(url, writeJson, infoFile, cenasDoFoundry = true) {
     // ficha da wiki mostrar as mesmas armas e armaduras que a mesa.
     const comprados = p.itens.filter(linha => !linha.origem);
     const { data: character } = await call('/api/personagens', { method: 'POST', cookie, body: {
-      nome: p.nome, apelido: p.apelido, role: p.role, metodo: p.metodo, stats: p.stats,
+      nome: p.nome, apelido: p.apelido, role: p.role, ...(p.rankRole ? { rankRole: p.rankRole } : {}), metodo: p.metodo, stats: p.stats,
       itens: comprados.map(({ uid, id, qtd }) => ({ uid, id, qtd })),
       montagem: Object.fromEntries(comprados.filter(linha => linha.uso || linha.municao).map(linha => [linha.uid, { ...(linha.uso ? { uso: linha.uso } : {}), ...(linha.municao ? { municao: linha.municao } : {}) }])),
       resultado: { stats: p.stats, derivados: { hp: p.hp }, humanidade: p.humanidade, dinheiro: { saldo: p.dinheiro, inicial: 2550 }, pericias: p.pericias.map(([nome, stat, nivel]) => ({ nome, stat, nivel })), itens: p.itens }

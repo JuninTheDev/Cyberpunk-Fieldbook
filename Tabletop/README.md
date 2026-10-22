@@ -107,6 +107,11 @@ Teste automático (não abre navegador): `node --test Tabletop/` (79 testes).
   - **Mover:** quem dirige arrasta o veículo, e todos vão juntos (a parede segura o veículo).
   - **Descer:** arraste o token para fora (perto do veículo) ou **Descer** no cartão (um lugar livre ao lado). Tirar o veículo da cena deixa todos ao lado.
   - O veículo não entra na iniciativa (quem age é o motorista).
+- **NET** (em fases; a primeira: as arquiteturas e o netrunner):
+  - **A aba NET do mestre:** as arquiteturas da campanha. **+ Nova**, **Gerar** pelas tabelas do CORE (básica, padrão, incomum ou avançada: 3d6 andares, os ramos, o lobby), os três **exemplos** do NET Architect e as que vieram do Foundry.
+  - **O editor:** a grade de andares (a linha é o andar, a coluna é o ramo; o andar 1 do ramo A sai do ponto de acesso). Clique num **+** para criar um andar; arraste um andar para mover (em cima de outro, os dois trocam). O andar escolhido mostra o que há nele: senha, arquivo e nó de controle com a DV, Black ICE (os 12 do livro, com os números), demônio (Imp, Efreet, Balron) ou netrunner inimigo (uma ficha de NPC), com o nome e a descrição (o que o Eye-Dee e o Control revelam).
+  - **Só o mestre recebe** as arquiteturas.
+  - **O netrunner no cartão** (o dono e o mestre): o rank de Interface (a Role de Netrunner, a principal ou a segunda), as Ações NET por turno, o cyberdeck equipado com os slots, os programas dentro dele (a classe, o ATK e a REZ) e o hardware. O NPC, pela perícia Interface.
 - **Luta** (como a do sistema do Foundry 14; a wiki, "Agarrar e arremessar", "Escudo humano" e "Movimentos de artes marciais"):
   - **Agarrar:** no Atacar, com Desarmado (briga), o modo **Agarrar** contra quem está a até 2 m. Os dois rolam DEX + Briga, e o empate é de quem resiste (ele rola na hora, como a esquiva do corpo a corpo).
   - **Agarrados:** os dois têm −2 em tudo (o ataque, a defesa e o teste pelo token). Quem é agarrado não anda sozinho e é arrastado; ninguém usa arma de duas mãos. No mapa, uma faixa liga os dois, com o rótulo do agarrão.
@@ -305,7 +310,7 @@ Analisei o Foundry 14.369, o mesmo da mesa do servidor, em `%LOCALAPPDATA%\Field
 
 Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 
-- **NET** (o NET Architect, Fase 2): o grupo de agora não tem netrunner. O Black ICE já entra como ficha do mestre, sem as regras da NET.
+- **NET:** por enquanto, as arquiteturas e o netrunner no cartão. O ponto de acesso, a janela da NET, os inimigos, os programas e o Neuroport vêm nas próximas fases do M13 (o ROADMAP).
 - **Veículos:** a perseguição, o atropelamento e o tiro no ocupante através do veículo (cobertura) ainda são do mestre, à mão.
 - **Cyberware:** retirar ainda é à mão (a Humanidade e o dinheiro pelo ajuste da ficha). O lado da base é o que o jogador escolheu no pedido.
 - **Luta:** a arma tomada no desarme continua na ficha de quem perdeu, marcada com quem ficou (o mestre decide depois). A mesa não conta as Ações (o golpe no lugar dos 2 ataques, o Levantar-se, o Escudo humano) nem larga a arma do Braço quebrado.
@@ -323,6 +328,7 @@ Não muda nada para quem não usa a mesa: sem `doc.jogo`, tudo funciona como ant
   - o HP, o SP, a Sorte, a Humanidade (e o EMP), o dinheiro, o IP e a reputação;
   - o inventário com o uso e a quantidade, e a armadura vestida com a penalidade;
   - por arma: o pente, a munição carregada, a carga Tech, o ferrolho, a coronha e a arma que saiu da mão (arremessada ou tomada: `largada` e `com`). Gravar um deles não apaga os outros. A arma vai para a mesa com as mãos (do catálogo) e o uso;
+  - o que vai em cada cyberdeck (`noDeck`): os programas e o hardware, no deck da montagem ou do pedido (senão, no primeiro com slot, como o criador), e o que a mesa muda em cada programa (`doc.jogo.programas`: ativo, a REZ perdida, destruído);
   - as contas da mesa: vestir ou guardar (`comUso`), recarregar com a munição da caixa (`recarga`) e o ajuste do mestre com o extrato (`ajuste`).
 - **`api-personagens.js`:**
   - `jogo` entra nos campos do servidor (o jogador não grava, e salvar a ficha não apaga);
@@ -339,7 +345,7 @@ O M4 do roadmap. Quando você aprovar o teste:
 1. **`server.js`:**
    - criar a mesa com `require('./Tabletop/mesa-api')({ dataDir, charactersDir: path.join(charactersDataDir, 'personagens'), wikiDir: root, who: characterApi.who, campaigns: characterApi.campaigns, updateCharacter: characterApi.updateCharacter, send, writeJsonAtomic })`;
    - ligar a rota `ROUTES` antes da `characterApiRoutes`;
-   - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js`, `mesa-tocador.js`, `mesa-painel.js`, `mesa-areas.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
+   - pôr `/mesa` → `mesa.html` e acrescentar `mesa.html`, `mesa.js`, `mesa-visao.js`, `mesa-tocador.js`, `mesa-painel.js`, `mesa-areas.js`, `mesa-net.js` e `mesa.css` em `playerFiles` (eles não têm segredo);
    - o YouTube: a página carrega `https://www.youtube.com/iframe_api` e o player de `youtube-nocookie.com`. Se a wiki ganhar uma Content-Security-Policy, ela precisa deixar esses dois (hoje não há nenhuma);
    - não carregar o `mesa-config.js`: ele só existe no teste;
    - entregar a página da mesa carregada na memória quando o servidor liga, e passar a `versao` (como o `testar.js`): página nova com servidor velho dá "Operação desconhecida".
@@ -359,6 +365,8 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e a ficha de jogo dos personagens (o HP, o ajuste do mestre, o uso dos itens, as fichas ao vivo). |
 | `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha, o registro do turno) e as regras puras do RED e do Mission Kit (DV, armadura, autofogo, cartucho, Death Save, Power, Smart, Tech, o agarrão, o arremesso e as Artes Marciais). |
 | `mesa-luta.js` | A luta: agarrar, escapar, soltar, estrangular, derrubar, o escudo humano, levantar-se e os movimentos das Artes Marciais contra a DV. |
+| `mesa-net.js` | A NET, as regras puras: a arquitetura (os andares, os ramos, o pai, o Pathfinder), as tabelas do CORE e a geração, o Black ICE, os demônios e os programas (os números da wiki), o editor (mover, criar) e os exemplos. Vai para o servidor e para o navegador. |
+| `mesa-netrun.js` | A NET no servidor: as arquiteturas do mestre (salvar, apagar, gerar, importar) e o netrunner de cada token. |
 | `mesa-2077.js` | O perfil de 2077 de cada arma (do `system-2077.js`, como o build do Foundry) e o que a ficha diz dela e do cromo: o Rebuild, a munição carregada, a qualidade, a conexão Smart. |
 | `mesa-audio.js` | O áudio no servidor: as playlists, o que toca em cada canal e desde quando, a fila, a música da cena, o título do YouTube e a importação das playlists. |
 | `mesa-tocador.js` | O tocador no navegador: toca o arquivo num `<audio>` e o YouTube no player dele, acerta a posição pelo relógio do servidor e avisa quando o navegador segura o som. |
@@ -368,5 +376,5 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists, a biblioteca do yt-jukebox e os atores (as fichas de NPC do mestre) de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-veiculos.test.js`, `mesa-luta.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 89 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-veiculos.test.js`, `mesa-luta.test.js`, `mesa-net.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 97 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

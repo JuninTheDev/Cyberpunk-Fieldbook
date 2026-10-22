@@ -20,10 +20,12 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const characterGame = require('../personagem-jogo');
+const characterRoles = require('../personagem-roles');
 const R = require('./mesa-regras');
 const K = require('./mesa-2077');
 const createCombat = require('./mesa-combate');
 const createLuta = require('./mesa-luta');
+const createNet = require('./mesa-netrun');
 const createAudio = require('./mesa-audio');
 const V = require('./mesa-visao');
 const P = require('./mesa-painel');
@@ -292,9 +294,12 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const caixa = caixas.get(arma.municaoId);
       return { ...fato, municao: caixa ? K.municaoDe(catalogo.item(caixa.catalogo), caixa.nome) : arma.municao ? K.municaoDe(catalogo.porNome(arma.municao), arma.municao) : null };
     };
+    // A NET (M13): as Roles da ficha da wiki, ou as do Foundry quando ele mandou a ficha.
+    const roles = doc.mesa && (Array.isArray(doc.mesa.roles) ? doc.mesa.roles.length : doc.mesa.role) ? characterRoles.listaMesa(doc) : characterRoles.lista(doc);
     return {
       hp: ficha.hp, sp: ficha.sp, sorte: ficha.sorte, humanidade: ficha.humanidade, lesoes: ficha.lesoes, deathSave: ficha.deathSave, morto: ficha.morto, cromo: fatos.cromo,
-      armas: ficha.armas.map(arma => K.comPerfil({ ...arma, classe: R.classeDaArma(arma) }, armas2077, fatoDe(arma)))
+      armas: ficha.armas.map(arma => K.comPerfil({ ...arma, classe: R.classeDaArma(arma) }, armas2077, fatoDe(arma))),
+      netrunner: netFlow.netrunnerDaFicha(roles, ficha, catalogo)
     };
   }
   // O cartão do personagem (vai só para o dono e para o mestre): a ficha de rolar e a ficha de jogo, com o que o mestre
@@ -408,6 +413,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
         sp: token.sp || null, armas: (token.armas || []).map(arma => armaParaVer(arma, campaignId)), lesoes: token.lesoes || [], deathSave: token.deathSave || 0,
         ...(token.sorte ? { sorte: token.sorte } : {}), ...(token.humanidade ? { humanidade: token.humanidade } : {}), ...(token.cromo ? { cromo: token.cromo } : {})
       });
+      // A NET (M13): o rank de Interface, o deck e os programas (o personagem pela ficha; o NPC pela perícia Interface).
+      const netrunner = token.tipo === 'pj' ? token.netrunner : token.tipo === 'npc' ? netFlow.netrunnerDoNpc(token) : null;
+      if (netrunner) view.netrunner = netrunner;
       // As Artes Marciais: as armas de cada forma (com os golpes) e os movimentos, com o requisito de agora.
       const luta = lutaFlow.vistaDe(tableOf(campaignId).state, scene, token, campaignId, arma => armaParaVer(arma, campaignId));
       if (luta) view.luta = luta;
@@ -537,7 +545,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       ...(gm ? {
         cenas: scenesList(state), cenaAtiva: state.cenaAtiva,
         personagens: fichas,
-        ...npcsFor(state)
+        ...npcsFor(state),
+        arquiteturas: netFlow.arquiteturasFor(state)
       } : { meus: fichas })
     };
   }
@@ -653,6 +662,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       if (effects.esquecer) sendEvent(connection, 'visao.esquecer', { cena: effects.esquecer });
       if (effects.audio) sendEvent(connection, 'audio', audioFlow.audioFor(viewer, state, campaignId));
       if (effects.npcs && isGm(viewer)) sendEvent(connection, 'npcs', npcsFor(state));
+      if (effects.arquiteturas && isGm(viewer)) sendEvent(connection, 'arquiteturas', { arquiteturas: netFlow.arquiteturasFor(state) });
       if (effects.estiloDaMesa) sendEvent(connection, 'estiloDaMesa', { estilo: state.estiloDaMesa || null });
     }
     if (effects.fichas) sendCards(campaignId);
@@ -1134,6 +1144,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     regras: () => wikiData().regras, ptOf: en => (wikiData().ptOf ? wikiData().ptOf(en) : en),
     critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
   });
+  const netFlow = createNet({ fail, int, line, block, newId, pool });
   const lutaFlow = createLuta({
     fail, int, isGm, canControl, tokenArg, tokenFor, writeSheet, addEntry, authorOf, ajuda: combatFlow.ajuda,
     critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
@@ -1774,6 +1785,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     // Agarrar, escapar, soltar, estrangular, derrubar, o escudo humano, levantar-se e os movimentos das Artes Marciais:
     // mesa-luta.js.
     ...lutaFlow.operations,
+    // A NET: as arquiteturas (mesa-netrun.js).
+    ...netFlow.operations,
     // Playlists, o que toca e a importação das playlists do Foundry: mesa-audio.js.
     ...audioFlow.operations
   };

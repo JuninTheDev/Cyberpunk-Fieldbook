@@ -127,6 +127,8 @@
       <section id="retrato-janela" class="nota-janela retrato-janela" role="dialog" aria-labelledby="retrato-janela-titulo" hidden></section>
       <!-- O estilo do Painel Tático deste navegador (a paleta no painel). -->
       <section id="estilo-janela" class="nota-janela estilo-janela" role="dialog" aria-labelledby="estilo-janela-titulo" hidden></section>
+      <!-- O editor de arquitetura da NET (aba NET → Nova, Editar): a grade de andares e o que há em cada um. -->
+      <section id="arq-janela" class="nota-janela arq-janela" role="dialog" aria-labelledby="arq-janela-titulo" hidden></section>
       <div id="tiles-opcoes" class="nevoa-opcoes tiles-opcoes" hidden>
         <label class="botao vazado pequeno arquivo">Pôr um tile (imagem ou vídeo) <input id="tile-novo" type="file" accept="image/png,image/jpeg,image/webp,video/webm,video/mp4"></label>
         <div id="tile-escolhido" class="tile-escolhido" hidden></div>
@@ -224,6 +226,10 @@
       <section class="aba so-mestre" data-aba="cena">
         <div id="cena-painel"></div>
       </section>
+
+      <section class="aba so-mestre" data-aba="net">
+        <div id="net-painel"></div>
+      </section>
       </div>
 
       <nav class="abas" aria-label="Barra lateral">
@@ -245,6 +251,9 @@
           </button>
           <button type="button" role="tab" data-aba="cena" class="so-mestre" aria-selected="false" title="Cena">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2.5 6 2.5 6-2.5v14l-6 2.5-6-2.5-6 2.5z"/><path d="M9 3.5v14M15 6v14"/></svg><span class="aba-nome">Cena</span>
+          </button>
+          <button type="button" role="tab" data-aba="net" class="so-mestre" aria-selected="false" title="NET: as arquiteturas">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="4.5" rx="1"/><rect x="3" y="16.5" width="6" height="4.5" rx="1"/><rect x="15" y="16.5" width="6" height="4.5" rx="1"/><path d="M12 7v4.5M6 16.5V13h12v3.5"/></svg><span class="aba-nome">NET</span>
           </button>
         </div>
         <button id="barra-recolher" class="abas-recolher" type="button" aria-controls="painel-conteudo" aria-expanded="true" title="Recolher a barra (B)">
@@ -284,6 +293,7 @@
   <script src="/mesa-tocador.js"></script>
   <script src="/mesa-painel.js"></script>
   <script src="/mesa-areas.js"></script>
+  <script src="/mesa-net.js"></script>
   <script src="/mesa.js"></script>
 </body>
 </html>
