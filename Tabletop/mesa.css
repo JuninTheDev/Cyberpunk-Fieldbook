@@ -809,3 +809,10 @@ input.cresce { flex: 1; }
 /* Veículos (M17): os assentos e quem está dentro, no cartão. */
 .veiculo-cartao { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid var(--l); }
 .veiculo-cartao .nota { margin: 0; }
+/* A luta (M9b): o bloco do agarrão, de levantar-se e dos movimentos no cartão; o movimento sem o requisito fica apagado
+   (o título diz o que falta); o cartão da luta no chat. */
+.luta-cartao { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid var(--l); }
+.luta-cartao .cartao-acoes { margin: 0; }
+.luta-cartao .botao.ativo { background: rgba(255, 49, 88, .18); }
+.botao.apagado { opacity: .5; }
+.registro li.luta { border-left-width: 4px; }

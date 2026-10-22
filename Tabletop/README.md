@@ -107,6 +107,18 @@ Teste automático (não abre navegador): `node --test Tabletop/` (79 testes).
   - **Mover:** quem dirige arrasta o veículo, e todos vão juntos (a parede segura o veículo).
   - **Descer:** arraste o token para fora (perto do veículo) ou **Descer** no cartão (um lugar livre ao lado). Tirar o veículo da cena deixa todos ao lado.
   - O veículo não entra na iniciativa (quem age é o motorista).
+- **Luta** (como a do sistema do Foundry 14; a wiki, "Agarrar e arremessar", "Escudo humano" e "Movimentos de artes marciais"):
+  - **Agarrar:** no Atacar, com Desarmado (briga), o modo **Agarrar** contra quem está a até 2 m. Os dois rolam DEX + Briga, e o empate é de quem resiste (ele rola na hora, como a esquiva do corpo a corpo).
+  - **Agarrados:** os dois têm −2 em tudo (o ataque, a defesa e o teste pelo token). Quem é agarrado não anda sozinho e é arrastado; ninguém usa arma de duas mãos. No mapa, uma faixa liga os dois, com o rótulo do agarrão.
+  - **O bloco Luta do cartão:** quem agarra tem **Estrangular** e **Derrubar** (o BODY dele direto no HP, sem a armadura), **Escudo humano** e **Soltar**; quem é agarrado, **Escapar** (também no HUD).
+  - **Escudo humano:** os tiros em quem agarra vão no agarrado, que não esquiva (o corpo a corpo e o tiro mirado na cabeça não). Morto, ele vira um escudo com HP igual ao BODY; quebrado, o agarrão acaba.
+  - **Caído e inconsciente:** caído, o token não anda até **Levantar-se** (no cartão e no HUD); inconsciente, não age nem esquiva. O mestre marca e tira no bloco Luta.
+  - **Arremessar:** a arma branca ganha o modo **Arremessar** (DEX + Atletismo contra a DV do lança-granadas, até 25 m; não ignora metade do SP). A arma fica **no chão** até **pegar** (uma Ação).
+  - **Artes Marciais:** cada forma da ficha (Aikido, Judô, Karatê, Taekwondo) vira uma arma no Atacar, com o dano pelo BODY e metade do SP.
+    - **Os golpes:** Quebra-ossos e Ponto de pressão (no corpo ou na cabeça, −8: a lesão do golpe) e Voadora (até 4 m; o alvo cai).
+    - **Os movimentos contra a DV:** Desarme, Quebra-armadura e Contra-queda são modos da arma da forma, com o alvo. Aperto de ferro, Escape de agarrão e Recuperação ficam no bloco Luta.
+  - **O requisito "neste turno":** no combate, a mesa confere pelo registro do turno (quem acertou o quê, quem desviou, quanto andou), e a prévia mostra ✓ ou o que falta. O mestre confirma por cima (o acerto resolvido à mão). Fora do combate, quem age confirma.
+  - **O cartão da luta** vai para o chat, com as rolagens e o HP (o de NPC, só o mestre). O mestre desfaz.
 - **Áreas e desenhos** (ferramenta A, para todos), como os Measured Templates e os Drawings do Foundry:
   - **As formas:** o círculo (arraste do centro: a explosão), o cone (da ponta para onde abre; 90°, 45° para cada lado, como o cartucho), a linha (do começo ao fim, com a largura), o retângulo (de canto a canto) e o traço livre.
   - A ponta encaixa a cada meio quadrado; Shift solta. A medida aparece em metros.
@@ -296,7 +308,7 @@ Está no [ROADMAP.md](ROADMAP.md), em ordem. O mais importante:
 - **NET** (o NET Architect, Fase 2): o grupo de agora não tem netrunner. O Black ICE já entra como ficha do mestre, sem as regras da NET.
 - **Veículos:** a perseguição, o atropelamento e o tiro no ocupante através do veículo (cobertura) ainda são do mestre, à mão.
 - **Cyberware:** retirar ainda é à mão (a Humanidade e o dinheiro pelo ajuste da ficha). O lado da base é o que o jogador escolheu no pedido.
-- **Artes Marciais:** os movimentos especiais esperam o agarrar e a conta de quem acertou o quê no turno. O golpe de artes marciais já ignora metade do SP.
+- **Luta:** a arma tomada no desarme continua na ficha de quem perdeu, marcada com quem ficou (o mestre decide depois). A mesa não conta as Ações (o golpe no lugar dos 2 ataques, o Levantar-se, o Escudo humano) nem larga a arma do Braço quebrado.
 - **Cobertura:** a mesa não conta o HP da cobertura. O que atravessa cobertura (a carga Tech, o ricochete) aparece como nota no cartão, e o mestre decide.
 - **Luz em cone e modos de visão:** a luz em cone vira círculo, e não há visão no escuro do cyberware (o mestre aumenta o alcance no cartão).
 - **Imagem do mapa:** o mapa inteiro vai para os jogadores, e a névoa e a sombra da visão só cobrem na tela, como no Foundry.
@@ -310,7 +322,7 @@ Não muda nada para quem não usa a mesa: sem `doc.jogo`, tudo funciona como ant
 - **`personagem-jogo.js` (novo):** a regra da ficha de jogo, compartilhada pela wiki, pela API e pela mesa:
   - o HP, o SP, a Sorte, a Humanidade (e o EMP), o dinheiro, o IP e a reputação;
   - o inventário com o uso e a quantidade, e a armadura vestida com a penalidade;
-  - por arma: o pente, a munição carregada, a carga Tech, o ferrolho e a coronha. Gravar um deles não apaga os outros;
+  - por arma: o pente, a munição carregada, a carga Tech, o ferrolho, a coronha e a arma que saiu da mão (arremessada ou tomada: `largada` e `com`). Gravar um deles não apaga os outros. A arma vai para a mesa com as mãos (do catálogo) e o uso;
   - as contas da mesa: vestir ou guardar (`comUso`), recarregar com a munição da caixa (`recarga`) e o ajuste do mestre com o extrato (`ajuste`).
 - **`api-personagens.js`:**
   - `jogo` entra nos campos do servidor (o jogador não grava, e salvar a ficha não apaga);
@@ -345,7 +357,8 @@ O M4 do roadmap. Quando você aprovar o teste:
 | Arquivo | Para que serve |
 |---|---|
 | `mesa-api.js` | O servidor da mesa: operações, permissões, o filtro de cada pessoa, os eventos ao vivo, as rolagens, o chat, as paredes, a mídia (imagem, vídeo, SVG; com Range) e a ficha de jogo dos personagens (o HP, o ajuste do mestre, o uso dos itens, as fichas ao vivo). |
-| `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha) e as regras puras do RED e do Mission Kit (DV, armadura, autofogo, cartucho, Death Save, Power, Smart, Tech). |
+| `mesa-combate.js`, `mesa-regras.js` | O combate: o caminho (quem ataca, quem defende, o que vai para a ficha, o registro do turno) e as regras puras do RED e do Mission Kit (DV, armadura, autofogo, cartucho, Death Save, Power, Smart, Tech, o agarrão, o arremesso e as Artes Marciais). |
+| `mesa-luta.js` | A luta: agarrar, escapar, soltar, estrangular, derrubar, o escudo humano, levantar-se e os movimentos das Artes Marciais contra a DV. |
 | `mesa-2077.js` | O perfil de 2077 de cada arma (do `system-2077.js`, como o build do Foundry) e o que a ficha diz dela e do cromo: o Rebuild, a munição carregada, a qualidade, a conexão Smart. |
 | `mesa-audio.js` | O áudio no servidor: as playlists, o que toca em cada canal e desde quando, a fila, a música da cena, o título do YouTube e a importação das playlists. |
 | `mesa-tocador.js` | O tocador no navegador: toca o arquivo num `<audio>` e o YouTube no player dele, acerta a posição pelo relógio do servidor e avisa quando o navegador segura o som. |
@@ -355,5 +368,5 @@ O M4 do roadmap. Quando você aprovar o teste:
 | `mesa.html`, `mesa.js`, `mesa.css` | A página da mesa: canvas (mapa ou vídeo, tiles, grade, névoa, visão, portas, tokens), ferramentas, painel (Rolagens com o chat, Combate, Fichas/Personagem, Áudio, Cena) e celular. Vão para os jogadores: nada de segredo aqui. |
 | `importar-foundry.js` | Traz as cenas, as playlists, a biblioteca do yt-jukebox e os atores (as fichas de NPC do mestre) de um mundo do Foundry (de um backup `.tar` ou da pasta Data) pela API da mesa. |
 | `testar.js`, `testar-mesa.bat` | A wiki de verdade (o `server.js`, sem mudar nada nele) com a mesa junto e dados de teste. |
-| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-veiculos.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 79 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
+| `mesa.test.js`, `mesa-combate.test.js`, `mesa-2077.test.js`, `mesa-ficha.test.js`, `mesa-notas.test.js`, `mesa-npcs.test.js`, `mesa-painel.test.js`, `mesa-areas.test.js`, `mesa-veiculos.test.js`, `mesa-luta.test.js`, `mesa-visao.test.js`, `mesa-audio.test.js`, `importar-foundry.test.js`, `teste-ajuda.js` | 89 testes, com dados rolados de propósito e o título do YouTube sem ir à internet. |
 | `ROADMAP.md` | O caminho até substituir o Foundry. |

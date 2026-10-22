@@ -88,10 +88,15 @@ Para desligar o Foundry, da Fase 2 só são obrigatórios o M15, o M16 e o M18 (
   - **Desfazer:** volta também a carga e o ferrolho.
   - **Testado:** 11 testes e 75 mutações que caem, mais a conferência no Edge (o cartão e o ataque do Jax e da Nyx de teste, que agora têm armas de 2077).
   - **Falta:** o autofogo com −2 da Pozhar (a regra está só no texto) e a cobertura com HP (hoje é nota no cartão).
-- [ ] **M9b · Artes Marciais:**
-  - os movimentos especiais (o C10 da `sistema-v14`);
-  - **antes:** agarrar e arremessar na mesa;
-  - **antes:** quem acertou o quê no turno, para os requisitos.
+- [x] **M9b · Agarrar, arremessar e Artes Marciais** (`mesa-luta.js`; as regras em `mesa-regras.js`; o ataque, o escudo humano e o registro do turno em `mesa-combate.js`), como o C10 e o agarrão da `sistema-v14`:
+  - **Agarrar:** DEX + Briga contra DEX + Briga (o empate é de quem resiste, que rola na hora). Agarrados, −2 em tudo para os dois (o ataque, a defesa, o teste pelo token); quem é agarrado não anda e é arrastado; ninguém usa arma de duas mãos.
+  - **Agarrando:** Estrangular (o BODY direto no HP; abaixo de 0, fica com 1 e desmaia; três rodadas seguidas, desmaia), Derrubar (o BODY no HP, cai, acaba), Soltar e o **Escudo humano** (os tiros vão no agarrado, que não esquiva; o corpo a corpo e o mirado na cabeça não; morto, é um escudo com HP igual ao BODY). Agarrado: Escapar (o empate é de quem segura).
+  - **Caído e inconsciente:** caído não anda até Levantar-se; inconsciente não age nem esquiva. Quem agarra e morre ou desmaia solta.
+  - **Arremessar:** a arma branca e as de arremesso do Black Chrome (DEX + Atletismo, a DV do lança-granadas, até 25 m; a branca não ignora metade do SP). A arma fica no chão até pegar (`largada` na ficha).
+  - **Artes Marciais:** a arma de cada forma (o dano pelo BODY, metade do SP) e os 8 movimentos: os golpes (Quebra-ossos, Ponto de pressão, Voadora) pelo ataque; Desarme combinado (a arma fica com quem desarmou, marcada na ficha de quem perdeu, ou cai), Aperto de ferro, Combinação quebra-armadura, Contra-queda, Escape de agarrão e Recuperação contra a DV.
+  - **O registro do turno:** cada ataque resolvido no combate (quem, em quem, a classe da arma, se pegou, se desviou), a vez de cada um e os metros andados. Os requisitos "neste turno" e "desde o seu último turno" saem dali; o mestre confirma por cima, e fora do combate quem age confirma.
+  - **Fica de fora:** a arma tomada não passa para a ficha de quem desarmou (o mestre decide); a mesa não conta as Ações (o golpe no lugar dos 2 ataques); o Braço quebrado não larga a arma sozinho; agarrar com as mãos ocupadas só avisa.
+  - **Testado:** 10 testes, 93 mutações que caem, os cenários criador, cyberware, economia, Foundry e contas, e a conferência no Edge (a jogadora agarrando com o escudo humano, o cartão, o chat, o ataque com Arremessar e Agarrar; o mestre com o monge de Karatê e Judô; o celular agarrado).
 - [x] **M10 · Chat:** texto para todos, só para o mestre ou sussurro a um jogador (os outros nem recebem), `/r 2d6` rola, e os cartões de rolagem e de ataque no mesmo fio.
 - [x] **M11 · Áudio** (`mesa-audio.js` no servidor, `mesa-tocador.js` no navegador), como as playlists do Foundry e o yt-jukebox que o mundo usa:
   - **Playlists do mestre:** música enviada (MP3, OGG, M4A, WAV, FLAC) e vídeo do YouTube (o link; a playlist ou o mix do YouTube traz todas; o título vem pelo oEmbed, sem chave).

@@ -121,7 +121,7 @@
         if (tipo === 'arma') {
           const pente = Number(cat.arma.pente);
           entrada.arma = { id: entrada.id, nome: entrada.nome, classe: cat.arma.tipo || '', dano: String(cat.arma.dano || ''), cdt: Number(cat.arma.cdt) || 1,
-            pericia: cat.arma.pericia || '', distancia: Boolean(cat.arma.distancia),
+            pericia: cat.arma.pericia || '', distancia: Boolean(cat.arma.distancia), ...(Number(cat.arma.maos) ? { maos: Number(cat.arma.maos) } : {}),
             // Na montagem, a arma já vem carregada com a munição escolhida.
             pente: cat.arma.distancia && pente ? { atual: linha.municao ? pente : 0, max: pente } : null,
             municao: linha.municao ? (linhas.find(outra => outra.uid === linha.municao) || {}).nome || '' : '', municaoId: linha.municao || '' };
@@ -143,8 +143,9 @@
       if (COM_USO.has(entrada.tipo) && USOS.includes(salvo.uso)) entrada.uso = salvo.uso;
       if (definido(salvo.qtd)) entrada.qtd = Math.max(0, Math.round(Number(salvo.qtd)));
     }
-    // O que a mesa guarda de cada arma: a munição no pente (e qual), a carga da arma Tech, o ferrolho por manejar e a
-    // coronha recolhida. E a munição que o personagem tem e serve nela (para recarregar).
+    // O que a mesa guarda de cada arma: a munição no pente (e qual), a carga da arma Tech, o ferrolho por manejar, a
+    // coronha recolhida e a arma que saiu da mão (arremessada ou tomada no desarme: largada, e com quem ficou). E a
+    // munição que o personagem tem e serve nela (para recarregar).
     const salvas = (jogo.armas && typeof jogo.armas === 'object') ? jogo.armas : {};
     for (const { arma } of itens.filter(entrada => entrada.arma)) {
       const salva = salvas[arma.id];
@@ -158,6 +159,10 @@
         if (salva.carga && typeof salva.carga === 'object') arma.carga = salva.carga;
         if (salva.ferrolho) arma.ferrolho = true;
         if (salva.coronha) arma.coronha = true;
+        if (salva.largada) {
+          arma.largada = true;
+          if (salva.com) arma.com = String(salva.com).slice(0, 40);
+        }
       }
       if (arma.pente) {
         // A munição que o catálogo não conhece (renomeada no Foundry) serve na arma em que já está.
@@ -167,8 +172,8 @@
           .map(entrada => ({ id: entrada.id, nome: entrada.nome, qtd: entrada.qtd }));
       }
     }
-    // Armas à mão (equipadas ou carregadas; guardada não vai para a mesa).
-    const armas = itens.filter(entrada => entrada.arma && entrada.uso !== 'guardado').map(entrada => entrada.arma);
+    // Armas à mão (equipadas ou carregadas; guardada não vai para a mesa), com o uso (a equipada ocupa a mão).
+    const armas = itens.filter(entrada => entrada.arma && entrada.uso !== 'guardado').map(entrada => (entrada.uso ? { ...entrada.arma, uso: entrada.uso } : entrada.arma));
 
     // Armadura: o SP de cada local é o da armadura vestida (a maior, se houver duas). Do Foundry antigo, sem o SP de
     // cada armadura, vale o SP que ele mandou.

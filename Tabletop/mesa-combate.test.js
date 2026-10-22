@@ -16,7 +16,8 @@ test('regras: classe da arma, DV pelo alcance, armadura, briga e Death Save', ()
   assert.equal(R.classeDaArma({ nome: 'Katana', pericia: 'Melee Weapon', distancia: false }), 'medMelee');
   assert.equal(R.classeDaArma({ classe: 'smg', nome: 'qualquer' }), 'smg');
   assert.deepEqual(R.modosDaArma({ classe: 'assaultRifle' }), ['tiro', 'mirado', 'autofogo', 'supressivo']);
-  assert.deepEqual(R.modosDaArma({ classe: 'lightMelee' }), ['corpo']);
+  assert.deepEqual(R.modosDaArma({ classe: 'lightMelee' }), ['corpo', 'arremesso'], 'a arma branca também se arremessa');
+  assert.deepEqual(R.modosDaArma({ classe: 'briga' }), ['corpo']);
   assert.equal(R.dvPelaDistancia(regras, 'heavyPistol', 10), 15, 'pistola a 10 m: DV 15');
   assert.equal(R.dvPelaDistancia(regras, 'smg', 16, true), 20, 'autofogo de SMG a 16 m: DV 20');
   assert.equal(R.dvPelaDistancia(regras, 'heavyPistol', 300), null, 'pistola a 300 m: fora do alcance');

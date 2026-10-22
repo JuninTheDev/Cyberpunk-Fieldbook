@@ -23,6 +23,7 @@ const characterGame = require('../personagem-jogo');
 const R = require('./mesa-regras');
 const K = require('./mesa-2077');
 const createCombat = require('./mesa-combate');
+const createLuta = require('./mesa-luta');
 const createAudio = require('./mesa-audio');
 const V = require('./mesa-visao');
 const P = require('./mesa-painel');
@@ -179,7 +180,17 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const skills = new Map((rules.skills || []).map(([pt, en, stat]) => [en, { pt, stat }]));
     skills.set('Language (Streetslang)', { pt: 'Linguagem (Streetslang)', stat: 'INT' });
     skills.set('Local Expert (Your Home)', { pt: 'Especialista Local (sua casa)', stat: 'INT' });
-    const ptOf = en => (skills.get(en) || {}).pt || names[en] || en;
+    // As perícias com o tipo entre parênteses (a criação grava o nome do Foundry, "Martial Arts (Karate)"): o nome da
+    // perícia em português e o tipo (a forma das Artes Marciais, com o nome dela).
+    const ptOf = en => {
+      const direto = (skills.get(en) || {}).pt || names[en];
+      if (direto) return direto;
+      const partes = String(en || '').match(/^(.*) ((.*))$/);
+      const geral = partes && ((skills.get(partes[1]) || {}).pt || names[partes[1]]);
+      if (!geral) return en;
+      const forma = partes[1] === 'Martial Arts' && R.formaDaPericia(en);
+      return `${geral} (${forma ? R.FORMAS[forma] : partes[2]})`;
+    };
     // A perícia pelo nome em inglês ou em português (a ficha do mestre aceita os dois; grava o inglês, como as do livro).
     const chave = texto => String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
     const porNome = new Map();
@@ -376,6 +387,13 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (gm || mine || token.tipo === 'pj') view.hp = token.hp;
     if (token.morto) view.morto = true;
     if (token.suprimido) view.suprimido = true;
+    // A luta (M9b), que todos veem: caído, inconsciente e o agarrão (o papel, o outro, o escudo humano, o Aperto de ferro).
+    if (token.caido) view.caido = true;
+    if (token.inconsciente) view.inconsciente = true;
+    if (token.agarrao) {
+      const { papel, outro, escudo, apertoDeFerro, escudoHp } = token.agarrao;
+      view.agarrao = { papel, outro, ...(escudo ? { escudo: true } : {}), ...(apertoDeFerro ? { apertoDeFerro: true } : {}), ...(Number.isFinite(escudoHp) ? { escudoHp } : {}) };
+    }
     if (token.dentro) view.dentro = token.dentro;
     if (token.veiculo) {
       const ocupantes = token.veiculo.ocupantes.map(id => scene.tokens.find(item => item.id === id)).filter(item => item && (gm || !item.escondido));
@@ -390,6 +408,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
         sp: token.sp || null, armas: (token.armas || []).map(arma => armaParaVer(arma, campaignId)), lesoes: token.lesoes || [], deathSave: token.deathSave || 0,
         ...(token.sorte ? { sorte: token.sorte } : {}), ...(token.humanidade ? { humanidade: token.humanidade } : {}), ...(token.cromo ? { cromo: token.cromo } : {})
       });
+      // As Artes Marciais: as armas de cada forma (com os golpes) e os movimentos, com o requisito de agora.
+      const luta = lutaFlow.vistaDe(tableOf(campaignId).state, scene, token, campaignId, arma => armaParaVer(arma, campaignId));
+      if (luta) view.luta = luta;
     }
     if (gm) {
       Object.assign(view, { notas: token.notas || '', dono: token.dono || null, ref: token.ref ?? null });
@@ -486,6 +507,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       resto.ataque = { ...resto.ataque, alvos: resto.ataque.alvos.map(({ dono, ...alvo }) => (hpVisivel(viewer, alvo.tipo, dono) ? alvo : { ...alvo, dano: semHp(alvo.dano) })) };
     }
     if (resto.tipo === 'dano' && !hpVisivel(viewer, resto.alvoTipo, resto.alvoDono)) resto.dano = semHp(resto.dano);
+    if (resto.tipo === 'luta' && resto.luta && resto.luta.hp && !hpVisivel(viewer, resto.alvoTipo, resto.alvoDono)) resto.luta = { ...resto.luta, hp: null };
     delete resto.alvoDono;
     return { ...resto, ...(isGm(viewer) && desfazer && !entry.desfeito ? { podeDesfazer: true } : {}), autor: { ...autor, meu: isGm(viewer) ? autor.papel === 'mestre' : Boolean(conta) && conta === viewer.conta } };
   }
@@ -1016,9 +1038,11 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     if (body.token) {
       const { token } = tokenArg(state, viewer, body.token);
       if (!canControl(viewer, token)) throw fail(403, 'Você só rola pelo seu token.');
-      if (token.tipo === 'npc') return { nome: token.nome, tipo: 'npc', stats: token.stats || {}, pericias: token.pericias || [], hp: token.hp };
+      // O agarrão tira 2 de tudo (o teste pelo token).
+      const agarrao = token.agarrao ? token.agarrao.papel : null;
+      if (token.tipo === 'npc') return { nome: token.nome, tipo: 'npc', stats: token.stats || {}, pericias: token.pericias || [], hp: token.hp, agarrao };
       const doc = token.tipo === 'pj' ? readCharacter(campaignId, token.personagem) : null;
-      return { nome: token.nome, tipo: token.tipo, sheet: doc ? sheetOf(doc) : null, hp: token.hp };
+      return { nome: token.nome, tipo: token.tipo, sheet: doc ? sheetOf(doc) : null, hp: token.hp, agarrao };
     }
     if (body.personagem) {
       const doc = readCharacter(campaignId, String(body.personagem));
@@ -1060,6 +1084,7 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     }
     const wound = source && woundState(source.hp);
     if (woundPenalty(wound)) parts.push({ rotulo: wound, valor: woundPenalty(wound) });
+    if (source && source.agarrao) parts.push({ rotulo: source.agarrao === 'agarrando' ? 'Agarrando' : 'Agarrado', valor: R.AGARRAO.penalidade });
     const mod = int(body.mod, -30, 30, 0);
     if (mod) parts.push({ rotulo: 'Modificador', valor: mod });
     const first = die(10);
@@ -1107,6 +1132,10 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     prazo: prazoDefesa, die, pool, newId, fail, int, line, isGm, canControl, tokenArg, sceneById, tokenFor, readCharacter, sheetOf, writeSheet, recarregar,
     addEntry, systemEntry, authorOf, entryFor, canSeeEntry, connections, sendEvent, broadcast, save, tableOf,
     regras: () => wikiData().regras, ptOf: en => (wikiData().ptOf ? wikiData().ptOf(en) : en),
+    critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
+  });
+  const lutaFlow = createLuta({
+    fail, int, isGm, canControl, tokenArg, tokenFor, writeSheet, addEntry, authorOf, ajuda: combatFlow.ajuda,
     critTables: () => ({ corpo: wikiData().critBody, cabeca: wikiData().critHead })
   });
   const audioFlow = createAudio({
@@ -1207,15 +1236,29 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
       const { scene, token } = tokenArg(state, viewer, body.token);
       if (!canControl(viewer, token) && !dirige(viewer, scene, token)) throw fail(403, 'Esse token não é seu.');
       if (token.dentro) throw fail(409, 'Desça do veículo antes.');
+      // A luta (M9b): o agarrado não usa a Ação de Movimento (é arrastado), e o caído precisa se levantar antes. O mestre
+      // move assim mesmo.
+      if (!isGm(viewer) && token.agarrao && token.agarrao.papel === 'agarrado') throw fail(409, `${token.nome} está agarrado: não usa a Ação de Movimento (escape antes).`);
+      if (!isGm(viewer) && token.caido) throw fail(409, `${token.nome} está caído: levante-se antes (uma Ação).`);
+      if (!isGm(viewer) && token.inconsciente) throw fail(409, `${token.nome} está inconsciente.`);
       const x = Number(body.x);
       const y = Number(body.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) throw fail(400, 'Posição inválida.');
       const destino = naCena(scene, x, y);
       // O jogador não atravessa parede nem porta fechada (o mestre passa por tudo, como no Foundry).
       if (!isGm(viewer) && atravessa(scene.paredes || [], token, destino)) throw fail(409, 'Uma parede bloqueia o caminho.');
+      const origem = { x: token.x, y: token.y };
       token.x = destino.x;
       token.y = destino.y;
       for (const ocupante of ocupantesDe(scene, token)) Object.assign(ocupante, destino);
+      // Quem agarra arrasta o agarrado no mesmo passo; se a parede fecha o caminho dele, ele vai para onde quem agarra estava.
+      const arrastado = token.agarrao && token.agarrao.papel === 'agarrando' && scene.tokens.find(item => item.id === token.agarrao.outro);
+      if (arrastado) {
+        const junto = naCena(scene, arrastado.x + destino.x - origem.x, arrastado.y + destino.y - origem.y);
+        Object.assign(arrastado, atravessa(scene.paredes || [], arrastado, junto) ? origem : junto);
+      }
+      // Os metros andados no combate (a Voadora pede 4 m neste turno).
+      combatFlow.registrarPasso(state, scene.id, token, combatFlow.ajuda.distancia(scene, origem, destino));
       return { tokens: true };
     } },
     // Veículos (M17). Embarcar: { token, veiculo }. O jogador, com o token dele perto (até 2 quadrados da borda); o mestre,
@@ -1728,6 +1771,9 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     } },
     // Ataque, defesa, dano, Death Save, estabilizar, recarregar: mesa-combate.js.
     ...combatFlow.operations,
+    // Agarrar, escapar, soltar, estrangular, derrubar, o escudo humano, levantar-se e os movimentos das Artes Marciais:
+    // mesa-luta.js.
+    ...lutaFlow.operations,
     // Playlists, o que toca e a importação das playlists do Foundry: mesa-audio.js.
     ...audioFlow.operations
   };
@@ -1764,6 +1810,8 @@ module.exports = function createTableApi({ dataDir, charactersDir, wikiDir, who,
     const connection = connectionOf(body.conexao, viewer, campaignId);
     const effects = await operation.run({ table, state: table.state, viewer, body, campaignId, connection, color: connection ? connection.cor : colorOf(viewer) });
     if (operation.local) return json(response, 200, { ok: true });
+    // O agarrão que não vale mais (quem agarra morreu ou desmaiou, o outro saiu da cena) acaba aqui, depois de cada mudança.
+    if (effects.tokens || effects.cena) lutaFlow.conferir(table.state, campaignId);
     table.seq += 1;
     save(table);
     broadcast(campaignId, effects);

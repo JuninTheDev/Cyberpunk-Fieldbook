@@ -12,6 +12,10 @@
 // (foundry-2077/scripts/armas2077.mjs) e o Fluxo de Combate fazem: as travas antes do tiro, os ajustes do ataque, as
 // balas, o dano, a segunda chance da munição Smart melhorada, os dois alvos da Kappa e o estado da arma depois do tiro
 // (a carga Tech, o ferrolho).
+//
+// A luta (M9b; mesa-luta.js) também passa por aqui: o −2 do agarrão em tudo, o arremesso, a arma das Artes Marciais e os
+// golpes, o escudo humano (o tiro vai no agarrado, que não esquiva), quem está inconsciente, a arma no chão e o
+// registro do turno (quem acertou o quê, para os requisitos dos movimentos).
 'use strict';
 const R = require('./mesa-regras');
 const V = require('./mesa-visao');
@@ -27,12 +31,13 @@ module.exports = function createCombat(ctx) {
   // ---------------- Números de quem rola ----------------
   const mesmaPericia = (a, b) => String(a || '').replace(/s$/i, '').toLowerCase() === String(b || '').replace(/s$/i, '').toLowerCase();
   // A base de uma rolagem: STAT + perícia (personagem) ou a base da ficha do livro (NPC). Sem a perícia, só o STAT.
+  // pericias: as da ficha, com o nível (o NPC só tem a base: vale como nível), para achar as formas de Artes Marciais.
   function numerosDe(campaignId, token) {
     if (token.tipo === 'pj') {
       const doc = readCharacter(campaignId, token.personagem);
       const sheet = doc ? sheetOf(doc) : { stats: {}, pericias: [] };
       return {
-        stats: sheet.stats,
+        stats: sheet.stats, pericias: sheet.pericias.map(item => ({ nome: item.nome, pt: item.pt, nivel: item.nivel })),
         base(pericia, stat) {
           const achada = sheet.pericias.find(item => mesmaPericia(item.nome, pericia));
           return { valor: (sheet.stats[stat] || 0) + (achada ? achada.nivel : 0), rotulo: `${stat} + ${achada ? achada.pt : ptOf(pericia)}` };
@@ -41,7 +46,7 @@ module.exports = function createCombat(ctx) {
     }
     const stats = token.stats || {};
     return {
-      stats,
+      stats, pericias: (token.pericias || []).map(item => ({ nome: item.nome, pt: item.pt, nivel: item.base })),
       base(pericia, stat) {
         const achada = (token.pericias || []).find(item => mesmaPericia(item.nome, pericia));
         if (achada) return { valor: achada.base, rotulo: `${achada.pt} (base)` };
@@ -56,6 +61,22 @@ module.exports = function createCombat(ctx) {
     if (token.hp.atual < Math.ceil(token.hp.max / 2)) return { rotulo: 'Gravemente Ferido', valor: -2 };
     return null;
   };
+  // As penalidades em todas as ações: o ferimento e o agarrão (quem agarra e quem é agarrado, −2).
+  const penalidadesDe = token => [ferimento(token), token.agarrao ? { rotulo: token.agarrao.papel === 'agarrando' ? 'Agarrando' : 'Agarrado', valor: R.AGARRAO.penalidade } : null].filter(Boolean);
+  // As formas de Artes Marciais da ficha ([{ forma, pericia, nivel }]) e a arma de cada uma (a mesa monta, como a Briga):
+  // DEX + a forma, o dano pelo BODY (sem o mínimo do cyberbraço), metade do SP e os golpes da forma.
+  const formasDe = numeros => (numeros.pericias || []).filter(item => R.ehArtesMarciais(item.nome) && Number(item.nivel) >= 1)
+    .map(item => ({ forma: R.formaDaPericia(item.nome), pericia: item.nome, nivel: Number(item.nivel) }));
+  function armasDeArtesMarciais(numeros) {
+    const body = Number(numeros.stats.BODY) || 0;
+    const vistas = new Map();
+    for (const f of formasDe(numeros)) if (!vistas.has(f.forma) || f.nivel > vistas.get(f.forma).nivel) vistas.set(f.forma, f);
+    return [...vistas.values()].map(f => ({
+      id: `artes:${f.forma || 'geral'}`, nome: f.forma ? `Artes Marciais (${R.FORMAS[f.forma]})` : 'Artes Marciais', classe: 'artesMarciais', pericia: f.pericia, forma: f.forma,
+      dano: R.danoDeBriga(body), cdt: 2, distancia: false, pente: null,
+      golpes: Object.entries(R.MOVIMENTOS).filter(([, m]) => m.golpe && m.forma === f.forma).map(([id]) => id)
+    }));
+  }
   // Teste do RED: 10 natural soma mais 1d10; 1 natural tira 1d10 (uma vez só).
   function rolar(partes) {
     const dado = die(10);
@@ -89,15 +110,36 @@ module.exports = function createCombat(ctx) {
     }
     return linha ? { nome: linha[1], efeito: linha[2], dados } : { nome: 'Lesão crítica', efeito: 'Veja a tabela.', dados };
   }
-  const armaDe = (token, id, stats) => {
+  const armaDe = (token, id, numeros) => {
     if (id === 'briga') {
-      const body = Number(stats.BODY) || 0;
+      const body = Number(numeros.stats.BODY) || 0;
       return { id: 'briga', nome: 'Desarmado (briga)', classe: 'briga', pericia: 'Brawling', dano: R.danoDeBriga(body), cdt: 2, distancia: false, pente: null };
     }
+    if (id.startsWith('artes:')) return armasDeArtesMarciais(numeros).find(arma => arma.id === id) || null;
     return (token.armas || []).find(arma => arma.id === id) || null;
   };
-  const retrato = token => ({ hp: token.hp ? { ...token.hp } : null, sp: token.sp ? JSON.parse(JSON.stringify(token.sp)) : null, lesoes: [...(token.lesoes || [])], deathSave: token.deathSave || 0, morto: Boolean(token.morto), suprimido: token.suprimido || null });
+  // O retrato de antes (o desfazer volta para ele): os números da ficha e os estados da luta (caído, inconsciente, o
+  // agarrão), que ficam só no token.
+  const copia = valor => (valor && typeof valor === 'object' ? JSON.parse(JSON.stringify(valor)) : valor ?? null);
+  const retrato = token => ({ hp: token.hp ? { ...token.hp } : null, sp: copia(token.sp), lesoes: [...(token.lesoes || [])], deathSave: token.deathSave || 0, morto: Boolean(token.morto), suprimido: token.suprimido || null,
+    caido: Boolean(token.caido), inconsciente: Boolean(token.inconsciente), agarrao: copia(token.agarrao) });
   const mudancasDoRetrato = token => ({ hp: token.hp ? token.hp.atual : 0, sp: token.sp ? { cabeca: token.sp.cabeca.atual, corpo: token.sp.corpo.atual } : undefined, lesoes: token.lesoes || [], deathSave: token.deathSave || 0, morto: Boolean(token.morto) });
+  // Volta um token ao retrato (o desfazer do ataque e da luta).
+  function voltarAoRetrato(token, antes) {
+    Object.assign(token, { hp: antes.hp, sp: antes.sp, lesoes: antes.lesoes, deathSave: antes.deathSave, morto: antes.morto, suprimido: antes.suprimido });
+    for (const campo of ['caido', 'inconsciente']) { if (antes[campo]) token[campo] = true; else delete token[campo]; }
+    if (antes.agarrao) token.agarrao = copia(antes.agarrao); else delete token.agarrao;
+  }
+
+  // ---------------- O registro do turno ----------------
+  // Cada ataque resolvido no combate da cena: quem atacou quem, com que classe de arma, se foi corpo a corpo, se pegou e
+  // se o alvo desviou. Os requisitos "neste turno" das Artes Marciais leem daqui (mesa-regras.js requisitoDoMovimento).
+  const MAX_FEITOS = 300;
+  function registrarFeito(state, sceneId, feito) {
+    const combat = state.combate;
+    if (!combat || combat.cena !== sceneId) return;
+    combat.feitos = [...(combat.feitos || []), { turno: combat.turnos || 0, ...feito }].slice(-MAX_FEITOS);
+  }
 
   // ---------------- O dano na ficha ----------------
   // opcoes: { dados, total, local, metadeDoSp, autofogo, tabelaDaCabeca, pernaQuebrada, bonusDaLesao }
@@ -164,9 +206,7 @@ module.exports = function createCombat(ctx) {
     if (token && (escolha === 'esquivar' || escolha === 'concentrar')) {
       const numeros = numerosDe(campaignId, token);
       const base = escolha === 'esquivar' ? numeros.base('Evasion', 'DEX') : numeros.base('Concentration', 'WILL');
-      const partes = [{ rotulo: base.rotulo, valor: base.valor }];
-      const dor = ferimento(token);
-      if (dor) partes.push(dor);
+      const partes = [{ rotulo: base.rotulo, valor: base.valor }, ...penalidadesDe(token)];
       if (mod) partes.push({ rotulo: 'Modificador', valor: int(mod, -30, 30, 0) });
       const mudancas = {};
       const gasto = gastarSorte(token, sorte, mudancas);
@@ -189,20 +229,38 @@ module.exports = function createCombat(ctx) {
   const rolarSegundaChance = registro => rolar([{ rotulo: 'Smart melhorada', valor: R.KIT.segundaChance.base },
     ...(registro.penalidades ? [{ rotulo: 'Penalidades do tiro', valor: registro.penalidades }] : [])]);
 
-  // A pergunta de um alvo (a DV pela distância de quem atira, a esquiva, as opções). Só uma opção: rola já.
-  function novoAlvo(campaignId, scene, registro, atacante, token) {
+  // A DV de um alvo pela distância: a do tiro (a linha da arma) ou a do arremesso (a do lança-granadas, até 25 m).
+  function dvDoAlvo(registro, metros) {
+    if (registro.modo === 'arremesso') return metros > R.ALCANCE_ARREMESSO ? null : R.dvPelaDistancia(regras(), 'thrownWeapon', metros);
+    return ['tiro', 'mirado', 'ricochete', 'autofogo'].includes(registro.modo) ? R.dvPelaDistancia(regras(), registro.arma.classe, metros, registro.modo === 'autofogo') : null;
+  }
+  // A pergunta de um alvo (a DV pela distância de quem atira, a esquiva, as opções). Só uma opção: rola já. Não esquivam
+  // o inconsciente, o escudo humano (escudoDe: quem o segura) e quem se protege atrás do corpo (atrasDoCorpo: de quem).
+  function novoAlvo(campaignId, scene, registro, atacante, token, { escudoDe = null, atrasDoCorpo = null } = {}) {
     const numerosDoAlvo = numerosDe(campaignId, token);
     const ref = Number(numerosDoAlvo.stats.REF) || 0;
-    const esquiva = R.podeEsquivar({ modo: registro.modo, ref, semPerna: (token.lesoes || []).some(nome => /perna desmembrada/i.test(nome)) });
+    const preso = Boolean(token.inconsciente || escudoDe || atrasDoCorpo);
+    const esquiva = R.podeEsquivar({ modo: registro.modo, ref, semPerna: (token.lesoes || []).some(nome => /perna desmembrada/i.test(nome)), preso });
     const metros = distancia(scene, atacante, token);
     const alvo = {
       token: token.id, nome: token.nome, tipo: token.tipo, dono: token.dono || null, metros, opcoes: R.opcoesDeDefesa({ modo: registro.modo, esquiva }),
-      dv: ['tiro', 'mirado', 'ricochete', 'autofogo'].includes(registro.modo) ? R.dvPelaDistancia(regras(), registro.arma.classe, metros, registro.modo === 'autofogo') : null,
-      esquivaMedia: numerosDoAlvo.base('Evasion', 'DEX').valor + R.MEDIA_D10, escolha: null, defesa: null
+      dv: dvDoAlvo(registro, metros),
+      esquivaMedia: numerosDoAlvo.base('Evasion', 'DEX').valor + R.MEDIA_D10, escolha: null, defesa: null,
+      ...(escudoDe ? { escudoDe } : {}), ...(atrasDoCorpo ? { atrasDoCorpo } : {})
     };
     registro.alvos.push(alvo);
     if (alvo.opcoes.length === 1) defender(campaignId, registro, alvo, alvo.opcoes[0]);
     return alvo;
+  }
+  // O alvo que tem um escudo humano: o tiro vai no agarrado (vivo, ele recebe tudo e não esquiva; morto, é um escudo
+  // com HP igual ao BODY dele, que segura o dano até quebrar). Devolve o token que recebe e como.
+  function atrasDoEscudo(scene, alvo, registro) {
+    const agarrao = alvo.agarrao;
+    if (!agarrao || agarrao.papel !== 'agarrando' || !agarrao.escudo || !R.escudoBloqueia(registro)) return null;
+    const escudo = scene.tokens.find(item => item.id === agarrao.outro);
+    if (!escudo) return null;
+    if (!escudo.morto) return { token: escudo, escudoDe: alvo.nome };
+    return agarrao.escudoHp > 0 ? { objeto: escudo } : null;
   }
   // Sem resposta no prazo: quem não decidiu aguenta (ou rola sozinho, se for a única opção).
   function armarPrazo(campaignId, registro) {
@@ -250,6 +308,9 @@ module.exports = function createCombat(ctx) {
       const token = scene && scene.tokens.find(item => item.id === alvo.token);
       if (!token) continue;
       if (alvo.sorte) escritas.push([token, alvo.sorte]);
+      if (registro.modo !== 'supressivo' && !registro.errou) {
+        registrarFeito(state, registro.cena, { atacante: registro.atacante, alvo: token.id, classe, corpo: R.ehModoCorpo(registro.modo), acertou: Boolean(alvo.acertou && !alvo.atrasDoCorpo), esquivou: alvo.escolha === 'esquivar' && !alvo.acertou });
+      }
       if (registro.modo === 'supressivo') {
         if (alvo.acertou) {
           desfazer.push({ token: token.id, antes: retrato(token) });
@@ -258,6 +319,23 @@ module.exports = function createCombat(ctx) {
         continue;
       }
       if (!alvo.acertou) continue;
+      // Atrás do corpo de quem segurava (o escudo humano morto): o escudo segura o dano até o HP dele (o BODY do morto),
+      // e o que sobra se perde. Quebrado, o agarrão acaba.
+      if (alvo.atrasDoCorpo && token.agarrao) {
+        desfazer.push({ token: token.id, antes: retrato(token) });
+        const spec = R.lerDados(registro.arma.dano) || { quantos: 1, faces: 6, bonus: 0 };
+        const dados = registro.modo === 'autofogo' ? pool(2, 6) : pool(spec.quantos, spec.faces);
+        const total = dados.reduce((soma, valor) => soma + valor, 0) + (registro.modo === 'autofogo' ? 0 : spec.bonus);
+        const antesDoEscudo = token.agarrao.escudoHp || 0;
+        token.agarrao = { ...token.agarrao, escudoHp: Math.max(0, antesDoEscudo - total) };
+        alvo.escudo = { total, antes: antesDoEscudo, depois: token.agarrao.escudoHp, quebrou: token.agarrao.escudoHp <= 0 };
+        if (alvo.escudo.quebrou) {
+          const outro = scene.tokens.find(item => item.id === token.agarrao.outro);
+          if (outro) { desfazer.push({ token: outro.id, antes: retrato(outro) }); delete outro.agarrao; }
+          delete token.agarrao;
+        }
+        continue;
+      }
       let dados;
       let total;
       const naArea = registro.modo === 'explosivo' || registro.modo === 'cartucho';
@@ -275,10 +353,23 @@ module.exports = function createCombat(ctx) {
         if (naArea) danoDaArea = { dados, total };
       }
       desfazer.push({ token: token.id, antes: retrato(token) });
+      // A arma branca arremessada não ignora metade do SP (a de arremesso do Black Chrome, sim: registro.metadeDoSp).
       alvo.dano = aplicarDano(token, {
         dados, total, local: registro.local, autofogo: registro.modo === 'autofogo', bonusDaLesao: registro.bonusDaLesao,
-        metadeDoSp: (R.ehCorpoACorpo(classe) && classe !== 'briga') || Boolean(registro.metadeDoSp), tabelaDaCabeca: registro.local === 'cabeca', pernaQuebrada: registro.local === 'perna'
+        metadeDoSp: (R.ehCorpoACorpo(classe) && classe !== 'briga' && registro.modo !== 'arremesso') || Boolean(registro.metadeDoSp), tabelaDaCabeca: registro.local === 'cabeca', pernaQuebrada: registro.local === 'perna'
       });
+      // Os golpes das Artes Marciais: acertando, a lesão do golpe (+5 direto, como toda lesão; a que já tem não repete);
+      // a Voadora derruba.
+      if (registro.golpe) {
+        const nome = registro.golpe.lesao && nomeDaLesao(registro.golpe.lesao);
+        if (nome && !(token.lesoes || []).includes(nome)) {
+          const linha = [...critTables().corpo, ...critTables().cabeca].find(item => item[1] === nome);
+          token.lesoes = [...(token.lesoes || []), nome];
+          if (token.hp) token.hp = { ...token.hp, atual: token.hp.atual - 5 };
+          alvo.dano = { ...alvo.dano, perda: alvo.dano.perda + 5, hp: { ...alvo.dano.hp, depois: token.hp ? token.hp.atual : null }, lesoes: [...alvo.dano.lesoes, { nome, efeito: linha ? linha[2] : '', dados: [] }] };
+        }
+        if (registro.golpe.derruba) { token.caido = true; alvo.derrubado = token.dentro ? 'veiculo' : true; }
+      }
       escritas.push([token, mudancasDoRetrato(token)]);
     }
     for (const [token, mudancas] of escritas) await writeSheet(campaignId, token, mudancas);
@@ -296,7 +387,8 @@ module.exports = function createCombat(ctx) {
       ...(registro.notas && registro.notas.length ? { notas: registro.notas } : {}), ...(registro.segunda ? { segunda: registro.segunda } : {}),
       alvos: registro.alvos.map(alvo => ({
         token: alvo.token, nome: alvo.nome, tipo: alvo.tipo, dono: alvo.dono, metros: alvo.metros, dv: alvo.dv, escolha: alvo.escolha, defesa: alvo.defesa || null, acertou: alvo.acertou,
-        multiplicador: alvo.multiplicador || null, dano: alvo.dano || null, ...(alvo.segundaChance ? { segundaChance: alvo.segundaChance } : {}), ...(alvo.redirecionado ? { redirecionado: true } : {})
+        multiplicador: alvo.multiplicador || null, dano: alvo.dano || null, ...(alvo.segundaChance ? { segundaChance: alvo.segundaChance } : {}), ...(alvo.redirecionado ? { redirecionado: true } : {}),
+        ...(alvo.escudoDe ? { escudoDe: alvo.escudoDe } : {}), ...(alvo.atrasDoCorpo ? { atrasDoCorpo: alvo.atrasDoCorpo, escudo: alvo.escudo || null } : {}), ...(alvo.derrubado ? { derrubado: alvo.derrubado } : {})
       }))
     };
   }
@@ -350,6 +442,66 @@ module.exports = function createCombat(ctx) {
       notas.push(`${atacante.nome} ${motivo}: sofre a lesão crítica ${nome}.`);
     }
   }
+  // ---------------- A luta ----------------
+  // O que a luta impede: a arma que saiu da mão, a arma de duas mãos no agarrão (para os dois) e o ataque à distância de
+  // quem está no Aperto de ferro.
+  function travasDaLuta(atacante, arma, modo, numeros) {
+    if (arma.largada) throw fail(400, arma.com ? `${arma.nome} está com ${arma.com}.` : `${arma.nome} está no chão: pegue antes (uma Ação).`);
+    const agarrao = atacante.agarrao;
+    if (!agarrao) return;
+    if (R.maosDaArma(arma, numeros.stats.BODY) >= 2) throw fail(400, 'No agarrão, ninguém usa arma de duas mãos.');
+    if (agarrao.papel === 'agarrado' && agarrao.apertoDeFerro && !R.ehModoCorpo(modo)) throw fail(400, `${atacante.nome} está no Aperto de ferro: nada de ataques à distância enquanto agarrado.`);
+  }
+  // O que o requisito "neste turno" lê do combate: o registro do turno, a vez de agora, quanto o token andou e o turno da
+  // vez anterior dele (o "desde o seu último turno": na vez dele, a anterior; fora dela, a última).
+  function contextoDoRequisito(combat, token, { alvo = null, quemAgarra = null } = {}) {
+    const naVez = Boolean(combat.ordem[combat.vez] && combat.ordem[combat.vez].token === token.id);
+    const desde = naVez ? (combat.vezAnterior || {})[token.id] : (combat.ultimaVez || {})[token.id];
+    return { feitos: combat.feitos || [], turno: combat.turnos || 0, eu: token.id, alvo, quemAgarra, andou: (combat.andou || {})[token.id] || null, desde: Number.isFinite(desde) ? desde : null };
+  }
+  // O requisito de um movimento: no combate da cena, a mesa confere pelo registro do turno; fora dele, quem age confirma
+  // (confirmado). O mestre confirma por cima do registro (um acerto resolvido à mão não está nele).
+  function conferirRequisito(state, scene, token, id, { viewer, confirmado = false, alvo = null, quemAgarra = null } = {}) {
+    const m = R.MOVIMENTOS[id];
+    if (!m || !m.requisito) return;
+    const combat = state.combate;
+    if (!combat || combat.cena !== scene.id) {
+      if (!confirmado) throw fail(409, `${m.nome} pede: ${m.texto} Fora do combate, confirme.`);
+      return;
+    }
+    if (confirmado && viewer && isGm(viewer)) return;
+    const resposta = R.requisitoDoMovimento(id, contextoDoRequisito(combat, token, { alvo, quemAgarra }));
+    if (!resposta.ok) throw fail(409, `${m.nome}: ${resposta.falta}`);
+  }
+  // Os movimentos que o token pode usar agora, para o cartão: a DV ou o golpe, o bloqueio de WILL ou MOVE e o requisito
+  // (pronto: true ou false no combate da cena, null fora dele; nos movimentos com alvo, os alvos que servem).
+  function movimentosDoToken(state, scene, token, numeros) {
+    const combat = state.combate && state.combate.cena === scene.id ? state.combate : null;
+    const quemAgarra = token.agarrao && token.agarrao.papel === 'agarrado' ? token.agarrao.outro : null;
+    return R.movimentosDisponiveis(formasDe(numeros), { will: numeros.stats.WILL, move: numeros.stats.MOVE }).map(m => {
+      const item = { id: m.id, nome: m.nome, forma: m.formaDele, nomeDaForma: m.nomeDaForma, efeito: m.efeito, ...(m.dv ? { dv: m.dv } : {}), ...(m.golpe ? { golpe: true } : {}), ...(m.alvo ? { alvo: true } : {}),
+        ...(m.agarrao ? { agarrao: m.agarrao } : {}), ...(m.caido ? { caido: true } : {}), ...(m.texto ? { requisito: m.texto } : {}), ...(m.bloqueio ? { bloqueio: m.bloqueio } : {}) };
+      if (!m.requisito) return item;
+      if (!combat) return { ...item, pronto: null };
+      if (m.alvo) {
+        const alvos = scene.tokens.filter(outro => outro !== token && R.requisitoDoMovimento(m.id, contextoDoRequisito(combat, token, { alvo: outro.id })).ok).map(outro => outro.id);
+        return { ...item, pronto: alvos.length > 0, alvos };
+      }
+      const resposta = R.requisitoDoMovimento(m.id, contextoDoRequisito(combat, token, { quemAgarra }));
+      return { ...item, pronto: resposta.ok, ...(resposta.ok ? {} : { falta: resposta.falta }) };
+    });
+  }
+  // Um golpe das Artes Marciais: a forma da arma tem o golpe, o WILL ou o MOVE mínimo e, na Voadora, os 4 m andados neste
+  // turno. Devolve o que o acerto faz: a lesão (pelo local) e a queda.
+  function golpeDe(state, scene, atacante, arma, modo, local, numeros, viewer, body) {
+    const m = R.MOVIMENTOS[modo];
+    const disponivel = R.movimentosDisponiveis(formasDe(numeros), { will: numeros.stats.WILL, move: numeros.stats.MOVE }).find(item => item.id === modo && item.formaDele === arma.forma);
+    if (!disponivel) throw fail(400, `${m.nome} é um golpe do ${R.FORMAS[m.forma]}.`);
+    if (disponivel.bloqueio) throw fail(400, `${m.nome}: ${disponivel.bloqueio}`);
+    conferirRequisito(state, scene, atacante, modo, { viewer, confirmado: Boolean(body.confirmado) });
+    return { id: modo, lesao: m.lesoes ? m.lesoes[local === 'cabeca' ? 'cabeca' : 'corpo'] : null, derruba: Boolean(m.derruba) };
+  }
+
   // A arma de um token, para quem controla o token.
   function armaDoToken(state, viewer, body) {
     const { token } = tokenArg(state, viewer, body.token);
@@ -365,15 +517,20 @@ module.exports = function createCombat(ctx) {
       const { scene, token: atacante } = tokenArg(state, viewer, body.atacante);
       if (!canControl(viewer, atacante)) throw fail(403, 'Esse token não é seu.');
       if (atacante.morto) throw fail(400, `${atacante.nome} está morto.`);
+      if (atacante.inconsciente) throw fail(400, `${atacante.nome} está inconsciente.`);
       const numeros = numerosDe(campaignId, atacante);
-      const arma = armaDe(atacante, String(body.arma || 'briga'), numeros.stats);
+      const arma = armaDe(atacante, String(body.arma || 'briga'), numeros);
       if (!arma) throw fail(400, 'Arma não encontrada na ficha.');
       const classe = R.classeDaArma(arma);
       const kit = arma.kit || null;
       const modos = R.modosDaArma({ ...arma, classe });
       const modo = modos.includes(body.modo) ? body.modo : modos[0];
-      const local = modo === 'mirado' ? (['cabeca', 'perna', 'item'].includes(body.local) ? body.local : 'cabeca') : 'corpo';
+      // O tiro mirado escolhe o lugar; o Golpe quebra-ossos e o Ponto de pressão, o corpo ou a cabeça (−8).
+      const local = modo === 'mirado' ? (['cabeca', 'perna', 'item'].includes(body.local) ? body.local : 'cabeca')
+        : (modo === 'quebraOssos' || modo === 'pontoDePressao') && body.local === 'cabeca' ? 'cabeca' : 'corpo';
+      travasDaLuta(atacante, arma, modo, numeros);
       travasDe2077(atacante, arma, kit);
+      const golpe = R.GOLPES.has(modo) ? golpeDe(state, scene, atacante, arma, modo, local, numeros, viewer, body) : null;
       const visivel = token => isGm(viewer) || Boolean(tokenFor(viewer, scene, token, campaignId));
       let alvos;
       let alvoPrincipal = null;
@@ -392,7 +549,11 @@ module.exports = function createCombat(ctx) {
         }
       }
       const metros = alvoPrincipal ? distancia(scene, atacante, alvoPrincipal) : null;
-      if (modo === 'corpo' && metros > Math.max(2, scene.grade.metros)) throw fail(400, `Longe demais para corpo a corpo (${metros} m; o alcance é 2 m).`);
+      if (modo === 'voadora' && metros > Math.max(R.ALCANCE_DA_VOADORA, scene.grade.metros)) throw fail(400, `Longe demais para a Voadora (${metros} m; ela alcança até ${R.ALCANCE_DA_VOADORA} m).`);
+      if (R.ehModoCorpo(modo) && modo !== 'voadora' && metros > Math.max(2, scene.grade.metros)) throw fail(400, `Longe demais para corpo a corpo (${metros} m; o alcance é 2 m).`);
+      if (modo === 'arremesso' && metros > R.ALCANCE_ARREMESSO) throw fail(400, `Longe demais para arremessar (${metros} m; até ${R.ALCANCE_ARREMESSO} m).`);
+      // O escudo humano: o tiro no alvo vai no agarrado que ele segura (ou no corpo dele, se morreu).
+      const escudo = alvoPrincipal && !segundoAlvo ? atrasDoEscudo(scene, alvoPrincipal, { modo, local }) : null;
       // Espingarda com cartucho: todos à frente, até 6 m e à vista de quem atira (a parede tapa), na direção do alvo
       // escolhido.
       const daFrente = modo === 'cartucho' ? scene.tokens.filter(token => token !== atacante && !token.morto && distancia(scene, atacante, token) <= R.ALCANCE_CARTUCHO
@@ -411,11 +572,12 @@ module.exports = function createCombat(ctx) {
           : balas > 1 ? `${arma.nome} gasta ${balas} balas no tiro (tem ${arma.pente.atual}): recarregue.` : `${arma.nome} está sem balas: recarregue.`);
       }
 
-      const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'Autofire' : arma.pericia || (R.ehCorpoACorpo(classe) ? 'Melee Weapon' : 'Handgun');
-      const base = numeros.base(pericia, R.ehCorpoACorpo(classe) ? 'DEX' : 'REF');
+      // Arremessar é DEX + Atletismo, qualquer que seja a arma.
+      const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'Autofire' : modo === 'arremesso' ? 'Athletics' : arma.pericia || (R.ehCorpoACorpo(classe) ? 'Melee Weapon' : 'Handgun');
+      const base = numeros.base(pericia, R.ehCorpoACorpo(classe) || modo === 'arremesso' ? 'DEX' : 'REF');
       const antes = retrato(atacante);
       const partes = [{ rotulo: base.rotulo, valor: base.valor }];
-      if (modo === 'mirado') partes.push({ rotulo: 'Mirado', valor: R.MIRADO });
+      if (modo === 'mirado' || (golpe && local === 'cabeca')) partes.push({ rotulo: 'Mirado', valor: R.MIRADO });
       if (modo === 'ricochete') {
         const coprocessador = Boolean(atacante.cromo && atacante.cromo.coprocessador);
         partes.push({ rotulo: coprocessador ? 'Ricochete (Ballistic Coprocessor)' : 'Ricochete', valor: coprocessador ? R.KIT.ricocheteComCoprocessador : R.KIT.ricochete });
@@ -423,8 +585,7 @@ module.exports = function createCombat(ctx) {
       if (kit && kit.classe === 'smart' && arma.distancia) partes.push({ rotulo: 'Arma Smart', valor: R.KIT.smart });
       if (arma.excelente) partes.push({ rotulo: 'Qualidade excelente', valor: R.KIT.excelente });
       if (kit && kit.coronhaRetratil && arma.coronha) partes.push({ rotulo: 'Coronha recolhida', valor: R.KIT.coronha });
-      const dor = ferimento(atacante);
-      if (dor) partes.push(dor);
+      partes.push(...penalidadesDe(atacante));
       const mod = int(body.mod, -30, 30, 0);
       if (mod) partes.push({ rotulo: 'Modificador', valor: mod });
       // As penalidades vão junto na segunda chance da munição Smart melhorada.
@@ -434,10 +595,14 @@ module.exports = function createCombat(ctx) {
       if (gasto) partes.push(gasto);
       const notas = notasDe2077({ arma, kit, modo, pente, usaCarga, doisCanos, segundoAlvo, alvoPrincipal });
       lesoesDoAtirador(atacante, kit, numeros.stats, mudancas, notas);
+      if (golpe) notas.push(`${R.MOVIMENTOS[modo].nome}: ${R.MOVIMENTOS[modo].efeito}`);
+      if (escudo && escudo.token) notas.push(`Escudo humano: ${alvoPrincipal.nome} se protege com ${escudo.token.nome}, que recebe o ataque e não esquiva.`);
+      if (escudo && escudo.objeto) notas.push(`Escudo humano: ${alvoPrincipal.nome} se protege atrás do corpo de ${escudo.objeto.nome} (HP ${alvoPrincipal.agarrao.escudoHp}).`);
 
-      // A arma depois do tiro: o pente, a carga Tech gasta (a Omaha fica carregada até o fim do turno) e o ferrolho.
+      // A arma depois do tiro: o pente, a carga Tech gasta (a Omaha fica carregada até o fim do turno), o ferrolho e a arma
+      // arremessada, que sai da mão.
       const depois = {};
-      const estado = { pente: arma.pente ? arma.pente.atual : null, carga: arma.carga || null, ferrolho: Boolean(arma.ferrolho) };
+      const estado = { pente: arma.pente ? arma.pente.atual : null, carga: arma.carga || null, ferrolho: Boolean(arma.ferrolho), largada: Boolean(arma.largada) };
       if (arma.pente) { arma.pente = { ...arma.pente, atual: arma.pente.atual - balas }; depois.pente = arma.pente.atual; }
       if (usaCarga) {
         const combate = state.combate;
@@ -446,15 +611,16 @@ module.exports = function createCombat(ctx) {
         depois.carga = arma.carga;
       }
       if (kit && kit.ferrolho) { arma.ferrolho = true; depois.ferrolho = true; }
-      const municao = Object.keys(depois).length ? { token: atacante.id, arma: arma.id, antes: estado.pente, carga: estado.carga, ferrolho: estado.ferrolho } : null;
+      if (modo === 'arremesso') { arma.largada = true; depois.largada = true; }
+      const municao = Object.keys(depois).length ? { token: atacante.id, arma: arma.id, antes: estado.pente, carga: estado.carga, ferrolho: estado.ferrolho, largada: estado.largada } : null;
       if (municao) mudancas.armas = { [arma.id]: depois };
       const registro = {
         id: ctx.newId(), cena: scene.id, atacante: atacante.id, atacanteNome: atacante.nome, modo, local,
         arma: { id: arma.id, nome: arma.nome, classe, dano: R.formulaDoDano({ modo, dano: arma.dano, kit, pente, doisCanos }) },
         ataque: rolar(partes), alvos: [], desfazer: [{ token: atacante.id, antes, municao }], prazo: new Date(Date.now() + prazo).toISOString(),
-        notas, penalidades, metadeDoSp: usaCarga, bonusDaLesao: kit && kit.classe === 'power' ? R.KIT.bonusPower : 5,
+        notas, penalidades, metadeDoSp: usaCarga || (modo === 'arremesso' && R.deArremesso(arma, classe)), bonusDaLesao: kit && kit.classe === 'power' ? R.KIT.bonusPower : 5,
         segundaChance: Boolean(kit && kit.classe === 'smart' && arma.smartMelhorada && arma.distancia),
-        autofogoMax: R.autofogoDe(arma, classe), segundoAlvo: segundoAlvo ? segundoAlvo.id : null
+        autofogoMax: R.autofogoDe(arma, classe), segundoAlvo: segundoAlvo ? segundoAlvo.id : null, ...(golpe ? { golpe } : {})
       };
       if (modo === 'explosivo') {
         registro.metros = metros;
@@ -475,8 +641,10 @@ module.exports = function createCombat(ctx) {
         if (totalDoAtaque(registro) > R.DV_CARTUCHO) alvos = daFrente;
         else { registro.errou = true; alvos = []; }
       }
-      // Só uma escolha (corpo a corpo, REF abaixo de 8, fogo supressivo): rola já.
-      for (const token of alvos) novoAlvo(campaignId, scene, registro, atacante, token);
+      // Só uma escolha (corpo a corpo, REF abaixo de 8, fogo supressivo): rola já. O escudo humano recebe o tiro no lugar.
+      if (escudo && escudo.token) novoAlvo(campaignId, scene, registro, atacante, escudo.token, { escudoDe: alvoPrincipal.nome });
+      else if (escudo && escudo.objeto) novoAlvo(campaignId, scene, registro, atacante, alvoPrincipal, { atrasDoCorpo: escudo.objeto.nome });
+      else for (const token of alvos) novoAlvo(campaignId, scene, registro, atacante, token);
       if (gasto || municao || mudancas.lesoes) await writeSheet(campaignId, atacante, mudancas);
       const entrada = addEntry(state, {
         tipo: 'ataque', autor: ctx.authorOf(viewer, color), quem: atacante.nome, pendente: true,
@@ -508,7 +676,8 @@ module.exports = function createCombat(ctx) {
       return {};
     } },
 
-    // O mestre volta como estava antes de um ataque, de um dano ou de um Death Save (com a bala, a carga e o ferrolho).
+    // O mestre volta como estava antes de um ataque, de um dano, de um Death Save ou de uma ação da luta (com a bala, a
+    // carga, o ferrolho e a arma que saiu da mão).
     'ataque.desfazer': { mestre: true, async run({ state, body, campaignId }) {
       const entrada = state.registro.find(item => item.id === String(body.entrada || ''));
       if (!entrada || !Array.isArray(entrada.desfazer) || entrada.pendente) throw fail(404, 'Nada a desfazer aqui.');
@@ -517,7 +686,7 @@ module.exports = function createCombat(ctx) {
         let token = null;
         for (const scene of state.cenas) token = token || scene.tokens.find(item => item.id === id);
         if (!token) continue;
-        Object.assign(token, { hp: antes.hp, sp: antes.sp, lesoes: antes.lesoes, deathSave: antes.deathSave, morto: antes.morto, suprimido: antes.suprimido });
+        voltarAoRetrato(token, antes);
         const mudancas = mudancasDoRetrato(token);
         const arma = municao && (token.armas || []).find(item => item.id === municao.arma);
         if (arma) {
@@ -525,6 +694,10 @@ module.exports = function createCombat(ctx) {
           if (arma.pente && municao.antes !== null && municao.antes !== undefined) { arma.pente = { ...arma.pente, atual: municao.antes }; volta.pente = municao.antes; }
           if ('carga' in municao) { arma.carga = municao.carga; volta.carga = municao.carga; }
           if ('ferrolho' in municao) { arma.ferrolho = municao.ferrolho; volta.ferrolho = municao.ferrolho; }
+          if ('largada' in municao) {
+            if (municao.largada) { arma.largada = true; if (municao.com) arma.com = municao.com; else delete arma.com; } else { delete arma.largada; delete arma.com; }
+            Object.assign(volta, { largada: Boolean(municao.largada), com: municao.com || '' });
+          }
           if (Object.keys(volta).length) mudancas.armas = { [arma.id]: volta };
         }
         await writeSheet(campaignId, token, mudancas);
@@ -585,11 +758,15 @@ module.exports = function createCombat(ctx) {
       await writeSheet(campaignId, token, mudancasDoRetrato(token));
       return { tokens: true, registro: ctx.systemEntry(state, `${token.nome} foi estabilizado (1 HP).`) };
     } },
-    // O mestre marca ou tira: morto, suprimido.
+    // O mestre marca ou tira: morto, suprimido, caído, inconsciente.
     'token.estado': { mestre: true, async run({ state, viewer, body, campaignId }) {
       const { token } = tokenArg(state, viewer, body.token);
       if (body.morto !== undefined) token.morto = Boolean(body.morto);
       if (body.suprimido === false) token.suprimido = null;
+      for (const campo of ['caido', 'inconsciente']) {
+        if (body[campo] === undefined) continue;
+        if (body[campo]) token[campo] = true; else delete token[campo];
+      }
       await writeSheet(campaignId, token, mudancasDoRetrato(token));
       return { tokens: true, combate: Boolean(state.combate) };
     } },
@@ -631,6 +808,16 @@ module.exports = function createCombat(ctx) {
       await writeSheet(campaignId, token, { armas: { [arma.id]: { ferrolho: false } } });
       return { tokens: true };
     } },
+    // Pegar a arma que saiu da mão (a arremessada, a que caiu no desarme): uma Ação. A que ficou com outro, o mestre devolve.
+    'arma.pegar': { async run({ state, viewer, body, campaignId }) {
+      const { token, arma } = armaDoToken(state, viewer, body);
+      if (!arma.largada) throw fail(400, `${arma.nome} já está na mão.`);
+      if (arma.com && !isGm(viewer)) throw fail(403, `${arma.nome} está com ${arma.com}: o mestre devolve.`);
+      delete arma.largada;
+      delete arma.com;
+      await writeSheet(campaignId, token, { armas: { [arma.id]: { largada: false, com: '' } } });
+      return { tokens: true };
+    } },
     // A coronha retrátil (a Dian): recolhida, dá para esconder a arma, e o ataque tem −1.
     'arma.coronha': { async run({ state, viewer, body, campaignId }) {
       const { token, arma } = armaDoToken(state, viewer, body);
@@ -653,10 +840,28 @@ module.exports = function createCombat(ctx) {
     combat.inicioDaVez = combat.turnos;
     const atual = combat.ordem[combat.vez] && achar(combat.ordem[combat.vez].token);
     combat.deathSave = atual && atual.hp && atual.hp.atual < 1 && !atual.morto ? atual.id : null;
+    // A vez de cada um (o "desde o seu último turno" da Contra-queda): o turno em que a de agora e a anterior começaram.
+    if (atual) {
+      combat.ultimaVez = combat.ultimaVez || {};
+      combat.vezAnterior = combat.vezAnterior || {};
+      if (Number.isFinite(combat.ultimaVez[atual.id])) combat.vezAnterior[atual.id] = combat.ultimaVez[atual.id];
+      combat.ultimaVez[atual.id] = combat.turnos;
+    }
+  }
+  // O token andou no combate da cena (a Voadora pede 4 m neste turno): soma na vez de agora.
+  function registrarPasso(state, sceneId, token, metros) {
+    const combat = state.combate;
+    if (!combat || combat.cena !== sceneId || !metros) return;
+    const antes = (combat.andou || {})[token.id];
+    const turno = combat.turnos || 0;
+    combat.andou = { ...(combat.andou || {}), [token.id]: { turno, metros: Math.round(((antes && antes.turno === turno ? antes.metros : 0) + metros) * 10) / 10 } };
   }
   // Na volta do servidor, ataque que ficou pela metade não continua: o cartão diz que foi cancelado.
   function cancelarPendentes(state) {
     for (const entrada of state.registro) if (entrada.pendente) Object.assign(entrada, { pendente: false, cancelado: true });
   }
-  return { operations, perguntasPara, aoPassarAVez, cancelarPendentes };
+  // O que a luta (mesa-luta.js) usa daqui: os números de quem rola, o teste, as penalidades, a Sorte, a distância, o
+  // retrato para o desfazer, as lesões, as formas de Artes Marciais e o requisito dos movimentos.
+  const ajuda = { numerosDe, rolar, penalidadesDe, gastarSorte, distancia, retrato, mudancasDoRetrato, nomeDaLesao, formasDe, armasDeArtesMarciais, conferirRequisito, movimentosDoToken };
+  return { operations, perguntasPara, aoPassarAVez, cancelarPendentes, registrarPasso, ajuda };
 };

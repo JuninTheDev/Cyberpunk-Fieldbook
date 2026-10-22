@@ -1232,10 +1232,12 @@
     desenharAreas(px);
     if (gm() && S.ferramenta === 'paredes') desenharParedes(px);
     desenharNotas(px);
+    desenharAgarroes(px);
     for (const token of tokensNaOrdem()) {
       if (S.arrasto && S.arrasto.token === token.id) continue;
       desenharToken(token, token.vx, token.vy, agora, px);
     }
+    desenharRotulosDosAgarroes(px);
     desenharTokensNaArea(px);
     if (gm() && S.ferramenta === 'tiles') desenharTileEscolhido(px);
     if (gm() && S.ferramenta === 'luzes') desenharLuzes(px);
@@ -1283,6 +1285,37 @@
     ctx.strokeStyle = S.previaGrade ? 'rgba(248, 239, 2, .55)' : 'rgba(0, 255, 210, .16)';
     ctx.lineWidth = px;
     ctx.stroke();
+  }
+  // Os estados de um token que o mapa escreve em cima dele: [texto, cor do fundo].
+  const estadosDoToken = token => [
+    token.suprimido && ['SUPRIMIDO', '#ff8a3d'],
+    token.inconsciente && ['INCONSCIENTE', '#a9aeaa'],
+    token.caido && ['CAÍDO', '#f8ef02']
+  ].filter(Boolean);
+  // O agarrão no mapa (M9b): uma faixa entre quem agarra e quem é agarrado, por baixo dos dois, e um rótulo só para o par,
+  // no meio, acima dos outros estados dos dois (desenhado depois dos tokens).
+  const paresDeAgarrao = () => [...S.tokens.values()].filter(token => token.agarrao && token.agarrao.papel === 'agarrando' && S.tokens.has(token.agarrao.outro))
+    .map(token => [token, S.tokens.get(token.agarrao.outro)]);
+  function desenharAgarroes(px) {
+    for (const [token, outro] of paresDeAgarrao()) {
+      ctx.beginPath();
+      ctx.moveTo(token.vx, token.vy);
+      ctx.lineTo(outro.vx, outro.vy);
+      ctx.strokeStyle = 'rgba(255, 49, 88, .7)';
+      ctx.lineWidth = Math.max(grade().tamanho * 0.12, 4 * px);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+    }
+  }
+  function desenharRotulosDosAgarroes(px) {
+    for (const [token, outro] of paresDeAgarrao()) {
+      if (S.arrasto && (S.arrasto.token === token.id || S.arrasto.token === outro.id)) continue;
+      const pilha = Math.max(estadosDoToken(token).length, estadosDoToken(outro).length);
+      const topo = Math.min(token.vy - raioDe(token), outro.vy - raioDe(outro));
+      const texto = token.agarrao.escudo ? 'ESCUDO HUMANO' : outro.agarrao && outro.agarrao.apertoDeFerro ? 'AGARRÃO · APERTO DE FERRO' : 'AGARRÃO';
+      rotulo(texto, (token.vx + outro.vx) / 2, topo - (18 + pilha * 15) * px, px, { tamanho: 9, cor: '#140a04', fundo: '#ff3158' });
+    }
   }
   function rotulo(texto, x, y, px, { cor = '#f1f0df', fundo = 'rgba(11, 13, 15, .85)', tamanho = 12, peso = 600, alinhar = 'center', borda = null } = {}) {
     ctx.font = `${peso} ${tamanho * px}px Oxanium, 'Segoe UI', sans-serif`;
@@ -1378,7 +1411,9 @@
       ctx.lineWidth = Math.max(g * 0.07, 3 * px);
       ctx.stroke();
     }
-    if (token.suprimido && !fantasma) rotulo('SUPRIMIDO', x, y - r - 18 * px, px, { tamanho: 9, cor: '#140a04', fundo: '#ff8a3d' });
+    // Os estados que todos veem, empilhados em cima do token: Suprimido e os da luta (M9b). O agarrão tem um rótulo só,
+    // no meio do par (desenharRotulosDosAgarroes).
+    if (!fantasma) estadosDoToken(token).forEach(([texto, fundo], i) => rotulo(texto, x, y - r - (18 + i * 15) * px, px, { tamanho: 9, cor: '#140a04', fundo }));
     ctx.restore();
     if (fantasma) return;
     let base = y + r + 4 * px;
@@ -2087,7 +2122,9 @@
         <div class="hp-barra"><i style="width:${fracao * 100}%;background:${fracao > 0.5 ? 'var(--g)' : fracao > 0 ? '#ff8a3d' : 'var(--r)'}"></i></div></div>`);
     }
     if (token.estado) partes.push(`<div class="estado ${woundClass(token.estado)}">${esc(token.estado)}${token.estado === 'Gravemente Ferido' ? ' · −2 em tudo' : token.estado === 'Mortalmente Ferido' ? ' · −4 em tudo, Death Save no turno' : ''}</div>`);
-    const estados = [token.morto ? '<span class="tag falha">Morto</span>' : '', token.suprimido ? '<span class="tag lesao">Suprimido</span>' : ''].filter(Boolean);
+    const estados = [token.morto ? '<span class="tag falha">Morto</span>' : '', token.suprimido ? '<span class="tag lesao">Suprimido</span>' : '',
+      token.inconsciente ? '<span class="tag falha" title="Não age nem esquiva.">Inconsciente</span>' : '', token.caido ? '<span class="tag lesao" title="Levante-se (uma Ação) antes de andar.">Caído</span>' : '',
+      token.agarrao ? `<span class="tag lesao" title="−2 em todas as ações para os dois.">${esc(textoDoAgarrao(token))}</span>` : ''].filter(Boolean);
     if (estados.length) partes.push(`<div>${estados.join('')}</div>`);
     if (gm() || token.meu) partes.push(htmlDaFichaDeCombate(token));
     const acoes = [];
@@ -2106,6 +2143,8 @@
       acoes.push('<button class="botao vazado pequeno perigo" type="button" data-cartao="apagar">Tirar da cena</button>');
     }
     if (acoes.length) partes.push(`<div class="cartao-acoes">${acoes.join('')}</div>`);
+    const daLuta = htmlDaLuta(token);
+    if (daLuta) partes.push(daLuta);
     const doVeiculo = htmlDoVeiculo(token);
     if (doVeiculo) partes.push(doVeiculo);
     if (S.ataque && S.ataque.token === token.id) partes.push(htmlDoAtaque(token));
@@ -2141,6 +2180,9 @@
     olhoFechado: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3 3.6M6.5 7.6C3.8 9.3 2 12 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4.4-1"/></svg>',
     espadas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M13 17l4-4M15 15l4 4M20 4L9 15M7 13l4 4M9 15l-4 4"/></svg>',
     cartao: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.5 1.7-2 3-2s2.4.5 3 2M14 10h4M14 13h3"/></svg>',
+    // A luta (M9b): levantar-se e escapar do agarrão.
+    levantar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V6M6 11l6-6 6 6M5 21h14"/></svg>',
+    corrente: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 14.5l-2 2a3 3 0 0 1-4-4l3-3a3 3 0 0 1 4 0M14.5 9.5l2-2a3 3 0 0 1 4 4l-3 3a3 3 0 0 1-4 0M4 4l3 3M20 20l-3-3"/></svg>',
     // As do Painel Tático.
     coracao: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M5 12h4l1.5-3 2 6 1.5-3H19"/></svg>',
     alfinete: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l-1 6 3 3H7l3-3zM12 12v9"/></svg>',
@@ -2163,6 +2205,10 @@
     const acesa = Boolean(token.luz && (token.luz.claro || token.luz.penumbra));
     const acoes = [];
     if (meu && !token.morto) acoes.push(botao('atacar', 'Atacar', 'mira'));
+    // A luta (M9b): o que urge no seu token (o resto fica no cartão).
+    const daLuta = (acao, titulo, icone) => `<button type="button" data-luta="${acao}" class="ativo" title="${esc(titulo)}" aria-label="${esc(titulo)}">${ICONE[icone]}</button>`;
+    if (meu && !token.morto && !token.inconsciente && token.caido) acoes.push(daLuta('levantar', 'Levantar-se (uma Ação)', 'levantar'));
+    if (meu && !token.morto && !token.inconsciente && token.agarrao && token.agarrao.papel === 'agarrado') acoes.push(daLuta('escapar', 'Escapar do agarrão (uma Ação)', 'corrente'));
     if (meu) acoes.push(botao('rolar', 'Rolar um teste', 'dado'));
     if (meu) acoes.push(botao('lanterna', acesa ? 'Apagar a luz' : 'Acender a lanterna', 'lanterna', acesa ? 'ativo' : ''));
     if (meu && token.hp && token.hp.atual < 1 && !token.morto) acoes.push(botao('deathsave', 'Death Save', 'caveira', 'perigo'));
@@ -2221,9 +2267,88 @@
     const armas = token.armas || [];
     if (armas.length) {
       linhas.push(`<ul class="armas">${armas.map(arma => `<li><b>${esc(arma.nome)}</b><span>${esc(arma.dano)}${arma.pente ? ` · <span class="${arma.pente.atual ? '' : 'erro'}">${arma.pente.atual}/${arma.pente.max}</span>` : ''}${arma.pente && arma.municao ? ` · ${esc(arma.municao)}` : ''}</span>
-        ${htmlDaRecarga(token, arma)}${htmlDe2077(token, arma)}</li>`).join('')}</ul>`);
+        ${htmlDaArmaLargada(arma)}${htmlDaRecarga(token, arma)}${htmlDe2077(token, arma)}</li>`).join('')}</ul>`);
     }
     return linhas.length ? `<div class="ficha-combate">${linhas.join('')}</div>` : '';
+  }
+  // A arma que saiu da mão (M9b): a arremessada ou a que caiu no desarme fica no chão até pegar (uma Ação); a que ficou com
+  // outro, só o mestre devolve.
+  function htmlDaArmaLargada(arma) {
+    if (!arma.largada) return '';
+    const pode = !arma.com || gm();
+    return `<span class="tag lesao">${arma.com ? `com ${esc(arma.com)}` : 'no chão'}</span>${pode ? `<button class="link" type="button" data-arma-acao="pegar" data-arma="${esc(arma.id)}" title="${arma.com ? 'Devolver a arma (o mestre).' : 'Pegar a arma do chão (uma Ação).'}">${arma.com ? 'devolver' : 'pegar'}</button>` : ''}`;
+  }
+  // "Agarrando o Guarda-costas · escudo humano", "Agarrado pela Nyx · Aperto de ferro".
+  function textoDoAgarrao(token) {
+    const ag = token.agarrao;
+    if (!ag) return '';
+    const outro = S.tokens.get(ag.outro);
+    const nome = outro ? outro.nome : 'alguém';
+    const extras = [ag.escudo ? (Number.isFinite(ag.escudoHp) ? `atrás do corpo (escudo com ${ag.escudoHp} HP)` : 'escudo humano') : '', ag.apertoDeFerro ? 'Aperto de ferro' : ''].filter(Boolean);
+    return `${ag.papel === 'agarrando' ? `Agarrando ${nome}` : `Agarrado por ${nome}`}${extras.length ? ` · ${extras.join(' · ')}` : ''}`;
+  }
+  // A luta (M9b) no cartão: o agarrão (estrangular, derrubar, o escudo humano, soltar; escapar), levantar-se e os
+  // movimentos das Artes Marciais que não pedem alvo (os que pedem ficam no Atacar, com a arma da forma). O mestre marca
+  // caído e inconsciente.
+  const movimentosDe = token => (token.luta && token.luta.movimentos) || [];
+  function htmlDoRequisito(m, alvo = null) {
+    if (m.bloqueio) return `✗ ${m.bloqueio}`;
+    if (!m.requisito) return '';
+    if (m.pronto === null) return `Pede: ${m.requisito} Fora do combate, você confirma.`;
+    const ok = m.alvo ? (m.alvos || []).includes(alvo) : m.pronto;
+    return ok ? `✓ ${m.requisito}` : `✗ ${m.falta || `Pede: ${m.requisito}`}`;
+  }
+  function htmlDaLuta(token) {
+    if (!(gm() || token.meu) || token.morto) return '';
+    const botao = (acao, texto, dica, classe = 'vazado') => `<button class="botao ${classe} pequeno" type="button" data-luta="${acao}" title="${esc(dica)}">${esc(texto)}</button>`;
+    const doMovimento = id => {
+      const m = movimentosDe(token).find(item => item.id === id);
+      if (!m) return '';
+      const falta = Boolean(m.bloqueio) || m.pronto === false;
+      return `<button class="botao vazado pequeno${falta ? ' apagado' : ''}" type="button" data-movimento="${esc(m.id)}" title="${esc(`${m.efeito} ${htmlDoRequisito(m)}`.trim())}">${esc(m.nome)} (DV ${m.dv})</button>`;
+    };
+    const botoes = [];
+    const ag = token.agarrao;
+    const outro = ag && S.tokens.get(ag.outro);
+    if (!token.inconsciente) {
+      if (ag && ag.papel === 'agarrando') {
+        botoes.push(botao('estrangular', 'Estrangular', 'Uma Ação: o seu BODY direto no HP, sem a armadura. Abaixo de 0, fica com 1 e desmaia; três rodadas seguidas, desmaia.'));
+        botoes.push(botao('derrubar', 'Derrubar', 'Uma Ação: o seu BODY direto no HP, sem a armadura; cai, e o agarrão acaba.'));
+        botoes.push(botao('escudo', ag.escudo ? 'Largar o escudo' : 'Escudo humano', ag.escudo ? 'Parar de usar quem você agarra como escudo.' : 'Uma Ação: os tiros em você vão em quem você agarra, que não esquiva (não o corpo a corpo, nem o tiro mirado na cabeça).', ag.escudo ? 'vazado ativo' : 'vazado'));
+        if (!(outro && outro.agarrao && outro.agarrao.apertoDeFerro)) botoes.push(doMovimento('apertoDeFerro'));
+      }
+      if (ag && ag.papel === 'agarrado') {
+        botoes.push(botao('escapar', 'Escapar', `Uma Ação: DEX + Briga contra quem o segura (o empate é dele)${ag.apertoDeFerro ? '; o Aperto de ferro tira mais 2' : ''}.`));
+        botoes.push(doMovimento('escapeDeAgarrao'));
+      }
+      if (token.caido) {
+        botoes.push(botao('levantar', 'Levantar-se', 'Uma Ação.'));
+        botoes.push(doMovimento('recuperacao'));
+      }
+    }
+    if (ag && (ag.papel === 'agarrando' || gm())) botoes.push(botao('soltar', 'Soltar', 'Quem agarra solta quando quiser.'));
+    const marcas = gm() ? `<div class="cartao-acoes"><button class="link" type="button" data-luta="caido">${token.caido ? 'não está caído' : 'marcar caído'}</button>
+      <button class="link" type="button" data-luta="inconsciente">${token.inconsciente ? 'acordou' : 'marcar inconsciente'}</button></div>` : '';
+    const lista = botoes.filter(Boolean);
+    if (!lista.length && !marcas) return '';
+    return `<div class="luta-cartao"><div class="grupo-npc">Luta</div>${lista.length ? `<div class="cartao-acoes">${lista.join('')}</div>` : ''}${marcas}</div>`;
+  }
+  // O requisito "neste turno" de um movimento, antes de pedir: no combate, a mesa confere (o mestre confirma por cima);
+  // fora dele, quem age confirma. Devolve true (confirmado), false (não precisa) ou null (não vai).
+  function confirmarRequisito(token, id, alvo = null) {
+    const m = movimentosDe(token).find(item => item.id === id);
+    if (!m || !m.requisito) return false;
+    if (m.pronto === null) return confirm(`${m.nome} pede: ${m.requisito}\n\nFora do combate, a mesa não confere. Aconteceu?`) ? true : null;
+    const ok = m.alvo ? (m.alvos || []).includes(alvo) : m.pronto;
+    if (ok) return false;
+    if (gm()) return confirm(`${m.nome}: o registro do turno não mostra o requisito (${m.falta || m.requisito}).\n\nConfirmar como mestre (um acerto resolvido à mão)?`) ? true : null;
+    aviso(`${m.nome}: ${m.falta || m.requisito}`, 'erro');
+    return null;
+  }
+  async function fazerMovimento(token, id, extra = {}) {
+    const confirmado = confirmarRequisito(token, id, extra.alvo || null);
+    if (confirmado === null) return null;
+    return op('luta.movimento', { token: token.id, movimento: id, ...extra, ...(confirmado ? { confirmado: true } : {}) }).catch(() => null);
   }
   // Recarregar. O personagem recarrega com a munição da ficha (a caixa diminui) e escolhe qual, quando tem mais de uma
   // que serve; trocar devolve o que estava no pente. O NPC (arma.municoes não vem) recarrega de graça.
@@ -2267,13 +2392,28 @@
   // Os modos e a DV como o servidor calcula (mesa-regras.js); aqui só para mostrar antes de atacar.
   const AUTOFOGO = new Set(['smg', 'heavySmg', 'assaultRifle']);
   const CORPO = new Set(['lightMelee', 'medMelee', 'heavyMelee', 'vHeavyMelee', 'briga', 'artesMarciais']);
+  const R_GOLPES = new Set(['quebraOssos', 'pontoDePressao', 'voadora']);
   const EXPLOSIVO = new Set(['grenadeLauncher', 'rocketLauncher', 'thrownWeapon']);
   const LINHA_DV = { medPistol: 'pistol', heavyPistol: 'pistol', vHeavyPistol: 'pistol', smg: 'smg', heavySmg: 'smg', assaultRifle: 'assault', shotgun: 'shotgun', sniperRifle: 'sniper', bow: 'bow', grenadeLauncher: 'grenade', thrownWeapon: 'grenade', rocketLauncher: 'rocket' };
-  const NOME_MODO = { tiro: 'Tiro', mirado: 'Mirado', ricochete: 'Ricochete', autofogo: 'Autofogo', supressivo: 'Supressivo', cartucho: 'Cartucho', corpo: 'Corpo a corpo', explosivo: 'Explosivo' };
-  const armasDe = token => [...(token.armas || []), { id: 'briga', nome: 'Desarmado (briga)', classe: 'briga', dano: 'pelo BODY', pente: null }];
+  const NOME_MODO = {
+    tiro: 'Tiro', mirado: 'Mirado', ricochete: 'Ricochete', autofogo: 'Autofogo', supressivo: 'Supressivo', cartucho: 'Cartucho', corpo: 'Corpo a corpo', explosivo: 'Explosivo',
+    arremesso: 'Arremessar', quebraOssos: 'Quebra-ossos', pontoDePressao: 'Ponto de pressão', voadora: 'Voadora',
+    agarrar: 'Agarrar', desarmeCombinado: 'Desarme', quebraArmadura: 'Quebra-armadura', contraQueda: 'Contra-queda'
+  };
+  // A luta (M9b): a arma de cada forma de Artes Marciais vem do servidor (token.luta.artes), como a Briga vem daqui.
+  const armasDe = token => [...(token.armas || []), { id: 'briga', nome: 'Desarmado (briga)', classe: 'briga', dano: 'pelo BODY', pente: null }, ...((token.luta && token.luta.artes) || [])];
   // Os modos vêm do servidor com a arma (as de 2077 têm os delas); sem eles, pela classe.
   const modosDe = arma => (Array.isArray(arma.modos) && arma.modos.length ? arma.modos
     : CORPO.has(arma.classe) ? ['corpo'] : EXPLOSIVO.has(arma.classe) ? ['explosivo'] : AUTOFOGO.has(arma.classe) ? ['tiro', 'mirado', 'autofogo', 'supressivo'] : ['tiro', 'mirado']);
+  // O que não é ataque mas escolhe um alvo do mesmo jeito: o agarrão (na Briga) e os movimentos das Artes Marciais com alvo
+  // (na arma da forma deles). Vão pela luta (mesa-luta.js).
+  const MODOS_DA_LUTA = new Set(['agarrar', 'desarmeCombinado', 'quebraArmadura', 'contraQueda']);
+  function modosDoAtaque(token, arma) {
+    const modos = [...modosDe(arma)];
+    if (arma.id === 'briga' && !token.agarrao) modos.push('agarrar');
+    if (arma.classe === 'artesMarciais') for (const m of movimentosDe(token)) if (m.alvo && m.forma === arma.forma) modos.push(m.id);
+    return modos;
+  }
   function dvPrevia(classe, metros, autofogo) {
     const linha = (rules.rangeDV || []).find(item => item.id === LINHA_DV[classe]);
     const tabela = linha && (autofogo ? linha.autofire : linha.dv);
@@ -2285,7 +2425,7 @@
     const armas = armasDe(token);
     const arma = armas.find(item => item.id === at.arma) || armas[0];
     at.arma = arma.id;
-    const modos = modosDe(arma);
+    const modos = modosDoAtaque(token, arma);
     if (!modos.includes(at.modo)) at.modo = modos[0];
     const alvos = [...S.tokens.values()].filter(item => item.id !== token.id && !item.morto)
       .map(item => ({ item, metros: medir(token, item).metros })).sort((a, b) => a.metros - b.metros);
@@ -2293,11 +2433,21 @@
     const alvo = S.tokens.get(at.alvo);
     const kit = arma.kit || null;
     let previa = '';
+    const movimento = movimentosDe(token).find(item => item.id === at.modo) || null;
+    const corpoAte = at.modo === 'voadora' ? 4 : 2;
     if (at.modo === 'supressivo') previa = 'Todos a até 25 m rolam WILL + Concentração contra o seu ataque. 10 balas.';
     else if (alvo) {
       const metros = medir(token, alvo).metros;
-      if (at.modo === 'corpo') previa = metros > Math.max(2, grade().metros) ? `${metros} m: longe demais (corpo a corpo é até 2 m)` : `${metros} m · o alvo esquiva (DEX + Evasão)`;
-      else if (at.modo === 'cartucho') previa = `DV 13 · se acertar, 3d6 em todos à sua frente até 6 m e à vista, na direção de ${alvo.nome}`;
+      const longe = metros > Math.max(corpoAte, grade().metros) ? `${metros} m: longe demais (até ${corpoAte} m)` : '';
+      if (at.modo === 'corpo') previa = longe || `${metros} m · o alvo esquiva (DEX + Evasão)`;
+      else if (at.modo === 'agarrar') previa = longe || `${metros} m · os dois rolam DEX + Briga; o empate é de quem resiste. Agarrados, −2 em tudo para os dois.`;
+      else if (movimento && (movimento.golpe || MODOS_DA_LUTA.has(at.modo))) {
+        const requisito = htmlDoRequisito(movimento, alvo.id);
+        previa = [longe || `${metros} m`, movimento.golpe ? 'o alvo esquiva (DEX + Evasão)' : `DV ${movimento.dv}`, movimento.efeito, requisito].filter(Boolean).join(' · ');
+      } else if (at.modo === 'arremesso') {
+        const dv = metros > 25 ? null : dvPrevia('thrownWeapon', metros);
+        previa = `${metros} m · DEX + Atletismo · ${dv === null ? 'longe demais (até 25 m)' : `DV ${dv}`} · a arma fica no chão${CORPO.has(arma.classe) ? '; arremessada, não ignora metade do SP' : ''}`;
+      } else if (at.modo === 'cartucho') previa = `DV 13 · se acertar, 3d6 em todos à sua frente até 6 m e à vista, na direção de ${alvo.nome}`;
       else {
         const dv = dvPrevia(arma.classe, metros, at.modo === 'autofogo');
         const ricochete = token.cromo && token.cromo.coprocessador ? ' · −2 (ricochete com o Ballistic Coprocessor)' : ' · −4 (ricochete: alvo atrás de cobertura ou fora da vista)';
@@ -2322,6 +2472,8 @@
       <label class="campo">Arma <select data-at="arma">${armas.map(item => `<option value="${esc(item.id)}"${item.id === arma.id ? ' selected' : ''}>${esc(item.nome)}${item.pente ? ` (${item.pente.atual}/${item.pente.max})` : ''}</option>`).join('')}</select></label>
       <div class="segmentado" role="radiogroup" aria-label="Modo">${modos.map(modo => `<button type="button" data-at-modo="${modo}" class="${modo === at.modo ? 'ativo' : ''}">${NOME_MODO[modo]}</button>`).join('')}</div>
       ${at.modo === 'mirado' ? `<div class="segmentado" role="radiogroup" aria-label="Onde">${[['cabeca', 'Cabeça'], ['perna', 'Perna'], ['item', 'Item na mão']].map(([valor, nome]) => `<button type="button" data-at-local="${valor}" class="${(at.local || 'cabeca') === valor ? 'ativo' : ''}">${nome}</button>`).join('')}</div>` : ''}
+      ${at.modo === 'quebraOssos' || at.modo === 'pontoDePressao' ? `<div class="segmentado" role="radiogroup" aria-label="Onde">${[['corpo', 'Corpo'], ['cabeca', 'Cabeça (−8)']].map(([valor, nome]) => `<button type="button" data-at-golpe="${valor}" class="${(at.golpe || 'corpo') === valor ? 'ativo' : ''}">${nome}</button>`).join('')}</div>` : ''}
+      ${at.modo === 'desarmeCombinado' ? `<div class="segmentado" role="radiogroup" aria-label="O objeto">${[['ficar', 'Fica com você'], ['cair', 'Cai']].map(([valor, nome]) => `<button type="button" data-at-desarme="${valor}" class="${(at.desarme || 'ficar') === valor ? 'ativo' : ''}">${nome}</button>`).join('')}</div>` : ''}
       ${at.modo === 'supressivo' ? '' : `<div class="campo-linha"><label class="campo cresce">Alvo <select data-at="alvo">${alvos.map(({ item, metros }) => `<option value="${esc(item.id)}"${item.id === at.alvo ? ' selected' : ''}>${esc(item.nome)} · ${metros} m</option>`).join('') || '<option value="">Ninguém na cena</option>'}</select></label>
         <button class="botao vazado pequeno" type="button" data-at="mapa">${S.escolhendoAlvo ? 'Clique no alvo…' : 'No mapa'}</button></div>`}
       ${segundos ? `<label class="campo">Segundo alvo (a até 4 m) <select data-at="alvo2"><option value="">Nenhum</option>${segundos.map(({ item }) => `<option value="${esc(item.id)}"${item.id === at.alvo2 ? ' selected' : ''}>${esc(item.nome)}</option>`).join('')}</select></label>` : ''}
@@ -2329,11 +2481,26 @@
       <p class="previa">${esc(previa)}</p>
       <div class="campo-linha"><label class="campo mod">Mod <input data-at="mod" type="number" min="-30" max="30" value="${at.mod || 0}"></label>
         ${token.sorte ? `<label class="campo mod">Sorte <input data-at="sorte" type="number" min="0" max="${token.sorte.atual}" value="${at.sorte || 0}"></label>` : ''}
-        <button class="botao" type="button" data-at="disparar">Atacar</button></div></div>`;
+        <button class="botao" type="button" data-at="disparar">${MODOS_DA_LUTA.has(at.modo) ? esc(NOME_MODO[at.modo]) : 'Atacar'}</button></div></div>`;
   }
   async function dispararAtaque(token) {
     const at = S.ataque;
-    const resposta = await op('ataque', { atacante: token.id, arma: at.arma, modo: at.modo, local: at.local || 'cabeca', alvo: at.alvo, alvo2: at.alvo2 || undefined, doisCanos: Boolean(at.doisCanos), mod: Number(at.mod) || 0, sorte: Number(at.sorte) || 0 }).catch(() => null);
+    const ajuste = { mod: Number(at.mod) || 0, sorte: Number(at.sorte) || 0 };
+    // O agarrão e os movimentos com alvo vão pela luta; o cartão deles aparece no chat.
+    if (MODOS_DA_LUTA.has(at.modo)) {
+      const feito = at.modo === 'agarrar' ? await op('luta.agarrar', { token: token.id, alvo: at.alvo, ...ajuste }).catch(() => null)
+        : await fazerMovimento(token, at.modo, { alvo: at.alvo, ...(at.modo === 'desarmeCombinado' ? { ficar: at.desarme !== 'cair' } : {}), ...ajuste });
+      if (!feito) return;
+      at.sorte = 0;
+      if (at.modo === 'agarrar') S.ataque = null;
+      if (!chatFlutua()) abrirAba('rolagens', { expandir: false });
+      return;
+    }
+    // O golpe com requisito (a Voadora): fora do combate, quem ataca confirma.
+    const confirmado = R_GOLPES.has(at.modo) ? confirmarRequisito(token, at.modo) : false;
+    if (confirmado === null) return;
+    const local = R_GOLPES.has(at.modo) ? at.golpe || 'corpo' : at.local || 'cabeca';
+    const resposta = await op('ataque', { atacante: token.id, arma: at.arma, modo: at.modo, local, alvo: at.alvo, alvo2: at.alvo2 || undefined, doisCanos: Boolean(at.doisCanos), ...ajuste, ...(confirmado ? { confirmado: true } : {}) }).catch(() => null);
     if (!resposta) return;
     at.sorte = 0;
     if (resposta.resultado && !resposta.resultado.concluido) aviso('Esperando a defesa do alvo…');
@@ -2373,6 +2540,21 @@
     if (modo) { S.ataque.modo = modo.dataset.atModo; renderCartao(); return; }
     const local = event.target.closest('[data-at-local]');
     if (local) { S.ataque.local = local.dataset.atLocal; renderCartao(); return; }
+    const golpe = event.target.closest('[data-at-golpe]');
+    if (golpe) { S.ataque.golpe = golpe.dataset.atGolpe; renderCartao(); return; }
+    const desarme = event.target.closest('[data-at-desarme]');
+    if (desarme) { S.ataque.desarme = desarme.dataset.atDesarme; renderCartao(); return; }
+    // A luta (M9b): o agarrão, levantar-se, as marcas do mestre e os movimentos sem alvo.
+    const luta = event.target.closest('[data-luta]');
+    if (luta) {
+      const acao = luta.dataset.luta;
+      if (acao === 'caido' || acao === 'inconsciente') op('token.estado', { token: token.id, [acao]: !token[acao] }).catch(() => {});
+      else if (acao === 'escudo') op('luta.escudo', { token: token.id, ligar: !(token.agarrao && token.agarrao.escudo) }).catch(() => {});
+      else op(`luta.${acao}`, { token: token.id }).catch(() => {});
+      return;
+    }
+    const movimento = event.target.closest('[data-movimento]');
+    if (movimento) { fazerMovimento(token, movimento.dataset.movimento); return; }
     const at = event.target.closest('[data-at]');
     if (at && at.dataset.at === 'mapa') { escolherAlvoNoMapa(!S.escolhendoAlvo); return; }
     if (at && at.dataset.at === 'disparar') { dispararAtaque(token); return; }
@@ -2801,9 +2983,13 @@
         else defesa = alvo.dv === null || alvo.dv === undefined ? (['tiro', 'mirado', 'ricochete', 'autofogo'].includes(a.modo) ? 'fora do alcance' : 'aguentou') : `aguentou (DV ${alvo.dv})`;
         if (alvo.segundaChance) defesa += `; segunda chance (Smart melhorada) ${alvo.segundaChance.total}`;
         if (alvo.redirecionado) defesa = `as balas Smart mudaram de alvo; ${defesa}`;
+        // O escudo humano (M9b): o agarrado recebe no lugar de quem o segura; morto, o corpo segura o dano até quebrar.
+        if (alvo.escudoDe) defesa = `escudo humano de ${esc(alvo.escudoDe)}, não esquiva; ${defesa}`;
+        const caiu = alvo.derrubado ? ` <span class="tag lesao">Caiu${alvo.derrubado === 'veiculo' ? ' (e sai da moto ou do veículo aberto: o mestre desce)' : ''}</span>` : '';
         if (a.modo === 'supressivo') linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: ${defesa} → ${alvo.acertou ? '<span class="tag lesao">Suprimido</span>' : 'resistiu'}</div>`);
         else if (!alvo.acertou) linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: ${defesa} → errou</div>`);
-        else linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: ${defesa} → pegou. ${contaDoDano(alvo.dano, alvo.multiplicador)}</div>${lesoesHtml(alvo.dano && alvo.dano.lesoes)}`);
+        else if (alvo.atrasDoCorpo && alvo.escudo) linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: atrás do corpo de ${esc(alvo.atrasDoCorpo)} → o escudo segurou ${alvo.escudo.total} (HP ${alvo.escudo.antes} → ${alvo.escudo.depois})${alvo.escudo.quebrou ? '; quebrou, e o agarrão acabou (o resto do dano se perde)' : ''}</div>`);
+        else linhas.push(`<div class="reg-alvo"><b>${esc(alvo.nome)}</b>: ${defesa} → pegou. ${contaDoDano(alvo.dano, alvo.multiplicador)}${caiu}</div>${lesoesHtml(alvo.dano && alvo.dano.lesoes)}`);
       }
     }
     const tags = r.partes ? tagsDoCritico(r) : [];
@@ -2814,8 +3000,28 @@
       ${r.partes ? `<div class="reg-conta">${contaDoTeste(r)}</div>` : ''}${tags.length ? `<div>${tags.join('')}</div>` : ''}${linhas.join('')}${botaoDesfazer(entrada)}</li>`;
   }
 
+  // A luta (M9b): quem fez o quê em quem, as rolagens (o teste resistido traz as duas), o que aconteceu e o HP de quem
+  // sofreu (o de NPC, só o mestre recebe).
+  const TAG_DA_LUTA = { agarrou: 'sucesso', escapou: 'sucesso', passou: 'sucesso', estrangulou: 'lesao', derrubou: 'lesao', desmaiou: 'falha', resistiu: 'secreta', segurou: 'secreta', falhou: 'falha' };
+  const NOME_DO_RESULTADO = { agarrou: 'Agarrou', escapou: 'Escapou', passou: 'Passou', estrangulou: 'Estrangulou', derrubou: 'Derrubou', desmaiou: 'Desmaiou', resistiu: 'Resistiu', segurou: 'Segurou', falhou: 'Não passou' };
+  function htmlLuta(entrada) {
+    const l = entrada.luta || {};
+    const rolagens = (l.rolagens || []).map(item => {
+      const tags = tagsDoCritico(item.rolagem);
+      return `<div class="reg-corpo"><span class="reg-rotulo">${esc(item.quem)} · ${esc(item.rotulo)}</span><span class="reg-total">${item.rolagem.total}</span></div>
+        <div class="reg-conta">${contaDoTeste(item.rolagem)}</div>${tags.length ? `<div>${tags.join('')}</div>` : ''}`;
+    }).join('');
+    const hp = l.hp ? ` <small>(HP ${l.hp.antes} → ${l.hp.depois})</small>` : '';
+    const tags = [NOME_DO_RESULTADO[l.resultado] ? `<span class="tag ${TAG_DA_LUTA[l.resultado]}">${NOME_DO_RESULTADO[l.resultado]}</span>` : '', entrada.desfeito ? '<span class="tag secreta">Desfeito</span>' : ''].filter(Boolean);
+    return `<li class="luta${entrada.desfeito ? ' desfeito' : ''}" data-id="${esc(entrada.id)}" style="--cor:${esc(entrada.autor.cor)}">
+      <div class="reg-topo"><span><b>${esc(l.quem)}</b>${l.alvo ? ` → ${esc(l.alvo)}` : ''} · ${esc(l.titulo || 'Luta')}</span><span>${esc(hora(entrada.quando))}</span></div>
+      ${rolagens}<div class="reg-alvo">${esc(l.frase || '')}${hp}</div>${(l.notas || []).map(nota => `<div class="reg-nota">${esc(nota)}</div>`).join('')}
+      ${tags.length ? `<div>${tags.join('')}</div>` : ''}${botaoDesfazer(entrada)}</li>`;
+  }
+
   function htmlEntrada(entrada) {
     if (entrada.tipo === 'sistema') return `<li class="sistema" data-id="${esc(entrada.id)}">${esc(hora(entrada.quando))} · ${esc(entrada.texto)}</li>`;
+    if (entrada.tipo === 'luta') return htmlLuta(entrada);
     if (entrada.tipo === 'chat') {
       const para = Array.isArray(entrada.para) ? ` <small>→ ${esc(entrada.paraNome || 'Mestre')} (só vocês${entrada.paraNome === 'Mestre' ? '' : ' e o mestre'})</small>` : '';
       return `<li class="chat${entrada.para ? ' sussurro' : ''}" data-id="${esc(entrada.id)}" style="--cor:${esc(entrada.autor.cor)}"><div class="reg-topo"><span><b>${esc(entrada.autor.nome)}</b>${para}</span><span>${esc(hora(entrada.quando))}</span></div>
@@ -2873,6 +3079,8 @@
       const r = entrada.rolagem;
       aviso(`${r.rotulo}: ${r.total}${r.critico === 'sucesso' ? ' · sucesso crítico' : r.critico === 'falha' ? ' · falha crítica' : ''}`, r.critico === 'falha' ? 'erro' : 'destaque');
     }
+    // A luta (o cartão do token pede, o chat está fora de vista): o que aconteceu vira aviso.
+    if (entrada.tipo === 'luta' && entrada.autor.meu && entrada.luta && !chatFlutua() && !abaVisivel('rolagens')) aviso(entrada.luta.frase, 'destaque');
   }
   // O cartão que mudou (o ataque resolvido, o desfeito) troca no lugar; quem não tinha (o alvo), recebe agora.
   function trocarRegistro(entrada) {
@@ -3666,6 +3874,10 @@
     const selos = [];
     if (meuTurno(d.token)) selos.push('<span class="pt-selo pt-selo-turno">▶ Seu turno</span>');
     if (d.token && d.token.suprimido) selos.push('<span class="pt-selo pt-selo-alerta" title="Suprimido: sai no fim do seu próximo turno.">Suprimido</span>');
+    // A luta (M9b): caído, inconsciente e o agarrão.
+    if (d.token && d.token.caido) selos.push('<span class="pt-selo pt-selo-alerta" title="Caído: levante-se (uma Ação) antes de andar.">Caído</span>');
+    if (d.token && d.token.inconsciente) selos.push('<span class="pt-selo pt-selo-alerta" title="Inconsciente: não age nem esquiva.">Inconsciente</span>');
+    if (d.token && d.token.agarrao) selos.push(`<span class="pt-selo pt-selo-alerta" title="${esc(textoDoAgarrao(d.token))}: −2 em todas as ações.">${d.token.agarrao.papel === 'agarrando' ? 'Agarrando' : 'Agarrado'}</span>`);
     const ferramenta = (acao, titulo, icone, ativa = false) => `<button type="button" class="${ativa ? 'pt-ativa' : ''}" data-pt="${acao}" title="${esc(titulo)}" aria-label="${esc(titulo)}">${icone}</button>`;
     return `<header class="pt-topo">
       <span class="pt-alca" title="Arraste para mover · dois cliques: de volta à base" aria-hidden="true">⋮⋮</span>

@@ -44,7 +44,7 @@ function carregarPagina() {
   const pagina = new Map();
   for (const [rota, arquivo] of Object.entries(files)) pagina.set(rota, { conteudo: fs.readFileSync(arquivo), tipo: contentTypes[path.extname(arquivo)] });
   const hash = crypto.createHash('sha1');
-  const codigo = [...new Set(Object.values(files)), ...['mesa-api.js', 'mesa-combate.js', 'mesa-regras.js', 'mesa-2077.js', 'mesa-audio.js'].map(nome => path.join(here, nome)), path.join(root, 'personagem-jogo.js')];
+  const codigo = [...new Set(Object.values(files)), ...['mesa-api.js', 'mesa-combate.js', 'mesa-luta.js', 'mesa-regras.js', 'mesa-2077.js', 'mesa-audio.js'].map(nome => path.join(here, nome)), path.join(root, 'personagem-jogo.js')];
   for (const arquivo of codigo) hash.update(fs.readFileSync(arquivo));
   return { pagina, versao: hash.digest('hex').slice(0, 12) };
 }
