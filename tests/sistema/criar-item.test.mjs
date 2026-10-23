@@ -66,3 +66,19 @@ test('C34.2: a configuração é do mundo, visível e desligada por padrão como
     assert.equal(opcao.default, false);
   } finally { globalThis.game = antes; }
 });
+
+
+test('C34.2: confirmar ao apagar é uma preferência do navegador, ligada por padrão como no CORE', () => {
+  const antes = globalThis.game;
+  const registros = new Map();
+  globalThis.game = { settings: { register: (sistema, chave, dados) => registros.set(chave, { sistema, ...dados }) } };
+  try {
+    registrarConfiguracoes();
+    const opcao = registros.get('confirmarApagarItem');
+    assert.equal(opcao.sistema, 'cpr-fieldbook');
+    assert.equal(opcao.scope, 'client');
+    assert.equal(opcao.config, true);
+    assert.equal(opcao.type, Boolean);
+    assert.equal(opcao.default, true);
+  } finally { globalThis.game = antes; }
+});

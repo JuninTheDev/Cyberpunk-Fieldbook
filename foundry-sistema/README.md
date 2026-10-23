@@ -4,6 +4,18 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 **Esta é a versão 0.2.0, um protótipo.** O combate do Fluxo de Combate já está dentro do sistema. A campanha continua no Foundry 12 com o CORE 0.92.4 até este sistema estar provado na mesa.
 
+## Em revisão (C34.2)
+
+A opção **Confirmar ao apagar item** vale só neste navegador e começa ligada, como a `deleteItemConfirmation` do
+CORE 0.92.4. Desligada, a exclusão simples nas fichas de personagem e capanga é direta; a escolha entre soltar os
+instalados e apagar junto continua obrigatória. A alteração e o cenário de aceitação estão preparados, mas ainda
+aguardam o G4 num Foundry 14 ativado antes de entrar na lista de entregas concluídas.
+
+A preferência local **Exibição das perícias do capanga** escolhe o resumo da última coluna: Nível, Base
+(atributo + nível, o padrão do CORE) ou Total (com bônus e penalidades). O nível continua editável e a rolagem
+continua usando o total, qualquer que seja a exibição. Mudar a preferência atualiza as fichas abertas de capangas,
+incluindo as de tokens, só neste navegador. Também aguarda validação no Foundry pelo G4.
+
 ## O que já faz
 
 - **Criação de itens na ficha (C34.2, ciclo 158):** a configuração do mundo **Jogadores podem criar itens**, desligada

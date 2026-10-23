@@ -6740,6 +6740,86 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.nome === 'Jogador' && !info.gm && info.dono && ativo, JSON.stringify({ ...info, ativo })];
     });
 
+    await r.passo('C34.2: perícias do capanga por nível, base ou total; ficha aberta e preferências separadas', async () => {
+      const anterior = await edge.evaluate("game.settings.get('cpr-fieldbook', 'periciasDoCapanga')");
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const ator = await Actor.implementation.create({ name: 'C34 perícias', type: 'capanga',
+            system: { atributos: { dex: { valor: 6 } }, pericias: { evasion: { nivel: 4 } }, hp: { value: 1 } } });
+          const saida = [];
+          try {
+            for (const modo of ['nivel', 'base', 'total']) {
+              await game.settings.set('${S}', 'periciasDoCapanga', modo);
+              await ator.sheet.render({ force: true });
+              const contexto = await ator.sheet._prepareContext({});
+              const linha = contexto.linhasDePericia.find(p => p.id === 'evasion');
+              const dom = ator.sheet.element.querySelector('.pericia[data-pericia="evasion"]');
+              saida.push({ modo, valor: linha?.exibicaoCapanga, total: linha?.total,
+                nivel: ator.system.pericias.evasion.nivel, penalidade: ator.system.penalidade,
+                exibido: dom?.querySelector('.total')?.textContent.trim(),
+                rotulo: ator.sheet.element.querySelector('.linha-pericia.cabeca > :last-child')?.textContent.trim() });
+            }
+            return saida;
+          } finally { if (ator.sheet.rendered) await ator.sheet.close(); await ator.delete(); }
+        })()`);
+        // O mestre terminou em Total; o jogador continua no padrão Base deste outro navegador.
+        const modoJogador = await jogador.evaluate("game.settings.get('cpr-fieldbook', 'periciasDoCapanga')");
+        const esperados = [[4, 'NÍVEL'], [10, 'BASE'], [8, 'TOTAL']];
+        return [info.length === 3 && info.every((p, i) => p.valor === esperados[i][0] && p.exibido === String(esperados[i][0])
+          && p.rotulo === esperados[i][1] && p.total === 8 && p.nivel === 4 && p.penalidade === -2) && modoJogador === 'base',
+          JSON.stringify({ info, modoJogador })];
+      } finally {
+        await edge.evaluate(`game.settings.set('${S}', 'periciasDoCapanga', ${JSON.stringify(anterior)}).then(() => true)`);
+      }
+    });
+
+    await r.passo('C34.2: confirmação ao apagar por navegador; cancelar preserva, desligada apaga, instalados ainda perguntam', async () => {
+      const resultado = await edge.evaluate(`(async () => {
+        const D = foundry.applications.api.DialogV2;
+        const anterior = game.settings.get('${S}', 'confirmarApagarItem');
+        const confirmar = D.confirm, esperar = D.wait;
+        const atores = [], resultados = [];
+        let perguntas = 0, montagens = 0, resposta = false;
+        D.confirm = async () => { perguntas++; return resposta; };
+        D.wait = async () => { montagens++; return 'cancelar'; };
+        try {
+          for (const type of ['personagem', 'capanga']) {
+            const ator = await Actor.implementation.create({ name: 'C34 apagar ' + type, type });
+            atores.push(ator);
+            const [item] = await ator.createEmbeddedDocuments('Item', [{ name: 'Item de teste', type: 'equipamento' }]);
+            const apagar = id => ator.sheet.options.actions.apagarItem.call(ator.sheet, {}, { closest: () => ({ dataset: { itemId: id } }) });
+            await game.settings.set('${S}', 'confirmarApagarItem', true);
+            resposta = false;
+            let antes = perguntas;
+            await apagar(item.id);
+            const cancelou = ator.items.has(item.id) && perguntas === antes + 1;
+            resposta = true;
+            await apagar(item.id);
+            const confirmou = !ator.items.has(item.id) && perguntas === antes + 2;
+            const [outro] = await ator.createEmbeddedDocuments('Item', [{ name: 'Sem confirmação', type: 'equipamento' }]);
+            await game.settings.set('${S}', 'confirmarApagarItem', false);
+            antes = perguntas;
+            await apagar(outro.id);
+            const direto = !ator.items.has(outro.id) && perguntas === antes;
+            const [arma] = await ator.createEmbeddedDocuments('Item', [{ name: 'Com instalado', type: 'arma' }]);
+            const [upgrade] = await ator.createEmbeddedDocuments('Item', [{ name: 'Instalado', type: 'upgrade', system: { alvo: 'arma', instaladoEm: arma.id } }]);
+            const antesMontagens = montagens;
+            await apagar(arma.id);
+            const preservou = montagens === antesMontagens + 1 && ator.items.has(arma.id) && ator.items.get(upgrade.id)?.system.instaladoEm === arma.id;
+            resultados.push({ type, cancelou, confirmou, direto, preservou });
+          }
+          return resultados;
+        } finally {
+          D.confirm = confirmar; D.wait = esperar;
+          await game.settings.set('${S}', 'confirmarApagarItem', anterior);
+          for (const ator of atores) { if (ator.sheet.rendered) await ator.sheet.close(); await ator.delete(); }
+        }
+      })()`);
+      const jogadorConfirma = await jogador.evaluate("game.settings.get('cpr-fieldbook', 'confirmarApagarItem')");
+      return [resultado.length === 2 && resultado.every(r => r.cancelou && r.confirmou && r.direto && r.preservou) && jogadorConfirma === true,
+        JSON.stringify({ resultado, jogadorConfirma })];
+    });
+
     await r.passo('C34.2: criar itens exige a opção atual; botões e ações nas fichas de personagem, capanga e observador', async () => {
       const anterior = await edge.evaluate("game.settings.get('cpr-fieldbook', 'jogadoresCriamItens')");
       let ids = [];

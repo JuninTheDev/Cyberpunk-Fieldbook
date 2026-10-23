@@ -800,15 +800,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // com ele, pelo gancho (armas-cyberware.mjs), com as balas de volta.
   static async #apagarItem(evento, alvo) {
     const item = this.#item(alvo);
-    if (!item) return;
+    if (!this.isEditable || !item) return;
     const nome = foundry.utils.escapeHTML(item.name);
     const montagem = junto => apagarComInstalados(item.id, this.actor.items.map(outro => ({ id: outro.id, instaladoEm: outro.system.instaladoEm ?? '', propria: ehArmaMontadaEmItem(outro) })), junto);
     // Sem a munição carregada na ficha, a arma só sai (sem o aviso do descarregar).
     const descarregar = junto => (descarregaAoApagar({ tipo: item.type, pente: item.system.pente?.value, municaoNaFicha: Boolean(item.municaoCarregada), junto }) ? item.descarregar() : null);
     const dentro = montagem(false).soltar.map(id => this.actor.items.get(id)?.name).filter(Boolean);
     if (!dentro.length) {
-      const ok = await DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${nome}</b> da ficha?</p>` });
-      if (!ok || !this.actor.items.has(item.id)) return;
+      const ok = !config('confirmarApagarItem') || await DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${nome}</b> da ficha?</p>` });
+      if (!ok || !this.isEditable || !this.actor.items.has(item.id)) return;
       await descarregar(false);
       await item.delete();
       return;
@@ -819,7 +819,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       buttons: [{ action: 'soltar', label: 'Só tirar', default: true }, { action: 'junto', label: 'Apagar junto' }, { action: 'cancelar', label: 'Cancelar' }]
     });
     // A montagem se lê de novo depois da pergunta: o que entrou ou saiu do item enquanto ela estava aberta.
-    if (!['soltar', 'junto'].includes(escolha) || !this.actor.items.has(item.id)) return;
+    if (!['soltar', 'junto'].includes(escolha) || !this.isEditable || !this.actor.items.has(item.id)) return;
     const junto = escolha === 'junto';
     const { apagar, soltar } = montagem(junto);
     await descarregar(junto);

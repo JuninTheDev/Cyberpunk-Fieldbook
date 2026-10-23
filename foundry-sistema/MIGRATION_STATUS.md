@@ -7827,6 +7827,49 @@ agente, sem editar os arquivos durante as rodadas de G4 e mutações.
 - **Próximo:** C34.2 continua reservado para a sessão Codex: lesão repetida, perícias do capanga por nível/base/total e
   confirmação ao apagar item. Esta entrega fecha só a opção de criação de itens.
 
+### C34.2 em revisão (2026-10-23): confirmação ao apagar, sem ciclo de conclusão
+
+Base: `4edb7d2c`, após o ciclo 158. Preparação numa branch de revisão a partir da `sistema-v14`.
+
+- **Referência:** CORE 0.92.4, `modules/system/settings.js:151-161` (`deleteItemConfirmation`, client, Boolean,
+  true) e `modules/actor/sheet/cpr-actor-sheet.js:980-1024`.
+- **Alteração:** `confirmarApagarItem`, preferência local ligada por padrão; a ação herdada pelo capanga consulta
+  a opção a cada exclusão simples. A escolha dos instalados continua obrigatória. A ação confere `isEditable`
+  antes de perguntar e novamente depois das janelas.
+- **Verificado aqui:** G1, 139 arquivos sem erro; G2 (ESLint 10.12.0), nenhum erro; G3, 407/407; diff sem erros de
+  whitespace. Quatro mutações da configuração detectadas pelo teste (scope, visibilidade, tipo e padrão), uma de
+  cada vez; arquivo original restaurado com SHA-256 conferido. Essas mutações não validam a ação no navegador.
+- **G4 pendente:** `motivoIndisponivel()` informa que o Foundry 14 não foi encontrado. Também não há o Edge do
+  Windows usado pelo harness. O cenário novo chama a ação real nas duas fichas e confere cancelar, confirmar,
+  exclusão direta sem pergunta, preservação dos instalados ao cancelar e preferência independente do jogador.
+  O cenário foi validado apenas quanto a sintaxe e lint, sem execução no Foundry; não conta como portão aprovado.
+- **Para fechar:** executar o G4 completo e mutações da ação no ambiente ativado, incluindo desligar a consulta
+  à opção e retirar a pergunta dos instalados. Conferir a revogação de permissão durante as janelas. Só então
+  atribuir o ciclo seguinte e concluir esta subparte. Perícias do capanga e lesões repetidas continuam pendentes.
+
+### C34.2 em revisão (2026-10-23): exibição das perícias do capanga, sem ciclo de conclusão
+
+Continuação da preparação de confirmação ao apagar, sobre `096eff8`, na mesma branch de revisão.
+
+- **Referência:** CORE 0.92.4, `modules/system/settings.js:179-198` (`mookSheetSkillDisplay`, client, String,
+  padrão base); `templates/actor/mook/cpr-mook-skills.hbs:35-42` e `register-helpers.js:405-408`.
+- **Alteração:** `periciasDoCapanga` escolhe a última coluna da lista: nível, atributo efetivo + nível ou o total
+  já calculado pela ficha com bônus e penalidades. O nível continua editável, as favoritas e os grupos se preservam,
+  o valor usado na rolagem não se altera. A preferência é por navegador e atualiza as fichas abertas de capangas,
+  inclusive as de tokens, via `foundry.applications.instances`. A ficha do personagem mantém a apresentação atual.
+- **Verificado:** G1, 141 arquivos; G2, ESLint 10.12.0; G3, 409/409. Dez mutações detectadas por asserções no teste
+  novo: seleção de modo, nível, base, total, grupo, rótulo, scope, padrão e as duas condições de atualização das fichas.
+  Cada arquivo foi restaurado e conferido pelo SHA-256. Somadas às quatro da confirmação, são 14 mutações do G3;
+  elas não substituem a validação da integração no navegador.
+- **G4 preparado e pendente:** cria um capanga com DEX 6, Evasão 4 e HP 1 (penalidade −2), renderiza a ficha real
+  nos três modos e espera 4, 10 e 8, tanto no contexto quanto na última coluna do DOM. Confere o rótulo e que o
+  jogador continua em Base enquanto o mestre escolhe Total. Resta rodar o cenário completo e mutações de integração
+  num Foundry 14 ativado; o ambiente atual não tem o Foundry 14 nem o Edge de Windows exigidos pelo harness.
+- **O que falta no C34.2:** tratar as lesões repetidas. O CORE começa em off, mas a wiki exige repetir o sorteio;
+  preservar o padrão atual reroll ao implementar a opção e registrar explicitamente a diferença de padrão.
+- **Publicação:** só branch de revisão e PR de rascunho para `sistema-v14`; nenhuma marca de conclusão, integração
+  no master ou instalação no servidor faz parte desta preparação.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

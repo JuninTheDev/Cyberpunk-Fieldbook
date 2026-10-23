@@ -347,6 +347,14 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
       no CORE; o mestre continua criando. Botão e ação respeitam dono e opção atual nas fichas de personagem e capanga.
       G1 e G2 passam; G3, 406/406; G4 completo, 240/240; 11 mutações caem. As outras configurações desta parte continuam
       abertas: lesão repetida, exibição das perícias do capanga e confirmação ao apagar.
+    - [~] Confirmação ao apagar preparada em revisão (sessão Codex, 2026-10-23): preferência por navegador,
+      ligada por padrão como no CORE; preserva a escolha dos instalados. G1/G2 passam; G3, 407/407;
+      quatro mutações da configuração detectadas. Cenário G4 novo ainda não executado: Foundry 14 não instalado
+      neste ambiente. A parte continua aberta, sem ciclo de conclusão.
+    - [~] Exibição das perícias do capanga preparada em revisão (sessão Codex, 2026-10-23): preferência local
+      por Nível, Base (padrão do CORE) ou Total na última coluna; o nível continua editável e a rolagem não muda.
+      G1/G2 passam; G3, 409/409; dez mutações detectadas no G3. Cenário G4 acrescentado, ainda sem execução
+      neste ambiente. A configuração de lesões repetidas ainda não foi implementada.
   - [ ] parte 3, a mesa: a SP na barra do token; a árvore dos instalados no diretório de itens; a imagem padrão de cada
     tipo; escolher a armadura de cada local (o "track" do CORE; conferir antes o que muda, já que o C18 usa a de maior SP).
 - [ ] **C35. Gerar a cena da arquitetura** com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de
