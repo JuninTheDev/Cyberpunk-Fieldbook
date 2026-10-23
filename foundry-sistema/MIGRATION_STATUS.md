@@ -7870,6 +7870,42 @@ Continuação da preparação de confirmação ao apagar, sobre `096eff8`, na me
 - **Publicação:** só branch de revisão e PR de rascunho para `sistema-v14`; nenhuma marca de conclusão, integração
   no master ou instalação no servidor faz parte desta preparação.
 
+### C34.2 em revisão (2026-10-23): lesões repetidas, sem ciclo de conclusão
+
+Continuação do PR #2, sobre a árvore `994eff71` do commit publicado `4b60ef40` (localmente, a mesma árvore em
+`25f1c29`). As três configurações restantes estão preparadas; o item aguarda a validação no Foundry.
+
+- **Referências:** CORE 0.92.4, `modules/system/settings.js:117-132` (`preventDuplicateCriticalInjuries`) e
+  `modules/actor/sheet/cpr-actor-sheet.js:1191-1295` (off aceita outra cópia; warn aceita e avisa; reroll procura outra).
+  A wiki, `system-rules.js:549`, exige uma lesão que o alvo ainda não tenha; por isso o padrão continua **Rolar
+  novamente**, com a diferença do off do CORE escrita na configuração e no README.
+- **Alteração:** `lesaoRepetida`, do mundo, valores `permitir`, `avisar` e `rolar`. O sorteio mantém as exclusões,
+  a tabela escolhida, o limite de mil tentativas e o aviso de esgotamento; permitir e avisar podem aceitar uma lesão
+  já existente mesmo quando todas as da tabela já estão na ficha. A opção se relê antes da criação após os awaits.
+  Aceitar cria outra cópia com seus efeitos, sem alterar HP; só anunciar não cria. IDs fixos, como a Perna quebrada
+  do tiro mirado, mantêm o comportamento sem duplicar. O parâmetro interno `deSorteio` distingue a escolha do Monowire
+  de uma lesão fixa; a escolha relê a opção atual, e uma recusa não fecha o cartão.
+- **Dois cliques:** um WeakSet guarda a escolha em andamento por cartão neste cliente e libera a guarda em finally,
+  inclusive na recusa. É uma proteção local, não uma transação entre navegadores de mestres diferentes.
+- **G3:** onze testes novos em `lesoes-repetidas.test.mjs`: cadastro/padrão, normalização, esgotamento, exclusões,
+  tabela da cabeça, os três modos na API, efeitos próprios da cópia, só anunciar, IDs fixos, opção alterada durante
+  a rolagem, criação recusada e nova tentativa, Monowire, cliques simultâneos e recusa seguida de outra escolha.
+  O teste antigo de colisão só ganhou o mock da nova configuração; suas asserções foram preservadas.
+- **Portões executados:** G1, 142 arquivos sem erro; G2, ESLint 10.12.0 sem erro; G3, 420/420. Diff sem erros de
+  whitespace. Nenhuma fonte de regras da wiki ou módulo do Foundry 12 foi alterada.
+- **Mutações:** 22 detectadas por asserções: padrão e scope; normalização; evitar/aceitar repetidas; exclusão;
+  encaminhamento da opção; distinção de lesão fixa; releitura da configuração; bloqueio após await; criar/só anunciar;
+  criação recusada; aviso apenas em Avisar; silêncio das prévias; guarda, liberação e origem de sorteio no Monowire.
+  Cada arquivo foi restaurado e conferido por SHA-256. A mutação da liberação inicialmente falhava com TypeError ao
+  acessar o resultado nulo; o teste ganhou uma asserção explícita de que a próxima escolha deve criar o item.
+- **G4 preparado, não executado:** dois passos novos. O primeiro confere os três modos em personagem, capanga e
+  token solto (nove casos), as cópias e seus efeitos, a quantidade de dados, o aviso, o cartão, o HP, o modelo intacto
+  e o ID fixo. O segundo confere o Monowire em Avisar, dois cliques locais e a mudança para Rolar antes da escolha.
+  O diagnóstico continua: Foundry 14 não encontrado; o Edge do Windows do harness também não está instalado.
+  Faltam G4 completo e mutações de integração para esta e as duas preparações anteriores; nenhuma foi marcada feita.
+- **Publicação:** atualização do mesmo PR de rascunho para `sistema-v14`; o próximo ciclo de conclusão só se atribui
+  depois do G4. O restante do C34 fora da parte 2 continua com a divisão já registrada no roadmap.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

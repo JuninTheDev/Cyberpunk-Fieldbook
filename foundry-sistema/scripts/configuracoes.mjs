@@ -34,8 +34,13 @@ export function registrarConfiguracoes() {
     type: String, default: 'mestre', choices: { mestre: 'O mestre escolhe', automatica: 'Automática' }
   });
   registrar('lesaoCritica', {
-    name: 'Lesão crítica', hint: 'Dois ou mais 6 no dano: rola na tabela (cabeça só em tiro mirado na cabeça), sem repetir uma que o alvo já tem. Tiro mirado na perna que passa da armadura dá Perna quebrada.',
+    name: 'Lesão crítica', hint: 'Dois ou mais 6 no dano: rola na tabela (cabeça só em tiro mirado na cabeça), pela opção de lesões repetidas. Tiro mirado na perna que passa da armadura dá Perna quebrada.',
     type: String, default: 'ficha', choices: { ficha: 'Na ficha', anunciar: 'Só anunciar', nao: 'Desligada' }
+  });
+  // CORE 0.92.4: preventDuplicateCriticalInjuries (off/warn/reroll). O padrão é o da wiki, não o off do CORE.
+  registrar('lesaoRepetida', {
+    name: 'Lesões repetidas ao rolar na tabela', hint: 'Rolar novamente (padrão da wiki): procura uma lesão que o alvo ainda não tem. Desligado: aceita outra cópia, com seus efeitos. Avisar: também aceita, mas avisa. Vale para os sorteios e a escolha do Monowire; lesões fixas, como a Perna quebrada do tiro mirado, continuam sem duplicar.',
+    type: String, default: 'rolar', choices: { permitir: 'Desligado (aceitar repetida)', avisar: 'Avisar e aceitar', rolar: 'Rolar novamente' }
   });
   registrar('mortalmenteFerido', { name: 'Mortalmente ferido sofre lesão a cada acerto', hint: 'Quem já está com HP abaixo de 1 ganha uma lesão crítica a cada ataque que o atinge.', type: Boolean, default: true });
   registrar('deathSave', {

@@ -16,6 +16,13 @@ A preferência local **Exibição das perícias do capanga** escolhe o resumo da
 continua usando o total, qualquer que seja a exibição. Mudar a preferência atualiza as fichas abertas de capangas,
 incluindo as de tokens, só neste navegador. Também aguarda validação no Foundry pelo G4.
 
+A configuração do mundo **Lesões repetidas ao rolar na tabela** oferece **Rolar novamente** (padrão da wiki),
+**Desligado (aceitar repetida)** e **Avisar e aceitar**, como as opções de repetição do CORE. Aceitar acrescenta
+outra cópia da lesão e seus efeitos; só anunciar continua sem criar itens. A configuração vale também para a
+escolha do Monowire, e dois cliques simultâneos no mesmo cartão deste navegador não aplicam duas vezes.
+Lesões fixas, como a Perna quebrada do tiro mirado, continuam sem duplicar. O padrão difere do CORE, que começa
+com a prevenção desligada. Sintaxe, lint e 420 testes passam; os cenários novos ainda aguardam o G4 no Foundry 14.
+
 ## O que já faz
 
 - **Criação de itens na ficha (C34.2, ciclo 158):** a configuração do mundo **Jogadores podem criar itens**, desligada

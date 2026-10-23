@@ -136,6 +136,106 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    await r.passo('C34.2: lesões repetidas por opção do mundo, no personagem, no capanga e no token solto; HP e lesões fixas preservados', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const api = game.system.api.lesoes, s = '${S}', perna = 'core_critical-injuries-body:broken-leg';
+        const anterior = game.settings.get(s, 'lesaoRepetida'), random = CONFIG.Dice.randomUniform;
+        const avisoProprio = Object.hasOwn(ui.notifications, 'warn'), avisoAnterior = ui.notifications.warn;
+        const mensagens = new Set(game.messages.map(m => m.id)), atores = [], cenas = [], resultados = [], avisos = [];
+        let fila = [], dados = 0;
+        CONFIG.Dice.randomUniform = () => { dados++; return 1 - ((fila.shift() ?? 1) - .5) / 6; };
+        ui.notifications.warn = m => avisos.push(String(m));
+        try {
+          for (const modo of ['rolar', 'permitir', 'avisar']) {
+            await game.settings.set(s, 'lesaoRepetida', modo);
+            for (const tipo of ['personagem', 'capanga', 'token']) {
+              const modelo = await Actor.implementation.create({ name: 'C34 Lesões ' + tipo + ' ' + modo,
+                type: tipo === 'token' ? 'capanga' : tipo, system: { hp: { value: 35 }, atributos: { body: { valor: 5 }, will: { valor: 5 } } } });
+              atores.push(modelo);
+              let ator = modelo;
+              if (tipo === 'token') {
+                const cena = await Scene.implementation.create({ name: 'C34 Lesões soltas ' + modo, active: false, width: 1000, height: 1000 });
+                cenas.push(cena);
+                const [token] = await cena.createEmbeddedDocuments('Token', [(await modelo.getTokenDocument({ x: 100, y: 100 })).toObject()]);
+                ator = token.actor;
+              }
+              const original = await api.lesaoCritica(ator, { id: perna, falar: false });
+              const antesAvisos = avisos.length, antesDados = dados, antesMensagens = game.messages.size;
+              fila = modo === 'rolar' ? [4, 4, 3, 3] : [4, 4];
+              const feita = await api.lesaoCritica(ator);
+              const cartao = game.messages.contents.at(-1), quantidade = ator.items.size;
+              const fixa = await api.lesaoCritica(ator, { id: perna, falar: false });
+              resultados.push({ modo, tipo, id: feita?.id, novaCopia: Boolean(feita?.item && feita.item.id !== original.item.id),
+                copias: ator.items.filter(i => i.getFlag(s, 'catalogo') === perna).length,
+                efeitos: feita?.item?.effects.size ?? 0, dados: dados - antesDados, fila: fila.length,
+                hp: ator.system.hp.value, fixa: fixa?.item === null && ator.items.size === quantidade,
+                mensagens: game.messages.size - antesMensagens, aviso: avisos.length - antesAvisos,
+                cartao: Boolean(cartao?.content.includes(feita?.nome)),
+                modeloLivre: tipo !== 'token' || modelo.items.size === 0 });
+            }
+          }
+          return { padrao: anterior, resultados };
+        } finally {
+          CONFIG.Dice.randomUniform = random;
+          if (avisoProprio) ui.notifications.warn = avisoAnterior; else delete ui.notifications.warn;
+          await game.settings.set(s, 'lesaoRepetida', anterior);
+          for (const cena of cenas) await cena.delete();
+          for (const ator of atores) await ator.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      return [info.padrao === 'rolar' && info.resultados.length === 9 && info.resultados.every(p =>
+        p.id === (p.modo === 'rolar' ? 'core_critical-injuries-body:broken-arm' : 'core_critical-injuries-body:broken-leg')
+        && p.copias === (p.modo === 'rolar' ? 1 : 2) && p.dados === (p.modo === 'rolar' ? 4 : 2)
+        && p.aviso === (p.modo === 'avisar' ? 1 : 0) && p.novaCopia && p.efeitos === (p.modo === 'rolar' ? 0 : 1) && p.fila === 0
+        && p.hp === 35 && p.fixa && p.mensagens === 1 && p.cartao && p.modeloLivre), JSON.stringify(info)];
+    });
+
+    await r.passo('C34.2: Monowire aceita repetida em Avisar e dois cliques aplicam uma só vez; a opção atual impede escolha repetida', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const api = game.system.api.lesoes, s = '${S}', perna = 'core_critical-injuries-body:broken-leg', braco = 'core_critical-injuries-body:broken-arm';
+        const anterior = game.settings.get(s, 'lesaoRepetida'), random = CONFIG.Dice.randomUniform;
+        const avisoProprio = Object.hasOwn(ui.notifications, 'warn'), avisoAnterior = ui.notifications.warn;
+        const mensagens = new Set(game.messages.map(m => m.id)), avisos = [];
+        const ator = await Actor.implementation.create({ name: 'C34 Monowire', type: 'personagem', system: { hp: { value: 35 } } });
+        let fila = [4, 4, 3, 3];
+        CONFIG.Dice.randomUniform = () => 1 - ((fila.shift() ?? 1) - .5) / 6;
+        ui.notifications.warn = m => avisos.push(String(m));
+        const cartao = () => game.messages.contents.filter(m => m.getFlag(s, 'escolhaDeLesao')?.alvo === ator.uuid).at(-1);
+        try {
+          await game.settings.set(s, 'lesaoRepetida', 'avisar');
+          await api.lesaoCritica(ator, { id: perna, falar: false });
+          const opcoes = await api.escolhaDeLesao(ator);
+          const antes = { opcoes: opcoes.map(p => p.id), avisos: avisos.length, itens: ator.items.size };
+          const escolha = cartao();
+          const dupla = await Promise.all([api.escolherLesao(escolha, perna), api.escolherLesao(escolha, perna)]);
+          const aplicada = { copias: ator.items.filter(i => i.getFlag(s, 'catalogo') === perna).length,
+            resultados: dupla.filter(r => r?.item).length, recusas: dupla.filter(r => r === null).length,
+            avisos: avisos.length, escolhida: escolha.getFlag(s, 'escolhaDeLesao').escolhida };
+          fila = [4, 4, 3, 3];
+          await api.escolhaDeLesao(ator);
+          const segundo = cartao();
+          await game.settings.set(s, 'lesaoRepetida', 'rolar');
+          const recusada = await api.escolherLesao(segundo, perna);
+          const livre = segundo.getFlag(s, 'escolhaDeLesao').escolhida === '';
+          const nova = await api.escolherLesao(segundo, braco);
+          return { antes, aplicada, recusou: recusada === null && livre, nova: nova?.id,
+            itens: ator.items.size, hp: ator.system.hp.value, fila: fila.length };
+        } finally {
+          CONFIG.Dice.randomUniform = random;
+          if (avisoProprio) ui.notifications.warn = avisoAnterior; else delete ui.notifications.warn;
+          await game.settings.set(s, 'lesaoRepetida', anterior);
+          await ator.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      return [info.antes.opcoes.join() === 'core_critical-injuries-body:broken-leg,core_critical-injuries-body:broken-arm'
+        && info.antes.avisos === 0 && info.antes.itens === 1 && info.aplicada.copias === 2
+        && info.aplicada.resultados === 1 && info.aplicada.recusas === 1 && info.aplicada.avisos === 1
+        && Boolean(info.aplicada.escolhida) && info.recusou && info.nova === 'core_critical-injuries-body:broken-arm'
+        && info.itens === 3 && info.hp === 35 && info.fila === 0, JSON.stringify(info)];
+    });
+
     // CORE 0.92.4, CPRActorSheet._rollCriticalInjury: rolar a tabela à mão não altera HP.
     // Wiki, p. 187–188 e 223: corpo/cabeça, repetir lesão já existente, paliativo e tratamento pela DV.
     await r.passo('lesões (C19): personagem e capanga rolam corpo e cabeça pela ficha, criam os efeitos e o cartão sem perder HP; fechar a escolha não rola nem cria', async () => {

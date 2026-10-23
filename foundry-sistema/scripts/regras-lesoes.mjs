@@ -5,14 +5,18 @@ import { lesaoNaTabela } from './regras.mjs';
 
 export const MAXIMO_ROLAGENS_LESAO = 1000;
 
+// As opções do preventDuplicateCriticalInjuries do CORE; desconhecida conserva a regra da wiki.
+export const modoDeLesaoRepetida = modo => ['permitir', 'avisar'].includes(modo) ? modo : 'rolar';
+
 export function lesoesDisponiveis(faixas, tem = [], excluir = []) {
   const indisponiveis = new Set([...tem, ...excluir]);
   return [...new Set((faixas ?? []).map(([, , id]) => id).filter(id => id && !indisponiveis.has(id)))];
 }
 
 // O callback recebe os dados do ambiente: no Foundry, Roll('2d6'); no teste de referência, a sequência conhecida.
-export async function sortearLesao({ faixas, tem = [], excluir = [], rolar }) {
-  const disponiveis = new Set(lesoesDisponiveis(faixas, tem, excluir));
+export async function sortearLesao({ faixas, tem = [], excluir = [], rolar, repeticao = 'rolar' }) {
+  const evitar = modoDeLesaoRepetida(repeticao) === 'rolar';
+  const disponiveis = new Set(lesoesDisponiveis(faixas, evitar ? tem : [], excluir));
   if (!disponiveis.size) return { motivo: 'esgotada' };
   for (let tentativa = 0; tentativa < MAXIMO_ROLAGENS_LESAO; tentativa++) {
     const roll = await rolar();
