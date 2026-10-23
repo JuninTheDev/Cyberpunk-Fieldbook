@@ -340,7 +340,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [ ] **C34. Os detalhes do CORE**, um ciclo por parte:
   - [~] parte 1, a ficha (sessão KouArt, 2026-10-22): a aba de efeitos do ator; o +1 à mão na penalidade do Death Save;
     expandir e recolher as listas;
-  - [ ] parte 2, as configurações: a lesão repetida (desligado, avisar, rolar de novo: o
+  - [~] parte 2, as configurações (sessão Codex, 2026-10-23): a lesão repetida (desligado, avisar, rolar de novo: o
     `preventDuplicateCriticalInjuries`); as perícias do capanga por nível, base ou total; a confirmação ao apagar item e o
     jogador que cria itens;
   - [ ] parte 3, a mesa: a SP na barra do token; a árvore dos instalados no diretório de itens; a imagem padrão de cada
