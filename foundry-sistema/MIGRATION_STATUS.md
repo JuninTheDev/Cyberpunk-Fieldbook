@@ -7827,6 +7827,85 @@ agente, sem editar os arquivos durante as rodadas de G4 e mutações.
 - **Próximo:** C34.2 continua reservado para a sessão Codex: lesão repetida, perícias do capanga por nível/base/total e
   confirmação ao apagar item. Esta entrega fecha só a opção de criação de itens.
 
+### C34.2 em revisão (2026-10-23): confirmação ao apagar, sem ciclo de conclusão
+
+Base: `4edb7d2c`, após o ciclo 158. Preparação numa branch de revisão a partir da `sistema-v14`.
+
+- **Referência:** CORE 0.92.4, `modules/system/settings.js:151-161` (`deleteItemConfirmation`, client, Boolean,
+  true) e `modules/actor/sheet/cpr-actor-sheet.js:980-1024`.
+- **Alteração:** `confirmarApagarItem`, preferência local ligada por padrão; a ação herdada pelo capanga consulta
+  a opção a cada exclusão simples. A escolha dos instalados continua obrigatória. A ação confere `isEditable`
+  antes de perguntar e novamente depois das janelas.
+- **Verificado aqui:** G1, 139 arquivos sem erro; G2 (ESLint 10.12.0), nenhum erro; G3, 407/407; diff sem erros de
+  whitespace. Quatro mutações da configuração detectadas pelo teste (scope, visibilidade, tipo e padrão), uma de
+  cada vez; arquivo original restaurado com SHA-256 conferido. Essas mutações não validam a ação no navegador.
+- **G4 pendente:** `motivoIndisponivel()` informa que o Foundry 14 não foi encontrado. Também não há o Edge do
+  Windows usado pelo harness. O cenário novo chama a ação real nas duas fichas e confere cancelar, confirmar,
+  exclusão direta sem pergunta, preservação dos instalados ao cancelar e preferência independente do jogador.
+  O cenário foi validado apenas quanto a sintaxe e lint, sem execução no Foundry; não conta como portão aprovado.
+- **Para fechar:** executar o G4 completo e mutações da ação no ambiente ativado, incluindo desligar a consulta
+  à opção e retirar a pergunta dos instalados. Conferir a revogação de permissão durante as janelas. Só então
+  atribuir o ciclo seguinte e concluir esta subparte. Perícias do capanga e lesões repetidas continuam pendentes.
+
+### C34.2 em revisão (2026-10-23): exibição das perícias do capanga, sem ciclo de conclusão
+
+Continuação da preparação de confirmação ao apagar, sobre `096eff8`, na mesma branch de revisão.
+
+- **Referência:** CORE 0.92.4, `modules/system/settings.js:179-198` (`mookSheetSkillDisplay`, client, String,
+  padrão base); `templates/actor/mook/cpr-mook-skills.hbs:35-42` e `register-helpers.js:405-408`.
+- **Alteração:** `periciasDoCapanga` escolhe a última coluna da lista: nível, atributo efetivo + nível ou o total
+  já calculado pela ficha com bônus e penalidades. O nível continua editável, as favoritas e os grupos se preservam,
+  o valor usado na rolagem não se altera. A preferência é por navegador e atualiza as fichas abertas de capangas,
+  inclusive as de tokens, via `foundry.applications.instances`. A ficha do personagem mantém a apresentação atual.
+- **Verificado:** G1, 141 arquivos; G2, ESLint 10.12.0; G3, 409/409. Dez mutações detectadas por asserções no teste
+  novo: seleção de modo, nível, base, total, grupo, rótulo, scope, padrão e as duas condições de atualização das fichas.
+  Cada arquivo foi restaurado e conferido pelo SHA-256. Somadas às quatro da confirmação, são 14 mutações do G3;
+  elas não substituem a validação da integração no navegador.
+- **G4 preparado e pendente:** cria um capanga com DEX 6, Evasão 4 e HP 1 (penalidade −2), renderiza a ficha real
+  nos três modos e espera 4, 10 e 8, tanto no contexto quanto na última coluna do DOM. Confere o rótulo e que o
+  jogador continua em Base enquanto o mestre escolhe Total. Resta rodar o cenário completo e mutações de integração
+  num Foundry 14 ativado; o ambiente atual não tem o Foundry 14 nem o Edge de Windows exigidos pelo harness.
+- **O que falta no C34.2:** tratar as lesões repetidas. O CORE começa em off, mas a wiki exige repetir o sorteio;
+  preservar o padrão atual reroll ao implementar a opção e registrar explicitamente a diferença de padrão.
+- **Publicação:** só branch de revisão e PR de rascunho para `sistema-v14`; nenhuma marca de conclusão, integração
+  no master ou instalação no servidor faz parte desta preparação.
+
+### C34.2 em revisão (2026-10-23): lesões repetidas, sem ciclo de conclusão
+
+Continuação do PR #2, sobre a árvore `994eff71` do commit publicado `4b60ef40` (localmente, a mesma árvore em
+`25f1c29`). As três configurações restantes estão preparadas; o item aguarda a validação no Foundry.
+
+- **Referências:** CORE 0.92.4, `modules/system/settings.js:117-132` (`preventDuplicateCriticalInjuries`) e
+  `modules/actor/sheet/cpr-actor-sheet.js:1191-1295` (off aceita outra cópia; warn aceita e avisa; reroll procura outra).
+  A wiki, `system-rules.js:549`, exige uma lesão que o alvo ainda não tenha; por isso o padrão continua **Rolar
+  novamente**, com a diferença do off do CORE escrita na configuração e no README.
+- **Alteração:** `lesaoRepetida`, do mundo, valores `permitir`, `avisar` e `rolar`. O sorteio mantém as exclusões,
+  a tabela escolhida, o limite de mil tentativas e o aviso de esgotamento; permitir e avisar podem aceitar uma lesão
+  já existente mesmo quando todas as da tabela já estão na ficha. A opção se relê antes da criação após os awaits.
+  Aceitar cria outra cópia com seus efeitos, sem alterar HP; só anunciar não cria. IDs fixos, como a Perna quebrada
+  do tiro mirado, mantêm o comportamento sem duplicar. O parâmetro interno `deSorteio` distingue a escolha do Monowire
+  de uma lesão fixa; a escolha relê a opção atual, e uma recusa não fecha o cartão.
+- **Dois cliques:** um WeakSet guarda a escolha em andamento por cartão neste cliente e libera a guarda em finally,
+  inclusive na recusa. É uma proteção local, não uma transação entre navegadores de mestres diferentes.
+- **G3:** onze testes novos em `lesoes-repetidas.test.mjs`: cadastro/padrão, normalização, esgotamento, exclusões,
+  tabela da cabeça, os três modos na API, efeitos próprios da cópia, só anunciar, IDs fixos, opção alterada durante
+  a rolagem, criação recusada e nova tentativa, Monowire, cliques simultâneos e recusa seguida de outra escolha.
+  O teste antigo de colisão só ganhou o mock da nova configuração; suas asserções foram preservadas.
+- **Portões executados:** G1, 142 arquivos sem erro; G2, ESLint 10.12.0 sem erro; G3, 420/420. Diff sem erros de
+  whitespace. Nenhuma fonte de regras da wiki ou módulo do Foundry 12 foi alterada.
+- **Mutações:** 22 detectadas por asserções: padrão e scope; normalização; evitar/aceitar repetidas; exclusão;
+  encaminhamento da opção; distinção de lesão fixa; releitura da configuração; bloqueio após await; criar/só anunciar;
+  criação recusada; aviso apenas em Avisar; silêncio das prévias; guarda, liberação e origem de sorteio no Monowire.
+  Cada arquivo foi restaurado e conferido por SHA-256. A mutação da liberação inicialmente falhava com TypeError ao
+  acessar o resultado nulo; o teste ganhou uma asserção explícita de que a próxima escolha deve criar o item.
+- **G4 preparado, não executado:** dois passos novos. O primeiro confere os três modos em personagem, capanga e
+  token solto (nove casos), as cópias e seus efeitos, a quantidade de dados, o aviso, o cartão, o HP, o modelo intacto
+  e o ID fixo. O segundo confere o Monowire em Avisar, dois cliques locais e a mudança para Rolar antes da escolha.
+  O diagnóstico continua: Foundry 14 não encontrado; o Edge do Windows do harness também não está instalado.
+  Faltam G4 completo e mutações de integração para esta e as duas preparações anteriores; nenhuma foi marcada feita.
+- **Publicação:** atualização do mesmo PR de rascunho para `sistema-v14`; o próximo ciclo de conclusão só se atribui
+  depois do G4. O restante do C34 fora da parte 2 continua com a divisão já registrada no roadmap.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

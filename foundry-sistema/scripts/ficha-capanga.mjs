@@ -8,6 +8,8 @@ import { caminho, USOS } from './config.mjs';
 import { bloco, FichaPersonagem } from './ficha-personagem.mjs';
 import { AO_RECEBER_CAPANGA } from './regras.mjs';
 import { divisaoDaPilha } from './regras-inventario.mjs';
+import { config } from './configuracoes.mjs';
+import { periciaDoCapanga, rotuloDePericiasDoCapanga } from './pericias-capanga.mjs';
 
 const modelo = arquivo => caminho(`templates/capanga/${arquivo}.hbs`);
 
@@ -47,6 +49,10 @@ export class FichaCapanga extends FichaPersonagem {
     const itens = this.actor.items.filter(item => item.type !== 'lesao' && !ehArmaMontadaEmItem(item))
       .sort((a, b) => ordem.indexOf(a.type) - ordem.indexOf(b.type) || a.name.localeCompare(b.name, 'pt-BR'))
       .map(item => ({ id: item.id, nome: item.name, img: item.img, divisivel: Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)), tipo: game.i18n.localize(CONFIG.Item.typeLabels[item.type]), detalhe: detalheDoItem(item), ...botaoDoItem(item) }));
+    const modo = config('periciasDoCapanga');
+    contexto.periciaRotuloCapanga = rotuloDePericiasDoCapanga(modo);
+    contexto.linhasDePericia = contexto.linhasDePericia.map(linha => periciaDoCapanga(linha,
+      linha.grupo ? 0 : this.actor.system.atributos[linha.atributo].valor, modo));
     // Na ficha de um token, o nome é o do token (o que a cena mostra).
     return Object.assign(contexto, { capanga: true, naCena: this.actor.isToken, nomeNaFicha: this.token?.name ?? this.actor.name, itensDoCapanga: itens });
   }

@@ -34,8 +34,13 @@ export function registrarConfiguracoes() {
     type: String, default: 'mestre', choices: { mestre: 'O mestre escolhe', automatica: 'Automática' }
   });
   registrar('lesaoCritica', {
-    name: 'Lesão crítica', hint: 'Dois ou mais 6 no dano: rola na tabela (cabeça só em tiro mirado na cabeça), sem repetir uma que o alvo já tem. Tiro mirado na perna que passa da armadura dá Perna quebrada.',
+    name: 'Lesão crítica', hint: 'Dois ou mais 6 no dano: rola na tabela (cabeça só em tiro mirado na cabeça), pela opção de lesões repetidas. Tiro mirado na perna que passa da armadura dá Perna quebrada.',
     type: String, default: 'ficha', choices: { ficha: 'Na ficha', anunciar: 'Só anunciar', nao: 'Desligada' }
+  });
+  // CORE 0.92.4: preventDuplicateCriticalInjuries (off/warn/reroll). O padrão é o da wiki, não o off do CORE.
+  registrar('lesaoRepetida', {
+    name: 'Lesões repetidas ao rolar na tabela', hint: 'Rolar novamente (padrão da wiki): procura uma lesão que o alvo ainda não tem. Desligado: aceita outra cópia, com seus efeitos. Avisar: também aceita, mas avisa. Vale para os sorteios e a escolha do Monowire; lesões fixas, como a Perna quebrada do tiro mirado, continuam sem duplicar.',
+    type: String, default: 'rolar', choices: { permitir: 'Desligado (aceitar repetida)', avisar: 'Avisar e aceitar', rolar: 'Rolar novamente' }
   });
   registrar('mortalmenteFerido', { name: 'Mortalmente ferido sofre lesão a cada acerto', hint: 'Quem já está com HP abaixo de 1 ganha uma lesão crítica a cada ataque que o atinge.', type: Boolean, default: true });
   registrar('deathSave', {
@@ -74,6 +79,22 @@ export function registrarConfiguracoes() {
   });
   // A versão dos dados do mundo (migracao.mjs), escondida, como o "dataModelVersion" do CORE. 0: de antes da migração.
   game.settings.register(SISTEMA, 'versaoDosDados', { scope: 'world', config: false, type: Number, default: 0 });
+  // CORE 0.92.4, settings.js: mookSheetSkillDisplay, por navegador, base por padrão.
+  game.settings.register(SISTEMA, 'periciasDoCapanga', {
+    name: 'Exibição das perícias do capanga', hint: 'A última coluna da lista mostra o nível, a base (atributo + nível) ou o total com bônus e penalidades. O nível continua editável; a rolagem usa sempre o total.',
+    scope: 'client', config: true, type: String, default: 'base',
+    choices: { nivel: 'Nível', base: 'Base (atributo + nível)', total: 'Total (com bônus e penalidades)' },
+    onChange: () => {
+      for (const ficha of foundry.applications.instances.values()) {
+        if (ficha.actor?.type === 'capanga' && ficha.rendered) ficha.render({ force: true });
+      }
+    }
+  });
+  // CORE 0.92.4, settings.js: deleteItemConfirmation, por navegador, ligada por padrão.
+  game.settings.register(SISTEMA, 'confirmarApagarItem', {
+    name: 'Confirmar ao apagar item', hint: 'Pergunta antes de apagar um item da ficha de personagem ou capanga. Mesmo desligada, a escolha do que fazer com os itens instalados continua aparecendo.',
+    scope: 'client', config: true, type: Boolean, default: true
+  });
   // Deste navegador, como o "invertRollCtrlFunction" do CORE.
   game.settings.register(SISTEMA, 'rolarDireto', {
     name: 'Rolar direto, sem a janela de rolagem', hint: 'Só neste navegador. Desligado (o padrão, como no CORE), o clique no atributo ou na perícia abre a janela de rolagem, e Ctrl + clique rola direto. Ligado, é o contrário. O teste direto usa a Sorte preparada na ficha e os situacionais ligados por padrão.',

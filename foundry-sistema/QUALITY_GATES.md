@@ -46,6 +46,12 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Repetição e origem da lesão (C34.2, em revisão):** a configuração da repetição pertence aos sorteios e ao
+  cartão do Monowire; o ID fixo do tiro mirado continua sem duplicar. Reler a opção depois dos awaits evita aceitar
+  repetida quando o mestre acaba de exigir novo sorteio. As prévias silenciosas não avisam nem criam itens, e a
+  criação recusada não anuncia uma lesão aplicada. A guarda dos cliques no cartão precisa liberar em finally:
+  o teste também escolhe outra opção depois de uma recusa. A verificação da integração desses casos aguarda o G4.
+
 - **Opção de criação e ficha aberta (C34.2):** esconder o botão não basta; a ação relê a opção e a permissão. O G4
   revoga a opção com o botão antigo ainda desenhado, clica no botão real das fichas de personagem e capanga e confere
   também o observador. Nas mutações de navegador, rode um controle sem mutação e confira que a falha é a esperada,

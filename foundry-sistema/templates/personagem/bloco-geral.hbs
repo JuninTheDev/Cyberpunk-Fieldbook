@@ -43,7 +43,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
         <button type="button" class="alternar-pericias" data-action="alternarPericias" data-tooltip="{{periciasComNivel}} com nível e {{periciasSemNivel}} sem">{{#if todasAsPericias}}SÓ COM NÍVEL{{else}}VER TODAS{{/if}}</button>
       </span>
     </div>
-    <div class="linha-pericia cabeca"><span>NOME</span><span>ATRIB</span><span>NÍV</span><span>BASE</span></div>
+    <div class="linha-pericia cabeca"><span>NOME</span><span>ATRIB</span><span>NÍV</span><span>{{#if capanga}}{{periciaRotuloCapanga}}{{else}}BASE{{/if}}</span></div>
     <ol class="lista-pericias">
       {{#each linhasDePericia}}
       {{#if grupo}}
@@ -58,7 +58,11 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
         </span>
         <span class="sigla">{{sigla}}</span>
         <input type="number" name="system.pericias.{{id}}.nivel" value="{{nivel}}" min="0" max="10" aria-label="Nível de {{nome}}">
+        {{#if @root.capanga}}
+        <span class="total" data-tooltip="{{dicaCapanga}}">{{exibicaoCapanga}}</span>
+        {{else}}
         <span class="total" data-tooltip="{{dicaTotal}}">{{total}}</span>
+        {{/if}}
       </li>
       {{/if}}
       {{else}}

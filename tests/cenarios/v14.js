@@ -136,6 +136,106 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    await r.passo('C34.2: lesões repetidas por opção do mundo, no personagem, no capanga e no token solto; HP e lesões fixas preservados', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const api = game.system.api.lesoes, s = '${S}', perna = 'core_critical-injuries-body:broken-leg';
+        const anterior = game.settings.get(s, 'lesaoRepetida'), random = CONFIG.Dice.randomUniform;
+        const avisoProprio = Object.hasOwn(ui.notifications, 'warn'), avisoAnterior = ui.notifications.warn;
+        const mensagens = new Set(game.messages.map(m => m.id)), atores = [], cenas = [], resultados = [], avisos = [];
+        let fila = [], dados = 0;
+        CONFIG.Dice.randomUniform = () => { dados++; return 1 - ((fila.shift() ?? 1) - .5) / 6; };
+        ui.notifications.warn = m => avisos.push(String(m));
+        try {
+          for (const modo of ['rolar', 'permitir', 'avisar']) {
+            await game.settings.set(s, 'lesaoRepetida', modo);
+            for (const tipo of ['personagem', 'capanga', 'token']) {
+              const modelo = await Actor.implementation.create({ name: 'C34 Lesões ' + tipo + ' ' + modo,
+                type: tipo === 'token' ? 'capanga' : tipo, system: { hp: { value: 35 }, atributos: { body: { valor: 5 }, will: { valor: 5 } } } });
+              atores.push(modelo);
+              let ator = modelo;
+              if (tipo === 'token') {
+                const cena = await Scene.implementation.create({ name: 'C34 Lesões soltas ' + modo, active: false, width: 1000, height: 1000 });
+                cenas.push(cena);
+                const [token] = await cena.createEmbeddedDocuments('Token', [(await modelo.getTokenDocument({ x: 100, y: 100 })).toObject()]);
+                ator = token.actor;
+              }
+              const original = await api.lesaoCritica(ator, { id: perna, falar: false });
+              const antesAvisos = avisos.length, antesDados = dados, antesMensagens = game.messages.size;
+              fila = modo === 'rolar' ? [4, 4, 3, 3] : [4, 4];
+              const feita = await api.lesaoCritica(ator);
+              const cartao = game.messages.contents.at(-1), quantidade = ator.items.size;
+              const fixa = await api.lesaoCritica(ator, { id: perna, falar: false });
+              resultados.push({ modo, tipo, id: feita?.id, novaCopia: Boolean(feita?.item && feita.item.id !== original.item.id),
+                copias: ator.items.filter(i => i.getFlag(s, 'catalogo') === perna).length,
+                efeitos: feita?.item?.effects.size ?? 0, dados: dados - antesDados, fila: fila.length,
+                hp: ator.system.hp.value, fixa: fixa?.item === null && ator.items.size === quantidade,
+                mensagens: game.messages.size - antesMensagens, aviso: avisos.length - antesAvisos,
+                cartao: Boolean(cartao?.content.includes(feita?.nome)),
+                modeloLivre: tipo !== 'token' || modelo.items.size === 0 });
+            }
+          }
+          return { padrao: anterior, resultados };
+        } finally {
+          CONFIG.Dice.randomUniform = random;
+          if (avisoProprio) ui.notifications.warn = avisoAnterior; else delete ui.notifications.warn;
+          await game.settings.set(s, 'lesaoRepetida', anterior);
+          for (const cena of cenas) await cena.delete();
+          for (const ator of atores) await ator.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      return [info.padrao === 'rolar' && info.resultados.length === 9 && info.resultados.every(p =>
+        p.id === (p.modo === 'rolar' ? 'core_critical-injuries-body:broken-arm' : 'core_critical-injuries-body:broken-leg')
+        && p.copias === (p.modo === 'rolar' ? 1 : 2) && p.dados === (p.modo === 'rolar' ? 4 : 2)
+        && p.aviso === (p.modo === 'avisar' ? 1 : 0) && p.novaCopia && p.efeitos === (p.modo === 'rolar' ? 0 : 1) && p.fila === 0
+        && p.hp === 35 && p.fixa && p.mensagens === 1 && p.cartao && p.modeloLivre), JSON.stringify(info)];
+    });
+
+    await r.passo('C34.2: Monowire aceita repetida em Avisar e dois cliques aplicam uma só vez; a opção atual impede escolha repetida', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const api = game.system.api.lesoes, s = '${S}', perna = 'core_critical-injuries-body:broken-leg', braco = 'core_critical-injuries-body:broken-arm';
+        const anterior = game.settings.get(s, 'lesaoRepetida'), random = CONFIG.Dice.randomUniform;
+        const avisoProprio = Object.hasOwn(ui.notifications, 'warn'), avisoAnterior = ui.notifications.warn;
+        const mensagens = new Set(game.messages.map(m => m.id)), avisos = [];
+        const ator = await Actor.implementation.create({ name: 'C34 Monowire', type: 'personagem', system: { hp: { value: 35 } } });
+        let fila = [4, 4, 3, 3];
+        CONFIG.Dice.randomUniform = () => 1 - ((fila.shift() ?? 1) - .5) / 6;
+        ui.notifications.warn = m => avisos.push(String(m));
+        const cartao = () => game.messages.contents.filter(m => m.getFlag(s, 'escolhaDeLesao')?.alvo === ator.uuid).at(-1);
+        try {
+          await game.settings.set(s, 'lesaoRepetida', 'avisar');
+          await api.lesaoCritica(ator, { id: perna, falar: false });
+          const opcoes = await api.escolhaDeLesao(ator);
+          const antes = { opcoes: opcoes.map(p => p.id), avisos: avisos.length, itens: ator.items.size };
+          const escolha = cartao();
+          const dupla = await Promise.all([api.escolherLesao(escolha, perna), api.escolherLesao(escolha, perna)]);
+          const aplicada = { copias: ator.items.filter(i => i.getFlag(s, 'catalogo') === perna).length,
+            resultados: dupla.filter(r => r?.item).length, recusas: dupla.filter(r => r === null).length,
+            avisos: avisos.length, escolhida: escolha.getFlag(s, 'escolhaDeLesao').escolhida };
+          fila = [4, 4, 3, 3];
+          await api.escolhaDeLesao(ator);
+          const segundo = cartao();
+          await game.settings.set(s, 'lesaoRepetida', 'rolar');
+          const recusada = await api.escolherLesao(segundo, perna);
+          const livre = segundo.getFlag(s, 'escolhaDeLesao').escolhida === '';
+          const nova = await api.escolherLesao(segundo, braco);
+          return { antes, aplicada, recusou: recusada === null && livre, nova: nova?.id,
+            itens: ator.items.size, hp: ator.system.hp.value, fila: fila.length };
+        } finally {
+          CONFIG.Dice.randomUniform = random;
+          if (avisoProprio) ui.notifications.warn = avisoAnterior; else delete ui.notifications.warn;
+          await game.settings.set(s, 'lesaoRepetida', anterior);
+          await ator.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      return [info.antes.opcoes.join() === 'core_critical-injuries-body:broken-leg,core_critical-injuries-body:broken-arm'
+        && info.antes.avisos === 0 && info.antes.itens === 1 && info.aplicada.copias === 2
+        && info.aplicada.resultados === 1 && info.aplicada.recusas === 1 && info.aplicada.avisos === 1
+        && Boolean(info.aplicada.escolhida) && info.recusou && info.nova === 'core_critical-injuries-body:broken-arm'
+        && info.itens === 3 && info.hp === 35 && info.fila === 0, JSON.stringify(info)];
+    });
+
     // CORE 0.92.4, CPRActorSheet._rollCriticalInjury: rolar a tabela à mão não altera HP.
     // Wiki, p. 187–188 e 223: corpo/cabeça, repetir lesão já existente, paliativo e tratamento pela DV.
     await r.passo('lesões (C19): personagem e capanga rolam corpo e cabeça pela ficha, criam os efeitos e o cartão sem perder HP; fechar a escolha não rola nem cria', async () => {
@@ -6738,6 +6838,86 @@ module.exports = async ({ edge, servidores, r }) => {
       const info = await jogador.evaluate(`({ nome: game.user.name, gm: game.user.isGM, dono: game.actors.getName('Alvo')?.isOwner })`);
       const ativo = await edge.evaluate(`game.users.getName('Jogador').active`);
       return [info.nome === 'Jogador' && !info.gm && info.dono && ativo, JSON.stringify({ ...info, ativo })];
+    });
+
+    await r.passo('C34.2: perícias do capanga por nível, base ou total; ficha aberta e preferências separadas', async () => {
+      const anterior = await edge.evaluate("game.settings.get('cpr-fieldbook', 'periciasDoCapanga')");
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const ator = await Actor.implementation.create({ name: 'C34 perícias', type: 'capanga',
+            system: { atributos: { dex: { valor: 6 } }, pericias: { evasion: { nivel: 4 } }, hp: { value: 1 } } });
+          const saida = [];
+          try {
+            for (const modo of ['nivel', 'base', 'total']) {
+              await game.settings.set('${S}', 'periciasDoCapanga', modo);
+              await ator.sheet.render({ force: true });
+              const contexto = await ator.sheet._prepareContext({});
+              const linha = contexto.linhasDePericia.find(p => p.id === 'evasion');
+              const dom = ator.sheet.element.querySelector('.pericia[data-pericia="evasion"]');
+              saida.push({ modo, valor: linha?.exibicaoCapanga, total: linha?.total,
+                nivel: ator.system.pericias.evasion.nivel, penalidade: ator.system.penalidade,
+                exibido: dom?.querySelector('.total')?.textContent.trim(),
+                rotulo: ator.sheet.element.querySelector('.linha-pericia.cabeca > :last-child')?.textContent.trim() });
+            }
+            return saida;
+          } finally { if (ator.sheet.rendered) await ator.sheet.close(); await ator.delete(); }
+        })()`);
+        // O mestre terminou em Total; o jogador continua no padrão Base deste outro navegador.
+        const modoJogador = await jogador.evaluate("game.settings.get('cpr-fieldbook', 'periciasDoCapanga')");
+        const esperados = [[4, 'NÍVEL'], [10, 'BASE'], [8, 'TOTAL']];
+        return [info.length === 3 && info.every((p, i) => p.valor === esperados[i][0] && p.exibido === String(esperados[i][0])
+          && p.rotulo === esperados[i][1] && p.total === 8 && p.nivel === 4 && p.penalidade === -2) && modoJogador === 'base',
+          JSON.stringify({ info, modoJogador })];
+      } finally {
+        await edge.evaluate(`game.settings.set('${S}', 'periciasDoCapanga', ${JSON.stringify(anterior)}).then(() => true)`);
+      }
+    });
+
+    await r.passo('C34.2: confirmação ao apagar por navegador; cancelar preserva, desligada apaga, instalados ainda perguntam', async () => {
+      const resultado = await edge.evaluate(`(async () => {
+        const D = foundry.applications.api.DialogV2;
+        const anterior = game.settings.get('${S}', 'confirmarApagarItem');
+        const confirmar = D.confirm, esperar = D.wait;
+        const atores = [], resultados = [];
+        let perguntas = 0, montagens = 0, resposta = false;
+        D.confirm = async () => { perguntas++; return resposta; };
+        D.wait = async () => { montagens++; return 'cancelar'; };
+        try {
+          for (const type of ['personagem', 'capanga']) {
+            const ator = await Actor.implementation.create({ name: 'C34 apagar ' + type, type });
+            atores.push(ator);
+            const [item] = await ator.createEmbeddedDocuments('Item', [{ name: 'Item de teste', type: 'equipamento' }]);
+            const apagar = id => ator.sheet.options.actions.apagarItem.call(ator.sheet, {}, { closest: () => ({ dataset: { itemId: id } }) });
+            await game.settings.set('${S}', 'confirmarApagarItem', true);
+            resposta = false;
+            let antes = perguntas;
+            await apagar(item.id);
+            const cancelou = ator.items.has(item.id) && perguntas === antes + 1;
+            resposta = true;
+            await apagar(item.id);
+            const confirmou = !ator.items.has(item.id) && perguntas === antes + 2;
+            const [outro] = await ator.createEmbeddedDocuments('Item', [{ name: 'Sem confirmação', type: 'equipamento' }]);
+            await game.settings.set('${S}', 'confirmarApagarItem', false);
+            antes = perguntas;
+            await apagar(outro.id);
+            const direto = !ator.items.has(outro.id) && perguntas === antes;
+            const [arma] = await ator.createEmbeddedDocuments('Item', [{ name: 'Com instalado', type: 'arma' }]);
+            const [upgrade] = await ator.createEmbeddedDocuments('Item', [{ name: 'Instalado', type: 'upgrade', system: { alvo: 'arma', instaladoEm: arma.id } }]);
+            const antesMontagens = montagens;
+            await apagar(arma.id);
+            const preservou = montagens === antesMontagens + 1 && ator.items.has(arma.id) && ator.items.get(upgrade.id)?.system.instaladoEm === arma.id;
+            resultados.push({ type, cancelou, confirmou, direto, preservou });
+          }
+          return resultados;
+        } finally {
+          D.confirm = confirmar; D.wait = esperar;
+          await game.settings.set('${S}', 'confirmarApagarItem', anterior);
+          for (const ator of atores) { if (ator.sheet.rendered) await ator.sheet.close(); await ator.delete(); }
+        }
+      })()`);
+      const jogadorConfirma = await jogador.evaluate("game.settings.get('cpr-fieldbook', 'confirmarApagarItem')");
+      return [resultado.length === 2 && resultado.every(r => r.cancelou && r.confirmou && r.direto && r.preservou) && jogadorConfirma === true,
+        JSON.stringify({ resultado, jogadorConfirma })];
     });
 
     await r.passo('C34.2: criar itens exige a opção atual; botões e ações nas fichas de personagem, capanga e observador', async () => {
