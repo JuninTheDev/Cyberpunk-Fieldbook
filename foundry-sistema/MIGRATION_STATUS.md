@@ -39,6 +39,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
+| wiki | os perigos do ambiente (C38): a queda, o fogo, a eletrocução, o afogamento e a asfixia, o veneno, a droga como arma e a radiação | portados no ciclo 156 (sessão Junin, com o Codex); o CORE 0.92.4 não tem nenhum (ver as dúvidas) |
 | CORE e wiki | moradia, estilo de vida, moda e Trauma Team (o `lifestyle`; C22) | portados no ciclo 140: os campos, a importação da wiki e da mesa, a ficha "Na mesa" e o "Pagar o mês" (a regra do criador da wiki) |
 | CORE | o `/red` no chat, a DV no HUD do token e na régua, a iniciativa crítica (C26, partes 1 a 3) | portados no ciclo 144 (o `/red` soma todos os modificadores; ver as dúvidas) |
 | wiki e CORE | a terapia e a ciberpsicose (C21) | portadas no ciclo 145: a terapia pelo Medtech, o vício tirado por um ano, o estado mental e o aviso, a Humanidade negativa (ver as dúvidas) |
@@ -151,6 +152,30 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
+
+- **C38, os perigos do ambiente (2026-10-23, sessão Junin, com o Codex):** a fonte é só a wiki (`system-rules.js:555-563`,
+  "Outras formas de se ferir", p. 180–181): o CORE 0.92.4 não tem nenhum destes perigos (só a munição de veneno). As
+  decisões:
+  - **do usuário (2026-10-23):** a Perna Quebrada da queda vem com os +5 direto no HP ("Toda lesão causa +5", p. 187); o
+    fôlego (BODY minutos) não tem relógio: o mestre aperta "Sem ar" quando acaba; a janela abre pelo `/perigo` e pelo botão
+    no HUD do token; e duas mudanças na NET (`netrun/index.mjs`, da sessão KouArt): o `queimar` sem o piso de zero (com o HP
+    negativo, o fogo curava: −3 ia a 0) e lendo só o "Em chamas" ativo, e o fogo do perigo fora dele (queima no
+    `perigos.mjs`, na fila do ator, com o cartão e o Desfazer);
+  - **o fogo não acumula, vale o maior**, e a radiação também. O maior toma o lugar dos outros "Em chamas" (o da munição
+    incendiária, o do Hellhound, o do Overheat), que o Desfazer recria. Um efeito desligado não conta;
+  - **a ordem no turno:** no fim, o fogo da munição e depois o fogo do perigo, a eletrocução e a radiação; no começo, o
+    Death Save de quem já estava mortalmente ferido e depois o "Sem ar";
+  - **a eletrocução não é ataque:** sem lesão crítica pelos seis; aplicada de novo, os 6d6 entram de novo, sem um segundo
+    estado;
+  - **a queda:** 2d6 a cada 10 m inteiros (25 m = 4d6). A Meat Leg não conta como cyberperna; uma cyberperna inoperante
+    (EMP) conta. A configuração "Lesão crítica" (a dos seis no dano do ataque) não vale para a Perna Quebrada da queda; já
+    com ela, nem lesão nova nem os +5. O "Cai 40 m por turno" e o agarrar a borda ficam só no cartão;
+  - **a resistência** (o veneno, a droga e o Atletismo da queda) usa o pedido da munição (o tratador `municao`): o dono rola
+    no computador dele, com a janela, a Sorte e os situacionais; sem dono, o mestre;
+  - **a radiação baixa** é só o cartão; a alta e a extrema saem só pelo "Saiu da zona", não pelo "Apagar fogo";
+  - **fica de fora:** o fogo da NET que fica no lugar (o "manter": igual ou maior que o do perigo) ainda queima pelo
+    `queimar`, fora da fila do ator; no mesmo fim de turno que um tick do perigo, um dos dois danos pode se perder. E a
+    marca do turno é gravada antes do dano: um dano que o servidor recusar não se repete no mesmo turno.
 
 - **C39, gastar IP (2026-10-22, worker do Codex da sessão KouArt):** o CORE 0.92.4 só tem o ledger do IP
   (`cpr-ledger-form.js:86-151`, `cpr-actor.js:754-795`), sem a compra do avanço: a regra é a da wiki (`system-rules.js:242-245`,
@@ -7651,6 +7676,60 @@ pela `subir-ip`, com o estilo próprio no `tema.css`.
   pelo preço da perícia, M3; sem saldo, M4; o salto, M5; o teto, M6; o extrato que soma, M7; a compra recusada que não
   volta, M8), e a M7 e a M8 também no G4.
 - **Próximo:** os itens abertos da Fase 7 (C34 a C38, C40 a C44); o C28 e as perguntas abertas são do usuário.
+
+### Ciclo 156 (2026-10-23): o C38, os perigos do ambiente (sessão Junin, com o Codex)
+
+Commit anterior: `594ccd7` (a reserva do C38, sobre o `ec4b6d2`, o ciclo 155 e as reservas da KouArt). O código e os
+testes saíram de um worker do Claude, numa worktree própria e sem commit; o Codex (`codex exec`, só leitura) revisou três
+vezes; a sessão Junin conferiu, rodou os portões e as mutações e fez o commit.
+
+- **Referência:** a wiki, `system-rules.js:555-563` ("Outras formas de se ferir", p. 180–181) e `:549` (os +5 da lesão).
+  O CORE 0.92.4 não tem estes perigos.
+- **O que muda:**
+  - **`scripts/regras-perigos.mjs` (novo):** as contas puras: o catálogo dos perigos e dos níveis, o fogo e a radiação por
+    turno, o "vale o maior", o veneno e a droga pela DV, a queda pelos metros e pelas cyberpernas e os argumentos do
+    `/perigo`;
+  - **`scripts/perigos.mjs` (novo):** a janela "Perigo do ambiente" (só o mestre), o `/perigo` (com os argumentos:
+    `/perigo fogo intenso`, `/perigo queda 25`), o botão no HUD do token, o `aplicar` (a API `game.system.api.perigos`),
+    os cartões com o Desfazer e os botões "Sem ar", "Respirou", "Afastou-se", "Saiu da zona" e "Apagar fogo", os três
+    estados novos ("Sem ar", "Eletrocutado", "Na radiação") e os ticks dos turnos. Uma fila por ator (a aplicação, os
+    ticks e o Desfazer) e uma por cartão (os botões); o tick marca o turno no efeito e relê o ator pelo uuid;
+  - **`scripts/turnos.mjs`:** o momento do turno tirado na entrada do `updateCombat` (quem acabou, quem começa e o
+    combatente do Death Save, pelo combatente: vale no combate sem cena), os ticks dos perigos, e o Death Save que não
+    roda se o combate acabou no meio (falhou, morre; o combatente só se ainda existe);
+  - **`scripts/netrun/index.mjs` (autorizado pelo usuário):** o `queimar` sem o piso de zero e lendo o "Em chamas" ativo;
+    o gancho pula o fogo do perigo;
+  - **`scripts/sistema.mjs`:** o registro e a API.
+- **Testes:**
+  - **G3:** `perigos.test.mjs` (9 testes: os números contra a tabela da própria wiki, o fogo e a radiação, o "vale o
+    maior", a queda de 9 a 40 m com 0, 1 e 2 cyberpernas e a Meat Leg, o veneno, a droga e os argumentos do `/perigo`);
+  - **G4:** 7 passos novos, antes do "nenhum aviso": o fogo (o maior, o da munição, o desligado, o HP negativo, dois ao
+    mesmo tempo, a NET); a eletrocução, o "Sem ar" e a radiação; os ticks (a corrida, a repetição, a ordem com o Death
+    Save, o ator apagado, o capanga, o uuid); a queda e o veneno (o Desfazer, os sucessos e as falhas, a Sonífera); a
+    janela (o `/perigo`, o HUD, "Aplicar" e "Cancelar"; o jogador que rola no computador dele e não vê os botões do
+    mestre); o combate sem cena com o Desfazer junto de um tick; e o Death Save pendente com o combate apagado.
+- **Portões:** G1, 189 arquivos sem erro; G2, nenhum erro; G3, 397/397; G4 completo, 233/233 (509 s), com a checagem dos dois navegadores sem avisos ou erros de JS.
+- **Mutações:** 41 caíram, uma por vez, com o arquivo devolvido pelo md5:
+  - **11 no G3:** os números da wiki, o "vale o maior", os limites da queda e das cyberpernas, a Meat Leg, o empate com a DV
+    e os argumentos do `/perigo`;
+  - **30 no G4 focado** (uma cópia do v14.js só com a abertura do mundo, um jogador e os passos do C38, em cerca de 52 s):
+    - o fogo da munição que não sai;
+    - o Desfazer: o fogo trocado, duas vezes, o que mudou no meio da queda, fora da fila;
+    - os ticks: sem eles, o efeito errado, a metade do BODY, o combate de agora no lugar do momento, sem a marca do turno, o
+      ator apagado, os efeitos desligados, o Death Save do combatente certo e do combate apagado, o combate sem cena;
+    - as filas;
+    - a NET: o piso de zero, o fogo do perigo em dobro, o efeito desligado;
+    - o mestre e o jogador: o botão do HUD, os botões do cartão, o `aplicar` e a rolagem no computador do dono;
+    - a resistência que nunca passa.
+  - **Uma sobreviveu:** tirar a reserva em memória do `marcar`. Com os ticks na fila do ator, ela não protegia mais nada,
+    e saiu do código.
+- **A revisão do Codex:** a primeira achou 11 problemas (o piso de zero da NET, o Desfazer da queda, o turno lido depois
+  dos `await`, a marca concorrente, as aplicações e os botões concorrentes, os efeitos desligados e quatro testes
+  fracos); a segunda, o dano perdido entre o fogo da NET e os ticks e três falhas do G4; a terceira, o combate sem cena,
+  o Desfazer fora da fila e o Death Save depois do fim do combate. Todos corrigidos, menos o que está em "fica de fora"
+  nas dúvidas.
+- **Próximo:** os itens abertos da Fase 7 (o C34, partes 2 e 3, o C35 e o C40 a C44); o C28 e as perguntas abertas são
+  do usuário.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

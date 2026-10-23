@@ -353,6 +353,19 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Penalidades:** a de base vem das lesões que não estão corrigidas; a outra sobe 1 a cada sucesso e se zera na ficha quando o personagem estabiliza.
   - **Quando:** no combate, no começo do turno de quem está mortalmente ferido. O jogador rola no computador dele.
   - **Falhou:** morto, com o status e o combatente derrotado.
+- **Perigos do ambiente** (o C38; a wiki, "Outras formas de se ferir", p. 180–181): o mestre seleciona os tokens (ou
+  marca os alvos) e abre a janela "Perigo do ambiente" pelo `/perigo` no chat (que aceita `/perigo fogo intenso` e
+  `/perigo queda 25`) ou pelo botão de aviso no HUD do token. O cartão tem o Desfazer, só para o mestre.
+  - **Fogo:** brando 2, intenso 4, mortal 6 direto no HP no fim de cada turno, até "Apagar fogo" (uma Ação); não acumula,
+    vale o maior;
+  - **Afogamento e asfixia:** o cartão diz o fôlego (BODY minutos); quando acaba, "Sem ar": o BODY direto no HP no começo
+    de cada turno, até "Respirou";
+  - **Eletrocução:** 6d6 (a armadura absorve) agora e no fim de cada turno, até "Afastou-se";
+  - **Queda:** 2d6 a cada 10 m (a armadura absorve) e o Atletismo DV15; falhou, a Perna Quebrada com os +5 no HP; duas
+    cyberpernas anulam até 30 m;
+  - **Veneno e droga como arma:** WILL + Resistir Tortura/Drogas contra DV11, 13 ou 15, no computador do dono; o veneno
+    tira 1d6, 2d6 ou 3d6 direto no HP, e a droga diz o efeito;
+  - **Radiação:** baixa, só o cartão; alta 2 e extrema 6 no fim de cada turno, até "Saiu da zona" (não se apaga).
 - **Consciência de Combate do Solo**, pelos pontos de cada habilidade da Role, como a wiki descreve:
   - **Reação de Iniciativa:** +1 na iniciativa por ponto.
   - **Ataque de Precisão:** +1 em todo ataque a cada 3 pontos.

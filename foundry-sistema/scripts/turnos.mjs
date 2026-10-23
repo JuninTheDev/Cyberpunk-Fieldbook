@@ -1,11 +1,14 @@
 // A cada turno do combate (no mestre ativo):
 // - o Suprimido sai no fim do próximo turno de quem foi suprimido (ele já gastou o movimento indo para a cobertura);
 // - no começo do turno de quem está mortalmente ferido (HP abaixo de 1), o Death Save: o jogador rola no computador
-//   dele; o mestre rola pelos NPCs e pelos capangas. Falhou: morto (status e combatente derrotado).
+//   dele; o mestre rola pelos NPCs e pelos capangas. Falhou: morto (status e combatente derrotado);
+// - os perigos do ambiente (perigos.mjs, o C38): no fim do turno, a eletrocução e a radiação, junto do fogo; no começo,
+//   depois do Death Save, o "Sem ar".
 import { jogadorDe, pedir, souOMestreAtivo, STATUS_SUPRIMIDO } from './combate.mjs';
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { fogoNoFimDoTurno } from './municoes.mjs';
+import { momentoDoTurno, perigosNoComecoDoTurno, perigosNoFimDoTurno } from './perigos.mjs';
 
 // O turno que acabou (combate.previous) veio depois do turno em que a supressão aconteceu?
 const depoisDe = (anterior, marca) => anterior.round > marca.rodada || (anterior.round === marca.rodada && anterior.turn > marca.turno);
@@ -21,8 +24,11 @@ async function tirarSupressao(combate) {
   await ator.unsetFlag(SISTEMA, 'suprimido');
 }
 
-async function deathSave(combate) {
-  const combatente = combate.combatant;
+// combatente: o do momento do turno (perigos.momentoDoTurno), tirado antes dos await do aoMudarTurno.
+// O combate pode ter acabado, ou o combatente saído dele, durante esses await: sem ele, não há Death Save do turno.
+const noCombate = combatente => Boolean(combatente?.parent && game.combats.get(combatente.parent.id)?.combatants.has(combatente.id));
+async function deathSave(combatente) {
+  if (!noCombate(combatente)) return;
   const token = combatente?.token;
   const ator = token?.actor;
   const modo = config('deathSave');
@@ -34,8 +40,9 @@ async function deathSave(combate) {
   // (combate/socket.mjs).
   const resultado = (jogador ? await pedir(jogador, 'deathSave', { ator: ator.uuid }) : null) ?? await ator.rolarDeathSave({ modo: 'public' });
   if (!resultado || resultado.passou) return;
+  // Falhou, morreu, mesmo que o combate tenha acabado durante a rolagem; o combatente só se ainda existe.
   await ator.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: true, overlay: true });
-  await combatente.update({ defeated: true });
+  if (noCombate(combatente)) await combatente.update({ defeated: true });
   await ChatMessage.implementation.create({
     content: `<div class="${SISTEMA} cartao morte"><p><b>${foundry.utils.escapeHTML(token.name)}</b> falhou no Death Save e morreu.</p></div>`,
     speaker: ChatMessage.implementation.getSpeaker({ token }), flags: { [SISTEMA]: { morte: ator.uuid } }
@@ -44,10 +51,15 @@ async function deathSave(combate) {
 
 export function aoMudarTurno(combate, mudancas) {
   if (!souOMestreAtivo() || !combate.started || !('turn' in mudancas || 'round' in mudancas)) return;
+  // O momento do turno, já (o combatente do Death Save e os dos perigos): os await abaixo (o Death Save do jogador espera o
+  // prazo inteiro) deixam o combate andar.
+  const momento = momentoDoTurno(combate);
   (async () => {
     await tirarSupressao(combate);
     await fogoNoFimDoTurno(combate);
-    await deathSave(combate);
+    await perigosNoFimDoTurno(momento);
+    await deathSave(momento.comeco?.combatente ?? null);
+    await perigosNoComecoDoTurno(momento);
   })().catch(erro => console.warn(`${SISTEMA} | turno`, erro));
 }
 

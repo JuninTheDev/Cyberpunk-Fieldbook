@@ -351,6 +351,14 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O foco visível no G4** (ciclo 150): um `KeyboardEvent` sintético não põe o navegador no modo de teclado, e o
   `:focus-visible` não liga. Para conferir o contorno do foco, mande um Tab de verdade pelo protocolo do Edge
   (`edge.send('Input.dispatchKeyEvent', ...)`) antes de focar o controle.
+- **Dois danos no mesmo ator, no mesmo fim de turno** (ciclo 156): os ganchos do `updateCombat` rodam ao mesmo tempo, e
+  cada `ator.update` parte do HP que o cliente tinha antes da resposta do servidor: o fogo da NET e a radiação do perigo
+  liam o mesmo HP, e um dos danos sumia (80 com 4 e 2 dava 76 ou 78). Ponha o que grava o HP do mesmo ator numa fila (o
+  `naFila` de `perigos.mjs`), com o Desfazer junto, e tire o turno (`combate.previous`, `combate.combatant`) antes do
+  primeiro `await`: o Death Save do jogador espera o prazo inteiro, e o combate anda.
+- **O Codex no Windows** (ciclo 156): a revisão roda com `codex exec -s read-only -c 'windows.sandbox="unelevated"' -c
+  model_reasoning_effort=high`. Sem o `windows.sandbox`, o `workspace-write` cai para só leitura e recusa até o
+  `Get-Content`; o esforço padrão é "none". No sandbox, o G3 dá `spawn EPERM`: os portões rodam fora dele.
 
 ## Build
 

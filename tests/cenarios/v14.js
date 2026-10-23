@@ -15456,6 +15456,675 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    // ---------- Os perigos do ambiente (o C38; a wiki, system-rules.js:555-563, "Outras formas de se ferir", p. 180–181) ----------
+    // Um alvo sem dono (o mestre rola a resistência): BODY 20 e WILL 8 (HP 80), DEX 2, com a Blindagem leve (SP 11). Os
+    // dados ficam fixos pela fila (window.__fila); os turnos passam num combate com o alvo (iniciativa 20) e um outro (10).
+    // A cena não é ativada nem vista: os perigos, os turnos e os cartões não usam o canvas, e a troca de cena (a do passo
+    // anterior ainda redesenhando) fazia a espera pelo canvas estourar o prazo. Os atores nascem sem
+    // dono (o default 0): ninguém mais responde por eles, e o mestre rola. A limpeza espera os ticks pendentes (as filas dos
+    // atores, perigos.esperarOsPerigos) e apaga só o combate criado aqui.
+    const comPerigos = teste => edge.evaluate(`(async () => {
+      const S = '${S}';
+      const api = game.system.api;
+      const cat = await api.wiki.carregarCatalogo();
+      const pegar = id => foundry.utils.deepClone(cat[id]);
+      const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+      const pausa = (ms = 800) => new Promise(r => setTimeout(r, ms));
+      const P = await import('/systems/' + S + '/scripts/perigos.mjs');
+      const antes = { dados: CONFIG.Dice.randomUniform, mensagens: game.messages.map(m => m.id), rolarDireto: game.settings.get(S, 'rolarDireto'), deathSave: game.settings.get(S, 'deathSave') };
+      const atores = [];
+      let cena, combate;
+      try {
+        await game.settings.set(S, 'rolarDireto', true);
+        await game.settings.set(S, 'deathSave', 'todos');
+        window.__fila = [];
+        CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+        const criar = async dados => { const a = await Actor.implementation.create({ ownership: { default: 0 }, ...dados }); atores.push(a); return a; };
+        const armadura = pegar('core_armor:light-armorjack-body'); armadura.system.equipada = true;
+        const alvo = await criar({ name: 'Perigos: alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 }, dex: { valor: 2 } } }, items: [armadura] });
+        const outro = await criar({ name: 'Perigos: outro', type: 'personagem', system: { hp: { value: 40 } } });
+        cena = await Scene.implementation.create({ name: 'Perigos (C38)', active: false, width: 1600, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
+        for (const [ator, x] of [[alvo, 300], [outro, 700]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 400 })).toObject()]);
+        const estado = () => ({ hp: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp, estados: [...alvo.statuses].filter(s => s.startsWith('cprf-')).sort(),
+          fogo: alvo.effects.filter(e => e.statuses.has('cprf-em-chamas')).map(e => ({ id: e.id, fogo: e.getFlag(S, 'fogo') ?? null, municao: e.getFlag(S, 'municao')?.tipo ?? null, ativo: e.active })),
+          lesoes: alvo.items.filter(i => i.type === 'lesao').map(i => i.getFlag(S, 'catalogo')) });
+        const repor = async () => { await alvo.update({ 'system.hp.value': 80 }); await alvo.items.find(i => i.type === 'armadura').update({ 'system.sp.corpo.value': 11 }); };
+        const cartao = async id => { await esperar(() => document.querySelector('[data-message-id="' + id + '"] .cartao.perigo')); return document.querySelector('[data-message-id="' + id + '"]'); };
+        const clicar = async (id, seletor) => { (await cartao(id))?.querySelector(seletor)?.click(); };
+        const doTurno = perigo => game.messages.contents.filter(m => m.getFlag(S, 'perigo')?.tipo === 'turno' && m.getFlag(S, 'perigo').perigo === perigo).at(-1) ?? null;
+        combate = await Combat.implementation.create({ scene: cena.id, active: true });
+        for (const [ator, ini] of [[alvo, 20], [outro, 10]]) await combate.createEmbeddedDocuments('Combatant', [{ actorId: ator.id, tokenId: cena.tokens.find(t => t.actorId === ator.id).id, sceneId: cena.id, initiative: ini }]);
+        await combate.startCombat();
+        await pausa(200);
+        // Os ticks rodam no updateCombat, sem o nextTurn esperar; o momento do turno é tirado na hora (turnos.mjs). Uma
+        // pausa curta entre os turnos; as checagens esperam a condição, e as negativas, a pausa padrão.
+        const passar = async () => { await combate.nextTurn(); await pausa(150); };
+        const comecoDoAlvo = async () => {
+          for (let voltas = 0; ; voltas++) {
+            if (voltas >= 6) throw new Error('comecoDoAlvo: o turno do alvo não chegou em 6 voltas');
+            await passar();
+            if (combate.combatant?.actorId === alvo.id) return;
+          }
+        };
+        const fimDoAlvo = async () => { if (combate.combatant?.actorId !== alvo.id) await comecoDoAlvo(); await passar(); };
+        const dados = fila => { window.__fila = fila; };
+        // Quem mais responderia pelo alvo (jogadorDe): ninguém; se aparecer alguém, o passo mostra.
+        const donos = game.users.filter(u => u.active && !u.isGM && alvo.testUserPermission(u, 'OWNER')).map(u => u.name);
+        const resultado = await (${teste})({ api, P, S, alvo, outro, cena, combate, criar, pegar, esperar, pausa, estado, repor, cartao, clicar, doTurno, passar, comecoDoAlvo, fimDoAlvo, dados });
+        return { ...resultado, donos };
+      } finally {
+        await combate?.delete();
+        await P.esperarOsPerigos();
+        CONFIG.Dice.randomUniform = antes.dados; window.__fila = [];
+        for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('perigo-do-ambiente')) await app.close();
+        await cena?.delete();
+        for (const ator of atores) await ator.delete();
+        const novas = game.messages.filter(m => !antes.mensagens.includes(m.id)).map(m => m.id);
+        if (novas.length) await ChatMessage.implementation.deleteDocuments(novas);
+        await game.settings.set(S, 'rolarDireto', antes.rolarDireto);
+        await game.settings.set(S, 'deathSave', antes.deathSave);
+      }
+    })()`);
+
+    await r.passo('perigos do ambiente (C38): o fogo intenso liga "Em chamas" com 4 (sem dano agora) e queima 4 no fim do turno; o brando por cima não troca; o intenso sobre o fogo da munição incendiária toma o lugar dele e queima 4 (não 2), e o Desfazer devolve o da munição, uma vez só; brando e mortal ao mesmo tempo dão um fogo só, de 6; um mortal desligado não impede o intenso; o fogo intenso e a radiação alta no mesmo fim de turno tiram 6; a NET (o Hellhound, 2) queima com o HP negativo (−3 a −5) e pula o fogo desligado', async () => {
+      const info = await comPerigos(`async ({ api, S, alvo, esperar, pausa, estado, repor, cartao, clicar, doTurno, passar, comecoDoAlvo, fimDoAlvo }) => {
+        const intenso = await api.perigos.aplicar({ perigo: 'fogo', nivel: 'intenso', atores: [alvo] });
+        const aceso = { ...estado(), botao: Boolean((await cartao(intenso.mensagem))?.querySelector('[data-cprf-acao="apagarFogo"]')) };
+        const brando = await api.perigos.aplicar({ perigo: 'fogo', nivel: 'brando', atores: [alvo] });
+        const naoTrocou = { ...estado(), nota: brando.atores[0].notas[0] };
+        await fimDoAlvo();
+        await esperar(() => alvo.system.hp.value === 76 && doTurno('fogo'));
+        const queimou = { ...estado(), cartao: Boolean(doTurno('fogo')?.content.includes('data-cprf-acao="apagarFogo"')) };
+        await clicar(intenso.mensagem, '[data-cprf-acao="apagarFogo"]');
+        await esperar(() => !alvo.statuses.has('cprf-em-chamas'));
+        const apagou = estado();
+        await repor();
+        // O fogo da munição incendiária como o municoes.mjs o põe (efeitoTemporario): o status e a flag municao, sem o dano.
+        const [daMunicao] = await alvo.createEmbeddedDocuments('ActiveEffect', [{ type: 'base', system: { changes: [] }, name: 'Em chamas', img: 'icons/svg/fire.svg', statuses: ['cprf-em-chamas'], flags: { [S]: { municao: { ataque: 'c38', tipo: 'fogo' } } } }]);
+        const sobre = await api.perigos.aplicar({ perigo: 'fogo', nivel: 'intenso', atores: [alvo] });
+        const trocou = estado();
+        await fimDoAlvo();
+        await esperar(() => alvo.system.hp.value <= 76);
+        await pausa();
+        const queimou4 = estado();
+        await clicar(sobre.mensagem, '[data-cprf-perigo="desfazer"]');
+        await esperar(() => alvo.effects.has(daMunicao.id) && game.messages.get(sobre.mensagem).getFlag(S, 'desfeito'));
+        const desfeito = { ...estado(), desfeito: Boolean(game.messages.get(sobre.mensagem).getFlag(S, 'desfeito')) };
+        await esperar(() => document.querySelector('[data-message-id="' + sobre.mensagem + '"] .cartao.perigo.desfeito'));
+        desfeito.classe = Boolean(document.querySelector('[data-message-id="' + sobre.mensagem + '"] .cartao.perigo.desfeito'));
+        const avisos = [];
+        ui.notifications.warn = m => { avisos.push(String(m)); };
+        try { await clicar(sobre.mensagem, '[data-cprf-perigo="desfazer"]'); await esperar(() => avisos.length, 30); } finally { delete ui.notifications.warn; }
+        const deNovo = { ...estado(), avisos };
+        await api.municoes.apagarFogo(alvo);
+        // Ao mesmo tempo, no mesmo ator: a fila do ator deixa um fogo só, o maior.
+        await Promise.all([api.perigos.aplicar({ perigo: 'fogo', nivel: 'brando', atores: [alvo] }), api.perigos.aplicar({ perigo: 'fogo', nivel: 'mortal', atores: [alvo] })]);
+        const juntos = estado();
+        await api.municoes.apagarFogo(alvo);
+        // O mortal desligado (na configuração do efeito) não conta: o intenso entra e tira o desligado.
+        await api.perigos.aplicar({ perigo: 'fogo', nivel: 'mortal', atores: [alvo] });
+        await alvo.effects.find(e => e.statuses.has('cprf-em-chamas')).update({ disabled: true });
+        const desligado = await api.perigos.aplicar({ perigo: 'fogo', nivel: 'intenso', atores: [alvo] });
+        const semODesligado = { ...estado(), nota: desligado.atores[0].notas[0] };
+        await api.municoes.apagarFogo(alvo);
+        // O fogo e a radiação no mesmo fim de turno, na fila do ator: os dois danos (4 + 2).
+        await repor();
+        await api.perigos.aplicar({ perigo: 'fogo', nivel: 'intenso', atores: [alvo] });
+        await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [alvo] });
+        await fimDoAlvo();
+        await esperar(() => alvo.system.hp.value <= 74);
+        await pausa();
+        const fogoERadiacao = estado();
+        await api.municoes.apagarFogo(alvo);
+        await alvo.toggleStatusEffect('cprf-radiacao', { active: false });
+        // A NET (o queimar): o fogo do Hellhound (o status, 2) com o HP negativo, e um Overheat desligado (4) antes dele.
+        await comecoDoAlvo();
+        await alvo.update({ 'system.hp.value': -3 });
+        await alvo.createEmbeddedDocuments('ActiveEffect', [{ type: 'base', system: { changes: [] }, name: 'Overheat desligado', img: 'icons/svg/fire.svg', statuses: ['cprf-em-chamas'], disabled: true, flags: { [S]: { fogo: { dano: 4, de: 'Overheat' } } } }]);
+        await alvo.createEmbeddedDocuments('ActiveEffect', [{ type: 'base', system: { changes: [] }, name: 'Em chamas', img: 'icons/svg/fire.svg', statuses: ['cprf-em-chamas'] }]);
+        await passar();
+        await esperar(() => alvo.system.hp.value !== -3);
+        await pausa(300);
+        const negativo = estado();
+        await api.municoes.apagarFogo(alvo);
+        return { aceso, naoTrocou, queimou, apagou, daMunicao: daMunicao.id, trocou, queimou4, desfeito, deNovo, juntos, semODesligado, fogoERadiacao, negativo };
+      }`);
+      const fogoDe = (lista, dano, de) => lista.length === 1 && lista[0].municao === null && lista[0].ativo && JSON.stringify(lista[0].fogo) === JSON.stringify({ dano, de });
+      const ok = info.aceso.hp === 80 && fogoDe(info.aceso.fogo, 4, 'Fogo intenso') && info.aceso.estados.join() === 'cprf-em-chamas' && info.aceso.botao
+        && info.naoTrocou.fogo.length === 1 && info.naoTrocou.fogo[0].id === info.aceso.fogo[0].id && fogoDe(info.naoTrocou.fogo, 4, 'Fogo intenso')
+        && info.naoTrocou.nota === 'Já em chamas (4 no HP por turno): o fogo não acumula, vale o maior.'
+        && info.queimou.hp === 76 && info.queimou.cartao && info.apagou.fogo.length === 0
+        && fogoDe(info.trocou.fogo, 4, 'Fogo intenso') && info.trocou.fogo[0].id !== info.daMunicao && info.trocou.hp === 80
+        && info.queimou4.hp === 76
+        && info.desfeito.fogo.length === 1 && info.desfeito.fogo[0].id === info.daMunicao && info.desfeito.fogo[0].municao === 'fogo' && info.desfeito.fogo[0].fogo === null
+        && info.desfeito.hp === 76 && info.desfeito.desfeito && info.desfeito.classe
+        && info.deNovo.avisos.join() === 'Este perigo já foi desfeito (ou não há o que desfazer).' && info.deNovo.fogo.length === 1 && info.deNovo.fogo[0].id === info.daMunicao
+        && fogoDe(info.juntos.fogo, 6, 'Fogo mortal')
+        && fogoDe(info.semODesligado.fogo, 4, 'Fogo intenso') && info.semODesligado.nota.startsWith('Fogo intenso: em chamas, 4 direto no HP')
+        && info.fogoERadiacao.hp === 74 && info.negativo.hp === -5 && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('perigos do ambiente (C38): a eletrocução tira 6d6 com a armadura (30 − 11 = 19) e de novo no fim do turno (24 − 10 = 14), o Desfazer do cartão do turno devolve, e para depois do "Afastou-se"; o "Sem ar" tira o BODY (20) no começo do turno e para com o "Respirou"; dois "Sem ar" do mesmo cartão, clicados juntos, ficam os dois no Desfazer; a radiação alta tira 2 no fim do turno, não sai pelo "Apagar" e para com o "Saiu da zona"; a baixa não tira nada', async () => {
+      const info = await comPerigos(`async ({ api, S, alvo, outro, esperar, pausa, estado, repor, cartao, clicar, doTurno, comecoDoAlvo, fimDoAlvo, dados }) => {
+        dados([[5,6],[5,6],[5,6],[5,6],[5,6],[5,6]]);
+        const choque = await api.perigos.aplicar({ perigo: 'eletrocucao', atores: [alvo] });
+        const agora = { ...estado(), fila: window.__fila.length, notas: choque.atores[0].notas };
+        dados([[4,6],[4,6],[4,6],[4,6],[4,6],[4,6]]);
+        await fimDoAlvo();
+        await esperar(() => alvo.system.hp.value === 47);
+        const tick = doTurno('eletrocucao');
+        const noFim = { ...estado(), fila: window.__fila.length, cartao: Boolean(tick) };
+        await clicar(tick.id, '[data-cprf-perigo="tirar"]');
+        await esperar(() => !alvo.statuses.has('cprf-eletrocutado'));
+        await clicar(tick.id, '[data-cprf-perigo="desfazer"]');
+        await esperar(() => alvo.system.hp.value === 61);
+        const desfezOTurno = estado();
+        dados([[6,6],[6,6],[6,6],[6,6],[6,6],[6,6]]);
+        await fimDoAlvo();
+        await pausa();
+        const parou = { ...estado(), fila: window.__fila.length };
+        dados([]);
+        await repor();
+        const afogar = await api.perigos.aplicar({ perigo: 'afogamento', atores: [alvo] });
+        const folego = afogar.atores[0].notas[0];
+        await clicar(afogar.mensagem, '[data-cprf-perigo="semAr"]');
+        await esperar(() => alvo.statuses.has('cprf-sem-ar'));
+        const semAr = estado();
+        await comecoDoAlvo();
+        await esperar(() => alvo.system.hp.value === 60);
+        const noComeco = { ...estado(), cartao: Boolean(doTurno('afogamento')) };
+        await clicar(doTurno('afogamento').id, '[data-cprf-perigo="tirar"]');
+        await esperar(() => !alvo.statuses.has('cprf-sem-ar'));
+        await comecoDoAlvo();
+        await pausa();
+        const respirou = estado();
+        // Dois "Sem ar" no mesmo cartão, clicados juntos (a fila da mensagem): os dois ficam no Desfazer, que tira os dois.
+        const dois = await api.perigos.aplicar({ perigo: 'afogamento', atores: [alvo, outro] });
+        (await cartao(dois.mensagem)).querySelectorAll('[data-cprf-perigo="semAr"]').forEach(botao => botao.click());
+        const lista = () => game.messages.get(dois.mensagem).getFlag(S, 'perigo').desfazer.map(e => e.estados.length);
+        await esperar(() => alvo.statuses.has('cprf-sem-ar') && outro.statuses.has('cprf-sem-ar') && lista().join() === '1,1');
+        const juntos = { alvo: alvo.statuses.has('cprf-sem-ar'), outro: outro.statuses.has('cprf-sem-ar'), lista: lista() };
+        await clicar(dois.mensagem, '[data-cprf-perigo="desfazer"]');
+        await esperar(() => !alvo.statuses.has('cprf-sem-ar') && !outro.statuses.has('cprf-sem-ar'));
+        Object.assign(juntos, { depoisAlvo: alvo.statuses.has('cprf-sem-ar'), depoisOutro: outro.statuses.has('cprf-sem-ar') });
+        await repor();
+        const zona = await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [alvo] });
+        await api.municoes.apagarFogo(alvo);
+        const naoApagou = estado();
+        await fimDoAlvo();
+        await esperar(() => alvo.system.hp.value === 78);
+        const irradiou = estado();
+        await clicar(zona.mensagem, '[data-cprf-perigo="tirar"]');
+        await esperar(() => !alvo.statuses.has('cprf-radiacao'));
+        await fimDoAlvo();
+        await pausa();
+        const saiu = estado();
+        const baixa = await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'baixa', atores: [alvo] });
+        const semDano = { ...estado(), nota: baixa.atores[0].notas[0] };
+        return { agora, noFim, desfezOTurno, parou, folego, semAr, noComeco, respirou, juntos, naoApagou, irradiou, saiu, semDano };
+      }`);
+      const ok = info.agora.hp === 61 && info.agora.sp === 10 && info.agora.estados.join() === 'cprf-eletrocutado' && info.agora.fila === 0
+        && info.noFim.hp === 47 && info.noFim.sp === 9 && info.noFim.fila === 0 && info.noFim.cartao
+        && info.desfezOTurno.hp === 61 && info.desfezOTurno.sp === 10 && info.desfezOTurno.estados.length === 0
+        && info.parou.hp === 61 && info.parou.sp === 10 && info.parou.fila === 6
+        && info.folego === 'Segura o fôlego por 20 minutos (o BODY). Depois, sem ar: 20 direto no HP no começo de cada turno.'
+        && info.semAr.estados.join() === 'cprf-sem-ar' && info.semAr.hp === 80
+        && info.noComeco.hp === 60 && info.noComeco.cartao && info.respirou.hp === 60 && info.respirou.estados.length === 0
+        && info.juntos.alvo && info.juntos.outro && info.juntos.lista.join() === '1,1' && !info.juntos.depoisAlvo && !info.juntos.depoisOutro
+        && info.naoApagou.estados.join() === 'cprf-radiacao' && info.naoApagou.hp === 80 && info.irradiou.hp === 78 && info.irradiou.sp === 11
+        && info.saiu.hp === 78 && info.saiu.estados.length === 0
+        && info.semDano.hp === 78 && info.semDano.estados.length === 0 && info.semDano.nota === 'Radiação baixa: adoece com o tempo, a critério do mestre.' && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('perigos do ambiente (C38), os ticks: o mesmo momento duas vezes ao mesmo tempo, e em sequência (eletrocução e "Sem ar"), dá um dano só; o momento tirado no turno do alvo aplica nele com o combate já no turno do outro; um "Sem ar" desligado não tira HP; dois ticks do mesmo ator ao mesmo tempo somam (2 + 20); o tick de um ator já apagado desiste sem erro; com o combate andando de novo durante o tick do outro, o Death Save do alvo mortalmente ferido (d10 2, passa) ainda é dele e vem antes do dano do "Sem ar"; o perigo num capanga (token solto) fica no token; o aplicar pelo uuid; o "Sem ar" depois do Desfazer não liga nada', async () => {
+      const info = await comPerigos(`async ({ api, P, S, alvo, outro, cena, combate, criar, esperar, pausa, estado, repor, cartao, clicar, passar, dados }) => {
+        const cartoesDe = perigo => game.messages.filter(m => m.getFlag(S, 'perigo')?.perigo === perigo && m.getFlag(S, 'perigo').tipo === 'turno').length;
+        // O momento tirado no começo do turno do alvo; o combate anda para o outro, e só então o alvo fica sem ar.
+        const momento = P.momentoDoTurno(combate);
+        const doMomento = momento.comeco?.ator === alvo && momento.comeco.combatente?.actorId === alvo.id;
+        await passar();
+        const hpDoOutro = outro.system.hp.value;
+        for (const ator of [alvo, outro]) await ator.toggleStatusEffect('cprf-sem-ar', { active: true });
+        await P.perigosNoComecoDoTurno(momento);
+        const atrasado = { doMomento, vez: combate.combatant?.actorId === outro.id, hp: alvo.system.hp.value, outro: outro.system.hp.value === hpDoOutro };
+        for (const ator of [alvo, outro]) await ator.toggleStatusEffect('cprf-sem-ar', { active: false });
+        await repor();
+        // Duas vezes ao mesmo tempo, com o mesmo momento: a reserva (e a fila do ator) deixa um dano só.
+        await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [alvo] });
+        const mesmo = { fim: { ator: alvo, turno: combate.id + ':c38:duas' }, comeco: null };
+        const radiacoes = cartoesDe('radiacao');
+        await Promise.all([P.perigosNoFimDoTurno(mesmo), P.perigosNoFimDoTurno(mesmo)]);
+        const duasVezes = { hp: alvo.system.hp.value, cartoes: cartoesDe('radiacao') - radiacoes };
+        await alvo.toggleStatusEffect('cprf-radiacao', { active: false });
+        await repor();
+        // Em sequência, com o mesmo momento: a eletrocução (6d6 = 30 − 11 = 19) e o "Sem ar" (20), uma vez cada.
+        await alvo.toggleStatusEffect('cprf-eletrocutado', { active: true });
+        dados([[5,6],[5,6],[5,6],[5,6],[5,6],[5,6],[6,6],[6,6],[6,6],[6,6],[6,6],[6,6]]);
+        const seguido = { fim: { ator: alvo, turno: combate.id + ':c38:seguido' }, comeco: null };
+        await P.perigosNoFimDoTurno(seguido);
+        await P.perigosNoFimDoTurno(seguido);
+        const emSequencia = { choque: alvo.system.hp.value, fila: window.__fila.length, cartoes: cartoesDe('eletrocucao') };
+        await alvo.toggleStatusEffect('cprf-eletrocutado', { active: false });
+        dados([]);
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: true });
+        const semAres = cartoesDe('afogamento');
+        const semArSeguido = { fim: null, comeco: { ator: alvo, turno: combate.id + ':c38:seguido' } };
+        await P.perigosNoComecoDoTurno(semArSeguido);
+        await P.perigosNoComecoDoTurno(semArSeguido);
+        Object.assign(emSequencia, { semAr: alvo.system.hp.value, cartoesSemAr: cartoesDe('afogamento') - semAres });
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: false });
+        await repor();
+        // Um "Sem ar" desligado na configuração do efeito: nada.
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: true });
+        await alvo.effects.find(e => e.statuses.has('cprf-sem-ar')).update({ disabled: true });
+        const mensagens = game.messages.size;
+        await P.perigosNoComecoDoTurno({ fim: null, comeco: { ator: alvo, turno: combate.id + ':c38:desligado' } });
+        const desligado = { hp: alvo.system.hp.value, mensagens: game.messages.size - mensagens };
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: false });
+        // Dois ticks do mesmo ator ao mesmo tempo (a radiação no fim de um turno e o "Sem ar" no começo de outro): a fila do
+        // ator soma os dois (2 + 20), sem um ler o HP antigo do outro.
+        await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [alvo] });
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: true });
+        await Promise.all([P.perigosNoFimDoTurno({ fim: { ator: alvo, turno: combate.id + ':c38:fila' }, comeco: null }), P.perigosNoComecoDoTurno({ fim: null, comeco: { ator: alvo, turno: combate.id + ':c38:fila' } })]);
+        const naFila = alvo.system.hp.value;
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: false });
+        await alvo.toggleStatusEffect('cprf-radiacao', { active: false });
+        await repor();
+        // O ator apagado antes do tick (a limpeza, o token tirado da cena): o tick desiste, sem erro e sem cartão.
+        const sumido = await Actor.implementation.create({ name: 'Perigos: apagado', type: 'personagem', ownership: { default: 0 }, system: { hp: { value: 30 } } });
+        await sumido.toggleStatusEffect('cprf-sem-ar', { active: true });
+        const doSumido = { fim: null, comeco: { ator: sumido, turno: combate.id + ':c38:apagado' } };
+        await sumido.delete();
+        const antesDoSumido = game.messages.size;
+        const apagado = { resultado: await P.perigosNoComecoDoTurno(doSumido).then(() => 'ok', erro => String(erro?.message ?? erro)) };
+        apagado.mensagens = game.messages.size - antesDoSumido;
+        // O alvo mortalmente ferido (HP 0) e sem ar; o outro na radiação. Do turno do outro para o do alvo e, sem esperar,
+        // para o do outro de novo: o tick do outro (a radiação) ainda roda quando o combate já andou, e o Death Save e o
+        // "Sem ar" ficam com o alvo, nessa ordem.
+        await alvo.update({ 'system.hp.value': 0 });
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: true });
+        await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [outro] });
+        const hpOutro = outro.system.hp.value;
+        const antes = game.messages.map(m => m.id);
+        dados([[2,10]]);
+        await combate.nextTurn();
+        await combate.nextTurn();
+        await esperar(() => alvo.system.hp.value === -20 && outro.system.hp.value === hpOutro - 2);
+        const novas = game.messages.contents.filter(m => !antes.includes(m.id));
+        const ordem = { hp: alvo.system.hp.value, outro: hpOutro - outro.system.hp.value, fila: window.__fila.length, vez: combate.combatant?.actorId === outro.id,
+          deathSave: novas.findIndex(m => m.getFlag(S, 'deathSave')), passou: novas.find(m => m.getFlag(S, 'deathSave'))?.getFlag(S, 'deathSave').passou ?? null,
+          doAlvo: novas.find(m => m.getFlag(S, 'deathSave'))?.speaker.actor === alvo.id, semAr: novas.findIndex(m => m.getFlag(S, 'perigo')?.perigo === 'afogamento') };
+        await alvo.toggleStatusEffect('cprf-sem-ar', { active: false });
+        await outro.toggleStatusEffect('cprf-radiacao', { active: false });
+        await repor();
+        // O capanga (token solto): o perigo fica no ator do token, não no da ficha. 6d6 = 18, sem armadura.
+        const modelo = await criar({ name: 'Perigos: capanga', type: 'capanga', system: { hp: { value: 40 }, atributos: { body: { valor: 10 }, will: { valor: 10 } } } });
+        const [doc] = await cena.createEmbeddedDocuments('Token', [(await modelo.getTokenDocument({ x: 1100, y: 400 })).toObject()]);
+        dados([[3,6],[3,6],[3,6],[3,6],[3,6],[3,6]]);
+        await api.perigos.aplicar({ perigo: 'eletrocucao', atores: [doc] });
+        const capanga = { solto: !doc.actorLink, hp: doc.actor.system.hp.value, estado: doc.actor.statuses.has('cprf-eletrocutado'), modelo: modelo.system.hp.value, modeloEstado: modelo.statuses.has('cprf-eletrocutado'), fila: window.__fila.length };
+        // O aplicar pelo uuid do ator.
+        await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [alvo.uuid] });
+        const peloUuid = alvo.statuses.has('cprf-radiacao');
+        await alvo.toggleStatusEffect('cprf-radiacao', { active: false });
+        // O "Sem ar" clicado depois do Desfazer do cartão: nada.
+        const afogar = await api.perigos.aplicar({ perigo: 'afogamento', atores: [alvo] });
+        await clicar(afogar.mensagem, '[data-cprf-perigo="semAr"]');
+        await esperar(() => alvo.statuses.has('cprf-sem-ar'));
+        await clicar(afogar.mensagem, '[data-cprf-perigo="desfazer"]');
+        await esperar(() => !alvo.statuses.has('cprf-sem-ar') && game.messages.get(afogar.mensagem).getFlag(S, 'desfeito'));
+        await clicar(afogar.mensagem, '[data-cprf-perigo="semAr"]');
+        await pausa();
+        const depoisDoDesfazer = { semAr: alvo.statuses.has('cprf-sem-ar'), estados: game.messages.get(afogar.mensagem).getFlag(S, 'perigo').desfazer[0].estados.length };
+        return { atrasado, duasVezes, emSequencia, desligado, naFila, apagado, ordem, capanga, peloUuid, depoisDoDesfazer };
+      }`);
+      const ok = info.atrasado.doMomento && info.atrasado.vez && info.atrasado.hp === 60 && info.atrasado.outro
+        && info.duasVezes.hp === 78 && info.duasVezes.cartoes === 1
+        && info.emSequencia.choque === 61 && info.emSequencia.fila === 6 && info.emSequencia.cartoes === 1 && info.emSequencia.semAr === 41 && info.emSequencia.cartoesSemAr === 1
+        && info.desligado.hp === 80 && info.desligado.mensagens === 0 && info.naFila === 58 && info.apagado.resultado === 'ok' && info.apagado.mensagens === 0
+        && info.ordem.hp === -20 && info.ordem.outro === 2 && info.ordem.fila === 0 && info.ordem.vez && info.ordem.passou === true && info.ordem.doAlvo
+        && info.ordem.deathSave >= 0 && info.ordem.semAr > info.ordem.deathSave
+        && info.capanga.solto && info.capanga.hp === 22 && info.capanga.estado && info.capanga.modelo === 40 && !info.capanga.modeloEstado && info.capanga.fila === 0
+        && info.peloUuid && !info.depoisDoDesfazer.semAr && info.depoisDoDesfazer.estados === 1 && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('perigos do ambiente (C38): a queda de 25 m (4d6 = 20 − 11 = 9) com o Atletismo falhado (2 + 2 = 4 contra DV15) dá a Perna Quebrada e os +5 (HP 66), e o Desfazer devolve o HP, o SP e tira a lesão; o Desfazer não leva o que mudou no HP durante o Atletismo; com a Perna Quebrada já na ficha, sem lesão nova nem os +5; o Atletismo passando (8 + 9 = 17): só o impacto; duas cyberpernas e 30 m: nada; o veneno mortal falhado (8 + 2 = 10 contra DV15) tira 3d6 = 12; o brando com 11 contra DV11 falha (1d6 = 4) e com 12 resiste; a droga DV13 falhada diz o efeito; o dano do veneno acorda quem dorme pela Sonífera', async () => {
+      const info = await comPerigos(`async ({ api, S, alvo, pegar, esperar, estado, repor, cartao, clicar, dados }) => {
+        dados([[5,6],[5,6],[5,6],[5,6],[2,10]]);
+        const caiu = await api.perigos.aplicar({ perigo: 'queda', metros: 25, atores: [alvo] });
+        const quebrou = { ...estado(), fila: window.__fila.length, teste: caiu.atores[0].teste, lesao: caiu.atores[0].lesao, hpDepois: caiu.atores[0].hpDepois };
+        await clicar(caiu.mensagem, '[data-cprf-perigo="desfazer"]');
+        await esperar(() => alvo.system.hp.value === 80 && !alvo.items.some(i => i.type === 'lesao'));
+        const desfeito = estado();
+        // Enquanto se espera o Atletismo, o HP perde 10 por outra coisa: o Desfazer devolve só o impacto (9) e os +5.
+        const rolarPericia = alvo.rolarPericia;
+        alvo.rolarPericia = async (...args) => { await alvo.update({ 'system.hp.value': alvo.system.hp.value - 10 }); return rolarPericia.apply(alvo, args); };
+        dados([[5,6],[5,6],[5,6],[5,6],[2,10]]);
+        let noMeio;
+        try { noMeio = await api.perigos.aplicar({ perigo: 'queda', metros: 25, atores: [alvo] }); } finally { delete alvo.rolarPericia; }
+        const comOutro = { hp: alvo.system.hp.value };
+        await clicar(noMeio.mensagem, '[data-cprf-perigo="desfazer"]');
+        await esperar(() => !alvo.items.some(i => i.type === 'lesao') && alvo.system.hp.value !== comOutro.hp);
+        Object.assign(comOutro, { depois: alvo.system.hp.value, sp: alvo.system.armadura.corpo.sp });
+        await repor();
+        const [jaTinha] = await alvo.createEmbeddedDocuments('Item', [pegar('core_critical-injuries-body:broken-leg')]);
+        dados([[5,6],[5,6],[5,6],[5,6],[2,10]]);
+        const segunda = await api.perigos.aplicar({ perigo: 'queda', metros: 25, atores: [alvo] });
+        const semBonus = { ...estado(), fila: window.__fila.length, passou: segunda.atores[0].teste?.passou, nota: segunda.atores[0].notas.at(-1) };
+        await alvo.deleteEmbeddedDocuments('Item', [jaTinha.id]);
+        await repor();
+        await alvo.update({ 'system.atributos.dex.valor': 8 });
+        dados([[5,6],[5,6],[5,6],[5,6],[9,10]]);
+        const passouNaQueda = await api.perigos.aplicar({ perigo: 'queda', metros: 25, atores: [alvo] });
+        const evitou = { ...estado(), fila: window.__fila.length, teste: passouNaQueda.atores[0].teste, lesao: passouNaQueda.atores[0].lesao };
+        await alvo.update({ 'system.atributos.dex.valor': 2 });
+        await repor();
+        const perna = () => { const d = pegar('core_cyberware:cyberleg'); d.system.instalado = true; return d; };
+        const pernas = await alvo.createEmbeddedDocuments('Item', [perna(), perna()]);
+        dados([[6,6]]);
+        const trinta = await api.perigos.aplicar({ perigo: 'queda', metros: 30, atores: [alvo] });
+        const nada = { ...estado(), fila: window.__fila.length, nota: trinta.atores[0].notas[0], desfazer: Boolean((await cartao(trinta.mensagem))?.querySelector('[data-cprf-perigo="desfazer"]')) };
+        await alvo.deleteEmbeddedDocuments('Item', pernas.map(i => i.id));
+        dados([[2,10],[4,6],[4,6],[4,6]]);
+        const veneno = await api.perigos.aplicar({ perigo: 'veneno', nivel: 'mortal', atores: [alvo] });
+        const envenenado = { ...estado(), fila: window.__fila.length, teste: veneno.atores[0].teste };
+        dados([[3,10],[4,6]]);
+        const igual = await api.perigos.aplicar({ perigo: 'veneno', nivel: 'brando', atores: [alvo] });
+        const naDv = { ...estado(), fila: window.__fila.length, teste: igual.atores[0].teste };
+        dados([[4,10],[6,6]]);
+        const maior = await api.perigos.aplicar({ perigo: 'veneno', nivel: 'brando', atores: [alvo] });
+        const resistiu = { ...estado(), fila: window.__fila.length, teste: maior.atores[0].teste, nota: maior.atores[0].notas[0] };
+        dados([[2,10]]);
+        const droga = await api.perigos.aplicar({ perigo: 'droga', nivel: 'dv13', atores: [alvo] });
+        const drogado = { ...estado(), fila: window.__fila.length, nota: droga.atores[0].notas[0] };
+        // O dano do perigo acorda quem dorme pela Sonífera (municoes.mjs, acordarComDano): o veneno brando falhado (1d6 = 3).
+        const [sono] = await alvo.createEmbeddedDocuments('ActiveEffect', [{ type: 'base', system: { changes: [] }, name: 'Sonífera: inconsciente', img: 'icons/svg/sleep.svg', statuses: ['unconscious'], flags: { [S]: { municao: { ataque: 'c38', tipo: 'sono' } } } }]);
+        const dormia = alvo.effects.has(sono.id);
+        dados([[2,10],[3,6]]);
+        await api.perigos.aplicar({ perigo: 'veneno', nivel: 'brando', atores: [alvo] });
+        await esperar(() => !alvo.effects.has(sono.id));
+        const acordou = { dormia, hp: alvo.system.hp.value, sono: alvo.effects.has(sono.id), fila: window.__fila.length };
+        return { quebrou, desfeito, comOutro, semBonus, evitou, nada, envenenado, naDv, resistiu, drogado, acordou };
+      }`);
+      const PERNA = 'core_critical-injuries-body:broken-leg';
+      const teste = (t, total, dv, passou) => JSON.stringify(t) === JSON.stringify({ total, dv, passou });
+      const ok = info.quebrou.hp === 66 && info.quebrou.sp === 10 && info.quebrou.lesoes.join() === PERNA && info.quebrou.fila === 0 && info.quebrou.hpDepois === 66
+        && teste(info.quebrou.teste, 4, 15, false) && Boolean(info.quebrou.lesao)
+        && info.desfeito.hp === 80 && info.desfeito.sp === 11 && info.desfeito.lesoes.length === 0
+        && info.comOutro.hp === 56 && info.comOutro.depois === 70 && info.comOutro.sp === 11
+        && info.semBonus.hp === 71 && info.semBonus.sp === 10 && info.semBonus.lesoes.join() === PERNA && info.semBonus.fila === 0 && info.semBonus.passou === false
+        && /já tinha a Perna Quebrada \(sem lesão nova e sem os \+5\)\.$/.test(info.semBonus.nota)
+        && info.evitou.hp === 71 && info.evitou.sp === 10 && info.evitou.lesoes.length === 0 && info.evitou.fila === 0 && teste(info.evitou.teste, 17, 15, true) && info.evitou.lesao === null
+        && info.nada.hp === 80 && info.nada.sp === 11 && info.nada.fila === 1 && !info.nada.desfazer
+        && info.nada.nota === 'Caiu 30 m: duas cyberpernas anulam a queda até 30 m (nem dano, nem teste).'
+        && info.envenenado.hp === 68 && info.envenenado.sp === 11 && info.envenenado.fila === 0 && teste(info.envenenado.teste, 10, 15, false)
+        && info.naDv.hp === 64 && info.naDv.fila === 0 && teste(info.naDv.teste, 11, 11, false)
+        && info.resistiu.hp === 64 && info.resistiu.fila === 1 && teste(info.resistiu.teste, 12, 11, true) && info.resistiu.nota === 'Resistência 12 contra DV11: resistiu.'
+        && info.drogado.hp === 64 && info.drogado.fila === 0 && info.drogado.nota === 'Resistência 10 contra DV13: falhou: fica sugestionável.'
+        && info.acordou.dormia && info.acordou.hp === 61 && !info.acordou.sono && info.acordou.fila === 0 && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('perigos do ambiente (C38): o /perigo (com os argumentos: o fogo intenso, a queda de 25 m) e o botão do HUD abrem a janela "Perigo do ambiente" para o mestre, sem mensagem no chat, e Cancelar não aplica nada; "Aplicar" pela janela aplica no token selecionado e fecha; no jogador, o /perigo só avisa, o HUD não tem o botão e a API não aplica nem abre; o veneno no personagem dele é rolado no navegador dele (a mensagem é dele), e o cartão do fogo aparece nele sem nenhum botão do mestre', async () => {
+      for (const navegador of [edge, jogador]) await navegador.evaluate(`window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); }`);
+      const vistaJogador = await jogador.evaluate('canvas.scene?.id ?? null');
+      const rolarDiretoDoJogador = await jogador.evaluate(`(async () => { const antes = game.settings.get('${S}', 'rolarDireto'); await game.settings.set('${S}', 'rolarDireto', true); return antes; })()`);
+      try {
+        const mestre = await edge.evaluate(`(async () => {
+          const salvo = { vista: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, mensagens: game.messages.map(m => m.id), atores: [] };
+          window.__c38 = salvo;
+          const cena = await Scene.implementation.create({ name: 'Perigos (C38): janela', width: 1200, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
+          salvo.cena = cena.id;
+          await cena.activate();
+          await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const ator = await Actor.implementation.create({ name: 'Perigos: do jogador', type: 'personagem', ownership: { [game.users.getName('Jogador').id]: 3 }, system: { hp: { value: 30 }, atributos: { will: { valor: 8 } } } });
+          salvo.atores.push(ator.id);
+          const [doc] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 300, y: 300 })).toObject()]);
+          // O token desenhado nesta cena (a ativação pode redesenhar o canvas depois do createEmbeddedDocuments).
+          const desenhado = () => canvas.ready && canvas.scene?.id === cena.id ? canvas.tokens.get(doc.id) ?? null : null;
+          if (!await __esperar(desenhado)) { await cena.view(); await __esperar(desenhado); }
+          const janela = () => [...foundry.applications.instances.values()].find(app => app.options.classes?.includes('perigo-do-ambiente') && app.rendered);
+          const campo = seletor => janela()?.element.querySelector(seletor);
+          const fechar = async () => { await janela()?.close(); await __esperar(() => !janela()); };
+          const mensagens = game.messages.size;
+          desenhado().control({ releaseOthers: true });
+          await ui.chat.processMessage('/perigo fogo intenso');
+          await __esperar(() => campo('select[name="nivel"]'));
+          const pelaLinha = { aberta: Boolean(janela()), perigo: campo('select[name="perigo"]')?.value, nivel: campo('select[name="nivel"]')?.value, nome: janela()?.element.textContent.includes('Perigos: do jogador') };
+          await fechar();
+          await ui.chat.processMessage('/perigo queda 25');
+          await __esperar(() => campo('input[name="metros"]'));
+          const queda = { perigo: campo('select[name="perigo"]')?.value, metros: campo('input[name="metros"]')?.value, semNivel: campo('[data-campo="nivel"]')?.style.display === 'none' };
+          await fechar();
+          await canvas.hud.token.bind(desenhado());
+          await __esperar(() => canvas.hud.token.element?.querySelector('.${S}-perigo'));
+          const botao = canvas.hud.token.element?.querySelector('.${S}-perigo');
+          const dica = botao?.dataset.tooltip ?? null;
+          botao?.click();
+          await __esperar(() => campo('select[name="perigo"]'));
+          const peloHud = { botao: Boolean(botao), dica, aberta: Boolean(janela()), nome: janela()?.element.textContent.includes('Perigos: do jogador') };
+          campo('button[data-action="cancelar"]')?.click();
+          await __esperar(() => !janela());
+          const cancelou = { hp: ator.system.hp.value, efeitos: ator.effects.size, mensagens: game.messages.size - mensagens };
+          // "Aplicar" pela janela: o fogo brando no token selecionado, e a janela fecha.
+          await ui.chat.processMessage('/perigo fogo brando');
+          await __esperar(() => campo('button[data-action="aplicar"]'));
+          campo('button[data-action="aplicar"]')?.click();
+          await __esperar(() => !janela() && ator.statuses.has('cprf-em-chamas'));
+          const peloBotao = { fechou: !janela(), fogo: ator.effects.find(e => e.statuses.has('cprf-em-chamas'))?.getFlag('${S}', 'fogo') ?? null, cartao: game.messages.size - mensagens };
+          await game.system.api.municoes.apagarFogo(ator);
+          await __esperar(() => !ator.effects.size);
+          desenhado()?.release();
+          return { pelaLinha, queda, peloHud, cancelou, peloBotao, cena: cena.id, token: doc.id, ator: ator.id };
+        })()`);
+        const doJogador = await jogador.evaluate(`(async () => {
+          await __esperar(() => game.scenes.has('${mestre.cena}'));
+          const cena = game.scenes.get('${mestre.cena}');
+          const desenhado = () => canvas.ready && canvas.scene?.id === cena.id ? canvas.tokens.get('${mestre.token}') ?? null : null;
+          if (!await __esperar(desenhado, 50)) { await cena.view(); await __esperar(desenhado); }
+          const avisos = [];
+          const anterior = Object.getOwnPropertyDescriptor(ui.notifications, 'warn');
+          ui.notifications.warn = m => { avisos.push(String(m)); };
+          const janela = () => [...foundry.applications.instances.values()].some(app => app.options.classes?.includes('perigo-do-ambiente'));
+          try {
+            const mensagens = game.messages.size;
+            await ui.chat.processMessage('/perigo fogo intenso');
+            await __esperar(() => avisos.length, 30);
+            const pelaLinha = { janela: janela(), mensagens: game.messages.size - mensagens, avisos: [...avisos] };
+            const token = desenhado();
+            token.control({ releaseOthers: true });
+            await canvas.hud.token.bind(token);
+            await __esperar(() => canvas.hud.token.element?.querySelector('.dv-table-selector'));
+            const hud = { aberto: Boolean(canvas.hud.token.element?.querySelector('.dv-table-selector')), botao: Boolean(canvas.hud.token.element?.querySelector('.${S}-perigo')) };
+            await canvas.hud.token.close();
+            token.release();
+            const n = avisos.length;
+            const aplicou = await game.system.api.perigos.aplicar({ perigo: 'fogo', nivel: 'mortal', atores: [game.actors.get('${mestre.ator}').uuid] });
+            const abriu = await game.system.api.perigos.abrir({ perigo: 'fogo' });
+            return { pelaLinha, hud, aplicou, abriu, janela: janela(), avisos: avisos.slice(n) };
+          } finally {
+            if (anterior) Object.defineProperty(ui.notifications, 'warn', anterior); else delete ui.notifications.warn;
+          }
+        })()`);
+        const depois = await edge.evaluate(`(async () => { await new Promise(r => setTimeout(r, 300)); const a = game.actors.get('${mestre.ator}'); return { hp: a.system.hp.value, efeitos: a.effects.size }; })()`);
+        // O veneno brando no personagem do jogador: ele rola no navegador dele (WILL 8 + 0 + 9 = 17 contra DV11: resiste).
+        await jogador.evaluate(`(() => {
+          window.__c38Dados = CONFIG.Dice.randomUniform;
+          window.__fila = [[9, 10]];
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          return true;
+        })()`);
+        let noJogador;
+        try {
+          noJogador = await edge.evaluate(`(async () => {
+            const ator = game.actors.get('${mestre.ator}'), jogador = game.users.getName('Jogador');
+            const veneno = await game.system.api.perigos.aplicar({ perigo: 'veneno', nivel: 'brando', atores: [ator] });
+            const daRolagem = () => game.messages.filter(m => m.getFlag('${S}', 'teste') && !window.__c38.mensagens.includes(m.id)).at(-1);
+            await __esperar(() => daRolagem());
+            const rolagem = daRolagem();
+            const fogo = await game.system.api.perigos.aplicar({ perigo: 'fogo', nivel: 'brando', atores: [ator] });
+            await __esperar(() => document.querySelector('[data-message-id="' + fogo.mensagem + '"] [data-cprf-perigo="desfazer"]'));
+            const noMestre = { desfazer: Boolean(document.querySelector('[data-message-id="' + fogo.mensagem + '"] [data-cprf-perigo="desfazer"]')), apagar: Boolean(document.querySelector('[data-message-id="' + fogo.mensagem + '"] [data-cprf-acao="apagarFogo"]')) };
+            return { teste: veneno.atores[0].teste, hp: ator.system.hp.value, autor: rolagem?.author?.id === jogador.id, fogo: fogo.mensagem, noMestre };
+          })()`);
+        } finally {
+          await jogador.evaluate(`(() => { if (window.__c38Dados) CONFIG.Dice.randomUniform = window.__c38Dados; delete window.__c38Dados; window.__fila = []; return true; })()`);
+        }
+        const cartaoNoJogador = await jogador.evaluate(`(async () => {
+          const seletor = '[data-message-id="${noJogador.fogo}"] .cartao.perigo';
+          await __esperar(() => document.querySelector(seletor));
+          const cartao = document.querySelector(seletor);
+          return { visto: Boolean(cartao), perigo: cartao?.querySelectorAll('[data-cprf-perigo]').length ?? null, apagar: cartao?.querySelectorAll('[data-cprf-acao="apagarFogo"]').length ?? null };
+        })()`);
+        const info = { mestre, doJogador, depois, noJogador, cartaoNoJogador };
+        const ok = mestre.pelaLinha.aberta && mestre.pelaLinha.perigo === 'fogo' && mestre.pelaLinha.nivel === 'intenso' && mestre.pelaLinha.nome
+          && mestre.queda.perigo === 'queda' && mestre.queda.metros === '25' && mestre.queda.semNivel
+          && mestre.peloHud.botao && mestre.peloHud.dica === 'Perigo do ambiente' && mestre.peloHud.aberta && mestre.peloHud.nome
+          && mestre.cancelou.efeitos === 0 && mestre.cancelou.mensagens === 0
+          && mestre.peloBotao.fechou && JSON.stringify(mestre.peloBotao.fogo) === JSON.stringify({ dano: 2, de: 'Fogo brando' }) && mestre.peloBotao.cartao === 1
+          && !doJogador.pelaLinha.janela && doJogador.pelaLinha.mensagens === 0 && doJogador.pelaLinha.avisos.join() === 'Só o mestre aplica um perigo do ambiente.'
+          && doJogador.hud.aberto && !doJogador.hud.botao && doJogador.aplicou === null && doJogador.abriu === null && !doJogador.janela
+          && doJogador.avisos.join('|') === 'Só o mestre ativo aplica um perigo do ambiente.|Só o mestre aplica um perigo do ambiente.'
+          && depois.hp === mestre.cancelou.hp && depois.efeitos === 0
+          && JSON.stringify(noJogador.teste) === JSON.stringify({ total: 17, dv: 11, passou: true }) && noJogador.autor && noJogador.hp === depois.hp
+          && noJogador.noMestre.desfazer && noJogador.noMestre.apagar
+          && cartaoNoJogador.visto && cartaoNoJogador.perigo === 0 && cartaoNoJogador.apagar === 0;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => { await game.settings.set('${S}', 'rolarDireto', ${JSON.stringify(rolarDiretoDoJogador)}); await canvas.hud.token?.close?.(); const id = ${JSON.stringify(vistaJogador)}; if (id && game.scenes.has(id)) await game.scenes.get(id).view(); return true; })()`).catch(() => null);
+        await edge.evaluate(`(async () => {
+          const s = window.__c38;
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('perigo-do-ambiente')) await app.close();
+          if (!s) return true;
+          if (s.ativa && game.scenes.has(s.ativa)) await game.scenes.get(s.ativa).activate();
+          if (s.vista && game.scenes.has(s.vista)) await game.scenes.get(s.vista).view();
+          await game.scenes.get(s.cena)?.delete();
+          for (const id of s.atores) await game.actors.get(id)?.delete();
+          const novas = game.messages.filter(m => !s.mensagens.includes(m.id)).map(m => m.id);
+          if (novas.length) await ChatMessage.implementation.deleteDocuments(novas);
+          delete window.__c38;
+          return true;
+        })()`);
+      }
+    });
+
+    await r.passo('perigos do ambiente (C38): num combate sem cena (os combatentes pelo token), o fogo intenso do perigo queima 4 no fim do turno do alvo; o Desfazer do cartão do fogo (+4) ao mesmo tempo que o tick da radiação (−2) no mesmo ator: as duas contas ficam (76 → 78)', async () => {
+      const info = await comPerigos(`async ({ api, P, S, alvo, outro, cena, esperar, pausa, estado, repor, cartao, fimDoAlvo }) => {
+        // O combate sem cena: o momento do turno acha quem acabou o turno pelo combatente, não pelo token da cena.
+        const semCena = await Combat.implementation.create({ scene: null, active: true });
+        let semCenaInfo;
+        try {
+          for (const [ator, ini] of [[alvo, 20], [outro, 10]]) await semCena.createEmbeddedDocuments('Combatant', [{ actorId: ator.id, tokenId: cena.tokens.find(t => t.actorId === ator.id).id, sceneId: cena.id, initiative: ini }]);
+          await semCena.startCombat();
+          await pausa(200);
+          const doAlvo = semCena.combatant?.actorId === alvo.id;
+          await api.perigos.aplicar({ perigo: 'fogo', nivel: 'intenso', atores: [alvo] });
+          await semCena.nextTurn();
+          await esperar(() => alvo.system.hp.value !== 80, 40);
+          await pausa(300);
+          semCenaInfo = { cena: semCena.scene?.id ?? null, doAlvo, hp: alvo.system.hp.value };
+        } finally {
+          await semCena.delete();
+          await P.esperarOsPerigos();
+        }
+        await api.municoes.apagarFogo(alvo);
+        await repor();
+        const fogosAntes = game.messages.map(m => m.id);
+        // O Desfazer do cartão do tick do fogo junto com o tick da radiação: o tick começa primeiro (a marca do turno no
+        // ar) e o Desfazer é clicado logo depois. Na fila do ator, o Desfazer espera o tick e devolve os 4 sobre o 74.
+        await api.perigos.aplicar({ perigo: 'fogo', nivel: 'intenso', atores: [alvo] });
+        await fimDoAlvo();
+        const novoFogo = () => game.messages.contents.find(m => !fogosAntes.includes(m.id) && m.getFlag(S, 'perigo')?.tipo === 'turno' && m.getFlag(S, 'perigo').perigo === 'fogo') ?? null;
+        await esperar(() => alvo.system.hp.value === 76 && novoFogo());
+        const doFogo = novoFogo();
+        await api.municoes.apagarFogo(alvo);
+        await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [alvo] });
+        const elemento = await cartao(doFogo.id);
+        const antes = alvo.system.hp.value;
+        const tick = P.perigosNoFimDoTurno({ fim: { ator: alvo, turno: doFogo.id + ':c38:desfazer' }, comeco: null });
+        elemento.querySelector('[data-cprf-perigo="desfazer"]').click();
+        await tick;
+        await esperar(() => game.messages.get(doFogo.id).getFlag(S, 'desfeito'));
+        await P.esperarOsPerigos();
+        await pausa(300);
+        const juntos = { antes, hp: alvo.system.hp.value, desfeito: Boolean(game.messages.get(doFogo.id).getFlag(S, 'desfeito')) };
+        await alvo.toggleStatusEffect('cprf-radiacao', { active: false });
+        return { semCena: semCenaInfo, juntos, estado: estado() };
+      }`);
+      const ok = info.semCena.cena === null && info.semCena.doAlvo && info.semCena.hp === 76
+        && info.juntos.antes === 76 && info.juntos.hp === 78 && info.juntos.desfeito && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('perigos do ambiente (C38): o Death Save pendente no navegador do jogador quando o combate é apagado: a janela fechada devolve a vez ao mestre, que rola (10 natural, falha); o personagem morre, sem erro no turno e sem mexer no combatente apagado', async () => {
+      // O jogador rola na janela (o "O jogador rola os próprios dados" ligado e o "Rolar direto" desligado no navegador dele):
+      // a janela fica aberta enquanto o mestre apaga o combate; fechada, o mestre rola por ele.
+      for (const navegador of [edge, jogador]) await navegador.evaluate(`window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); }`);
+      const rolarDiretoDoJogador = await jogador.evaluate(`(async () => { const antes = game.settings.get('${S}', 'rolarDireto'); await game.settings.set('${S}', 'rolarDireto', false); return antes; })()`);
+      try {
+        const preparo = await edge.evaluate(`(async () => {
+          const S = '${S}';
+          const salvo = { mensagens: game.messages.map(m => m.id), dados: CONFIG.Dice.randomUniform, manual: game.settings.get(S, 'rolagemManual'), deathSave: game.settings.get(S, 'deathSave'), avisos: [], aviso: console.warn };
+          window.__c38Morte = salvo;
+          await game.settings.set(S, 'rolagemManual', true);
+          await game.settings.set(S, 'deathSave', 'todos');
+          console.warn = (...args) => { salvo.avisos.push(args.map(a => String(a?.message ?? a)).join(' ')); return salvo.aviso.apply(console, args); };
+          const cena = await Scene.implementation.create({ name: 'Perigos (C38): Death Save', active: false, width: 1000, height: 600, grid: { size: 100, distance: 2, units: 'm' } });
+          salvo.cena = cena.id;
+          const dono = game.users.getName('Jogador');
+          const morre = await Actor.implementation.create({ name: 'Perigos: mortalmente ferido', type: 'personagem', ownership: { default: 0, [dono.id]: 3 }, system: { hp: { value: 0 }, atributos: { body: { valor: 6 } } } });
+          const npc = await Actor.implementation.create({ name: 'Perigos: NPC', type: 'personagem', ownership: { default: 0 }, system: { hp: { value: 30 } } });
+          salvo.atores = [morre.id, npc.id];
+          for (const [ator, x] of [[morre, 100], [npc, 500]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 200 })).toObject()]);
+          const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+          salvo.combate = combate.id;
+          for (const [ator, ini] of [[morre, 20], [npc, 10]]) await combate.createEmbeddedDocuments('Combatant', [{ actorId: ator.id, tokenId: cena.tokens.find(t => t.actorId === ator.id).id, sceneId: cena.id, initiative: ini }]);
+          window.__fila = [[10, 10]];
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          await combate.startCombat();
+          return { ator: morre.id, combate: combate.id, dono: game.system.api.combate.jogadorDe(morre)?.name ?? null };
+        })()`);
+        const janela = `[...foundry.applications.instances.values()].find(app => app.options.classes?.includes('janela-rolagem') && app.rendered && /Death Save/.test(app.options.window?.title ?? ''))`;
+        const abriu = await jogador.evaluate(`(async () => { await window.__esperar(() => ${janela}); return Boolean(${janela}); })()`);
+        await edge.evaluate(`(async () => { await game.combats.get('${preparo.combate}')?.delete(); return true; })()`);
+        const fechou = await jogador.evaluate(`(async () => { const app = ${janela}; await app?.close(); return Boolean(app); })()`);
+        const info = await edge.evaluate(`(async () => {
+          const S = '${S}', a = game.actors.get('${preparo.ator}'), salvo = window.__c38Morte;
+          const morte = () => game.messages.contents.find(m => !salvo.mensagens.includes(m.id) && m.getFlag(S, 'morte') === a.uuid);
+          await window.__esperar(() => a.statuses.has(CONFIG.specialStatusEffects.DEFEATED) && morte());
+          await new Promise(r => setTimeout(r, 300));
+          const rolagem = game.messages.contents.find(m => !salvo.mensagens.includes(m.id) && m.getFlag(S, 'deathSave'));
+          return { morto: a.statuses.has(CONFIG.specialStatusEffects.DEFEATED), cartao: Boolean(morte()), deathSave: rolagem?.getFlag(S, 'deathSave') ?? null, fila: window.__fila.length,
+            combate: game.combats.has('${preparo.combate}'), avisos: salvo.avisos.filter(t => /cpr-fieldbook/.test(t)) };
+        })()`);
+        const ok = preparo.dono === 'Jogador' && abriu && fechou && info.morto && info.cartao && info.deathSave?.passou === false && info.fila === 0 && !info.combate && !info.avisos.length;
+        return [ok, JSON.stringify({ preparo, abriu, fechou, info })];
+      } finally {
+        await jogador.evaluate(`(async () => {
+          for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close();
+          await game.settings.set('${S}', 'rolarDireto', ${JSON.stringify(rolarDiretoDoJogador)});
+          return true;
+        })()`).catch(() => null);
+        await edge.evaluate(`(async () => {
+          const S = '${S}', s = window.__c38Morte;
+          if (!s) return true;
+          console.warn = s.aviso; CONFIG.Dice.randomUniform = s.dados; window.__fila = [];
+          await game.combats.get(s.combate)?.delete();
+          await game.scenes.get(s.cena)?.delete();
+          for (const id of s.atores ?? []) await game.actors.get(id)?.delete();
+          const novas = game.messages.filter(m => !s.mensagens.includes(m.id)).map(m => m.id);
+          if (novas.length) await ChatMessage.implementation.deleteDocuments(novas);
+          await game.settings.set(S, 'rolagemManual', s.manual);
+          await game.settings.set(S, 'deathSave', s.deathSave);
+          delete window.__c38Morte;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

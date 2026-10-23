@@ -35,9 +35,9 @@ function aoAbrirCena() {
 // O fogo: no fim do turno de quem está em chamas, o dano no HP, com o aviso no chat. O do Hellhound é 2 (a wiki); o do
 // quickhack Overheat (neuroport.mjs), 4, que o efeito guarda (flags.fogo.dano), e quem o apaga é uma Ação no turno dele.
 async function queimar(ator, nome) {
-  const fogo = ator.effects.find(efeito => efeito.statuses.has(STATUS_EM_CHAMAS))?.getFlag(SISTEMA, 'fogo');
+  const fogo = ator.effects.find(efeito => efeito.active && efeito.statuses.has(STATUS_EM_CHAMAS))?.getFlag(SISTEMA, 'fogo');
   const dano = Number(fogo?.dano) || 2;
-  const hp = Math.max(0, ator.system.hp.value - dano);
+  const hp = ator.system.hp.value - dano;
   await ator.update({ 'system.hp.value': hp });
   await ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ actor: ator }),
@@ -138,9 +138,10 @@ export function registrarNet() {
   Hooks.on('updateCombat', (combate, mudancas) => {
     JanelaDaNet.redesenhar();
     if (!souOMestreAtivo() || !combate.started || !('turn' in mudancas || 'round' in mudancas)) return;
-    // O fogo do Hellhound (a wiki: 2 no HP por turno): quem acabou o turno em chamas queima.
+    // O fogo do Hellhound (a wiki: 2 no HP por turno): quem acabou o turno em chamas queima. O da munição e o ativo dos
+    // perigos do ambiente (perigos.mjs) queimam pelos deles.
     const anterior = combate.combatants.get(combate.previous?.combatantId);
-    if (anterior?.actor?.statuses.has(STATUS_EM_CHAMAS) && !anterior.actor.effects.some(e => e.getFlag(SISTEMA, 'municao')?.tipo === 'fogo')) queimar(anterior.actor, anterior.name).catch(falha => console.warn(`${SISTEMA} | NET: fogo`, falha));
+    if (anterior?.actor?.statuses.has(STATUS_EM_CHAMAS) && !anterior.actor.effects.some(e => e.getFlag(SISTEMA, 'municao')?.tipo === 'fogo') && !anterior.actor.effects.some(e => e.active && e.getFlag(SISTEMA, 'perigo') && e.statuses.has(STATUS_EM_CHAMAS))) queimar(anterior.actor, anterior.name).catch(falha => console.warn(`${SISTEMA} | NET: fogo`, falha));
     const token = combate.combatant?.token;
     const conexao = token && conexaoDoToken(token);
     if (conexao) pedir('zerarAcoes', { tile: conexao.tile, token: token.id }).catch(falha => console.warn(`${SISTEMA} | NET: Ações NET do turno`, falha));
