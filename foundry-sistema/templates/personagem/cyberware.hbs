@@ -21,7 +21,7 @@ EMP); à direita, o cyberware. --}}
 
     <div class="coluna-principal">
       <section class="painel corte">
-        <div class="titulo">CYBERWARE<span>{{cyberInstalado.length}} DE {{cyberwares.length}} INSTALADO{{#unless (eq cyberInstalado.length 1)}}S{{/unless}}{{#if editavel}}<button type="button" class="criar" data-action="criarItem" data-tipo="cyberware" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar cyberware">+</button>{{/if}}</span></div>
+        <div class="titulo">CYBERWARE<span>{{cyberInstalado.length}} DE {{cyberwares.length}} INSTALADO{{#unless (eq cyberInstalado.length 1)}}S{{/unless}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="cyberware" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar cyberware">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each cyberwares}}
           <li data-item-id="{{id}}" class="{{#unless sistema.instalado}}guardada{{/unless}}{{#if opcao}} opcao{{/if}}">

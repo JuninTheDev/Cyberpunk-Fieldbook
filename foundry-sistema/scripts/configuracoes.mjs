@@ -6,6 +6,10 @@ export const config = chave => game.settings.get(SISTEMA, chave);
 export function registrarConfiguracoes() {
   const registrar = (chave, dados) => game.settings.register(SISTEMA, chave, { config: true, scope: 'world', ...dados });
   // As chaves e os textos são os de foundry-fluxo-de-combate/scripts/fluxo-de-combate.mjs, no init.
+  registrar('jogadoresCriamItens', {
+    name: 'Jogadores podem criar itens', hint: 'Permite criar itens em branco nas fichas de personagem e capanga que o jogador pode editar. O mestre pode sempre criar; os contêineres usam suas próprias permissões.',
+    type: Boolean, default: false
+  });
   registrar('ativo', {
     name: 'Resolver os ataques', hint: 'Todo ataque com alvo marcado (pela ficha, pelo Token Action HUD ou pelo Combat HUD) pergunta a defesa ao alvo e aplica o dano. Desligado, o sistema funciona como sempre.',
     type: Boolean, default: true

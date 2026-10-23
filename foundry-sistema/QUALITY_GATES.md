@@ -46,6 +46,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Opção de criação e ficha aberta (C34.2):** esconder o botão não basta; a ação relê a opção e a permissão. O G4
+  revoga a opção com o botão antigo ainda desenhado, clica no botão real das fichas de personagem e capanga e confere
+  também o observador. Nas mutações de navegador, rode um controle sem mutação e confira que a falha é a esperada,
+  não uma falha de ambiente: os quatro templates só podem mudar a quantidade de botões indevidos.
+
 - **Paliativo e efeitos anteriores (C19):** guarde os IDs dos efeitos ativos que a correção desliga. O "Voltou" só
   restaura esses IDs ainda existentes; religar todos altera efeitos desligados antes e os acrescentados depois. A
   marca antiga sem lista continua aceita. O G4 também confere o Death Save sem apagar a regra do item.

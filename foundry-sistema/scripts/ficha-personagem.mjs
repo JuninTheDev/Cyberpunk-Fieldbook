@@ -6,6 +6,7 @@ import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLA
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
 import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
+import { criarItemNaFicha, podeCriarItemNaFicha } from './criar-item.mjs';
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { avancarComIp } from './avanco.mjs';
@@ -13,7 +14,7 @@ import { abrirExtrato } from './extrato.mjs';
 import { levantar, movimentoDe } from './estados.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
-import { apagarComInstalados, descarregaAoApagar, divisaoDaPilha, nomeDoItemNovo, passaNaBusca } from './regras-inventario.mjs';
+import { apagarComInstalados, descarregaAoApagar, divisaoDaPilha, passaNaBusca } from './regras-inventario.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
 import { trocarMunicao } from './painel/acoes.mjs';
 import { roleDaWiki } from './dados.mjs';
@@ -392,7 +393,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     return Object.assign(contexto, {
       podeAtualizarWiki: game.user.isGM && Boolean(ator.getFlag(SISTEMA, 'wiki')) && !ator.isToken,
-      ator, sistema: s, fonte, editavel: this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
+      ator, sistema: s, fonte, editavel: this.isEditable, podeCriarItem: this.isEditable && podeCriarItemNaFicha(ator), versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
       // A Sorte usada na sessão (as maquetes do usuário, "Luck used"): o máximo menos a que resta.
       sorteUsada: Math.max(0, s.sorte.max - s.sorte.value),
       roles: ROLES,
@@ -771,8 +772,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // "+" do contêiner.
   static async #criarItem(evento, alvo) {
     const tipo = alvo.dataset.tipo;
-    if (!this.isEditable || !(tipo in CONFIG.Item.dataModels)) return null;
-    const [criado] = await this.actor.createEmbeddedDocuments('Item', [{ name: nomeDoItemNovo(tipo, game.i18n.localize(`TYPES.Item.${tipo}`)), type: tipo }]);
+    if (!this.isEditable) return null;
+    const criado = await criarItemNaFicha(this.actor, tipo);
     return criado?.sheet.render(true) ?? null;
   }
   // A correção rápida, o tratamento e o "Voltou" da lesão (tratamento.mjs, pela wiki).

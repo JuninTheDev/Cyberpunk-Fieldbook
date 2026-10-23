@@ -6,6 +6,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## O que já faz
 
+- **Criação de itens na ficha (C34.2, ciclo 158):** a configuração do mundo **Jogadores podem criar itens**, desligada
+  por padrão como no CORE, permite ao dono criar itens em branco nas fichas de personagem e capanga. O mestre pode
+  sempre criar. Desligada, os botões somem e a ação recusa a criação mesmo numa ficha aberta anteriormente. Os
+  contêineres mantêm suas permissões próprias. A exceção do mestre preserva o botão do C32; o padrão desligado vem
+  da configuração `playersCreateInventory` do CORE 0.92.4.
+
 - **Ficha do personagem**, no visual do modelo de ficha da mesa (Cyberpunk 2077: amarelo, ciano e vermelho sobre o escuro, com as fontes Rajdhani e Share Tech Mono embutidas). A ficha é sempre escura, qualquer que seja o tema do Foundry. Tem estas partes:
   - **Cabeçalho:** o retrato, a Role e o Rank (com a lista das 10 Roles do RED da wiki), o nome, o apelido e os indicadores de HP, Sorte (com os botões da Sorte, abaixo, e a Sorte usada na sessão: o máximo menos a que resta, amarela quando já se gastou alguma; ciclo 66), Eurodólares, IP e Reputação (cada um abre o extrato dele, abaixo).
   - **Perícias:** o painel geral, em três colunas.

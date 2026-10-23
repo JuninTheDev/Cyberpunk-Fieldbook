@@ -19,7 +19,7 @@ branco do tipo dela (o C32). --}}
       </section>
 
       <section class="painel corte">
-        <div class="titulo">MUNIÇÃO<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}{{#if editavel}}<button type="button" class="criar" data-action="criarItem" data-tipo="municao" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar munição">+</button>{{/if}}</span></div>
+        <div class="titulo">MUNIÇÃO<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="municao" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar munição">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each municoes}}
           <li class="draggable" data-item-id="{{id}}">
@@ -36,7 +36,7 @@ branco do tipo dela (o C32). --}}
 
     <div class="coluna-principal">
       <section class="painel corte">
-        <div class="titulo">ARMAS<span>EQUIPADA OU GUARDADA{{#if editavel}}<button type="button" class="criar" data-action="criarItem" data-tipo="arma" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar arma">+</button>{{/if}}</span></div>
+        <div class="titulo">ARMAS<span>EQUIPADA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="arma" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar arma">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each armas}}
           <li data-item-id="{{id}}" class="draggable {{#unless sistema.equipada}}guardada{{/unless}}">
@@ -65,7 +65,7 @@ branco do tipo dela (o C32). --}}
       </section>
 
       <section class="painel corte vermelho">
-        <div class="titulo">ARMADURAS<span>VESTIDA OU GUARDADA{{#if editavel}}<button type="button" class="criar" data-action="criarItem" data-tipo="armadura" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar armadura">+</button>{{/if}}</span></div>
+        <div class="titulo">ARMADURAS<span>VESTIDA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="armadura" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar armadura">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each armaduras}}
           <li data-item-id="{{id}}" class="draggable {{#unless equipada}}guardada{{/unless}}">
@@ -82,7 +82,7 @@ branco do tipo dela (o C32). --}}
 
       {{#each inventario}}
       <section class="painel corte">
-        <div class="titulo">{{titulo}}<span>EQUIPADO, CARREGANDO OU GUARDADO{{#if @root.editavel}}<button type="button" class="criar" data-action="criarItem" data-tipo="{{tipo}}" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar {{tipo}}">+</button>{{/if}}</span></div>
+        <div class="titulo">{{titulo}}<span>EQUIPADO, CARREGANDO OU GUARDADO{{#if @root.podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="{{tipo}}" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar {{tipo}}">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each itens}}
           <li data-item-id="{{id}}" class="draggable {{#if guardado}}guardada{{/if}}">
@@ -104,7 +104,7 @@ branco do tipo dela (o C32). --}}
 
       {{#if upgrades.length}}
       <section class="painel corte">
-        <div class="titulo">UPGRADES E ACESSÓRIOS<span>ONDE ESTÁ INSTALADO{{#if editavel}}<button type="button" class="criar" data-action="criarItem" data-tipo="upgrade" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar upgrade">+</button>{{/if}}</span></div>
+        <div class="titulo">UPGRADES E ACESSÓRIOS<span>ONDE ESTÁ INSTALADO{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="upgrade" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar upgrade">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each upgrades}}
           <li data-item-id="{{id}}">
@@ -121,7 +121,7 @@ branco do tipo dela (o C32). --}}
 
       {{#if veiculos.length}}
       <section class="painel corte">
-        <div class="titulo">VEÍCULOS<span>UM EM USO POR VEZ{{#if editavel}}<button type="button" class="criar" data-action="criarItem" data-tipo="veiculo" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar veículo">+</button>{{/if}}</span></div>
+        <div class="titulo">VEÍCULOS<span>UM EM USO POR VEZ{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="veiculo" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar veículo">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each veiculos}}
           <li class="draggable" data-item-id="{{id}}">

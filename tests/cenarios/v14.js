@@ -6740,6 +6740,121 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.nome === 'Jogador' && !info.gm && info.dono && ativo, JSON.stringify({ ...info, ativo })];
     });
 
+    await r.passo('C34.2: criar itens exige a opção atual; botões e ações nas fichas de personagem, capanga e observador', async () => {
+      const anterior = await edge.evaluate("game.settings.get('cpr-fieldbook', 'jogadoresCriamItens')");
+      let ids = [];
+      try {
+        ids = await edge.evaluate(`(async () => {
+          const usuario = game.users.getName('Jogador').id;
+          const atores = [];
+          for (const type of ['personagem', 'capanga']) {
+            atores.push(await Actor.implementation.create({ name: 'C34 criar ' + type, type,
+              ownership: { [usuario]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } }));
+          }
+          atores.push(await Actor.implementation.create({ name: 'C34 observador', type: 'personagem',
+            ownership: { [usuario]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER } }));
+          return atores.map(a => a.id);
+        })()`);
+        const configurar = async valor => {
+          await edge.evaluate(`game.settings.set('cpr-fieldbook', 'jogadoresCriamItens', ${valor}).then(() => true)`);
+          for (let i = 0; i < 50; i++) {
+            if (await jogador.evaluate(`game.settings.get('cpr-fieldbook', 'jogadoresCriamItens') === ${valor}`)) return;
+            await jogador.sleep(100);
+          }
+          throw new Error('A configuração não chegou ao jogador');
+        };
+        await configurar(false);
+        const desligado = await jogador.evaluate(`(async () => {
+          const resultados = [];
+          for (const id of ${JSON.stringify(ids)}) {
+            const a = game.actors.get(id);
+            await a.sheet.render({ force: true });
+            const contexto = await a.sheet._prepareContext({});
+            const antes = a.items.size;
+            await a.sheet.options.actions.criarItem.call(a.sheet, {}, { dataset: { tipo: 'lesao' } });
+            resultados.push({ contexto: contexto.podeCriarItem, botoes: a.sheet.element.querySelectorAll('[data-action="criarItem"]').length, igual: a.items.size === antes });
+          }
+          return resultados;
+        })()`);
+        await configurar(true);
+        const ligado = await jogador.evaluate(`(async () => {
+          const esperar = async condicao => { for (let i = 0; i < 50 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+          const resultados = [];
+          for (const id of ${JSON.stringify(ids)}) {
+            const a = game.actors.get(id);
+            await a.sheet.render({ force: true });
+            const contexto = await a.sheet._prepareContext({});
+            const antes = new Set(a.items.map(i => i.id));
+            const botoes = a.sheet.element.querySelectorAll('[data-action="criarItem"]');
+            const botao = a.sheet.element.querySelector('[data-action="criarItem"][data-tipo="lesao"]');
+            if (botao) botao.click();
+            else await a.sheet.options.actions.criarItem.call(a.sheet, {}, { dataset: { tipo: 'lesao' } });
+            const novo = () => a.items.find(i => !antes.has(i.id));
+            if (a.isOwner) await esperar(() => novo()?.sheet.rendered);
+            const item = novo();
+            resultados.push({ contexto: contexto.podeCriarItem, botoes: botoes.length, tipo: item?.type ?? null, aberta: Boolean(item?.sheet.rendered) });
+            await item?.sheet.close();
+            // A ficha do ator fica aberta, com o botão antigo, para o teste da revogação.
+          }
+          return resultados;
+        })()`);
+        await configurar(false);
+        const revogado = await jogador.evaluate(`(async () => {
+          const resultados = [];
+          for (const id of ${JSON.stringify(ids.slice(0, 2))}) {
+            const a = game.actors.get(id);
+            const antes = a.items.size;
+            const aberta = a.sheet.rendered;
+            const botaoAntigo = Boolean(a.sheet.element.querySelector('[data-action="criarItem"]'));
+            await a.sheet.options.actions.criarItem.call(a.sheet, {}, { dataset: { tipo: 'lesao' } });
+            resultados.push({ aberta, botaoAntigo, igual: a.items.size === antes });
+          }
+          return resultados;
+        })()`);
+        const mestre = await edge.evaluate(`(async () => {
+          const resultados = [];
+          for (const id of ${JSON.stringify(ids.slice(0, 2))}) {
+            const a = game.actors.get(id);
+            await a.sheet.render({ force: true });
+            const contexto = await a.sheet._prepareContext({});
+            const antes = new Set(a.items.map(i => i.id));
+            const botoes = a.sheet.element.querySelectorAll('[data-action="criarItem"]').length;
+            await a.sheet.options.actions.criarItem.call(a.sheet, {}, { dataset: { tipo: 'lesao' } });
+            const novo = a.items.find(i => !antes.has(i.id));
+            resultados.push({ contexto: contexto.podeCriarItem, botoes, tipo: novo?.type, aberta: Boolean(novo?.sheet.rendered) });
+            await novo?.sheet.close();
+          }
+          return resultados;
+        })()`);
+        return [desligado.length === 3 && desligado.every(r => !r.contexto && r.botoes === 0 && r.igual)
+          && ligado.length === 3 && ligado.slice(0, 2).every(r => r.contexto && r.botoes > 0 && r.tipo === 'lesao' && r.aberta)
+          && !ligado[2].contexto && ligado[2].botoes === 0 && ligado[2].tipo === null
+          && revogado.length === 2 && revogado.every(r => r.aberta && r.botaoAntigo && r.igual)
+          && mestre.length === 2 && mestre.every(r => r.contexto && r.botoes > 0 && r.tipo === 'lesao' && r.aberta),
+        JSON.stringify({ desligado, ligado, revogado, mestre })];
+      } finally {
+        await jogador.evaluate(`(async () => {
+          for (const id of ${JSON.stringify(ids)}) {
+            const a = game.actors.get(id);
+            for (const item of a?.items ?? []) if (item.sheet.rendered) await item.sheet.close();
+            if (a?.sheet.rendered) await a.sheet.close();
+          }
+          return true;
+        })()`);
+        await edge.evaluate(`(async () => {
+          for (const id of ${JSON.stringify(ids)}) {
+            const a = game.actors.get(id);
+            if (!a) continue;
+            for (const item of a.items) if (item.sheet.rendered) await item.sheet.close();
+            if (a.sheet.rendered) await a.sheet.close();
+            await a.delete();
+          }
+          await game.settings.set('cpr-fieldbook', 'jogadoresCriamItens', ${JSON.stringify(anterior)});
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('jogador: a segunda chance da munição Smart melhorada rola no computador de quem atacou (o Alvo, do jogador), como o dano', async () => {
       // O Alvo (REF 8, sem a perícia), com o Subdermal Grip e a Yukimura com a munição Smart melhorada, atira no Longe
       // (18 m, DV 15 da SMG): d10 2 → 8 + 1 + 2 = 11, errou por 4; a segunda chance, no jogador, d10 5 → 14 + 5 = 19, pega;

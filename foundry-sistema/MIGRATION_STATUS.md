@@ -7800,6 +7800,33 @@ conferiu, rodou os portões e fez o commit.
 - **Próximo:** os itens abertos da Fase 7 (o C34, partes 2 e 3, o C35, o C41 a C44); o C28 e as perguntas abertas são do
   usuário.
 
+### Ciclo 158 (2026-10-23): C34.2, jogadores podem criar itens (sessão Codex)
+
+Commit anterior: `03953bb` (a reserva do C34.2, sobre o ciclo 157). Trabalho numa worktree própria; revisão por outro
+agente, sem editar os arquivos durante as rodadas de G4 e mutações.
+
+- **Referência:** CORE 0.92.4, `modules/system/settings.js:139`, `playersCreateInventory` (mundo, Boolean, false), e os
+  botões em `templates/actor/character/right-pane/cpr-gear.hbs` e `bottom-pane/fight/cpr-criticalInjuries.hbs`.
+- **O que muda:** a opção `jogadoresCriamItens`, o contexto `podeCriarItem` e a ação em `scripts/criar-item.mjs`.
+  Exige dono e ator personagem ou capanga; o mestre dispensa a opção, preservando o botão do C32 (o CORE esconde também
+  o dele quando desligada). A ação relê a configuração em cada chamada e recusa tipos de item inexistentes ou herdados
+  de Object. Mantém os nomes e a abertura da ficha do C32. Contêineres continuam com as permissões próprias do C25.
+- **Portões:** G1, 139 arquivos sem erro; G2, nenhum erro; G3, 406/406 no Node 24; G4 completo, 240/240 em 538 s, sem
+  avisos de compatibilidade nem erros do sistema nos dois navegadores. A rodada anterior também deu 240/240 em 569 s.
+  As execuções anteriores puladas com a mesa ocupada não contaram como portão.
+- **G4 novo:** o jogador clica no botão real de lesão das fichas de personagem e capanga; desligada, nem botão nem
+  criação; ligada, cria e abre o item. O observador não recebe botão nem cria. Revogar com as fichas abertas e os botões
+  antigos ainda desenhados recusa a ação. O mestre cria nos dois tipos mesmo com a opção desligada. Documentos de teste
+  são separados dos atores de combate e removidos ao final.
+- **Mutações:** 11 caíram, com os arquivos restaurados pelo SHA-256: 7 na lógica (dono, tipo de ator, opção ligada e
+  desligada, mestre, proteção da ação e tipo herdado) e 4 no navegador, voltando cada template a mostrar o botão só por
+  ser editável (`bloco-lesoes`, `equipamento`, `cyberware` e `net`). As de navegador usam as cópias instaladas na pasta
+  descartável e o mesmo passo do G4, com controle sem mutação aprovado; a única diferença permitida é o botão indevido.
+- **Revisão:** sem falha funcional encontrada; o cenário foi reforçado para manter a ficha aberta na revogação,
+  executar a ação herdada do capanga e conferir a permissão de observador. A exceção do mestre ficou explícita.
+- **Próximo:** C34.2 continua reservado para a sessão Codex: lesão repetida, perícias do capanga por nível/base/total e
+  confirmação ao apagar item. Esta entrega fecha só a opção de criação de itens.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
