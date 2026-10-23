@@ -40,6 +40,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | wiki | os perigos do ambiente (C38): a queda, o fogo, a eletrocução, o afogamento e a asfixia, o veneno, a droga como arma e a radiação | portados no ciclo 156 (sessão Junin, com o Codex); o CORE 0.92.4 não tem nenhum (ver as dúvidas) |
+| wiki | os veículos fora do dano (C40): a direção sob pressão, as manobras, a batida e desviar a pé; o tipo do veículo | portados no ciclo 157 (sessão Junin, com o Codex); o CORE 0.92.4 não automatiza nenhum (ver as dúvidas) |
 | CORE e wiki | moradia, estilo de vida, moda e Trauma Team (o `lifestyle`; C22) | portados no ciclo 140: os campos, a importação da wiki e da mesa, a ficha "Na mesa" e o "Pagar o mês" (a regra do criador da wiki) |
 | CORE | o `/red` no chat, a DV no HUD do token e na régua, a iniciativa crítica (C26, partes 1 a 3) | portados no ciclo 144 (o `/red` soma todos os modificadores; ver as dúvidas) |
 | wiki e CORE | a terapia e a ciberpsicose (C21) | portadas no ciclo 145: a terapia pelo Medtech, o vício tirado por um ano, o estado mental e o aviso, a Humanidade negativa (ver as dúvidas) |
@@ -152,6 +153,26 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   o Lifepath e os efeitos pelo uso.
 
 ## Dúvidas de regra e discrepâncias
+
+- **C40, os veículos fora do dano (2026-10-23, sessão Junin, com o Codex):** a fonte é só a wiki (`system-rules.js:538`,
+  "Veículos", p. 189–192): o CORE 0.92.4 não automatiza a direção, as manobras nem a batida. As decisões:
+  - **do usuário (2026-10-23):** o Traumatismo Cervical da batida vem com os +5 direto no HP (como a Perna Quebrada da
+    queda); a direção sob pressão é cobrada sozinha, no começo do turno de quem dirige, com o jogador rolando no
+    computador dele; e a batida entra na janela de perigos: os tokens selecionados estão no veículo que bateu, e os alvos
+    marcados (T) são o que foi atingido;
+  - **o tipo do veículo** (terrestre, aéreo ou marítimo, para a perícia de controle e as manobras do aéreo) é um campo
+    novo do item. Vazio, vale o nome em inglês dos 14 veículos do CORE (os da família do Nomad são os mesmos) e, sem
+    nada, terrestre;
+  - **a soma "REF + perícia"** é a do `partesDaPericia` (com as penalidades e os situacionais ligados, como a esquiva da
+    ficha). O controle vem depois do Death Save e do "Sem ar" do turno, uma vez por turno;
+  - **perder o controle** só dá o cartão, com o botão "Batida" do mestre: a wiki não diz o que acontece;
+  - **a batida:** cada veículo e cada pessoa a pé rolam os próprios 6d6; o veículo pelo SDP menos o SP (como o C15); a
+    pessoa a pé pela armadura (como a queda), depois de falhar o DEX + Evasão contra DV13. O passageiro (no veículo, sem
+    dirigir) só ganha a lesão; quem já tem o Traumatismo Cervical não ganha outro nem os +5;
+  - **um erro no meio** (o token apagado durante a rolagem de alguém) vira uma nota na linha dele; o cartão sai do mesmo
+    jeito, com o Desfazer do que aconteceu. Vale também para os perigos do C38;
+  - **fica de fora:** as mãos no volante e os Plugs de Interface, o topo da iniciativa e o MOVE do veículo (o C15 deixou
+    com o mestre). E o Death Save do turno ainda não roda para o combatente sem token (só pelo ator), como antes do C38.
 
 - **C38, os perigos do ambiente (2026-10-23, sessão Junin, com o Codex):** a fonte é só a wiki (`system-rules.js:555-563`,
   "Outras formas de se ferir", p. 180–181): o CORE 0.92.4 não tem nenhum destes perigos (só a munição de veneno). As
@@ -7730,6 +7751,54 @@ vezes; a sessão Junin conferiu, rodou os portões e as mutações e fez o commi
   nas dúvidas.
 - **Próximo:** os itens abertos da Fase 7 (o C34, partes 2 e 3, o C35 e o C40 a C44); o C28 e as perguntas abertas são
   do usuário.
+
+### Ciclo 157 (2026-10-23): o C40, os veículos fora do dano (sessão Junin, com o Codex)
+
+Commit anterior: `aa0b24a` (a reserva do C40, sobre o `06568c8`, o ciclo 156). O código e os testes saíram de um worker
+do Claude, numa worktree própria e sem commit; o Codex (`codex exec`, só leitura) revisou duas vezes; a sessão Junin
+conferiu, rodou os portões e fez o commit.
+
+- **Referência:** a wiki, `system-rules.js:538` ("Veículos", p. 189–192). O CORE 0.92.4 não automatiza nada disto.
+- **O que muda:**
+  - **`scripts/regras-veiculos.mjs`:** as contas puras: o tipo do veículo (o campo ou os 14 nomes do CORE), a perícia de
+    controle pelo tipo, a direção sob pressão (9 ou menos rola DV10), as manobras e as DVs (o pouso e a acrobacia só no
+    aéreo), o 6d6 da batida, o Traumatismo Cervical e a DV13 de desviar;
+  - **`scripts/direcao.mjs` (novo):** o controle no começo do turno (na fila do ator, com a marca do turno; o jogador rola
+    no computador dele), a manobra (a janela, conferida de novo antes e depois de rolar), os cartões com o botão
+    "Batida" do mestre e a API `game.system.api.veiculos`;
+  - **`scripts/perigos.mjs`:** a "Batida de veículo" na janela (as listas "No veículo" e "Atingidos", o `aplicar` com
+    `atingidos`, o Desfazer do SDP e da ablação pela diferença); cada ator protegido por um `try/catch`, relido depois
+    das rolagens; o `momentoDoTurno` também pelo ator do combatente sem token;
+  - **`dados.mjs`, `ficha-item.mjs` e o `item.hbs`:** o campo `tipo` do veículo ("Pelo nome", "Terrestre", "Aéreo",
+    "Marítimo"), sem migração;
+  - **`ficha-personagem.mjs` e o `equipamento.hbs`:** o botão "Manobra", ao lado do "Dirigir";
+  - **`turnos.mjs` e `sistema.mjs`:** o controle no começo do turno e a API.
+- **Testes:**
+  - **G3:** `direcao.test.mjs` (6 testes: o tipo pelos 14 nomes e pelo campo, a perícia, o 9 e o 10, as manobras contra
+    a tabela da própria wiki, a batida e o desvio) e um em `perigos.test.mjs` (o `/perigo batida`). O inventário do
+    `mesa.test.mjs` ganhou o `direcao.mjs` (a manobra rola com o modo);
+  - **G4:** 6 passos novos, depois dos do C38: a direção sob pressão (o 9 e o 10, passa e falha, uma vez por turno, o botão
+    Batida); a manobra pela ficha (o botão, o aéreo e o terrestre, o "Dirigir" desligado com a janela aberta); a batida (o
+    SDP com o SP, os +5, a lesão repetida, a pessoa a pé que desvia e a que não, o erro no meio, o Desfazer diferencial); a
+    batida pela janela; o momento do turno (o combate que anda durante um tick, o combatente sem token); e o jogador (o
+    controle, o desvio e a manobra no computador dele, com a janela; o personagem apagado com a janela da Evasão aberta).
+- **Portões:** G1, 191 arquivos sem erro; G2, nenhum erro; G3, 404/404; G4 completo, 239/239 (570 s), com a checagem dos
+  dois navegadores sem avisos ou erros de JS.
+- **Mutações:** 54 caíram, uma por vez, com o arquivo devolvido pelo md5: 20 no G3 (o limite 9 e 10, a DV10, os tipos
+  pelos nomes, o campo, as perícias, as DVs das manobras, o 6d6, a DV13, a lesão e a Evasão) e 34 no G4 focado (o
+  controle, a manobra, a batida, a janela, o jogador, o `try/catch`, o `aindaNaMesa`, o `oMesmoControle`, o combatente
+  sem token, o momento capturado, os atingidos pela janela e o Desfazer diferencial). Uma sobreviveu: o "uma vez por
+  veículo" da batida. O veículo é item do próprio ator, e a lista já não repete o ator, então o trecho saiu do código.
+- **A revisão do Codex:**
+  - a primeira não achou erro de regra. Ela achou o ator apagado durante a Evasão (a aplicação parava sem cartão), a
+    manobra com o controle vencido, o combatente sem token e quatro testes fracos (os atingidos pela janela, o jogador
+    com a janela, o momento capturado e o Desfazer diferencial);
+  - a segunda: a segunda confirmou seis dos sete e achou um passo do G4 que podia esperar sem fim pela janela do jogador (ganhou
+  o prazo de 10 s). O que fica: o controle e o desvio do jogador são testados com o "Rolar direto" (eles usam o pedido da
+  resistência da munição; a janela é testada pela manobra), e uma falha dentro do `receberDano` depois de gravar o HP (o
+  servidor recusando a ablação) fica sem Desfazer, como em qualquer dano.
+- **Próximo:** os itens abertos da Fase 7 (o C34, partes 2 e 3, o C35, o C41 a C44); o C28 e as perguntas abertas são do
+  usuário.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

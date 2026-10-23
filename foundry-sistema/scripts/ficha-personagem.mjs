@@ -25,6 +25,7 @@ import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { alcanceDoJackIn, bonusDeRole, custoMensalDeMoradia, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
+import { manobra } from './direcao.mjs';
 import { armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 import { alternarItemFavorito, alternarPericiaFavorita, arrastoDaPericia, FLAG_FAVORITAS, FLAG_FAVORITO, listaCurta, perguntarLocalMirado } from './macros.mjs';
 import { ESTADOS_MENTAIS, estadoMental, fazerTerapia, TRACOS_DE_HARE } from './terapia.mjs';
@@ -126,6 +127,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       descarregar: FichaPersonagem.#descarregar,
       usarVeiculo: FichaPersonagem.#usarVeiculo,
       dirigirVeiculo: FichaPersonagem.#dirigirVeiculo,
+      manobra: FichaPersonagem.#manobra,
       prepararArmaVeicular: FichaPersonagem.#prepararArmaVeicular,
       prepararSorte: FichaPersonagem.#prepararSorte,
       abrirExtrato: FichaPersonagem.#abrirExtrato,
@@ -667,6 +669,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return item && this.actor.usarVeiculo(this.actor.veiculoAtivo?.id === item.id ? '' : item.id);
   }
   static #dirigirVeiculo() { return this.actor.dirigirVeiculo(!this.actor.system.dirigindo); }
+  // A manobra de quem dirige (o C40, direcao.mjs): a janela das manobras do tipo do veículo e a rolagem.
+  static #manobra(evento) { return manobra(this.actor, null, { perguntar: comJanela(evento) }); }
   static #prepararArmaVeicular(evento, alvo) { return this.#item(alvo)?.prepararArmaVeicular(); }
   // Sorte: um ponto a mais ou a menos para o próximo teste; no começo da sessão, volta ao máximo.
   static #prepararSorte(evento, alvo) { return this.actor.prepararSorte(this.actor.sortePreparada + Number(alvo.dataset.delta)); }

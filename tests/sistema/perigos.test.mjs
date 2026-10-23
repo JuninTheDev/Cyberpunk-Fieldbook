@@ -8,6 +8,7 @@ import {
   contarCyberpernas, danoDaRadiacao, danoDoFogo, drogaDe, fogoQueVale, folegoEmMinutos, lerComandoPerigo, nivelValido, PERIGOS, quedaDe, superou, venenoDe,
   DANO_DA_ELETROCUCAO, DV_DA_QUEDA, LEMBRETE_DA_QUEDA, PERICIA_DA_QUEDA, PERICIA_DO_VENENO
 } from '../../foundry-sistema/scripts/regras-perigos.mjs';
+import { DANO_DA_BATIDA, DV_DESVIAR_A_PE } from '../../foundry-sistema/scripts/regras-veiculos.mjs';
 
 const wiki = fs.readFileSync(new URL('../../system-rules.js', import.meta.url), 'utf8');
 const linhaDaWiki = fonte => {
@@ -117,4 +118,17 @@ test('o /perigo: os argumentos preenchem a janela; o nível que não existe fica
   assert.equal(lerComandoPerigo('fogo'), null);
   assert.equal(nivelValido('fogo', 'alto'), 'brando');
   assert.equal(nivelValido('queda', 'alto'), '');
+});
+
+test('a batida de veículo (o C40; p. 189–192) na janela dos perigos: sem níveis, o /perigo batida e os 6d6 da wiki', () => {
+  assert.deepEqual(PERIGOS.batida, { nome: 'Batida de veículo', niveis: {}, batida: true, pagina: 'p. 189–192' });
+  assert.equal(nivelValido('batida', 'forte'), '');
+  assert.deepEqual(lerComandoPerigo('/perigo batida'), { perigo: 'batida', nivel: '', metros: null });
+  assert.deepEqual(lerComandoPerigo('/perigo colisão'), { perigo: 'batida', nivel: '', metros: null });
+  // Só a batida tem as duas listas (o veículo e os atingidos).
+  assert.deepEqual(Object.entries(PERIGOS).filter(([, p]) => p.batida).map(([id]) => id), ['batida']);
+  assert.match(wiki, /<b>Batida:<\/b> 6d6 no veículo e no que foi atingido, e todos os envolvidos sofrem a lesão Traumatismo Cervical\./);
+  assert.equal(DANO_DA_BATIDA, '6d6');
+  assert.equal(superou(13, DV_DESVIAR_A_PE), false);
+  assert.equal(superou(14, DV_DESVIAR_A_PE), true);
 });

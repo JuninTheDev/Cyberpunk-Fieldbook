@@ -11,13 +11,19 @@
 // - queda: 2d6 a cada 10 m (a armadura absorve) e o Atletismo DV15 contra a Perna Quebrada (com os +5 no HP); duas
 //   cyberpernas anulam até 30 m;
 // - veneno e droga: o dono rola WILL + Resistir Tortura/Drogas no computador dele, como a resistência da munição;
-// - radiação: baixa só no cartão; alta e extrema como o fogo (2 e 6 no fim do turno), mas só sai da zona pelo cartão.
+// - radiação: baixa só no cartão; alta e extrema como o fogo (2 e 6 no fim do turno), mas só sai da zona pelo cartão;
+// - batida de veículo (o C40; a wiki, system-rules.js:538, p. 189–192): os tokens selecionados estão no veículo que
+//   bateu, os alvos marcados (T) foram atingidos. O Traumatismo Cervical (com os +5) em todos; 6d6 no veículo de quem
+//   dirige (o SDP menos o SP, uma vez por veículo); quem está a pé desvia com DEX + Evasão contra DV13 ou leva 6d6 no
+//   corpo (a armadura absorve).
 import { jogadorDe, pedir, souOMestreAtivo } from './combate.mjs';
 import { SISTEMA } from './config.mjs';
 import { lesaoCritica } from './lesoes.mjs';
 import { rolarResistencia } from './municoes.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import * as R from './regras-perigos.mjs';
+import * as RV from './regras-veiculos.mjs';
+import { veiculoDirigido } from './veiculos.mjs';
 
 export const STATUS_SEM_AR = 'cprf-sem-ar';
 export const STATUS_ELETROCUTADO = 'cprf-eletrocutado';
@@ -34,7 +40,8 @@ const { DialogV2 } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const comHp = ator => ['personagem', 'capanga'].includes(ator?.type);
 const corpo = ator => Number(ator.system.atributos.body.valor) || 0;
-const temPernaQuebrada = ator => ator.items.some(item => item.type === 'lesao' && item.getFlag(SISTEMA, 'catalogo') === R.PERNA_QUEBRADA_NA_QUEDA);
+const temLesao = (ator, id) => ator.items.some(item => item.type === 'lesao' && item.getFlag(SISTEMA, 'catalogo') === id);
+const temPernaQuebrada = ator => temLesao(ator, R.PERNA_QUEBRADA_NA_QUEDA);
 const cyberpernasDe = ator => R.contarCyberpernas(ator.items.filter(item => item.type === 'cyberware').map(item => ({
   tipo: item.system.tipo, fundacional: item.system.fundacional, instalado: item.system.instalado, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', nome: item.name
 })));
@@ -53,16 +60,27 @@ function tokensDaVez(primeiro = null) {
     : controlados.length ? controlados : [...game.user.targets].map(token => token.document);
   return lista.filter(token => comHp(token?.actor));
 }
+// A batida (o C40): no veículo, os tokens da vez sem a volta para os alvos marcados (o do HUD ou o do cartão primeiro, com
+// os controlados); atingidos, os alvos marcados que não estão no veículo. Um token, ou o ator sem token (o do cartão).
+const controlados = () => (canvas?.tokens?.controlled ?? []).map(token => token.document).filter(token => comHp(token?.actor));
+const marcados = () => [...game.user.targets].map(token => token.document).filter(token => comHp(token?.actor));
+const atorDoToken = token => (token instanceof Actor ? token : token?.actor ?? null);
+const fora = (lista, outros) => lista.filter(token => !outros.some(outro => atorDoToken(outro) === atorDoToken(token)));
+const noVeiculoDaVez = (primeiro = null) => (primeiro ? [primeiro, ...fora(controlados(), [primeiro])] : controlados());
 
 // ---------------- A janela ----------------
 const opcoesDoNivel = (perigo, escolhido) => R.niveisDe(perigo).map(id => `<option value="${id}"${id === escolhido ? ' selected' : ''}>${esc(R.nivelDe(perigo, id).rotulo)}</option>`).join('');
 
 // A janela "Perigo do ambiente" (só o mestre): o perigo, o nível ou os metros, e os tokens da vez. perigo, nivel e metros
-// preenchem a janela (os argumentos do /perigo); tokens: os do HUD. Aplicado, devolve o resumo do aplicar; fechada, null.
+// preenchem a janela (os argumentos do /perigo); tokens: os do HUD (ou o do cartão da direção, na batida). Na batida, a
+// janela mostra os do veículo e os atingidos. Aplicado, devolve o resumo do aplicar; fechada, null.
 export async function abrir({ perigo = '', nivel = '', metros = null, tokens = null } = {}) {
   if (!game.user.isGM) { ui.notifications.warn('Só o mestre aplica um perigo do ambiente.'); return null; }
   const alvos = tokens ?? tokensDaVez();
   if (!alvos.length) { ui.notifications.warn('Perigo do ambiente: selecione os tokens (ou marque os alvos) que o sofrem.'); return null; }
+  const noVeiculo = tokens ?? noVeiculoDaVez();
+  const atingidos = fora(marcados(), noVeiculo);
+  const nomes = lista => (lista.length ? lista.map(token => esc(token.name)).join(', ') : 'ninguém');
   const inicial = R.PERIGOS[perigo] ? perigo : 'fogo';
   const opcoes = Object.entries(R.PERIGOS).map(([id, p]) => `<option value="${id}"${id === inicial ? ' selected' : ''}>${esc(p.nome)}</option>`).join('');
   const escolha = await DialogV2.wait({
@@ -73,8 +91,10 @@ export async function abrir({ perigo = '', nivel = '', metros = null, tokens = n
     content: `<div class="form-group"><label>Perigo <select name="perigo">${opcoes}</select></label></div>
       <div class="form-group" data-campo="nivel"><label>Nível <select name="nivel">${opcoesDoNivel(inicial, R.nivelValido(inicial, nivel))}</select></label></div>
       <div class="form-group" data-campo="metros"><label>Metros <input name="metros" type="number" min="0" step="1" value="${Number(metros) >= 0 && metros !== null ? Number(metros) : 10}"></label></div>
-      <p class="nota">Em: ${alvos.map(token => esc(token.name)).join(', ')}.</p>
-      <p class="nota">${esc(R.PAGINA_DOS_PERIGOS)}</p>`,
+      <p class="nota" data-campo="em">Em: ${alvos.map(token => esc(token.name)).join(', ')}.</p>
+      <div data-campo="batida"><p class="nota" data-lista="noVeiculo">No veículo (os selecionados): ${nomes(noVeiculo)}.</p>
+      <p class="nota" data-lista="atingidos">Atingidos (os alvos marcados): ${nomes(atingidos)}.</p></div>
+      <p class="nota" data-campo="pagina">${esc(R.PAGINA_DOS_PERIGOS)}</p>`,
     buttons: [
       { action: 'aplicar', label: 'Aplicar', icon: 'fa-solid fa-check', default: true, callback: (evento, botao) => ({
         perigo: botao.form.elements.perigo.value, nivel: botao.form.elements.nivel.value, metros: Number(botao.form.elements.metros.value) || 0
@@ -88,6 +108,9 @@ export async function abrir({ perigo = '', nivel = '', metros = null, tokens = n
         const p = campo('perigo').value;
         formulario.querySelector('[data-campo="nivel"]').style.display = R.niveisDe(p).length ? '' : 'none';
         formulario.querySelector('[data-campo="metros"]').style.display = R.PERIGOS[p].metros ? '' : 'none';
+        formulario.querySelector('[data-campo="em"]').style.display = R.PERIGOS[p].batida ? 'none' : '';
+        formulario.querySelector('[data-campo="batida"]').style.display = R.PERIGOS[p].batida ? '' : 'none';
+        formulario.querySelector('[data-campo="pagina"]').textContent = R.PERIGOS[p].pagina ?? R.PAGINA_DOS_PERIGOS;
       };
       campo('perigo').addEventListener('change', () => {
         campo('nivel').innerHTML = opcoesDoNivel(campo('perigo').value, '');
@@ -97,6 +120,7 @@ export async function abrir({ perigo = '', nivel = '', metros = null, tokens = n
     }
   });
   if (!escolha || typeof escolha !== 'object') return null;
+  if (R.PERIGOS[escolha.perigo]?.batida) return aplicar({ perigo: escolha.perigo, atores: noVeiculo, atingidos });
   return aplicar({ ...escolha, atores: alvos });
 }
 
@@ -123,8 +147,8 @@ export function botaoNoHud(app, elemento) {
 
 // ---------------- A aplicação ----------------
 // A resistência pela janela de rolagem do dono (a Sorte e os situacionais), como a da munição (municoes.mjs, o tratador
-// "municao" do combate/socket.mjs); sem dono, ou sem resposta, o mestre rola.
-async function resistir(ator, { pericia, dv, nome }) {
+// "municao" do combate/socket.mjs); sem dono, ou sem resposta, o mestre rola. Também a direção sob pressão (direcao.mjs).
+export async function resistir(ator, { pericia, dv, nome }) {
   const dados = { ator: ator.uuid, pericia, dv, nome };
   const dono = jogadorDe(ator);
   const teste = (dono ? await pedir(dono, 'municao', dados) : null) ?? await rolarResistencia(dados);
@@ -186,6 +210,15 @@ async function acender(ator, linha, { status, chave, dano, de }) {
   return { decisao, atual };
 }
 
+// Depois de esperar uma rolagem (o resistir): o ator lido de novo pelo uuid (o vivo). Apagado no meio (o token tirado da
+// cena), a linha diz isso, e o perigo para nele (null).
+function aindaNaMesa(ator, linha) {
+  const atual = vivo(ator);
+  if (comHp(atual)) return atual;
+  linha.notas.push(`${ator.name} saiu da mesa durante a rolagem: o perigo parou aqui.`);
+  return null;
+}
+
 const APLICAR = {
   async fogo(ator, linha, { nivel }) {
     const n = R.nivelDe('fogo', nivel);
@@ -219,11 +252,14 @@ const APLICAR = {
     ctx.rolagens.push(roll);
     const resumo = await danoNoCorpo(ator, roll.total);
     // O Desfazer leva só a perda do impacto e a dos +5: o que mudou no HP enquanto se esperava o Atletismo (um ataque no
-    // meio) não entra.
+    // meio) não entra. O do impacto já vale se o resto não terminar.
     let bonus = 0;
+    linha.desfazer.dano = danoParaDesfazer(resumo, resumo.hpAntes - resumo.hpDepois);
     linha.notas.push(`Caiu ${ctx.metros} m: ${textoDoDano(queda.formula, roll.total, resumo)}`);
     const teste = await resistir(ator, { pericia: R.PERICIA_DA_QUEDA, dv: R.DV_DA_QUEDA, nome: 'Queda: Atletismo contra a Perna Quebrada' });
     linha.teste = teste;
+    ator = aindaNaMesa(ator, linha);
+    if (!ator) return;
     if (!teste) linha.notas.push('Sem o teste de Atletismo: o mestre decide a Perna Quebrada.');
     else if (teste.passou) linha.notas.push(`Atletismo ${teste.total} contra DV${teste.dv}: evitou a Perna Quebrada.`);
     else if (temPernaQuebrada(ator)) linha.notas.push(`Atletismo ${teste.total} contra DV${teste.dv}: falhou, mas já tinha a Perna Quebrada (sem lesão nova e sem os +${R.BONUS_DA_LESAO}).`);
@@ -243,6 +279,8 @@ const APLICAR = {
     const n = R.nivelDe('veneno', ctx.nivel);
     const teste = await resistir(ator, { pericia: R.PERICIA_DO_VENENO, dv: n.dv, nome: n.nome });
     linha.teste = teste;
+    ator = aindaNaMesa(ator, linha);
+    if (!ator) return;
     if (!teste) { linha.notas.push('Sem a rolagem de resistência.'); return; }
     if (teste.passou) { linha.notas.push(`Resistência ${teste.total} contra DV${n.dv}: resistiu.`); return; }
     const roll = await new Roll(n.dano).evaluate();
@@ -266,40 +304,101 @@ const APLICAR = {
       ? `Já na radiação (${atual} no HP por turno): não acumula, vale a maior.`
       : `${n.nome}: ${n.dano} direto no HP no fim de cada turno, enquanto estiver na zona (não se apaga com uma Ação).${decisao === 'trocar' ? ` Tomou o lugar da radiação de ${atual}.` : ''}`);
     linha.botoes.push(botaoDeSaida(ator, STATUS_RADIACAO));
+  },
+  // A batida (o C40): linha.papel diz se o ator estava no veículo que bateu ("veiculo") ou foi atingido ("atingido").
+  async batida(ator, linha, ctx) {
+    const veiculo = veiculoDirigido(ator);
+    if (linha.papel === 'atingido' && !veiculo) {
+      linha.notas.push('Atingido a pé.');
+      const teste = await resistir(ator, { pericia: RV.PERICIA_DE_DESVIAR, dv: RV.DV_DESVIAR_A_PE, nome: 'Batida: desviar do veículo (DEX + Evasão)' });
+      linha.teste = teste;
+      ator = aindaNaMesa(ator, linha);
+      if (!ator) return;
+      if (!teste) { linha.notas.push('Sem o teste de Evasão: o mestre decide.'); return; }
+      if (teste.passou) { linha.notas.push(`Evasão ${teste.total} contra DV${teste.dv}: desviou do veículo.`); return; }
+      const roll = await new Roll(RV.DANO_DA_BATIDA).evaluate();
+      ctx.rolagens.push(roll);
+      const resumo = await danoNoCorpo(ator, roll.total);
+      linha.desfazer.dano = danoParaDesfazer(resumo, resumo.hpAntes - resumo.hpDepois);
+      linha.notas.push(`Evasão ${teste.total} contra DV${teste.dv}: falhou. ${textoDoDano(RV.DANO_DA_BATIDA, roll.total, resumo)}`);
+      const bonus = await lesaoDaBatida(ator, linha);
+      linha.desfazer.dano = danoParaDesfazer(resumo, resumo.hpAntes - resumo.hpDepois + bonus);
+      return;
+    }
+    linha.notas.push(linha.papel === 'atingido' ? `Atingido, dirigindo ${veiculo.name}.` : veiculo ? `No veículo, dirigindo ${veiculo.name}.` : 'No veículo, sem dirigir.');
+    if (veiculo) await baterOVeiculo(veiculo, linha, ctx);
+    const bonus = await lesaoDaBatida(ator, linha);
+    if (bonus) linha.desfazer.dano = { perdeu: bonus };
   }
 };
 
+// Os 6d6 da batida no veículo (o receberDanoVeicular: o SDP menos o SP, com a ablação). O veículo é item do próprio ator, e
+// a lista do aplicar não repete o ator: cada veículo leva o dano uma vez.
+async function baterOVeiculo(veiculo, linha, ctx) {
+  const roll = await new Roll(RV.DANO_DA_BATIDA).evaluate();
+  ctx.rolagens.push(roll);
+  const conta = await veiculo.receberDanoVeicular({ dano: roll.total });
+  if (!conta) { linha.notas.push(`${veiculo.name}: o dano no veículo não entrou.`); return; }
+  linha.desfazer.veiculos.push({ veiculo: veiculo.uuid, perdeu: conta.perdeu, ablado: conta.ablado });
+  linha.notas.push(`${veiculo.name}: ${RV.DANO_DA_BATIDA}: ${roll.total} contra SP ${conta.sp}: ${conta.passou ? `perdeu ${conta.perdeu} de SDP (${conta.antes} → ${conta.depois})` : 'a blindagem segurou'}${conta.ablado ? `; a blindagem perdeu ${conta.ablado} de SP` : ''}.`);
+}
+
+// O Traumatismo Cervical da batida, com os +5 direto no HP (a decisão do usuário, como a Perna Quebrada da queda); quem já
+// o tem não ganha outro nem os +5. Devolve o HP que os +5 tiraram.
+async function lesaoDaBatida(ator, linha) {
+  if (temLesao(ator, RV.LESAO_DA_BATIDA)) { linha.notas.push(`Já tinha o Traumatismo Cervical: sem lesão nova e sem os +${R.BONUS_DA_LESAO}.`); return 0; }
+  const feita = await lesaoCritica(ator, { id: RV.LESAO_DA_BATIDA, falar: false });
+  if (!feita?.item) { linha.notas.push('O Traumatismo Cervical não entrou na ficha.'); return 0; }
+  linha.desfazer.lesoes.push(feita.item.id);
+  linha.lesao = feita.nome;
+  const { hpAntes, hpDepois } = await danoDireto(ator, R.BONUS_DA_LESAO);
+  linha.notas.push(`Lesão crítica: ${feita.nome}, +${R.BONUS_DA_LESAO} direto no HP (${hpAntes} → ${hpDepois}).`);
+  return hpAntes - hpDepois;
+}
+
 const botaoDeApagar = ator => `<button type="button" data-cprf-acao="apagarFogo" data-ator="${ator.uuid}">Apagar fogo (uma Ação)</button>`;
 const botaoDeSaida = (ator, status) => `<button type="button" data-cprf-perigo="tirar" data-estado="${status}" data-ator="${ator.uuid}">${SAIDA[status]}</button>`;
-const temOQueDesfazer = entrada => Boolean(entrada.dano || entrada.estados.length || entrada.trocados.length || entrada.lesoes.length);
+const temOQueDesfazer = entrada => Boolean(entrada.dano || entrada.estados.length || entrada.trocados.length || entrada.lesoes.length || entrada.veiculos?.length);
 
 // Aplica um perigo sem a janela (a macro, o G4 e a janela): perigo (as chaves de regras-perigos.PERIGOS), nivel, metros (a
-// queda) e atores (Actor, Token, TokenDocument ou uuid). Só o mestre ativo. Devolve o resumo por ator, com o id do cartão.
-export async function aplicar({ perigo, nivel = '', metros = 0, atores = [] } = {}) {
+// queda) e atores (Actor, Token, TokenDocument ou uuid). Na batida, atores são os do veículo que bateu e atingidos, o que
+// foi atingido (quem está nas duas listas fica só no veículo). Só o mestre ativo. Devolve o resumo por ator, com o id do
+// cartão.
+export async function aplicar({ perigo, nivel = '', metros = 0, atores = [], atingidos = [] } = {}) {
   if (!souOMestreAtivo()) { ui.notifications.warn('Só o mestre ativo aplica um perigo do ambiente.'); return null; }
   const regra = R.PERIGOS[perigo];
   if (!regra) { ui.notifications.warn(`Perigo do ambiente desconhecido: ${perigo}.`); return null; }
   const lista = [];
-  for (const alvo of [atores].flat()) {
-    const ator = await atorDe(alvo);
-    if (comHp(ator) && !lista.includes(ator)) lista.push(ator);
+  const papeis = new Map();
+  for (const [papel, alvos] of [['veiculo', atores], ['atingido', regra.batida ? atingidos : []]]) {
+    for (const alvo of [alvos].flat()) {
+      const ator = await atorDe(alvo);
+      if (comHp(ator) && !lista.includes(ator)) { lista.push(ator); papeis.set(ator, papel); }
+    }
   }
   if (!lista.length) { ui.notifications.warn('Perigo do ambiente: selecione os tokens (ou marque os alvos) que o sofrem.'); return null; }
   const ctx = { perigo, nivel: R.nivelValido(perigo, nivel), metros: Math.max(0, Number(metros) || 0), rolagens: [], linhas: [] };
   for (const ator of lista) {
-    const linha = { ator, hpAntes: null, notas: [], botoes: [], teste: null, lesao: null,
-      desfazer: { ator: ator.uuid, dano: null, estados: [], trocados: [], lesoes: [] } };
-    // Na fila do ator: o perigo lê os efeitos e o HP que a aplicação anterior no mesmo ator deixou.
+    const linha = { ator, papel: papeis.get(ator), hpAntes: null, notas: [], botoes: [], teste: null, lesao: null,
+      desfazer: { ator: ator.uuid, dano: null, estados: [], trocados: [], lesoes: [], veiculos: [] } };
+    // Na fila do ator: o perigo lê os efeitos e o HP que a aplicação anterior no mesmo ator deixou. Um erro no meio (o
+    // ator apagado durante a rolagem) fica numa nota da linha: os outros seguem, e o cartão sai com o Desfazer do que já
+    // aconteceu.
     await naFila(filasDosAtores, ator.uuid, async () => {
       linha.hpAntes = ator.system.hp.value;
-      await APLICAR[perigo](ator, linha, ctx);
+      try {
+        await APLICAR[perigo](ator, linha, ctx);
+      } catch (erro) {
+        console.warn(`${SISTEMA} | perigo`, erro);
+        linha.notas.push(`Não terminou: ${erro?.message ?? erro}`);
+      }
     });
     ctx.linhas.push(linha);
   }
   const titulo = R.nivelDe(perigo, ctx.nivel)?.nome ?? (perigo === 'queda' ? `Queda de ${ctx.metros} m` : regra.nome);
   const desfazer = ctx.linhas.map(linha => linha.desfazer);
   const comDesfazer = perigo === 'afogamento' || desfazer.some(temOQueDesfazer);
-  const content = `<div class="${SISTEMA} cartao perigo"><header><h3>Perigo: ${esc(titulo)}</h3><span class="sabor">${esc(R.PAGINA_DOS_PERIGOS)}</span></header>
+  const content = `<div class="${SISTEMA} cartao perigo"><header><h3>Perigo: ${esc(titulo)}</h3><span class="sabor">${esc(regra.pagina ?? R.PAGINA_DOS_PERIGOS)}</span></header>
     <ol class="alvos">${ctx.linhas.map(linha => `<li class="alvo"><div class="linha"><img src="${esc(linha.ator.token?.texture?.src || linha.ator.img)}" alt=""><b>${esc(linha.ator.name)}</b></div>
       ${linha.notas.map(nota => `<p class="nota">${esc(nota)}</p>`).join('')}${linha.botoes.length ? `<div class="botoes">${linha.botoes.join('')}</div>` : ''}</li>`).join('')}</ol>
     ${perigo === 'queda' ? `<p class="nota">${esc(R.LEMBRETE_DA_QUEDA)}</p>` : ''}
@@ -310,7 +409,8 @@ export async function aplicar({ perigo, nivel = '', metros = 0, atores = [] } = 
   });
   return {
     mensagem: mensagem.id, perigo, nivel: ctx.nivel, metros: ctx.metros,
-    atores: ctx.linhas.map(linha => ({ ator: linha.ator.uuid, nome: linha.ator.name, hpAntes: linha.hpAntes, hpDepois: linha.ator.system.hp.value, teste: linha.teste, lesao: linha.lesao, notas: linha.notas }))
+    atores: ctx.linhas.map(linha => ({ ator: linha.ator.uuid, nome: linha.ator.name, papel: linha.papel, hpAntes: linha.hpAntes, hpDepois: linha.ator.system.hp.value, teste: linha.teste, lesao: linha.lesao,
+      veiculos: linha.desfazer.veiculos, notas: linha.notas }))
   };
 }
 
@@ -332,7 +432,8 @@ export function momentoDoTurno(combate) {
   // Pelo combatente: vale também no combate sem cena (o token da cena só se o combatente já saiu).
   const doFim = combate.combatants.get(anterior?.combatantId)?.actor ?? (anterior?.tokenId ? combate.scene?.tokens.get(anterior.tokenId)?.actor : null) ?? null;
   const combatente = combate.combatant ?? null;
-  const doComeco = combatente?.token?.actor ?? null;
+  // O combatente sem token (posto no combate pelo ator): o ator dele.
+  const doComeco = combatente?.token?.actor ?? combatente?.actor ?? null;
   return {
     fim: doFim ? { ator: doFim, turno: `${combate.id}:${anterior.round}:${anterior.turn}` } : null,
     comeco: combatente ? { ator: doComeco, combatente, turno: `${combate.id}:${combate.round}:${combate.turn}` } : null
@@ -342,8 +443,9 @@ export function momentoDoTurno(combate) {
 // Os ticks de um ator esperam a vez na fila dele (com o aplicar): o fogo e a radiação no mesmo fim de turno leem o HP que
 // o anterior deixou. Antes de gravar, o ator é lido de novo pelo uuid: apagado no meio (a limpeza de um teste, o token
 // tirado da cena), o tick desiste.
+// Também o controle da direção no começo do turno (direcao.mjs).
 const vivo = ator => (ator?.uuid ? fromUuidSync(ator.uuid) : null);
-function naVezDoAtor(ator, tarefa) {
+export function naVezDoAtor(ator, tarefa) {
   if (!comHp(ator)) return Promise.resolve();
   return naFila(filasDosAtores, ator.uuid, () => {
     const atual = vivo(ator);
@@ -422,6 +524,11 @@ async function desfazerJa(mensagem) {
     // Na fila do ator, como os ticks: um tick que grava o HP ao mesmo tempo não apaga o que o Desfazer devolve.
     await naFila(filasDosAtores, ator.uuid, async () => {
       if (entrada.dano) await ator.desfazerDano(entrada.dano);
+      // O SDP e a ablação do veículo (a batida), pela diferença (o desfazerDanoVeicular).
+      for (const batido of entrada.veiculos ?? []) {
+        const veiculo = ator.items.get(batido.veiculo.split('.').at(-1));
+        if (veiculo?.uuid === batido.veiculo) await veiculo.desfazerDanoVeicular(batido);
+      }
       const nossos = entrada.estados.filter(id => ator.effects.has(id));
       if (nossos.length) await ator.deleteEmbeddedDocuments('ActiveEffect', nossos);
       const voltar = nossos.length ? entrada.trocados.filter(efeito => !ator.effects.has(efeito._id)) : [];
@@ -458,7 +565,16 @@ async function tirar(mensagem, { ator: uuid, estado }) {
   return true;
 }
 
-const ACOES = { desfazer, semAr, tirar };
+// "Batida" (o cartão da direção que perdeu o controle, direcao.mjs): a janela já na batida, com o token do motorista (ou o
+// ator, sem token) entre os do veículo, junto dos controlados.
+async function batida(mensagem, { ator: uuid }) {
+  const doc = uuid ? await fromUuid(uuid) : null;
+  const primeiro = doc instanceof Actor ? doc.getActiveTokens(false, true)[0] ?? doc : doc;
+  if (!comHp(atorDoToken(primeiro))) { ui.notifications.warn('Batida: o motorista deste cartão não está mais na mesa.'); return null; }
+  return abrir({ perigo: 'batida', tokens: noVeiculoDaVez(primeiro) });
+}
+
+const ACOES = { desfazer, semAr, tirar, batida };
 // Um clique por vez em cada botão de cada cartão, neste cliente (o cliquesEmAndamento do combate/cartao.mjs).
 const cliquesEmAndamento = new Set();
 export function ligarBotoes(mensagem, html) {

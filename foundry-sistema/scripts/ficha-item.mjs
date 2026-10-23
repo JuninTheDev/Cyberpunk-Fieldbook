@@ -8,6 +8,7 @@ import { ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeD
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
+import { TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
 import { ehArmaDoUpgrade, ehArmaMontadaEmItem, idDaOrigem } from './armas-cyberware.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -134,6 +135,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
         ? (tipo === 'upgrade' ? 'Na arma: ataca pela aba Combate, com ela equipada.' : 'Instalado: ataca pela aba Combate.') : '',
       prepararArma: tipo === 'upgrade' && item.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, item.getFlag(SISTEMA, 'catalogo')),
       janelas: tipo === 'veiculo' ? Object.entries(fonte.janelas).map(([id, janela]) => ({ id, ...janela })) : [],
+      // O tipo do veículo (o C40): "Pelo nome" é o vazio.
+      tiposDeVeiculo: comAtual(TIPOS_DE_VEICULO, tipo === 'veiculo' && fonte.tipo),
       drogaDeAtor: tipo === 'droga' && Boolean(item.actor) ? { sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')) } : null,
       // A lesão de um personagem: a correção rápida e o tratamento (o que ela permite) e se está corrigida.
       lesaoDeAtor: tipo === 'lesao' && Boolean(item.actor) ? { correcao: opcoesDaLesao(fonte, 'correcao').length > 0, tratamento: opcoesDaLesao(fonte, 'tratamento').length > 0, corrigida: Boolean(item.getFlag(SISTEMA, 'corrigida')) } : null,

@@ -52,7 +52,10 @@ export const PERIGOS = {
       alta: { rotulo: 'Alta (como fogo brando)', nome: 'Radiação alta', dano: 2 },
       extrema: { rotulo: 'Extrema (reator vazando; como fogo mortal)', nome: 'Radiação extrema', dano: 6 }
     }
-  }
+  },
+  // A batida de veículo (o C40; a wiki, system-rules.js:538, "Veículos", p. 189–192): os tokens selecionados estão no
+  // veículo que bateu; os alvos marcados (T), o que foi atingido (perigos.mjs). As contas ficam em regras-veiculos.mjs.
+  batida: { nome: 'Batida de veículo', niveis: {}, batida: true, pagina: 'p. 189–192' }
 };
 
 export const nivelDe = (perigo, nivel) => PERIGOS[perigo]?.niveis[nivel] ?? null;
@@ -102,11 +105,12 @@ export function quedaDe(metros, cyberpernas = 0) {
 // Os minutos que segura o fôlego: o BODY.
 export const folegoEmMinutos = body => Math.max(0, Number(body) || 0);
 
-// Os argumentos do /perigo ("/perigo fogo intenso", "/perigo queda 25", "/perigo veneno mortal"): o perigo, o nível e os
-// metros que a janela já traz. Sem o comando: null. Um perigo que não existe fica vazio (a janela abre no primeiro).
+// Os argumentos do /perigo ("/perigo fogo intenso", "/perigo queda 25", "/perigo veneno mortal", "/perigo batida"): o perigo, o nível
+// e os metros que a janela já traz. Sem o comando: null. Um perigo que não existe fica vazio (a janela abre no primeiro).
 const NOMES = {
   fogo: 'fogo', incendio: 'fogo', afogamento: 'afogamento', asfixia: 'afogamento', afogar: 'afogamento', eletrocucao: 'eletrocucao',
-  choque: 'eletrocucao', queda: 'queda', cair: 'queda', veneno: 'veneno', droga: 'droga', radiacao: 'radiacao'
+  choque: 'eletrocucao', queda: 'queda', cair: 'queda', veneno: 'veneno', droga: 'droga', radiacao: 'radiacao',
+  batida: 'batida', colisao: 'batida'
 };
 const semAcento = texto => String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 export function lerComandoPerigo(mensagem) {

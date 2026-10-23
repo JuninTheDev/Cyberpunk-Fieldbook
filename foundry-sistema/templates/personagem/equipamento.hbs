@@ -130,6 +130,7 @@ branco do tipo dela (o C32). --}}
             <span class="detalhe">{{detalhe}}</span>
             <button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="usarVeiculo" data-tooltip="Escolher o veículo em uso; o anterior fica na frota" aria-pressed="{{#if ativo}}true{{else}}false{{/if}}">{{#if ativo}}Em uso{{else}}Usar{{/if}}</button>
             {{#if ativo}}<button type="button" class="alternar {{#if dirigindo}}ligado{{/if}}" data-action="dirigirVeiculo" aria-pressed="{{#if dirigindo}}true{{else}}false{{/if}}">{{#if dirigindo}}Parar de dirigir{{else}}Dirigir{{/if}}</button>{{/if}}
+            {{#if dirigindo}}<button type="button" class="acao" data-action="manobra" data-tooltip="Uma manobra: usa a Ação e a Ação de Movimento; falhar é perder o controle">Manobra</button>{{/if}}
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>
           {{#each armas}}

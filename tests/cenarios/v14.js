@@ -16125,6 +16125,521 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    // ---------- Os veículos fora do dano (o C40; a wiki, system-rules.js:538, "Veículos", p. 189–192) ----------
+    // O motorista (REF 5 + Conduzir Veículo Terrestre 4 = 9; Pilotar Veículo Aéreo 2) dirige o carro (um Compact Groundcar,
+    // SDP 50 e SP 10); o passageiro vai junto, a pé; o outro motorista dirige a van (um Super Groundcar, SDP 50 e SP 0); o
+    // pedestre (DEX 6 + Evasão 4 = 10) usa a Blindagem leve (SP 11). Todos com BODY 20 e WILL 8 (HP 80) e sem dono (o mestre
+    // rola). Os dados pela fila (window.__fila); o combate com o motorista (20) e o outro (10) começa com o "Dirigindo"
+    // desligado. A limpeza espera as filas dos atores (perigos.esperarOsPerigos) e apaga só o que o passo criou.
+    const comVeiculos = teste => edge.evaluate(`(async () => {
+      const S = '${S}';
+      const api = game.system.api;
+      const cat = await api.wiki.carregarCatalogo();
+      const pegar = id => foundry.utils.deepClone(cat[id]);
+      const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+      const pausa = (ms = 800) => new Promise(r => setTimeout(r, ms));
+      const P = await import('/systems/' + S + '/scripts/perigos.mjs');
+      const antes = { dados: CONFIG.Dice.randomUniform, mensagens: game.messages.map(m => m.id), rolarDireto: game.settings.get(S, 'rolarDireto') };
+      const atores = [];
+      let cena, combate;
+      const janelas = () => [...foundry.applications.instances.values()].filter(app => ['perigo-do-ambiente', 'manobra-de-veiculo'].some(c => app.options.classes?.includes(c)));
+      try {
+        await game.settings.set(S, 'rolarDireto', true);
+        window.__fila = [];
+        CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+        const criar = async dados => { const a = await Actor.implementation.create({ ownership: { default: 0 }, ...dados }); atores.push(a); return a; };
+        const veiculo = (modelo, sp) => { const v = pegar(modelo); v.system.sp = sp; return v; };
+        const base = (extra = {}) => ({ hp: { value: 80 }, ...extra, atributos: { body: { valor: 20 }, will: { valor: 8 }, ...(extra.atributos ?? {}) } });
+        const doCarro = veiculo('core_vehicles:compact-groundcar', 10), daVan = veiculo('core_vehicles:super-groundcar', 0);
+        const motorista = await criar({ name: 'Veículos: motorista', type: 'personagem', items: [doCarro], system: base({ atributos: { ref: { valor: 5 } }, pericias: { 'drive-land-vehicle': { nivel: 4 }, 'pilot-air-vehicle': { nivel: 2 } } }) });
+        const passageiro = await criar({ name: 'Veículos: passageiro', type: 'personagem', system: base() });
+        // O outro (REF 8 + Conduzir 6 = 14) dirige sem rolar no começo do turno dele.
+        const outro = await criar({ name: 'Veículos: outro motorista', type: 'personagem', items: [daVan], system: base({ atributos: { ref: { valor: 8 } }, pericias: { 'drive-land-vehicle': { nivel: 6 } } }) });
+        const armadura = pegar('core_armor:light-armorjack-body'); armadura.system.equipada = true;
+        const pedestre = await criar({ name: 'Veículos: pedestre', type: 'personagem', items: [armadura], system: base({ atributos: { dex: { valor: 6 } }, pericias: { evasion: { nivel: 4 } } }) });
+        const carro = motorista.items.find(i => i.type === 'veiculo'), van = outro.items.find(i => i.type === 'veiculo');
+        await motorista.update({ 'system.veiculo': carro.id });
+        await outro.update({ 'system.veiculo': van.id, 'system.dirigindo': true });
+        cena = await Scene.implementation.create({ name: 'Veículos (C40)', active: false, width: 1600, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
+        for (const [ator, x] of [[motorista, 300], [outro, 700], [passageiro, 1000], [pedestre, 1300]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 400 })).toObject()]);
+        const estado = ator => ({ hp: ator.system.hp.value, lesoes: ator.items.filter(i => i.type === 'lesao').map(i => i.getFlag(S, 'catalogo')), sp: ator.system.armadura?.corpo?.sp ?? 0 });
+        const doVeiculo = v => ({ sdp: v.system.sdp.value, sp: v.system.blindagem.sp, ablacao: v.system.ablacao });
+        const cartao = async id => { await esperar(() => document.querySelector('[data-message-id="' + id + '"] .cartao.perigo')); return document.querySelector('[data-message-id="' + id + '"]'); };
+        const direcoes = tipo => game.messages.contents.filter(m => m.getFlag(S, 'direcao')?.tipo === tipo);
+        combate = await Combat.implementation.create({ scene: cena.id, active: true });
+        for (const [ator, ini] of [[motorista, 20], [outro, 10]]) await combate.createEmbeddedDocuments('Combatant', [{ actorId: ator.id, tokenId: cena.tokens.find(t => t.actorId === ator.id).id, sceneId: cena.id, initiative: ini }]);
+        await combate.startCombat();
+        await pausa(200);
+        const passar = async () => { await combate.nextTurn(); await pausa(150); };
+        const comecoDoMotorista = async () => {
+          for (let voltas = 0; ; voltas++) {
+            if (voltas >= 6) throw new Error('comecoDoMotorista: o turno do motorista não chegou em 6 voltas');
+            await passar();
+            if (combate.combatant?.actorId === motorista.id) return;
+          }
+        };
+        const dados = fila => { window.__fila = fila; };
+        const seis = n => Array.from({ length: 6 }, () => [n, 6]);
+        const donos = game.users.filter(u => u.active && !u.isGM && [motorista, passageiro, outro, pedestre].some(a => a.testUserPermission(u, 'OWNER'))).map(u => u.name);
+        const resultado = await (${teste})({ api, P, S, motorista, passageiro, outro, pedestre, carro, van, cena, combate, esperar, pausa, estado, doVeiculo, cartao, direcoes, passar, comecoDoMotorista, dados, seis, janelas });
+        return { ...resultado, donos };
+      } finally {
+        await combate?.delete();
+        await P.esperarOsPerigos();
+        CONFIG.Dice.randomUniform = antes.dados; window.__fila = [];
+        for (const app of janelas()) await app.close();
+        for (const ator of atores) { await ator.sheet?.close(); for (const item of ator.items) await item.sheet?.close(); }
+        await cena?.delete();
+        for (const ator of atores) await ator.delete();
+        const novas = game.messages.filter(m => !antes.mensagens.includes(m.id)).map(m => m.id);
+        if (novas.length) await ChatMessage.implementation.deleteDocuments(novas);
+        await game.settings.set(S, 'rolarDireto', antes.rolarDireto);
+      }
+    })()`);
+
+    await r.passo('veículos (C40), a direção sob pressão no começo do turno: REF + Conduzir 9 rola DV10 (o d10 2: 11, manteve o controle; o 1 natural: 9 + 1 − 4 = 6, perdeu, com o botão Batida); o mesmo turno duas vezes ao mesmo tempo dá um cartão só; com 10 não rola nem dá cartão; o "Dirigindo" desligado e o derrotado não rolam; o botão Batida abre a janela já na batida, com o motorista no veículo, e "Aplicar" bate o carro (6d6 = 30 − SP 10 = 20 de SDP) e dá o Traumatismo Cervical com os +5', async () => {
+      const info = await comVeiculos(`async ({ api, S, motorista, carro, combate, esperar, pausa, estado, doVeiculo, cartao, direcoes, comecoDoMotorista, dados, seis, janelas }) => {
+        await motorista.update({ 'system.dirigindo': true });
+        const resumo = m => { const d = m.getFlag(S, 'direcao'); return { soma: d.soma, total: d.total, dv: d.dv, manteve: d.manteve, pericia: d.pericia }; };
+        dados([[2, 10]]);
+        await comecoDoMotorista();
+        await esperar(() => direcoes('controle').length === 1);
+        const primeiro = direcoes('controle')[0];
+        const manteve = { ...resumo(primeiro), fila: window.__fila.length, botao: Boolean((await cartao(primeiro.id))?.querySelector('[data-cprf-perigo="batida"]')),
+          texto: primeiro.content.includes('11 contra DV10: gastou a Ação e manteve o controle.') };
+        dados([[1, 10], [4, 10]]);
+        await comecoDoMotorista();
+        await esperar(() => direcoes('controle').length === 2);
+        const segundo = direcoes('controle')[1];
+        const elemento = await cartao(segundo.id);
+        const perdeu = { ...resumo(segundo), fila: window.__fila.length, botao: Boolean(elemento?.querySelector('[data-cprf-perigo="batida"]')),
+          texto: segundo.content.includes('6 contra DV10: perdeu o controle: o mestre decide o que acontece.') };
+        // O mesmo momento duas vezes ao mesmo tempo (a fila do ator e a marca do turno): um cartão e um dado só.
+        dados([[5, 10], [5, 10]]);
+        const mesmo = { comeco: { ator: motorista, combatente: null, turno: combate.id + ':c40:duas' } };
+        const juntos = await Promise.all([api.veiculos.controleNoComecoDoTurno(mesmo), api.veiculos.controleNoComecoDoTurno(mesmo)]);
+        const umaVez = { cartoes: direcoes('controle').length, fila: window.__fila.length, resumos: juntos.filter(Boolean).length };
+        // Soma 10 (Conduzir 5): nem rolagem, nem cartão.
+        await motorista.update({ 'system.pericias.drive-land-vehicle.nivel': 5 });
+        dados([[5, 10]]);
+        let mensagens = game.messages.size;
+        await comecoDoMotorista();
+        await pausa();
+        const dez = { mensagens: game.messages.size - mensagens, fila: window.__fila.length };
+        // De volta a 9, com o "Dirigindo" desligado: nada.
+        await motorista.update({ 'system.pericias.drive-land-vehicle.nivel': 4, 'system.dirigindo': false });
+        mensagens = game.messages.size;
+        await comecoDoMotorista();
+        await pausa();
+        const desligado = { mensagens: game.messages.size - mensagens, fila: window.__fila.length };
+        // Dirigindo, mas derrotado: nada.
+        await motorista.update({ 'system.dirigindo': true });
+        await motorista.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: true, overlay: true });
+        mensagens = game.messages.size;
+        await api.veiculos.controleNoComecoDoTurno({ comeco: { ator: motorista, combatente: null, turno: combate.id + ':c40:derrotado' } });
+        const derrotado = { mensagens: game.messages.size - mensagens, fila: window.__fila.length };
+        await motorista.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: false });
+        // O botão Batida do cartão que perdeu o controle: a janela já na batida, com o token do motorista no veículo.
+        await motorista.update({ 'system.dirigindo': true });
+        elemento.querySelector('[data-cprf-perigo="batida"]').click();
+        const janela = () => janelas().find(app => app.rendered && app.options.classes.includes('perigo-do-ambiente'));
+        await esperar(() => janela()?.element.querySelector('[data-lista="noVeiculo"]'));
+        const campo = seletor => janela()?.element.querySelector(seletor);
+        const pelaJanela = { perigo: campo('select[name="perigo"]')?.value, noVeiculo: campo('[data-lista="noVeiculo"]')?.textContent, atingidos: campo('[data-lista="atingidos"]')?.textContent,
+          semNivel: campo('[data-campo="nivel"]')?.style.display === 'none', semEm: campo('[data-campo="em"]')?.style.display === 'none' };
+        dados(seis(5));
+        campo('button[data-action="aplicar"]')?.click();
+        await esperar(() => !janela() && carro.system.sdp.value === 30 && motorista.system.hp.value === 75);
+        const bateu = { ...estado(motorista), ...doVeiculo(carro), fila: window.__fila.length, fechou: !janela() };
+        return { manteve, perdeu, umaVez, dez, desligado, derrotado, pelaJanela, bateu };
+      }`);
+      const ok = info.manteve.soma === 9 && info.manteve.total === 11 && info.manteve.dv === 10 && info.manteve.manteve === true && info.manteve.pericia === 'drive-land-vehicle' && info.manteve.fila === 0 && !info.manteve.botao && info.manteve.texto
+        && info.perdeu.total === 6 && info.perdeu.manteve === false && info.perdeu.fila === 0 && info.perdeu.botao && info.perdeu.texto
+        && info.umaVez.cartoes === 3 && info.umaVez.fila === 1 && info.umaVez.resumos === 1
+        && info.dez.mensagens === 0 && info.dez.fila === 1 && info.desligado.mensagens === 0 && info.desligado.fila === 1 && info.derrotado.mensagens === 0 && info.derrotado.fila === 1
+        && info.pelaJanela.perigo === 'batida' && info.pelaJanela.noVeiculo === 'No veículo (os selecionados): Veículos: motorista.' && info.pelaJanela.atingidos === 'Atingidos (os alvos marcados): ninguém.'
+        && info.pelaJanela.semNivel && info.pelaJanela.semEm
+        && info.bateu.fechou && info.bateu.sdp === 30 && info.bateu.sp === 9 && info.bateu.ablacao === 1 && info.bateu.hp === 75 && info.bateu.lesoes.join() === 'core_critical-injuries-head:whiplash' && info.bateu.fila === 0
+        && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C40), a manobra pela ficha: o botão Manobra só aparece dirigindo; no carro, as cinco manobras do chão; com o Tipo "Aéreo" na ficha do item, a perícia passa a Pilotar Veículo Aéreo e entram o pouso e a acrobacia; o pouso (REF 5 + 2 + 5 = 12 contra DV13) perde o controle, com o botão Batida; o desviar no carro (9 + 6 = 15 contra DV13) faz a manobra; a acrobacia no carro e a manobra sem dirigir são recusadas, e também a que perdeu o "Dirigir" com a janela das manobras ou a de rolagem aberta; o Helicopter "pelo nome" é aéreo', async () => {
+      const info = await comVeiculos(`async ({ api, S, motorista, carro, esperar, pausa, cartao, direcoes, dados, janelas }) => {
+        const ficha = motorista.sheet;
+        await ficha.render({ force: true });
+        const botao = () => ficha.element?.querySelector('.tab.equipamento [data-item-id="' + carro.id + '"] [data-action="manobra"]');
+        await esperar(() => ficha.element?.querySelector('.tab.equipamento [data-item-id="' + carro.id + '"] [data-action="dirigirVeiculo"]'));
+        const semDirigir = Boolean(botao());
+        await motorista.update({ 'system.dirigindo': true });
+        await esperar(() => botao());
+        const dirigindo = Boolean(botao());
+        const janela = () => janelas().find(app => app.rendered && app.options.classes.includes('manobra-de-veiculo'));
+        const opcoes = () => [...(janela()?.element.querySelectorAll('select[name="manobra"] option') ?? [])].map(o => o.value);
+        botao().click();
+        await esperar(() => opcoes().length);
+        const doCarro = opcoes();
+        await janela().close();
+        await esperar(() => !janela());
+        // O Tipo "Aéreo" pela ficha do item (o seletor ao lado dos campos do veículo).
+        await carro.sheet.render({ force: true });
+        await esperar(() => carro.sheet.element?.querySelector('select[name="system.tipo"]'));
+        const seletor = carro.sheet.element.querySelector('select[name="system.tipo"]');
+        const rotulos = [...seletor.options].map(o => o.value + ':' + o.textContent.trim());
+        seletor.value = 'aereo';
+        seletor.dispatchEvent(new Event('change', { bubbles: true }));
+        await esperar(() => carro.system.tipo === 'aereo');
+        const pericia = api.veiculos.controleDe(motorista)?.pericia;
+        await carro.sheet.close();
+        await esperar(() => botao());
+        botao().click();
+        await esperar(() => opcoes().length);
+        const doAereo = opcoes();
+        janela().element.querySelector('select[name="manobra"]').value = 'pouso';
+        dados([[5, 10]]);
+        janela().element.querySelector('button[data-action="rolar"]').click();
+        await esperar(() => direcoes('manobra').length === 1);
+        const pouso = direcoes('manobra')[0];
+        const elemento = await cartao(pouso.id);
+        const perdeu = { ...pouso.getFlag(S, 'direcao'), fila: window.__fila.length, botao: Boolean(elemento?.querySelector('[data-cprf-perigo="batida"]')),
+          texto: pouso.content.includes('Pilotar Veículo Aéreo 12 contra DV13: perdeu o controle: o mestre decide o que acontece.') };
+        // De volta a "Pelo nome" (o Compact Groundcar é terrestre): o desviar passa.
+        await carro.update({ 'system.tipo': '' });
+        dados([[6, 10]]);
+        const desviou = await api.veiculos.manobra(motorista, 'desviar', { perguntar: false });
+        const fez = { ...desviou, fila: window.__fila.length, texto: game.messages.get(desviou.mensagem)?.content.includes('Conduzir Veículo Terrestre 15 contra DV13: fez a manobra (usou a Ação e a Ação de Movimento).'),
+          botao: game.messages.get(desviou.mensagem)?.content.includes('data-cprf-perigo="batida"') };
+        const avisos = [];
+        ui.notifications.warn = m => { avisos.push(String(m)); };
+        let recusas;
+        try {
+          dados([[6, 10]]);
+          const acrobacia = await api.veiculos.manobra(motorista, 'acrobacia', { perguntar: false });
+          await motorista.update({ 'system.dirigindo': false });
+          const semVolante = await api.veiculos.manobra(motorista, 'desviar', { perguntar: false });
+          recusas = { acrobacia, semVolante, fila: window.__fila.length, avisos: [...avisos], botao: await esperar(() => !botao(), 30) };
+        } finally { delete ui.notifications.warn; }
+        // As janelas abertas: o "Dirigir" desligado com a janela das manobras aberta (recusa sem rolar) e com a janela de
+        // rolagem aberta (rola, mas recusa sem o cartão).
+        await motorista.update({ 'system.dirigindo': true });
+        await esperar(() => botao());
+        const avisosDaJanela = [];
+        ui.notifications.warn = m => { avisosDaJanela.push(String(m)); };
+        let comAJanela;
+        try {
+          dados([[6, 10]]);
+          const escolhendo = api.veiculos.manobra(motorista, null, { perguntar: false });
+          await esperar(() => opcoes().length);
+          await motorista.update({ 'system.dirigindo': false });
+          janela().element.querySelector('button[data-action="rolar"]').click();
+          const naEscolha = await escolhendo;
+          const filaDaEscolha = window.__fila.length;
+          await motorista.update({ 'system.dirigindo': true });
+          const manobras = direcoes('manobra').length;
+          const rolagem = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+          const rolando = api.veiculos.manobra(motorista, 'desviar', { perguntar: true });
+          await esperar(() => rolagem()?.querySelector('button[data-action="rolar"]'));
+          await motorista.update({ 'system.dirigindo': false });
+          rolagem().querySelector('button[data-action="rolar"]').click();
+          const naRolagem = await rolando;
+          comAJanela = { naEscolha, filaDaEscolha, naRolagem, fila: window.__fila.length, cartoes: direcoes('manobra').length - manobras, avisos: avisosDaJanela };
+        } finally { delete ui.notifications.warn; }
+        // "Pelo nome": o mesmo carro chamado Helicopter é aéreo.
+        await motorista.update({ 'system.dirigindo': true });
+        await carro.update({ name: 'Helicopter' });
+        const helicoptero = { tipo: api.veiculos.controleDe(motorista)?.tipo, pericia: api.veiculos.controleDe(motorista)?.pericia };
+        await ficha.close();
+        return { semDirigir, dirigindo, doCarro, rotulos, pericia, doAereo, perdeu, fez, recusas, comAJanela, helicoptero };
+      }`);
+      const doChao = 'desviar,curvaFechada,paradaDeEmergencia,cavaloDePau,salto';
+      const ok = !info.semDirigir && info.dirigindo && info.doCarro.join() === doChao
+        && info.rotulos.join('|') === ':Pelo nome|terrestre:Terrestre|aereo:Aéreo|maritimo:Marítimo' && info.pericia === 'pilot-air-vehicle'
+        && info.doAereo.join() === doChao + ',pouso,acrobacia'
+        && info.perdeu.manobra === 'pouso' && info.perdeu.total === 12 && info.perdeu.dv === 13 && info.perdeu.passou === false && info.perdeu.pericia === 'pilot-air-vehicle' && info.perdeu.fila === 0 && info.perdeu.botao && info.perdeu.texto
+        && info.fez.passou === true && info.fez.total === 15 && info.fez.dv === 13 && info.fez.tipo === 'terrestre' && info.fez.pericia === 'drive-land-vehicle' && info.fez.fila === 0 && info.fez.texto && !info.fez.botao
+        && info.recusas.acrobacia === null && info.recusas.semVolante === null && info.recusas.fila === 1 && info.recusas.botao
+        && info.recusas.avisos.join('|') === 'Veículos: motorista: a manobra "acrobacia" não vale para Compact Groundcar.|Veículos: motorista: para uma manobra, escolha o veículo em uso e ligue "Dirigir".'
+        && info.comAJanela.naEscolha === null && info.comAJanela.filaDaEscolha === 1 && info.comAJanela.naRolagem === null && info.comAJanela.fila === 0 && info.comAJanela.cartoes === 0
+        && info.comAJanela.avisos.length === 2 && info.comAJanela.avisos.every(a => a === 'Veículos: motorista: o veículo em uso, o "Dirigir" ou o tipo do veículo mudou com a janela aberta; a manobra não foi feita.')
+        && info.helicoptero.tipo === 'aereo' && info.helicoptero.pericia === 'pilot-air-vehicle' && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C40), a batida: o motorista e o passageiro selecionados, a van e o pedestre como alvos. O carro leva 6d6 = 30 − SP 10 = 20 (SDP 30, a blindagem 9) e a van 24 (SDP 26); os quatro ganham o Traumatismo Cervical com os +5; o pedestre falha na Evasão (10 + 3 = 13 contra DV13) e leva 6d6 = 18 − 11 = 7 no corpo; o Desfazer devolve o HP, o SP, o SDP e a ablação (só os da batida: um dano de 15 no carro depois dela fica) e tira as lesões; de novo, com o Traumatismo já na ficha, sem lesão nem os +5; o pedestre que desvia (10 + 4 = 14) não leva nada; o motorista duas vezes na lista bate o carro uma vez; um erro no meio (o pedestre) não perde o cartão nem o Desfazer dos outros', async () => {
+      const info = await comVeiculos(`async ({ api, P, S, motorista, passageiro, outro, pedestre, carro, van, cena, esperar, estado, doVeiculo, cartao, dados, seis }) => {
+        await motorista.update({ 'system.dirigindo': true });
+        const todos = () => ({ motorista: estado(motorista), passageiro: estado(passageiro), outro: estado(outro), pedestre: estado(pedestre), carro: doVeiculo(carro), van: doVeiculo(van) });
+        const inicio = todos();
+        dados([...seis(5), ...seis(4), [3, 10], ...seis(3)]);
+        const batida = await api.perigos.aplicar({ perigo: 'batida', atores: [motorista, passageiro], atingidos: [outro, pedestre] });
+        const bateu = { ...todos(), fila: window.__fila.length, papeis: batida.atores.map(a => a.papel), teste: batida.atores[3].teste, notas: batida.atores.map(a => a.notas) };
+        // Outro dano no carro depois da batida (15 − 9 = 6: SDP 24, a ablação 2): o Desfazer devolve só o da batida (SDP 44,
+        // a ablação 1).
+        await carro.receberDanoVeicular({ dano: 15 });
+        const elemento = await cartao(batida.mensagem);
+        elemento.querySelector('[data-cprf-perigo="desfazer"]').click();
+        await esperar(() => game.messages.get(batida.mensagem).getFlag(S, 'desfeito'));
+        await P.esperarOsPerigos();
+        const desfeito = todos();
+        await carro.update({ 'system.sdp.value': 50, 'system.ablacao': 0 });
+        // A lesão de volta (o carro: 6d6 = 30 − 10 = 20, SDP 30, a blindagem 9); de novo, com o Traumatismo Cervical já na
+        // ficha: sem lesão nova e sem os +5, e o carro leva o dano de novo (6d6 = 12 − 9 = 3, SDP 27).
+        dados(seis(5));
+        await api.perigos.aplicar({ perigo: 'batida', atores: [motorista] });
+        dados(seis(2));
+        const jaTinha = await api.perigos.aplicar({ perigo: 'batida', atores: [motorista] });
+        const deNovo = { ...estado(motorista), ...doVeiculo(carro), fila: window.__fila.length, nota: jaTinha.atores[0].notas.at(-1) };
+        // O motorista pelo ator e pelo token, e também como alvo: uma linha e um dano no carro (6d6 = 24 − 8 = 16); o pedestre
+        // que desvia (10 + 4 = 14 contra DV13): nada. Os 6d6 a mais ficam na fila.
+        dados([...seis(4), [4, 10], ...seis(6)]);
+        const sdp = carro.system.sdp.value;
+        const desvio = await api.perigos.aplicar({ perigo: 'batida', atores: [motorista, cena.tokens.find(t => t.actorId === motorista.id)], atingidos: [pedestre, motorista] });
+        const desviou = { ...estado(pedestre), teste: desvio.atores.find(a => a.papel === 'atingido')?.teste, linhas: desvio.atores.length, perdeu: sdp - carro.system.sdp.value, fila: window.__fila.length };
+        // Um erro no meio (o receberDano do pedestre falha, depois da Evasão 13 e dos 6d6): o cartão sai, com a nota, o
+        // passageiro ganha a lesão, e o Desfazer devolve o carro (6d6 = 12 − 7 = 5) e o passageiro.
+        const sdpAntes = carro.system.sdp.value, ablacaoAntes = carro.system.ablacao;
+        pedestre.receberDano = async () => { throw new Error('falha de teste'); };
+        // O aviso do erro esperado fica aqui (não conta no "nenhum aviso"); os outros seguem para o console.
+        const avisoDoConsole = console.warn, avisosDoErro = [];
+        console.warn = (...args) => { if (args.some(a => String(a?.message ?? a).includes('falha de teste'))) avisosDoErro.push(args.map(a => String(a?.message ?? a)).join(' ')); else avisoDoConsole.apply(console, args); };
+        let comErro;
+        try {
+          dados([...seis(2), [3, 10], ...seis(3)]);
+          const batidaComErro = await api.perigos.aplicar({ perigo: 'batida', atores: [motorista, passageiro], atingidos: [pedestre] });
+          const linha = batidaComErro?.atores.find(a => a.papel === 'atingido');
+          comErro = { cartao: Boolean(game.messages.get(batidaComErro?.mensagem)), nota: linha?.notas.at(-1), pedestre: estado(pedestre), passageiro: estado(passageiro), perdeu: sdpAntes - carro.system.sdp.value, fila: window.__fila.length };
+          (await cartao(batidaComErro.mensagem)).querySelector('[data-cprf-perigo="desfazer"]').click();
+          await esperar(() => game.messages.get(batidaComErro.mensagem).getFlag(S, 'desfeito'));
+          await P.esperarOsPerigos();
+          Object.assign(comErro, { avisos: [...avisosDoErro], desfeito: { passageiro: estado(passageiro), sdp: carro.system.sdp.value === sdpAntes, ablacao: carro.system.ablacao === ablacaoAntes } });
+        } finally { delete pedestre.receberDano; console.warn = avisoDoConsole; }
+        return { inicio, bateu, desfeito, deNovo, desviou, comErro };
+      }`);
+      const lesao = 'core_critical-injuries-head:whiplash';
+      const b = info.bateu, d = info.desfeito;
+      const ok = b.carro.sdp === 30 && b.carro.sp === 9 && b.carro.ablacao === 1 && b.van.sdp === 26 && b.van.ablacao === 0
+        && b.motorista.hp === 75 && b.passageiro.hp === 75 && b.outro.hp === 75 && b.pedestre.hp === 68 && b.pedestre.sp === 10
+        && [b.motorista, b.passageiro, b.outro, b.pedestre].every(e => e.lesoes.join() === lesao) && b.fila === 0
+        && b.papeis.join() === 'veiculo,veiculo,atingido,atingido' && JSON.stringify(b.teste) === JSON.stringify({ total: 13, dv: 13, passou: false })
+        && JSON.stringify({ ...d, carro: null }) === JSON.stringify({ ...info.inicio, carro: null }) && d.carro.sdp === 44 && d.carro.ablacao === 1 && d.carro.sp === 9
+        && info.deNovo.hp === 75 && info.deNovo.lesoes.join() === lesao && info.deNovo.sdp === 27 && info.deNovo.sp === 8 && info.deNovo.fila === 0
+        && info.deNovo.nota === 'Já tinha o Traumatismo Cervical: sem lesão nova e sem os +5.'
+        && info.desviou.hp === 80 && info.desviou.lesoes.length === 0 && JSON.stringify(info.desviou.teste) === JSON.stringify({ total: 14, dv: 13, passou: true })
+        && info.desviou.linhas === 2 && info.desviou.perdeu === 16 && info.desviou.fila === 6
+        && info.comErro.cartao && info.comErro.nota === 'Não terminou: falha de teste' && info.comErro.avisos.join() === 'cpr-fieldbook | perigo falha de teste' && info.comErro.pedestre.hp === 80 && info.comErro.passageiro.hp === 75
+        && info.comErro.passageiro.lesoes.join() === lesao && info.comErro.perdeu === 5 && info.comErro.fila === 0
+        && info.comErro.desfeito.passageiro.hp === 80 && info.comErro.desfeito.passageiro.lesoes.length === 0 && info.comErro.desfeito.sdp && info.comErro.desfeito.ablacao && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C40), a batida pela janela: com o motorista e o passageiro selecionados e a van e o pedestre marcados (T), o /perigo batida mostra as duas listas, e "Aplicar" bate o carro (SDP 30) e a van (SDP 26), dá o Traumatismo Cervical com os +5 aos quatro, e o pedestre (10 + 3 = 13 contra DV13) leva 7 no corpo', async () => {
+      const info = await comVeiculos(`async ({ P, motorista, passageiro, outro, pedestre, carro, van, cena, esperar, estado, doVeiculo, dados, seis, janelas }) => {
+        await motorista.update({ 'system.dirigindo': true });
+        const vista = canvas.scene?.id ?? null;
+        const doc = ator => cena.tokens.find(t => t.actorId === ator.id);
+        const desenhado = ator => (canvas.ready && canvas.scene?.id === cena.id ? canvas.tokens.get(doc(ator).id) ?? null : null);
+        try {
+          await cena.view();
+          await esperar(() => [motorista, passageiro, outro, pedestre].every(desenhado));
+          desenhado(motorista).control({ releaseOthers: true });
+          desenhado(passageiro).control({ releaseOthers: false });
+          desenhado(outro).setTarget(true, { releaseOthers: true });
+          desenhado(pedestre).setTarget(true, { releaseOthers: false });
+          await ui.chat.processMessage('/perigo batida');
+          const janela = () => janelas().find(app => app.rendered && app.options.classes.includes('perigo-do-ambiente'));
+          await esperar(() => janela()?.element.querySelector('[data-lista="atingidos"]'));
+          const campo = seletor => janela()?.element.querySelector(seletor);
+          const listas = { perigo: campo('select[name="perigo"]')?.value, noVeiculo: campo('[data-lista="noVeiculo"]')?.textContent, atingidos: campo('[data-lista="atingidos"]')?.textContent,
+            semEm: campo('[data-campo="em"]')?.style.display === 'none' };
+          dados([...seis(5), ...seis(4), [3, 10], ...seis(3)]);
+          campo('button[data-action="aplicar"]')?.click();
+          await esperar(() => !janela() && pedestre.system.hp.value === 68);
+          await P.esperarOsPerigos();
+          return { listas, fechou: !janela(), motorista: estado(motorista), passageiro: estado(passageiro), outro: estado(outro), pedestre: estado(pedestre), carro: doVeiculo(carro), van: doVeiculo(van), fila: window.__fila.length };
+        } finally {
+          canvas.tokens?.releaseAll();
+          for (const token of [...game.user.targets]) token.setTarget(false, { releaseOthers: false });
+          if (vista && vista !== cena.id && game.scenes.has(vista)) await game.scenes.get(vista).view();
+        }
+      }`);
+      const lesao = 'core_critical-injuries-head:whiplash';
+      const ok = info.listas.perigo === 'batida' && info.listas.semEm
+        && info.listas.noVeiculo === 'No veículo (os selecionados): Veículos: motorista, Veículos: passageiro.'
+        && info.listas.atingidos === 'Atingidos (os alvos marcados): Veículos: outro motorista, Veículos: pedestre.'
+        && info.fechou && info.carro.sdp === 30 && info.carro.ablacao === 1 && info.van.sdp === 26
+        && info.motorista.hp === 75 && info.passageiro.hp === 75 && info.outro.hp === 75 && info.pedestre.hp === 68 && info.pedestre.sp === 10
+        && [info.motorista, info.passageiro, info.outro, info.pedestre].every(e => e.lesoes.join() === lesao) && info.fila === 0 && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C40), o momento do turno: com o combate andando de novo durante o tick do outro (na radiação, −2), o controle do começo do turno ainda é do motorista (o d10 2: 11) e sai uma vez só; um motorista com 9 no combate só pelo ator (sem token) rola no começo do turno dele', async () => {
+      const info = await comVeiculos(`async ({ api, P, S, motorista, outro, combate, esperar, pausa, direcoes, passar, dados }) => {
+        await passar();
+        const vezDoOutro = combate.combatant?.actorId === outro.id;
+        await api.perigos.aplicar({ perigo: 'radiacao', nivel: 'alta', atores: [outro] });
+        await motorista.update({ 'system.dirigindo': true });
+        const hpOutro = outro.system.hp.value;
+        dados([[2, 10]]);
+        await combate.nextTurn();
+        await combate.nextTurn();
+        await esperar(() => direcoes('controle').length >= 1 && outro.system.hp.value === hpOutro - 2);
+        await pausa();
+        const resumo = m => ({ ator: m?.getFlag(S, 'direcao').ator === motorista.uuid, total: m?.getFlag(S, 'direcao').total ?? null });
+        const doMomento = { vezDoOutro, cartoes: direcoes('controle').length, ...resumo(direcoes('controle')[0]), fila: window.__fila.length, vez: combate.combatant?.actorId === outro.id, outro: hpOutro - outro.system.hp.value };
+        await outro.toggleStatusEffect('cprf-radiacao', { active: false });
+        await P.esperarOsPerigos();
+        // O combate só pelos atores (sem token): o começo do turno do motorista (o d10 3: 12) é dele.
+        const semToken = await Combat.implementation.create({ scene: null, active: true });
+        let peloAtor;
+        try {
+          await semToken.createEmbeddedDocuments('Combatant', [{ actorId: motorista.id, initiative: 20 }, { actorId: outro.id, initiative: 10 }]);
+          const antes = direcoes('controle').length;
+          dados([[3, 10]]);
+          await semToken.startCombat();
+          await esperar(() => direcoes('controle').length === antes + 1);
+          await pausa(300);
+          peloAtor = { semToken: semToken.combatants.contents.every(c => !c.token), cartoes: direcoes('controle').length - antes, ...resumo(direcoes('controle').at(-1)), fila: window.__fila.length };
+        } finally {
+          await semToken.delete();
+          await P.esperarOsPerigos();
+        }
+        return { doMomento, peloAtor };
+      }`);
+      const ok = info.doMomento.vezDoOutro && info.doMomento.cartoes === 1 && info.doMomento.ator && info.doMomento.total === 11 && info.doMomento.fila === 0 && info.doMomento.vez && info.doMomento.outro === 2
+        && info.peloAtor.semToken && info.peloAtor.cartoes === 1 && info.peloAtor.ator && info.peloAtor.total === 12 && info.peloAtor.fila === 0 && !info.donos.length;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('veículos (C40), o jogador: o controle no começo do turno (9 + 1 − 4 = 6, perdeu) e o desvio a pé (10 + 9 = 19 contra DV13) são rolados no navegador dele (as mensagens são dele); a manobra que ele rola (9 + 2 = 11 contra DV13), com o "Rolar direto" desligado, abre a janela de rolagem dele e é confirmada lá; ele vê os cartões sem o botão Batida, que o mestre vê; o personagem dele a pé apagado com a janela da Evasão aberta: o cartão sai com a nota, e o Desfazer devolve o carro do mestre', async () => {
+      for (const navegador of [edge, jogador]) await navegador.evaluate(`window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); }`);
+      const rolarDiretoDoJogador = await jogador.evaluate(`(async () => { const antes = game.settings.get('${S}', 'rolarDireto'); await game.settings.set('${S}', 'rolarDireto', true); return antes; })()`);
+      try {
+        const preparo = await edge.evaluate(`(async () => {
+          const S = '${S}', salvo = { mensagens: game.messages.map(m => m.id), atores: [] };
+          window.__c40 = salvo;
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const moto = foundry.utils.deepClone(cat['core_vehicles:roadbike']);
+          const ator = await Actor.implementation.create({ name: 'Veículos: do jogador', type: 'personagem', ownership: { default: 0, [game.users.getName('Jogador').id]: 3 }, items: [moto],
+            system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 }, ref: { valor: 5 }, dex: { valor: 6 } }, pericias: { 'drive-land-vehicle': { nivel: 4 }, evasion: { nivel: 4 } } } });
+          salvo.atores.push(ator.id);
+          await ator.update({ 'system.veiculo': ator.items.find(i => i.type === 'veiculo').id, 'system.dirigindo': true });
+          // O motorista do mestre (sem dono; o carro com SP 0) e o segundo personagem do jogador, a pé, que some durante a Evasão.
+          const carro = foundry.utils.deepClone(cat['core_vehicles:compact-groundcar']); carro.system.sp = 0;
+          const doMestre = await Actor.implementation.create({ name: 'Veículos: motorista do mestre', type: 'personagem', ownership: { default: 0 }, items: [carro], system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 } } } });
+          salvo.atores.push(doMestre.id);
+          await doMestre.update({ 'system.veiculo': doMestre.items.find(i => i.type === 'veiculo').id, 'system.dirigindo': true });
+          const some = await Actor.implementation.create({ name: 'Veículos: some na Evasão', type: 'personagem', ownership: { default: 0, [game.users.getName('Jogador').id]: 3 }, system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 } } } });
+          salvo.atores.push(some.id);
+          return { ator: ator.id, doMestre: doMestre.id, some: some.id, dono: game.system.api.combate.jogadorDe(ator)?.name ?? null };
+        })()`);
+        await jogador.evaluate(`(() => {
+          window.__c40Dados = CONFIG.Dice.randomUniform;
+          window.__fila = [[1, 10], [4, 10], [9, 10], [2, 10]];
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          return true;
+        })()`);
+        let noMestre, doJogador;
+        try {
+          noMestre = await edge.evaluate(`(async () => {
+            const S = '${S}', ator = game.actors.get('${preparo.ator}'), jogador = game.users.getName('Jogador');
+            const rolagens = () => game.messages.filter(m => m.getFlag(S, 'teste') && !window.__c40.mensagens.includes(m.id));
+            const controle = await game.system.api.veiculos.controleNoComecoDoTurno({ comeco: { ator, combatente: null, turno: 'c40:jogador' } });
+            await ator.update({ 'system.dirigindo': false });
+            const batida = await game.system.api.perigos.aplicar({ perigo: 'batida', atingidos: [ator] });
+            await ator.update({ 'system.dirigindo': true });
+            await __esperar(() => rolagens().length === 2);
+            const seletor = '[data-message-id="' + controle.mensagem + '"] [data-cprf-perigo="batida"]';
+            await __esperar(() => document.querySelector(seletor));
+            return { controle, desvio: batida.atores[0].teste, hp: ator.system.hp.value, lesoes: ator.items.filter(i => i.type === 'lesao').length,
+              autores: rolagens().map(m => m.author?.id === jogador.id), batida: Boolean(document.querySelector(seletor)) };
+          })()`);
+          doJogador = await jogador.evaluate(`(async () => {
+            const S = '${S}', ator = game.actors.get('${preparo.ator}');
+            await __esperar(() => ator.system.dirigindo);
+            // Com o "Rolar direto" desligado: a janela de rolagem abre aqui e é confirmada aqui.
+            await game.settings.set(S, 'rolarDireto', false);
+            const rolagem = () => document.querySelector('.application.dialog.janela-rolagem:not(.minimizing)');
+            const pedida = game.system.api.veiculos.manobra(ator, 'desviar', { perguntar: true });
+            const abriu = await __esperar(() => rolagem()?.querySelector('button[data-action="rolar"]'));
+            rolagem()?.querySelector('button[data-action="rolar"]')?.click();
+            // Sem a janela ou sem o clique, a manobra não prende a suíte: depois de 10 s, a janela de rolagem fecha, a espera
+            // acaba e o passo falha.
+            const manobra = await Promise.race([pedida, new Promise(r => setTimeout(r, 10000, null))]);
+            for (const app of [...foundry.applications.instances.values()]) if (app.element?.classList?.contains('janela-rolagem')) await app.close();
+            const cartoes = [];
+            for (const id of ['${noMestre.controle.mensagem}', manobra?.mensagem]) {
+              const seletor = '[data-message-id="' + id + '"] .cartao.perigo';
+              await __esperar(() => document.querySelector(seletor));
+              cartoes.push({ visto: Boolean(document.querySelector(seletor)), botoes: document.querySelector(seletor)?.querySelectorAll('[data-cprf-perigo]').length ?? null });
+            }
+            return { abriu: Boolean(abriu), manobra, cartoes, autor: game.messages.get(manobra?.mensagem)?.author?.id === game.user.id, fila: window.__fila.length };
+          })()`);
+        } finally {
+          await jogador.evaluate(`(() => { if (window.__c40Dados) CONFIG.Dice.randomUniform = window.__c40Dados; delete window.__c40Dados; window.__fila = []; return true; })()`);
+        }
+        const daManobra = await edge.evaluate(`(async () => {
+          const seletor = '[data-message-id="${doJogador.manobra?.mensagem}"] [data-cprf-perigo="batida"]';
+          await __esperar(() => document.querySelector(seletor));
+          return Boolean(document.querySelector(seletor));
+        })()`);
+        // O personagem a pé apagado enquanto a janela da Evasão está aberta no navegador do jogador ("Rolar direto"
+        // desligado, do passo acima): a janela fecha sem rolar, o cartão sai com a nota, e o Desfazer devolve o carro do mestre
+        // (6d6 = 30 − SP 0) e a lesão dele.
+        await edge.evaluate(`(async () => {
+          const S = '${S}';
+          window.__c40Dados = CONFIG.Dice.randomUniform;
+          window.__fila = Array.from({ length: 6 }, () => [5, 6]);
+          CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
+          window.__c40Batida = game.system.api.perigos.aplicar({ perigo: 'batida', atores: [game.actors.get('${preparo.doMestre}')], atingidos: [game.actors.get('${preparo.some}')] });
+          return true;
+        })()`);
+        let sumiu;
+        try {
+          const abriuAEvasao = await jogador.evaluate(`(async () => {
+            const rolagem = () => [...foundry.applications.instances.values()].find(app => app.rendered && app.options.classes?.includes('janela-rolagem'));
+            return Boolean(await __esperar(() => rolagem()));
+          })()`);
+          await edge.evaluate(`(async () => { await game.actors.get('${preparo.some}')?.delete(); return true; })()`);
+          await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.options.classes?.includes('janela-rolagem')) await app.close(); return true; })()`);
+          sumiu = await edge.evaluate(`(async () => {
+            const S = '${S}', resultado = await window.__c40Batida, doMestre = game.actors.get('${preparo.doMestre}'), carro = doMestre.items.find(i => i.type === 'veiculo');
+            const depois = { sdp: carro.system.sdp.value, hp: doMestre.system.hp.value, lesoes: doMestre.items.filter(i => i.type === 'lesao').length, fila: window.__fila.length };
+            const linha = resultado?.atores.find(a => a.papel === 'atingido');
+            const seletor = '[data-message-id="' + resultado?.mensagem + '"] [data-cprf-perigo="desfazer"]';
+            await __esperar(() => document.querySelector(seletor));
+            document.querySelector(seletor)?.click();
+            await __esperar(() => game.messages.get(resultado.mensagem)?.getFlag(S, 'desfeito'));
+            await new Promise(r => setTimeout(r, 300));
+            return { cartao: Boolean(game.messages.get(resultado?.mensagem)), nota: linha?.notas.at(-1), depois, desfeito: { sdp: carro.system.sdp.value, hp: doMestre.system.hp.value, lesoes: doMestre.items.filter(i => i.type === 'lesao').length } };
+          })()`);
+          sumiu.abriuAEvasao = abriuAEvasao;
+        } finally {
+          await edge.evaluate(`(() => { if (window.__c40Dados) CONFIG.Dice.randomUniform = window.__c40Dados; delete window.__c40Dados; delete window.__c40Batida; window.__fila = []; return true; })()`);
+        }
+        const info = { preparo, noMestre, doJogador, daManobra, sumiu };
+        const ok = preparo.dono === 'Jogador'
+          && noMestre.controle?.total === 6 && noMestre.controle.manteve === false && noMestre.batida
+          && JSON.stringify(noMestre.desvio) === JSON.stringify({ total: 19, dv: 13, passou: true }) && noMestre.hp === 80 && noMestre.lesoes === 0 && noMestre.autores.join() === 'true,true'
+          && doJogador.abriu && doJogador.manobra?.total === 11 && doJogador.manobra.passou === false && doJogador.autor && doJogador.fila === 0
+          && doJogador.cartoes.every(c => c.visto && c.botoes === 0) && daManobra
+          && sumiu.abriuAEvasao && sumiu.cartao && sumiu.nota === 'Veículos: some na Evasão saiu da mesa durante a rolagem: o perigo parou aqui.'
+          && sumiu.depois.sdp === 20 && sumiu.depois.hp === 75 && sumiu.depois.lesoes === 1 && sumiu.depois.fila === 0
+          && sumiu.desfeito.sdp === 50 && sumiu.desfeito.hp === 80 && sumiu.desfeito.lesoes === 0;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => { await game.settings.set('${S}', 'rolarDireto', ${JSON.stringify(rolarDiretoDoJogador)}); return true; })()`).catch(() => null);
+        await edge.evaluate(`(async () => {
+          const s = window.__c40;
+          if (!s) return true;
+          for (const id of s.atores) await game.actors.get(id)?.delete();
+          const novas = game.messages.filter(m => !s.mensagens.includes(m.id)).map(m => m.id);
+          if (novas.length) await ChatMessage.implementation.deleteDocuments(novas);
+          delete window.__c40;
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

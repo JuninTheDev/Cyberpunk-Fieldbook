@@ -359,6 +359,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O Codex no Windows** (ciclo 156): a revisão roda com `codex exec -s read-only -c 'windows.sandbox="unelevated"' -c
   model_reasoning_effort=high`. Sem o `windows.sandbox`, o `workspace-write` cai para só leitura e recusa até o
   `Get-Content`; o esforço padrão é "none". No sandbox, o G3 dá `spawn EPERM`: os portões rodam fora dele.
+- **Uma aplicação para várias pessoas** (ciclo 157): um erro no meio (o token apagado durante a rolagem de alguém) parava
+  tudo antes do cartão, e o dano de quem já tinha passado ficava sem Desfazer. Proteja cada pessoa (`try/catch`, com a nota
+  na linha), grave o Desfazer logo depois de cada dano e crie o cartão sempre. E o que se escolhe numa janela envelhece com
+  ela aberta: confira de novo o estado (o veículo, o "Dirigir") antes e depois de rolar.
 
 ## Build
 

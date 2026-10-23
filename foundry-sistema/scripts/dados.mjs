@@ -5,7 +5,7 @@ import { ANDAR_MAX, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
 import { ALVOS_UPGRADE, ATIVACOES, ATRIBUTOS, CLASSES_BLACK_ICE, EXTRATOS, LIFEPATH, PERMISSOES_DO_CONTEINER, SISTEMA, TIPOS_DE_CONTEINER, TIPOS_QUE_A_LOJA_COMPRA, USOS } from './config.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from './gerado.mjs';
 import * as regras from './regras.mjs';
-import { protecoesDoVeiculo } from './regras-veiculos.mjs';
+import { protecoesDoVeiculo, TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
 import { scannerPreferido, tipoDeScanner } from './regras-inventario.mjs';
 import { armaduraDoLocal } from './regras-armadura.mjs';
 import { penalidadeDeDeathSave } from './tratamento.mjs';
@@ -492,6 +492,9 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
       assentos: inteiro(2, { min: 0 }),
       velocidade: new fields.SchemaField({ combate: inteiro(20, { min: 0 }), narrativa: texto() }),
       familia: new fields.BooleanField({ initial: false }),
+      // O tipo (o C40): terrestre, aéreo ou marítimo; vazio, pelo nome (regras-veiculos.tipoDoVeiculo). Muda a perícia de
+      // controle e as manobras.
+      tipo: new fields.StringField({ required: true, blank: true, initial: '', choices: Object.keys(TIPOS_DE_VEICULO) }),
       sp: inteiro(0, { min: 0 }),
       ablacao: inteiro(0, { min: 0 }),
       // Cada janela perde HP separadamente (CORE, Bulletproof Glass). O máximo fica persistido para não curar o vidro.

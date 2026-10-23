@@ -365,7 +365,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     cyberpernas anulam até 30 m;
   - **Veneno e droga como arma:** WILL + Resistir Tortura/Drogas contra DV11, 13 ou 15, no computador do dono; o veneno
     tira 1d6, 2d6 ou 3d6 direto no HP, e a droga diz o efeito;
-  - **Radiação:** baixa, só o cartão; alta 2 e extrema 6 no fim de cada turno, até "Saiu da zona" (não se apaga).
+  - **Radiação:** baixa, só o cartão; alta 2 e extrema 6 no fim de cada turno, até "Saiu da zona" (não se apaga);
+  - **Batida de veículo** (o C40): os tokens selecionados estão no veículo que bateu, e os alvos marcados (T) foram
+    atingidos. Todos ganham o Traumatismo Cervical com os +5 no HP; o veículo de quem dirige leva 6d6 (o SDP menos o SP);
+    quem está a pé rola DEX + Evasão contra DV13 e, se falhar, leva 6d6 (a armadura absorve).
+- **Direção e manobras** (o C40; a wiki, "Veículos", p. 189–192): com o veículo em uso e "Dirigindo" ligado.
+  - **Direção sob pressão:** no combate, no começo do turno, quem tem REF + perícia de controle de 9 ou menos gasta a Ação
+    e rola DV10, no computador dele; falhou, perdeu o controle, e o mestre decide (o cartão tem o botão "Batida").
+  - **Manobra:** o botão na linha do veículo abre as manobras do tipo dele (desviar, curva fechada e parada de emergência
+    DV13; cavalo de pau e salto DV17; no aéreo, pouso DV13 e acrobacia DV17), pela janela de rolagem.
+  - **A perícia de controle** vem do tipo do veículo (Conduzir, Pilotar Aéreo ou Pilotar Marítimo). Na ficha do veículo,
+    "Tipo" fica "Pelo nome" (os 14 do CORE) ou escolhe terrestre, aéreo ou marítimo.
 - **Consciência de Combate do Solo**, pelos pontos de cada habilidade da Role, como a wiki descreve:
   - **Reação de Iniciativa:** +1 na iniciativa por ponto.
   - **Ataque de Precisão:** +1 em todo ataque a cada 3 pontos.

@@ -3,10 +3,13 @@
 // - no começo do turno de quem está mortalmente ferido (HP abaixo de 1), o Death Save: o jogador rola no computador
 //   dele; o mestre rola pelos NPCs e pelos capangas. Falhou: morto (status e combatente derrotado);
 // - os perigos do ambiente (perigos.mjs, o C38): no fim do turno, a eletrocução e a radiação, junto do fogo; no começo,
-//   depois do Death Save, o "Sem ar".
+//   depois do Death Save, o "Sem ar";
+// - a direção sob pressão (direcao.mjs, o C40): no começo do turno, depois do "Sem ar", quem dirige sem passar de 9 em
+//   REF + perícia de controle rola DV10.
 import { jogadorDe, pedir, souOMestreAtivo, STATUS_SUPRIMIDO } from './combate.mjs';
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
+import { controleNoComecoDoTurno } from './direcao.mjs';
 import { fogoNoFimDoTurno } from './municoes.mjs';
 import { momentoDoTurno, perigosNoComecoDoTurno, perigosNoFimDoTurno } from './perigos.mjs';
 
@@ -60,6 +63,7 @@ export function aoMudarTurno(combate, mudancas) {
     await perigosNoFimDoTurno(momento);
     await deathSave(momento.comeco?.combatente ?? null);
     await perigosNoComecoDoTurno(momento);
+    await controleNoComecoDoTurno(momento);
   })().catch(erro => console.warn(`${SISTEMA} | turno`, erro));
 }
 

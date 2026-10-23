@@ -360,7 +360,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   o Desfazer e o que acontece a cada turno.
 - [x] **C39. Gastar IP:** feito no ciclo 155 (sessão KouArt, com o Codex, 2026-10-22) (p. 411, `:712`): o custo de subir perícia (20 × o nível novo, o dobro nas difíceis) e Rank
   (60 × o Rank novo), um nível por vez, pelo extrato.
-- [~] **C40. Veículos fora do dano** (sessão Junin, com o Codex, 2026-10-23) (`:538`): a direção sob pressão, as manobras, a batida e desviar a pé.
+- [x] **C40. Veículos fora do dano:** feito no ciclo 157 (sessão Junin, com o Codex, 2026-10-23) (p. 189–192, `:538`): a
+  direção sob pressão no começo do turno, as manobras pela ficha, a batida (na janela de perigos) e desviar a pé.
 - [ ] **C41. O resto:** correr (a Ação de Movimento a mais, `:501` e `:514`), o escudo humano (`:537`), a Reputação ao
   conhecer alguém (`:539`), o hospital e a instalação de cyberware (`:564`), o Cryopump e o Cryotank
   (`system-catalog.js:218-228`).

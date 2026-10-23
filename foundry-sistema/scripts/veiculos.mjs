@@ -20,6 +20,11 @@ export function veiculoAtivo(ator) {
   return item?.type === 'veiculo' ? item : null;
 }
 
+// O veículo que o ator dirige agora (o em uso, com "Dirigindo" ligado; o C40), ou null.
+export function veiculoDirigido(ator) {
+  return ator?.system?.dirigindo ? veiculoAtivo(ator) : null;
+}
+
 export function usarVeiculo(ator, id = '') {
   if (!ator.isOwner) return null;
   return naFila(ator, () => {
