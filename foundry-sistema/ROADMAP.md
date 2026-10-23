@@ -354,7 +354,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   igual ao BODY (o Skin Weave e o Subdermal Armor, +1 SP por dia; o Reinforced Antibodies, o dobro).
 - [~] **C37. Arremessar** (sessão KouArt, com o Codex, 2026-10-22) (p. 177, `:535`): DEX + Atletismo + 1d10, até 25 m, contra a DV da linha do lança-granadas;
   a granada de mão pela área.
-- [ ] **C38. Os perigos do ambiente** (`:556-562`): a queda, o fogo pela intensidade (2, 4 ou 6), a eletrocução, o
+- [~] **C38. Os perigos do ambiente** (sessão Junin, com o Codex, 2026-10-23) (`:556-562`): a queda, o fogo pela intensidade (2, 4 ou 6), a eletrocução, o
   afogamento e a asfixia, a radiação e o veneno; o mestre aplica pelo cartão.
 - [x] **C39. Gastar IP:** feito no ciclo 155 (sessão KouArt, com o Codex, 2026-10-22) (p. 411, `:712`): o custo de subir perícia (20 × o nível novo, o dobro nas difíceis) e Rank
   (60 × o Rank novo), um nível por vez, pelo extrato.
