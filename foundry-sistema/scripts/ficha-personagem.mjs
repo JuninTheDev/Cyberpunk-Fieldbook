@@ -3,7 +3,8 @@
 // atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
-import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
+import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar, usarEscudoHumano } from './agarrao.mjs';
+import { escudoHumanoDe } from './escudo-humano.mjs';
 import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { criarItemNaFicha, podeCriarItemNaFicha } from './criar-item.mjs';
@@ -95,6 +96,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       correr: FichaPersonagem.#correr,
       agarrar: FichaPersonagem.#agarrar, movimento: FichaPersonagem.#movimento,
       soltar: FichaPersonagem.#soltar,
+      usarEscudoHumano: FichaPersonagem.#usarEscudoHumano,
       estrangular: FichaPersonagem.#estrangular,
       derrubar: FichaPersonagem.#derrubar,
       escapar: FichaPersonagem.#escapar,
@@ -428,7 +430,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
       lesoes, favoritos,
       iniciativa: { valor: s.iniciativa, dica: `REF ${s.atributos.ref.valor}${bonusDeIniciativa ? ` + ${bonusDeIniciativa} (cyberware e Role)` : ''}` },
-      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown, emCobertura: ator.statuses.has(STATUS_COBERTURA), agarrao: agarraoDe(ator), movimentos: movimentosDe(ator),
+      esquiva, podeEsquivarTiro: s.atributos.ref.valor >= 8, facedown, emCobertura: ator.statuses.has(STATUS_COBERTURA), agarrao: agarraoDe(ator), escudoHumano: await escudoHumanoDe(ator), movimentos: movimentosDe(ator),
       municoes: itens('municao'),
       inventario: [
         { titulo: 'EQUIPAMENTO', tipo: 'equipamento', vazio: 'Sem equipamento.', itens: itens('equipamento').map(item => linhaDoInventario(item, item.effects.filter(e => e.active).map(e => e.name).join(', '))) },
@@ -558,6 +560,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // de reação do dono); agarrando, "Estrangular", "Derrubar" e "Soltar"; agarrado, "Escapar" (quem agarra resiste).
   static #agarrar(evento) { return agarrar(this.actor, { perguntar: comJanela(evento) }); }
   static #soltar() { return soltar(this.actor); }
+  static #usarEscudoHumano() { return this.isEditable ? usarEscudoHumano(this.actor) : null; }
   static #estrangular() { return estrangular(this.actor); }
   static #derrubar() { return derrubar(this.actor); }
   static #escapar(evento) { return escapar(this.actor, { perguntar: comJanela(evento) }); }

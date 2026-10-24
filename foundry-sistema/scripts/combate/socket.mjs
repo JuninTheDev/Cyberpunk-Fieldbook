@@ -8,6 +8,7 @@ import { perguntarTeste } from '../janela-rolagem.mjs';
 import { rolarResistencia, rolarInteligente } from '../municoes.mjs';
 import * as R from '../regras.mjs';
 import { rolarDano, testar } from '../rolagens.mjs';
+import { escudoHumanoDe } from '../escudo-humano.mjs';
 import { CANAL, precisaRolar, souOMestreAtivo } from './apoio.mjs';
 import { resolver } from './modos.mjs';
 
@@ -147,13 +148,15 @@ export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}
   if (!resposta) {
     // A conta de cada escolha sai do ator, aqui: a esquiva, a Concentração, a Briga (contra o agarrão) e o escudo.
     const escudo = ator.escudo;
+    const humano = pacote.opcoes.includes('escudoHumano') ? await escudoHumanoDe(ator, { cena: alvo.parent }) : null;
     resposta = await JanelaDeDefesa.perguntar({
       ...pacote, mestre, arma: arma?.name ?? pacote.rotulo, tempo: mestre ? 0 : Number(config('tempo')) || 0,
       atacante: { nome: pacote.atacante, img: pacote.imgAtq || 'icons/svg/mystery-man.svg' }, alvo: { nome: alvo.name, img: alvo.texture?.src || ator.img },
       esquiva: R.contaDaDefesa(ator.partesDaPericia('evasion').partes), concentracao: R.contaDaDefesa(ator.partesDaPericia('concentration').partes),
       briga: R.contaDaDefesa(ator.partesDaPericia('brawling').partes), vontade: R.contaDaDefesa(ator.partesDoAtributo('will')),
       interface: R.contaDaDefesa(ator.partesDaInterface(INTERFACE_DA_DEFESA.interface[0])),
-      escudo: escudo ? { nome: escudo.name, pv: escudo.system.pvEscudo.value } : null
+      escudo: escudo ? { nome: escudo.name, pv: escudo.system.pvEscudo.value } : null,
+      escudoHumano: humano ? { nome: humano.token.name, morto: humano.morto, pv: humano.pv?.value ?? null } : null
     }, registrarJanela(id));
     if (id) janelas.delete(id);
     if (!resposta) return null;

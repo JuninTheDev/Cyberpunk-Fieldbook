@@ -12,6 +12,8 @@
         {{#if contra}}<span class="contra">contra {{contra}}</span>{{/if}}
         {{#if metros}}<span class="contra">{{metros}} m</span>{{/if}}
       </div>
+      {{#if alvoOriginal}}<p class="nota">Alvo original: {{alvoOriginal.nome}}. O escudo humano {{nome}} recebe o ataque.</p>{{/if}}
+      {{#if cadaver}}<p class="nota">Escudo de cadáver: perdeu {{cadaver.perdeu}} PV ({{cadaver.antes}} → {{cadaver.depois}}, máximo {{cadaver.max}}).{{#unless cadaver.passou}} A sobra não alcança quem o segura.{{/unless}}</p>{{/if}}
       {{#if veicular}}
       <ul class="dano-veicular">
         {{#if (eq veicular.tipo "vidro")}}

@@ -641,13 +641,29 @@ export function podeEsquivar({ modo, ref = 0, exigeRef8 = true, semPerna = false
   return !exigeRef8 || Number(ref) >= 8;
 }
 
+// Wiki, p. 183–184: o escudo humano não bloqueia corpo a corpo nem tiro mirado na cabeça. O modo Ricochete é o
+// tiro de 2077; a carga Tech é uma opção do tiro, não outro modo. Supressão e resistências não são tiros que acertam.
+export const podeInterporEscudoHumano = ({ modo, local = 'corpo', ativo = false } = {}) => Boolean(ativo
+  && ['tiro', 'autofogo', 'cartucho', 'explosivo', 'ricochete'].includes(modo) && local !== 'cabeca');
+
+// O cadáver usa os HP inicializados pelo BODY uma vez, fora desta conta. Como o escudo comum (wiki, p. 182–184),
+// um tiro que o destrói perde a sobra; uma explosão que o destrói passa inteira, sem descontar o que ele perdeu.
+export function danoDoEscudoHumano({ dano, pv, explosivo = false }) {
+  const max = Math.max(0, Number(pv?.max) || 0);
+  const antes = Math.max(0, Math.min(max, Number(pv?.value) || 0));
+  const perdeu = Math.min(antes, Math.max(0, Number(dano) || 0));
+  const depois = antes - perdeu;
+  return { antes, depois, perdeu, max, passou: Boolean(explosivo && depois === 0) };
+}
+
 // As escolhas do alvo. Uma só = não há o que perguntar (só rolar, se for esquiva ou Concentração).
-export function opcoesDeDefesa({ modo, esquiva, escudo = false }) {
+export function opcoesDeDefesa({ modo, esquiva, escudo = false, escudoHumano = false }) {
   if (modo === 'supressivo') return ['concentrar'];
   const lista = [];
   if (esquiva) lista.push('esquivar');
   if (modo !== 'corpo' || !esquiva) lista.push('aguentar');
   if (escudo) lista.push('escudo');
+  if (podeInterporEscudoHumano({ modo, ativo: escudoHumano })) lista.push('escudoHumano');
   return lista;
 }
 
@@ -664,6 +680,7 @@ export function escolhaAutomatica({ opcoes, modo, dv = null, mediaEsquiva = 0 })
   if (opcoes.length === 1) return opcoes[0];
   if (opcoes.includes('esquivar') && (['corpo', 'explosivo', 'cartucho'].includes(modo) || dv === null || mediaEsquiva > dv)) return 'esquivar';
   if (opcoes.includes('escudo')) return 'escudo';
+  if (opcoes.includes('escudoHumano')) return 'escudoHumano';
   return opcoes.includes('aguentar') ? 'aguentar' : opcoes[0];
 }
 

@@ -69,6 +69,7 @@ export async function aplicarMunicaoSemDano(ctx, linhas) {
   const texto = MUNICAO_SEM_DANO[tipo];
   if (!texto) return false;
   for (const linha of linhas) {
+    if (ctx.conferirReceptor && !await ctx.conferirReceptor(linha)) continue;
     linha.notas.push(`${municao.name}: não causa dano da arma. ${texto[0].toUpperCase()}${texto.slice(1)}`);
     const regra = RESISTENCIAS_MUNICAO[tipo];
     if (!regra) continue; // A fumaça continua sendo uma área que o mestre resolve.
@@ -87,6 +88,7 @@ export async function aplicarMunicaoSemDano(ctx, linhas) {
     const dono = jogadorDe(ator);
     const teste = (dono ? await pedir(dono, 'municao', dados) : null) ?? await rolarResistencia(dados);
     if (!teste) continue;
+    if (ctx.conferirReceptor && !await ctx.conferirReceptor(linha)) continue;
     const estado = registro(ctx, linha);
     estado.efeito = tipo;
     estado.resistencia = { total: teste.total, dv: regra.dv, passou: teste.total > regra.dv };
@@ -94,6 +96,7 @@ export async function aplicarMunicaoSemDano(ctx, linhas) {
     if (estado.resistencia.passou) continue;
     if (regra.dano) {
       const roll = await new Roll(regra.dano).evaluate();
+      if (ctx.conferirReceptor && !await ctx.conferirReceptor(linha)) continue;
       ctx.rolagens.push(roll);
       const hpAntes = ator.system.hp.value;
       await ator.update({ 'system.hp.value': hpAntes - roll.total });

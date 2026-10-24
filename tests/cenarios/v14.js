@@ -6358,7 +6358,7 @@ module.exports = async ({ edge, servidores, r }) => {
           await capanga.update({ 'system.hp.value': capanga.system.hp.max });
           r.deNovo = await agarrar();
           for (const ator of [a, capanga]) { await ator.sheet.render({ force: true }); ator.sheet.changeTab('combate', 'primary'); }
-          await __esperar(() => botoes(capanga) === 'escapar' && botoes(a) === 'estrangular,derrubar,soltar');
+          await __esperar(() => botoes(capanga) === 'escapar' && botoes(a) === 'estrangular,derrubar,usarEscudoHumano,soltar');
           r.botoes = { capanga: botoes(capanga), atiradora: botoes(a) };
           window.__fila = [[6, 10], [3, 10]];
           const segurou = await api.escapar(capanga);
@@ -6383,7 +6383,7 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.cartaoDoTerceiro === 'Atiradora estrangulou Capanga: 6 de dano direto no HP, sem a armadura (8 → 2): é a 3ª rodada seguida, e Capanga desmaia.'
         && info.abaixoDeZero.hp === 1 && info.abaixoDeZero.desmaiado && info.abaixoDeZero.cartao === 'Atiradora estrangulou Capanga: 6 de dano direto no HP, sem a armadura (4 → 1): o dano o levaria abaixo de 0, então fica com 1 e desmaia.'
         && info.derrubou.hp === 14 && info.derrubou.caido && !info.derrubou.marcas && info.derrubou.cartao === 'Atiradora derrubou Capanga: 6 de dano direto no HP, sem a armadura (20 → 14); Capanga caiu, e o agarrão acabou.'
-        && info.deNovo === 'agarrou' && info.botoes.capanga === 'escapar' && info.botoes.atiradora === 'estrangular,derrubar,soltar'
+        && info.deNovo === 'agarrou' && info.botoes.capanga === 'escapar' && info.botoes.atiradora === 'estrangular,derrubar,usarEscudoHumano,soltar'
         && info.segurou.resultado === 'segurou' && info.segurou.ataque === 11 && info.segurou.defesa === 11 && info.segurou.marcas === 'agarrando,agarrado'
         && info.segurou.cartao === 'Atiradora segurou Capanga (11 contra 11: o empate é de quem segura): o agarrão continua.'
         && info.escapou.resultado === 'escapou' && info.escapou.ataque === 14 && info.escapou.defesa === 10 && !info.escapou.marcas && info.escapou.botoes === 'agarrar'
@@ -15967,6 +15967,7 @@ module.exports = async ({ edge, servidores, r }) => {
         await combate.nextTurn();
         await combate.nextTurn();
         await esperar(() => alvo.system.hp.value === -20 && outro.system.hp.value === hpOutro - 2);
+        await P.esperarOsPerigos();
         const novas = game.messages.contents.filter(m => !antes.includes(m.id));
         const ordem = { hp: alvo.system.hp.value, outro: hpOutro - outro.system.hp.value, fila: window.__fila.length, vez: combate.combatant?.actorId === outro.id,
           deathSave: novas.findIndex(m => m.getFlag(S, 'deathSave')), passou: novas.find(m => m.getFlag(S, 'deathSave'))?.getFlag(S, 'deathSave').passou ?? null,
@@ -16860,6 +16861,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await require('../lib/c34-lesoes')(r, edge, jogador);
     await require('../lib/c34-exclusao')(r, edge, jogador);
     await require('../lib/c41-correr')(r, edge, jogador);
+    await require('../lib/c41-escudo-humano')(r, edge, jogador);
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

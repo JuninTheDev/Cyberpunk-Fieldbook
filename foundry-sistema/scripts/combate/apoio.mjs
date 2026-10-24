@@ -16,7 +16,7 @@ export const souOMestreAtivo = () => game.user.isGM && game.users.activeGM?.id =
 
 // "resistir": a resistência ao agarrão (agarrao.mjs); "vontade": a WILL + 1d10 contra o Jack In; "interface": a Interface
 // + 1d10 do netrunner contra a expulsão (neuroport.mjs). Todas pela mesma janela de reação.
-export const ROTULO = { esquivar: 'esquivou', aguentar: 'aguentou', escudo: 'usou o escudo', concentrar: 'rolou a Concentração', resistir: 'rolou a resistência', vontade: 'rolou a Vontade', interface: 'rolou a Interface' };
+export const ROTULO = { esquivar: 'esquivou', aguentar: 'aguentou', escudo: 'usou o escudo', escudoHumano: 'interpôs o escudo humano', concentrar: 'rolou a Concentração', resistir: 'rolou a resistência', vontade: 'rolou a Vontade', interface: 'rolou a Interface' };
 export const precisaRolar = escolha => ['esquivar', 'concentrar', 'resistir', 'vontade', 'interface'].includes(escolha);
 
 // ---------------- Tokens e distância ----------------

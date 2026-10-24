@@ -8,11 +8,12 @@ import { aplicarMunicaoSemDano, incendiar, rolarInteligente } from '../municoes.
 import * as R from '../regras.mjs';
 import { techAtravessaVidro } from '../regras-veiculos.mjs';
 import { rolarDano } from '../rolagens.mjs';
+import { escudoHumanoDe, usadoComoEscudo, danoNoEscudoHumano } from '../escudo-humano.mjs';
 import { STATUS_COBERTURA, STATUS_SUPRIMIDO, ROTULO, precisaRolar, centroDe, combateDe, conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular, distancia, esc, jogadorDe } from './apoio.mjs';
 import { cartaoDoResultado } from './cartao.mjs';
 import { pedir, perguntarDefesa, rolarDefesa, rolarSegundaChance } from './socket.mjs';
 
-const BOTAO = { ...DEFESAS, escudo: 'Escudo', concentrar: 'Rolar Concentração', resistir: 'Resistir', vontade: 'Rolar a Vontade', interface: 'Rolar a Interface' };
+const BOTAO = { ...DEFESAS, escudo: 'Escudo', escudoHumano: 'Interpor escudo humano', concentrar: 'Rolar Concentração', resistir: 'Resistir', vontade: 'Rolar a Vontade', interface: 'Rolar a Interface' };
 
 // ---------------- No mestre ativo ----------------
 async function contexto(pedido, usuario) {
@@ -104,6 +105,11 @@ function infoDoAlvo(ctx, token) {
   const ator = token.actor;
   const esquiva = ator.partesDaPericia('evasion').partes.reduce((soma, parte) => soma + parte.valor, 0);
   return { token, ator, nome: token.name, dono: jogadorDe(ator), ref: ator.system.atributos.ref.valor, semPerna: ator.system.semPerna, metros: distancia(ctx.tokenAtq, token), mediaEsquiva: esquiva + R.MEDIA_D10, escudo: ator.escudo };
+}
+
+async function escudoDoToken(token) {
+  const humano = await escudoHumanoDe(token.actor, { cena: token.parent });
+  return humano?.tokenDoPortador.uuid === token.uuid ? humano : null;
 }
 
 // A DV pela distância, na tabela da arma (autofogo: a tabela "(Autofire)"; ricochete e rajada Tech: a de autofogo
@@ -214,6 +220,7 @@ async function segundaChance(ctx, contra) {
 
 // A defesa de um alvo já no alcance. Preenche a linha e devolve se pegou.
 async function defesaDoAlvo(ctx, linha, alvo, dv) {
+  delete linha.interposicao;
   if (!conferirDestinos([alvo.token], ctx.pedido.destinos?.[alvo.token.uuid] ? { [alvo.token.uuid]: ctx.pedido.destinos[alvo.token.uuid] } : {}, ctx)) {
     linha.resultado = 'semDestino';
     return false;
@@ -225,9 +232,31 @@ async function defesaDoAlvo(ctx, linha, alvo, dv) {
     resposta = { escolha: 'aguentar' };
     linha.notas.push('A estrutura não se esquiva.');
   } else {
-    const esquiva = R.podeEsquivar({ modo: ctx.modo, ref: alvo.ref, exigeRef8: config('exigeRef8'), semPerna: alvo.semPerna });
-    const opcoes = R.opcoesDeDefesa({ modo: ctx.modo, esquiva, escudo: Boolean(alvo.escudo) });
+    const humano = await escudoDoToken(alvo.token);
+    const disponivel = humano && (!humano.morto || humano.pv.value > 0);
+    const usado = !['corpo', 'supressivo'].includes(ctx.modo) && await usadoComoEscudo(alvo.ator, { cena: alvo.token.parent, token: alvo.token.uuid });
+    const esquiva = !usado && R.podeEsquivar({ modo: ctx.modo, ref: alvo.ref, exigeRef8: config('exigeRef8'), semPerna: alvo.semPerna });
+    const opcoes = R.opcoesDeDefesa({ modo: ctx.modo, esquiva, escudo: Boolean(alvo.escudo),
+      escudoHumano: R.podeInterporEscudoHumano({ modo: ctx.modo, local: ctx.local, ativo: Boolean(disponivel) }) });
     resposta = await defender(ctx, alvo, { opcoes, dv });
+    if (!opcoes.includes(resposta?.escolha)) resposta = { escolha: R.escolhaPadrao(opcoes) };
+    if (usado) linha.notas.push('Usado como escudo humano: não pode esquivar de tiros.');
+    if (resposta.escolha === 'escudoHumano') {
+      const atual = await escudoDoToken(alvo.token);
+      if (!atual || atual.ator.uuid !== humano.ator.uuid || atual.token.uuid !== humano.token.uuid || atual.efeito.id !== humano.efeito.id
+        || (atual.morto && atual.pv.value < 1)) {
+        linha.resultado = 'semDestino';
+        linha.notas.push('O escudo humano mudou durante a reação: resolva a defesa novamente.');
+        return false;
+      }
+      linha.interposicao = { portador: alvo.ator.uuid, vitima: atual.ator.uuid, token: atual.token.uuid, efeito: atual.efeito.id };
+    }
+    if (resposta.escolha === 'esquivar' && !['corpo', 'supressivo'].includes(ctx.modo)
+      && await usadoComoEscudo(alvo.ator, { cena: alvo.token.parent, token: alvo.token.uuid })) {
+      linha.resultado = 'semDestino';
+      linha.notas.push('Passou a ser usado como escudo humano durante a reação: resolva a defesa novamente, sem esquiva de tiro.');
+      return false;
+    }
   }
   Object.assign(linha, { escolha: resposta.escolha, defesa: resposta.defesa ?? null, dv });
   if (!estrutura && alvo.semPerna && ctx.modo !== 'supressivo') linha.notas.push('Sem a perna, não esquiva.');
@@ -295,14 +324,73 @@ async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}
 
 const SEM_LESAO_DE_BORRACHA = 'Munição de borracha: sem lesão crítica.';
 
+// A reação escolhe o receptor antes da munição e do dano. O cartão conserva quem foi visado, e o UUID de quem
+// realmente recebeu os efeitos fica na linha, inclusive para o Desfazer de atores sintéticos.
+async function conferirEscudoDaLinha(ctx, linha) {
+  if (!linha.interposicao) return true;
+  const original = linha.tokenOriginal ?? linha.token;
+  const atual = await escudoDoToken(original);
+  const valido = original.parent.tokens.get(original.id) && atual && atual.ator.uuid === linha.interposicao.vitima
+    && atual.token.uuid === linha.interposicao.token && atual.efeito.id === linha.interposicao.efeito
+    && (!atual.morto || atual.pv.value > 0);
+  if (!valido) {
+    linha.resultado = 'semDestino';
+    linha.notas.push('O escudo humano não está mais disponível: resolva a defesa novamente.');
+    return false;
+  }
+  linha.humano = atual;
+  return true;
+}
+
+async function receptoresDoAtaque(ctx, pegas, area = false) {
+  const validas = [];
+  for (const linha of pegas) {
+    if (!await conferirEscudoDaLinha(ctx, linha)) continue;
+    if (linha.interposicao && !linha.tokenOriginal) {
+      linha.tokenOriginal = linha.token;
+      linha.token = linha.humano.token;
+      linha.nome = linha.token.name;
+      linha.img = linha.token.texture?.src || linha.token.actor.img;
+      linha.notas.push(`${linha.tokenOriginal.name} interpôs ${linha.nome}: o escudo humano recebe o ataque.`);
+    }
+    validas.push(linha);
+  }
+  if (!area) return validas;
+  // A interposição prevalece sobre a linha direta da vítima na mesma área. Uma explosão/cartucho causa um impacto.
+  const interpostos = new Set(validas.filter(l => l.interposicao).map(l => l.token.actor.uuid));
+  const recebidos = new Set();
+  return [...validas].sort((a, b) => Number(Boolean(b.interposicao)) - Number(Boolean(a.interposicao))).filter(linha => {
+    const uuid = linha.token.actor.uuid;
+    if (!interpostos.has(uuid)) return true;
+    if (recebidos.has(uuid)) {
+      linha.notas.push('Já recebe este ataque de área uma vez como escudo humano; nenhum segundo dano ou efeito.');
+      linha.resultado = 'semRepeticao';
+      return false;
+    }
+    recebidos.add(uuid);
+    return true;
+  });
+}
+
 // Aplica o dano num alvo e cuida das lesões: dois 6 (a tabela da cabeça só no tiro mirado na cabeça), tiro na perna
 // que passou da armadura (Perna quebrada), mortalmente ferido atingido de novo. A Deflexão de Dano do Solo tira do
 // primeiro dano que ele sofre na rodada. A munição de borracha não mata nem causa lesão crítica (wiki, munições). A carga
 // Tech ignora metade do SP (regras.CARGA_TECH). lesaoDoCritico: false no dano aplicado pelo cartão, em que a lesão do crítico sai pelo botão "Rolar a lesão".
 export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true } = {}) {
+  if (!await conferirEscudoDaLinha(ctx, linha)) return;
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
   if (!conferirDestinos([linha.token], ctx.pedido.destinos?.[linha.token.uuid] ? { [linha.token.uuid]: ctx.pedido.destinos[linha.token.uuid] } : {}, ctx)) return;
   const ator = linha.token.actor;
+  if (linha.humano?.morto) {
+    linha.cadaver = await danoNoEscudoHumano(ator, dano.total + (dano.bonus ?? 0), { explosivo: ctx.modo === 'explosivo' });
+    if (linha.cadaver?.passou) {
+      const portador = linhaDe(ctx, linha.tokenOriginal);
+      portador.resultado = 'acertou';
+      portador.notas.push('A explosão destruiu o escudo de cadáver: o dano inteiro alcança quem o segurava.');
+      await ferir(ctx, portador, dano, { lesaoDoCritico });
+    }
+    return;
+  }
   const municao = ctx.arma.municaoCarregada;
   const destino = destinoVeicular(ctx, linha.token);
   if (destino?.tipo === 'veiculo') {
@@ -451,11 +539,12 @@ async function redirecionado(ctx) {
 async function individual(ctx) {
   const doisAlvos = ctx.perfil?.doisAlvos && ctx.modo === 'tiro' && !R.LOCAIS_MIRADOS[ctx.local] && ctx.alvos.length >= 2;
   const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
-  const pegas = ctx.linhas.filter(l => atingidas.has(l));
+  let pegas = ctx.linhas.filter(l => atingidas.has(l));
   // mestre.mjs:individual, no Fluxo: só a defesa; o dano fica com o botão Dano da ficha.
-  if (config('dano') === 'manual') { for (const linha of pegas) linha.notas.push('Role o dano pelo botão Dano da ficha.'); return; }
+  if (config('dano') === 'manual') { for (const linha of pegas) linha.notas.push(linha.interposicao ? 'Role o dano pelo botão Dano e marque a vítima interposta para aplicá-lo; o dano avulso não repete a reação.' : 'Role o dano pelo botão Dano da ficha.'); return; }
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
+  pegas = await receptoresDoAtaque(ctx, pegas);
   if (await aplicarMunicaoDoAtaque(ctx, pegas)) return;
   const rajada = ctx.modo === 'autofogo';
   const maximo = ctx.arma.system.autofogo;
@@ -474,9 +563,15 @@ async function individual(ctx) {
 // Área (explosivo e cartucho): o dano é rolado uma vez e vale para cada um que ficou.
 async function danoNaArea(ctx, pegas, formula = null) {
   // mestre.mjs:danoNaArea, no Fluxo: nenhum dano automático nos alvos da área.
-  if (config('dano') === 'manual') { if (pegas.length) ctx.notas.push('Role o dano pelo botão Dano da ficha e aplique em quem ficou na área.'); return; }
+  if (config('dano') === 'manual') {
+    if (pegas.length) ctx.notas.push(pegas.some(l => l.interposicao)
+      ? 'Role o dano pelo botão Dano da ficha e aplique em quem ficou na área; se houve interposição, marque a vítima uma única vez em vez de quem a segurava.'
+      : 'Role o dano pelo botão Dano da ficha e aplique em quem ficou na área.');
+    return;
+  }
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
+  pegas = await receptoresDoAtaque(ctx, pegas, true);
   if (!pegas.length || await aplicarMunicaoDoAtaque(ctx, pegas)) return;
   const dano = await rolarDanoDoAtaque(ctx, { formula });
   if (!dano) return;
@@ -497,8 +592,8 @@ async function contraADvDaArea(ctx, dv) {
 
 // Resistências e estados pertencem à pessoa. Vidro intacto protege; a munição sem dano não destrói a estrutura.
 async function aplicarMunicaoDoAtaque(ctx, pegas) {
-  const pessoas = pegas.filter(linha => !destinoEstrutural(ctx, linha.token));
-  const semDano = await aplicarMunicaoSemDano(ctx, pessoas);
+  const pessoas = pegas.filter(linha => !linha.humano?.morto && !destinoEstrutural(ctx, linha.token));
+  const semDano = await aplicarMunicaoSemDano({ ...ctx, conferirReceptor: async linha => await conferirEscudoDaLinha(ctx, linha) && !linha.humano?.morto }, pessoas);
   if (semDano) for (const linha of pegas.filter(linha => !pessoas.includes(linha))) linha.notas.push('Esta munição não causa dano da arma à estrutura; a pessoa continua protegida.');
   return semDano;
 }

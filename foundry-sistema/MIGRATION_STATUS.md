@@ -41,6 +41,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | SP monitorado na barra, escolha da peça por local, árvore no diretório e imagens padrão por tipo (C34.3) | portados no ciclo 160 (sessão Codex); o track não muda a proteção do C18 |
 | CORE e wiki | configurações de criação de itens, perícias do capanga, lesões repetidas e confirmação de exclusão (C34.2) | portadas nos ciclos 158, 159 e 161; reroll continua padrão pela wiki e a confirmação é por cliente |
 | wiki e CORE | Correr pela ficha: Movimento extra pela Ação, com confirmação e cartão (C41, parte 1) | portado no ciclo 162 (sessão Codex); usa MOVE preparado, com o gasto de ações confirmado pela mesa |
+| wiki e decisão do usuário | escudo humano a partir do agarrão, reação, dano no receptor e proteção de cadáver (C41, parte 2) | ciclo 163 (sessão Codex); vítima recebe uma vez na área, com Desfazer por UUID e PV de cadáver persistentes |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | wiki | os perigos do ambiente (C38): a queda, o fogo, a eletrocução, o afogamento e a asfixia, o veneno, a droga como arma e a radiação | portados no ciclo 156 (sessão Junin, com o Codex); o CORE 0.92.4 não tem nenhum (ver as dúvidas) |
 | wiki | os veículos fora do dano (C40): a direção sob pressão, as manobras, a batida e desviar a pé; o tipo do veículo | portados no ciclo 157 (sessão Junin, com o Codex); o CORE 0.92.4 não automatiza nenhum (ver as dúvidas) |
@@ -7984,6 +7985,49 @@ nenhuma mudança concorrente. Trabalho na worktree própria; o master da wiki e 
   do código confirmou as guardas e sugeriu incluir a identidade do combatente no snapshot, incorporada e testada.
 - **Próximo:** os demais itens do C41 (escudo humano, Reputação, hospital/instalação e Cryopump/Cryotank); as reservas
   das outras sessões e os itens abertos do ROADMAP continuam preservados.
+
+### Ciclo 163 (2026-10-24): C41, parte 2, escudo humano (sessão Codex)
+
+- **Fontes:** wiki, `system-rules.js:535–537`, agarrão, cobertura e escudos (p. 177 e 182–184). O CORE 0.92.4 não
+  automatiza escudo humano; o dano de seu escudo comum soma dano e bônus antes de consumir os PV. Mortalmente ferido
+  não é morto: `turnos.mjs` marca DEFEATED na falha do Death Save. A FAQ oficial não acrescenta uma resolução deste
+  caso; as lacunas foram levadas ao usuário antes da implementação.
+- **Dúvidas resolvidas pelo usuário em 2026-10-24:** interpor é uma escolha na reação, em lugar da esquiva. A pessoa
+  agarrada recebe dano, armadura e lesões normais e não pode esquivar de tiros enquanto é escudo. Se ela e o portador
+  estiverem na mesma área de explosão ou cartucho, a interposição protege o portador e a vítima recebe uma única vez.
+- **Ativação:** o botão na ficha de personagem e capanga usa uma Ação, sem novo teste, a partir de agarrão recíproco
+  válido. O mestre confere dono, identidade dos efeitos e tokens, e ausência de outro escudo equipado; marca manual
+  ou unilateral não basta. A marca de uso fica no efeito Agarrando e sai com Soltar, fuga ou Derrubar. Os UUIDs dos
+  tokens tornam o vínculo explícito, inclusive em atores sintéticos; vínculos antigos só usam fallback sem ambiguidade.
+- **Combate:** uma escolha própria de reação identifica o alvo original e o receptor real. O redirecionamento ocorre
+  antes da munição sem dano, para resistências, estados, lesões, ablação, Reflex Tuner, visibilidade e Desfazer pertencerem
+  à vítima. Corpo a corpo, tiro mirado na cabeça e supressão não oferecem a interposição. O vínculo é relido após
+  esperas; se mudou, o cartão pede resolver a defesa novamente. Na área, a linha interposta prevalece sobre a linha
+  direta da vítima, sem um segundo dano ou efeito.
+- **Cadáver:** somente morte marcada permite iniciar os PV iguais ao BODY preparado. A captura ocorre na primeira
+  consulta ou resolução nesse estado, uma vez; não há snapshot no hook da morte. A trilha pertence à vítima e
+  persiste depois de soltar e agarrar novamente; mudar BODY não a recarrega. Um tiro destruidor não transfere sobra;
+  uma explosão destruidora aplica o dano inteiro ao portador, como no escudo comum. Desfazer devolve apenas a perda
+  daquele impacto, preservando danos posteriores. Soltar vivo é livre; largar o cadáver registra uma Ação.
+- **Limites:** a mesa conduz o orçamento de ações. O dano rolado à parte continua aplicando nos tokens marcados
+  pelo mestre; a defesa manual orienta marcar a vítima interposta uma única vez, sem repetir a reação.
+- **Portões:** G1, 162 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 473/473 no Node 24.
+  G4 completo, 260/260 em 565 s no Foundry 14.369; nenhum aviso de compatibilidade nem erro do sistema
+  no mestre ou jogador. Os sete cenários novos passaram também em execuções focadas e nos controles restaurados: UI
+  de personagem/capanga, dano 15 contra SP 7, Desfazer com dano posterior, corpo/cabeça, área, sonífera, lesão crítica,
+  vínculos rompidos durante reação, HP zero, cadáver destruído por tiro/explosão, dono/observador e tokens soltos.
+- **Regressões corrigidas:** a primeira execução deu 256/260 em 577 s. Soltar comum e dano manual sem interposição
+  voltaram aos textos e flags anteriores; a lista exata dos botões passou a exigir a nova ação. No C38, o HP já
+  chegava antes do cartão do mesmo tick: o teste agora aguarda a fila antes de ler mensagens, mantendo as mesmas
+  expectativas de dano e ordem entre Death Save e Sem ar. A suíte completa foi repetida após os ajustes.
+- **Mutações:** 60 detectadas, com bytes restaurados por MD5: 14 da regra pura, 38 do estado/ativação/permissões
+  e oito no Foundry real (receptor do tiro, área duplicada, UUID do Desfazer, esquiva da vítima, cadáver tratado
+  como vivo, receptor da munição, explosão destruidora e botão desligado). Controles aprovados antes e depois;
+  as 38 de API foram repetidas sobre o Soltar final. O G4 completo final rodou após a restauração.
+- **Revisão:** auditorias separadas de fontes, estado, combate e testes; as guardas de identidade/permissão após
+  esperas e a leitura de ator apagado foram incorporadas. A revisão final aprovou o diff e os ajustes de regressão.
+- **Próximo:** Reputação, hospital/instalação de cyberware e Cryopump/Cryotank; as reservas das outras sessões
+  continuam preservadas.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

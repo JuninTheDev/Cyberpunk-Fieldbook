@@ -7,6 +7,7 @@ import { aplicarPerdaDeHumanidade } from '../humanidade.mjs';
 import { escolherLesao, lesaoCritica } from '../lesoes.mjs';
 import { desfazerMunicao, escolherEmp, encerrarEfeitos, apagarFogo } from '../municoes.mjs';
 import { aplicarDanoDeNet } from '../net.mjs';
+import { desfazerEscudoHumano } from '../escudo-humano.mjs';
 import * as R from '../regras.mjs';
 import { CANAL, STATUS_SUPRIMIDO, ROTULO, conferirArmaVeicular, renderizar } from './apoio.mjs';
 import { ferir, linhaDe } from './modos.mjs';
@@ -15,7 +16,7 @@ import { desistir } from './socket.mjs';
 // ---------------- Cartão do resultado e "Desfazer" ----------------
 const RESULTADOS = {
   acertou: 'acertou', errou: 'errou', esquivou: 'esquivou', fora: 'fora do alcance', semDv: 'sem DV: o mestre decide',
-  semDestino: 'destino indisponível: escolha novamente', suprimido: 'suprimido: gasta o próximo movimento indo para a cobertura', firme: 'ficou firme'
+  semDestino: 'destino indisponível: escolha novamente', semRepeticao: 'atingido uma vez como escudo humano', suprimido: 'suprimido: gasta o próximo movimento indo para a cobertura', firme: 'ficou firme'
 };
 
 // A barra de HP do alvo no cartão (só o desenho: o número está na linha do dano), em texto (o 0 também desenha).
@@ -28,14 +29,17 @@ export async function cartaoDoResultado(ctx) {
   const linhas = ctx.linhas.map(l => ({
     nome: l.nome, img: l.img, resultado: l.resultado, rotulo: RESULTADOS[l.resultado] ?? l.resultado, escolha: l.escolha ?? null, defesa: l.defesa ?? null,
     dv: l.dv ?? null, metros: l.metros ?? null, segundaTentativa: l.segundaTentativa ?? null, multiplicador: l.multiplicador ?? null, dano: l.dano ?? null, veicular: l.veicular ?? null, municao: l.municao ?? null, suprimido: Boolean(l.suprimido), notas: l.notas,
-    segundaChance: l.segundaChance ?? null
+    segundaChance: l.segundaChance ?? null, cadaver: l.cadaver ?? null,
+    alvoOriginal: l.tokenOriginal ? { uuid: l.tokenOriginal.uuid, nome: l.tokenOriginal.name } : null,
+    receptor: l.token.actor?.uuid ?? null
   }));
   const resumo = {
     id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, segundaChance: ctx.segundaChance ?? null, atacante: ctx.nomeAtq, arma: ctx.arma.name,
     cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas
   };
-  const desfazer = ctx.linhas.filter(l => l.dano || l.veicular?.perdeu || l.veicular?.ablado || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
+  const desfazer = ctx.linhas.filter(l => l.dano || l.cadaver?.perdeu || l.veicular?.perdeu || l.veicular?.ablado || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
     ator: l.token.actor.uuid, veicular: l.veicular ?? null, suprimido: Boolean(l.suprimido), derrubado: Boolean(l.derrubado), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
+    cadaver: l.cadaver?.perdeu ?? 0,
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, armaduras: l.dano.armaduras, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   if (ctx.lesoesDoAtirador?.length) desfazer.push({ ator: ctx.atacante.uuid, suprimido: false, municao: null, lesoes: ctx.lesoesDoAtirador, dano: null });
@@ -54,7 +58,9 @@ export function destinatarios(ctx) {
   const ids = new Set(game.users.filter(usuario => usuario.isGM).map(usuario => usuario.id));
   if (modo === 'envolvidos') {
     ids.add(ctx.usuario.id);
-    for (const linha of ctx.linhas) for (const usuario of game.users) if (linha.token.actor?.testUserPermission(usuario, 'OWNER')) ids.add(usuario.id);
+    for (const linha of ctx.linhas) for (const usuario of game.users) {
+      if ([linha.token.actor, linha.tokenOriginal?.actor].some(ator => ator?.testUserPermission(usuario, 'OWNER'))) ids.add(usuario.id);
+    }
   }
   return [...ids];
 }
@@ -93,6 +99,7 @@ export async function desfazer(mensagem) {
       }
     }
     if (item.dano) await ator.desfazerDano(item.dano);
+    if (item.cadaver) await desfazerEscudoHumano(ator, item.cadaver);
     await desfazerMunicao(ator, item.municao);
     const lesoes = item.lesoes.filter(id => ator.items.has(id));
     if (lesoes.length) await ator.deleteEmbeddedDocuments('Item', lesoes);

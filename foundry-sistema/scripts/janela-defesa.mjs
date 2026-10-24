@@ -10,8 +10,8 @@ import { caminho, SISTEMA } from './config.mjs';
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const numero = valor => String(Math.round(valor * 10) / 10).replace('.', ',');
-const ROTULO = { esquivar: 'esquiva', aguentar: 'aguenta', escudo: 'usa o escudo', concentrar: 'rola a Concentração', resistir: 'rola a resistência', vontade: 'rola a Vontade', interface: 'rola a Interface' };
-const ICONES = { esquivar: 'fa-person-running', aguentar: 'fa-user-shield', escudo: 'fa-shield-halved', concentrar: 'fa-brain', resistir: 'fa-hand-fist', vontade: 'fa-network-wired', interface: 'fa-microchip' };
+const ROTULO = { esquivar: 'esquiva', aguentar: 'aguenta', escudo: 'usa o escudo', escudoHumano: 'interpõe o escudo humano', concentrar: 'rola a Concentração', resistir: 'rola a resistência', vontade: 'rola a Vontade', interface: 'rola a Interface' };
+const ICONES = { esquivar: 'fa-person-running', aguentar: 'fa-user-shield', escudo: 'fa-shield-halved', escudoHumano: 'fa-person-shield', concentrar: 'fa-brain', resistir: 'fa-hand-fist', vontade: 'fa-network-wired', interface: 'fa-microchip' };
 
 // O que cada escolha faz, com a conta (HTML: os nomes vêm escapados).
 function textoDaEscolha(escolha, d) {
@@ -25,6 +25,7 @@ function textoDaEscolha(escolha, d) {
   }
   if (escolha === 'aguentar') return { explosivo: 'Fica na área e leva o dano da explosão.', cartucho: 'Leva os 3d6 do cartucho.', corpo: 'O golpe pega.' }[d.modo] ?? contraDv;
   if (escolha === 'escudo') return `${esc(d.escudo?.nome)} (${d.escudo?.pv ?? 0} PV) recebe o ataque todo. Sem esquiva.${aDistancia ? ` ${contraDv}` : ''}`;
+  if (escolha === 'escudoHumano') return `${esc(d.escudoHumano?.nome)} ${d.escudoHumano?.morto ? `(${d.escudoHumano.pv} PV de cadáver)` : '(com sua própria armadura e HP)'} recebe o ataque. Sem esquiva; na área, recebe uma única vez.${aDistancia ? ` ${contraDv}` : ''}`;
   if (escolha === 'concentrar') return `${d.concentracao ? `${esc(d.concentracao.texto)} (média ${numero(d.concentracao.media)})` : 'WILL + Concentração + 1d10'} contra o ataque. Empate é seu. Perdeu: fica Suprimido e usa a próxima Ação de Movimento para ir para a cobertura (se não bastar, a Ação também).`;
   if (escolha === 'resistir') {
     const briga = d.briga ? `${esc(d.briga.texto)} (média ${numero(d.briga.media)})` : 'DEX + Briga + 1d10';
@@ -102,7 +103,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
       ...d, metrosTexto: d.metros ? numero(d.metros) : '', padraoTexto: ROTULO[d.padrao] ?? d.padrao, verTotal: d.mestre || Number.isFinite(d.total),
       opcoes: d.opcoes.map(escolha => ({
         escolha, icone: ICONES[escolha] ?? 'fa-circle',
-        titulo: { esquivar: d.modo === 'explosivo' ? 'Esquivar da explosão' : 'Esquivar', aguentar: d.modo === 'explosivo' ? 'Ficar' : 'Aguentar', escudo: 'Usar o escudo', concentrar: 'Rolar a Concentração', resistir: 'Resistir', vontade: 'Resistir com a Vontade', interface: 'Resistir com a Interface' }[escolha] ?? escolha,
+        titulo: { esquivar: d.modo === 'explosivo' ? 'Esquivar da explosão' : 'Esquivar', aguentar: d.modo === 'explosivo' ? 'Ficar' : 'Aguentar', escudo: 'Usar o escudo', escudoHumano: 'Interpor escudo humano', concentrar: 'Rolar a Concentração', resistir: 'Resistir', vontade: 'Resistir com a Vontade', interface: 'Resistir com a Interface' }[escolha] ?? escolha,
         texto: textoDaEscolha(escolha, d), padrao: escolha === d.padrao
       }))
     });

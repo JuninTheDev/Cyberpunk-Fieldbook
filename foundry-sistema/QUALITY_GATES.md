@@ -46,6 +46,15 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Escudo humano e receptor do ataque (C41):** redirecione a linha antes dos efeitos da munição, não apenas dentro
+  de receberDano. O UUID da vítima pertence a dano, lesões, resistência, destinatários e Desfazer; o alvo original
+  continua visível no cartão. Revalide os dois efeitos recíprocos e os tokens exatos após a defesa e antes do dano.
+  Na área, a linha interposta prevalece sobre a linha direta da vítima e impede o segundo impacto. HP abaixo de 1
+  é mortalmente ferido: só DEFEATED inicia a trilha persistente de PV do cadáver. Restaure perdas por diferença,
+  preservando dano posterior e impedindo recarga ao soltar e agarrar outra vez.
+- **Ticks e mensagens (C38, observado no C41):** o HP pode ser atualizado antes de o cartão do mesmo tick existir.
+  Espere `esperarOsPerigos()` antes de fotografar a lista de mensagens; aguardar apenas o HP permite ler o intervalo
+  entre os dois awaits. Preserve as expectativas de dano e de ordem entre Death Save e Sem ar.
 - **Correr e o turno confirmado (C41):** o MOVE preparado já inclui armadura, efeitos e ferimento. A corrida concede
   outro Movimento (MOVE × 2), e MOVE × 4 é o limite total do turno. Deslocar o token não prova que a Ação de Movimento
   foi gasta: a mesa confirma o requisito e a Ação disponível. Releia ficha e permissões depois da pergunta e confira

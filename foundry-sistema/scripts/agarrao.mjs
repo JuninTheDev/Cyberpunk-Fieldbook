@@ -13,6 +13,7 @@ import { SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { combateDe, defesaContra, destinatarios, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
 import { APERTO_DE_FERRO, danoDoAgarrao, venceuOAgarrao, vezesEstrangulando } from './regras.mjs';
+import { escudoHumanoDe, parParaEscudoHumano } from './escudo-humano.mjs';
 
 const CANAL = `system.${SISTEMA}`;
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
@@ -52,9 +53,12 @@ export async function agarrar(ator, { alvo = null, perguntar = false } = {}) {
   if (agarraoDe(ator)) return avisar(`${ator.name} já está num agarrão.`);
   if (agarraoDe(token.actor)) return avisar(`${token.name} já está num agarrão.`);
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
+  const meus = [...token.parent.tokens].filter(t => t.actor?.uuid === ator.uuid);
+  const proprio = ator.token?.parent === token.parent ? ator.token : meus.length === 1 ? meus[0] : null;
+  if (!proprio) return avisar(`Ponha um único token de ${ator.name} na cena do alvo para identificar quem vai agarrar.`);
   const teste = await rolarBriga(ator, { rotulo: 'Agarrar', contra: token.name, acao: 'agarrar', perguntar });
   if (!teste) return null;
-  return pedirAoMestre('agarrar', { ator: ator.uuid, token: tokenNaCena(ator, token.parent)?.uuid ?? null, alvo: token.uuid, total: teste.total, mensagem: teste.mensagem?.id ?? null });
+  return pedirAoMestre('agarrar', { ator: ator.uuid, token: proprio.uuid, alvo: token.uuid, total: teste.total, mensagem: teste.mensagem?.id ?? null });
 }
 
 // "Escapar": quem é agarrado rola; quem agarra resiste (o token dele precisa estar na cena, para a janela de reação).
@@ -81,15 +85,27 @@ const agindoAgarrando = (ator, acao) => {
 export const estrangular = ator => agindoAgarrando(ator, 'estrangular');
 export const derrubar = ator => agindoAgarrando(ator, 'derrubar');
 
+// Tornar quem se agarra um escudo custa uma Ação, sem rolagem. O mestre confere o par e as mãos de novo na fila.
+export async function usarEscudoHumano(ator) {
+  if (!ator?.isOwner || !['personagem', 'capanga'].includes(ator.type)) return null;
+  if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
+  return pedirAoMestre('escudoHumano', { ator: ator.uuid });
+}
+
 // "Soltar": quem agarra solta quando quiser (a wiki). Apaga a marca dele; a do outro, o mestre ativo apaga.
 export async function soltar(ator) {
   const efeito = efeitoDe(ator, 'agarrando');
   if (!efeito) return null;
+  if (!ator.isOwner) return null;
+  const escudo = await escudoHumanoDe(ator);
+  if (!ator.isOwner || await fromUuid(ator.uuid) !== ator || efeitoDe(ator, 'agarrando') !== efeito) return null;
+  const acoes = escudo?.morto ? 1 : 0;
   const nome = efeito.getFlag(SISTEMA, 'agarrao')?.nome;
   await efeito.delete();
   await ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ actor: ator }),
-    content: `<div class="${SISTEMA} cartao agarrao soltou"><p><b>${esc(ator.name)}</b> soltou ${nome ? `<b>${esc(nome)}</b>` : 'quem agarrava'}: o agarrão acabou.</p></div>`
+    content: `<div class="${SISTEMA} cartao agarrao soltou"><p><b>${esc(ator.name)}</b> soltou ${nome ? `<b>${esc(nome)}</b>` : 'quem agarrava'}${acoes ? ' (1 Ação para soltar o escudo de cadáver)' : escudo ? ' (livre)' : ''}: o agarrão acabou.</p></div>`,
+    ...(escudo ? { flags: { [SISTEMA]: { agarrao: { resultado: 'soltou', acoes } } } } : {})
   });
   return true;
 }
@@ -130,8 +146,8 @@ async function resolverAgarrao(ator, pedido, usuario) {
   const defesa = resposta?.defesa ?? null;
   const resultado = defesa !== null && venceuOAgarrao(pedido.total, defesa) ? 'agarrou' : 'resistiu';
   if (resultado === 'agarrou') {
-    await marcar(ator, 'agarrando', alvo.actor, alvo.name);
-    await marcar(alvo.actor, 'agarrado', ator, nomeAtq);
+    await marcar(ator, 'agarrando', alvo.actor, alvo.name, tokenAtq, alvo);
+    await marcar(alvo.actor, 'agarrado', ator, nomeAtq, alvo, tokenAtq);
   }
   await mostrarTotal(pedido);
   const [a, b] = [nomeAtq, alvo.name].map(nome => `<b>${esc(nome)}</b>`);
@@ -193,13 +209,37 @@ async function resolverDano(ator, pedido, usuario, acao) {
   return cartao({ usuario, atores: [outro], falante: nome, frase, resumo: { resultado: estrangulando ? 'estrangulou' : 'derrubou', dano: body, hpAntes, hp, desmaiou, vezes, alvo: dados.nome } });
 }
 
-const RESOLVER = { agarrar: resolverAgarrao, escapar: resolverFuga, estrangular: resolverDano, derrubar: resolverDano };
+async function resolverEscudoHumano(ator, pedido, usuario) {
+  const par = await parParaEscudoHumano(ator);
+  if (!par) return avisar('O escudo humano precisa de um agarrão recíproco e dos dois tokens na mesma cena.');
+  const autorizado = () => souOMestreAtivo() && game.users.get(usuario.id) === usuario && usuario.active
+    && (usuario.isGM || ator.testUserPermission(usuario, 'OWNER'));
+  const outroEscudo = () => ator.items.some(item => item.type === 'armadura' && item.system.escudo && item.system.equipada);
+  if (!autorizado()) return null;
+  if (par.efeito.getFlag(SISTEMA, 'escudoHumano') === true) return null;
+  if (outroEscudo()) {
+    return avisar('Solte ou guarde o outro escudo equipado antes de usar o escudo humano.');
+  }
+  await par.efeito.setFlag(SISTEMA, 'escudoHumano', true);
+  const escudo = await escudoHumanoDe(ator, { cena: par.token.parent });
+  if (!escudo || !autorizado() || outroEscudo()) {
+    if (efeitoDe(ator, 'agarrando') === par.efeito && par.efeito.getFlag(SISTEMA, 'escudoHumano') === true) {
+      await par.efeito.unsetFlag(SISTEMA, 'escudoHumano');
+    }
+    return null;
+  }
+  return cartao({ usuario, atores: [ator, par.ator], falante: par.tokenDoPortador.name,
+    frase: `<b>${esc(par.tokenDoPortador.name)}</b> passou a usar <b>${esc(par.token.name)}</b> como escudo humano (1 Ação). A interposição é uma reação opcional em lugar da esquiva; não protege de corpo a corpo nem de tiros mirados na cabeça. Soltar a pessoa viva é livre; soltar o cadáver custa 1 Ação.`,
+    resumo: { resultado: 'escudoHumano', acao: 'escudoHumano', acoes: 1, alvo: par.token.name, vitima: par.ator.uuid, token: par.token.uuid } });
+}
+
+const RESOLVER = { agarrar: resolverAgarrao, escapar: resolverFuga, estrangular: resolverDano, derrubar: resolverDano, escudoHumano: resolverEscudoHumano };
 
 // A marca de um lado do agarrão: o efeito de status, com o outro ator (para apagar junto) e o nome dele (para a ficha).
-async function marcar(ator, papel, outro, nome) {
+async function marcar(ator, papel, outro, nome, token, tokenOutro) {
   // Como o toggleStatusEffect do Foundry, com o flag.
   const efeito = await ActiveEffect.implementation.fromStatusEffect(STATUS_AGARRAO[papel], { parent: ator });
-  efeito.updateSource({ [`flags.${SISTEMA}.agarrao`]: { outro: outro.uuid, nome } });
+  efeito.updateSource({ [`flags.${SISTEMA}.agarrao`]: { outro: outro.uuid, nome, token: token?.uuid ?? null, tokenOutro: tokenOutro?.uuid ?? null } });
   return ActiveEffect.implementation.create(efeito.toObject(), { parent: ator, keepId: true });
 }
 

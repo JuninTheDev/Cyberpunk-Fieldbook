@@ -6,6 +6,15 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## O que já faz
 
+- **Escudo humano (C41, parte 2, ciclo 163):** quem está Agarrando pode gastar uma Ação para usar a pessoa agarrada
+  como escudo. Na reação, **Interpor escudo humano** substitui a esquiva: o agarrado recebe o tiro com sua própria
+  armadura, HP, lesões e efeitos da munição. Ele não esquiva de tiros enquanto é usado como escudo. Corpo a corpo e
+  tiro mirado na cabeça continuam atingindo quem o segura. Na mesma área de explosão ou cartucho, a vítima recebe
+  um único impacto, protegendo o portador. O cartão identifica ambos e Desfazer restaura as perdas do receptor real.
+  Morte marcada transforma a proteção em PV iguais ao BODY, registrados uma vez: soltar e agarrar novamente não
+  recarrega os PV. Um tiro destruidor perde a sobra; uma explosão destruidora alcança o portador com o dano inteiro,
+  como nos escudos comuns. Soltar a pessoa viva é livre; largar o cadáver custa uma Ação. O dano avulso orienta o
+  mestre a marcar a vítima, sem repetir a reação. O gasto de ações continua sendo conduzido pela mesa.
 - **Correr (C41, parte 1, ciclo 162):** nas abas Perícias e Combate do personagem e na ficha do capanga, **Correr
   (1 Ação)** confirma que o Movimento normal já foi usado e que a Ação está disponível. O cartão registra mais
   MOVE × 2 metros, até MOVE × 4 metros no turno, com o MOVE atual da ficha (armadura, lesões e ferimento incluídos).
