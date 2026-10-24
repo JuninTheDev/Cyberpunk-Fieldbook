@@ -46,6 +46,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Reconhecimento por Reputação (C41):** um d10 simples abaixo do nível não passa pelo teste genérico, que acrescenta
+  crítico e Sorte preparada. Confira 1 e 10 com um único dado, empate falho, má fama por magnitude e ficha intacta.
+  O modo do chat é capturado no início; dono, identidade e valor da Reputação são relidos após rolar e renderizar.
 - **Escudo humano e receptor do ataque (C41):** redirecione a linha antes dos efeitos da munição, não apenas dentro
   de receberDano. O UUID da vítima pertence a dano, lesões, resistência, destinatários e Desfazer; o alvo original
   continua visível no cartão. Revalide os dois efeitos recíprocos e os tokens exatos após a defesa e antes do dano.

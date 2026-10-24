@@ -15,6 +15,7 @@ import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { modoDaMesa } from './mesa.mjs';
 import { avisarCiberpsicose, estadoMental } from './terapia.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
+import { rolarReputacao } from './reputacao.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
 import { ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
@@ -274,6 +275,9 @@ export class AtorCPR extends Actor {
       rotulo: FACEDOWN.rotulo, perguntar, partes: situacionais => this.partesDoFacedown({ situacionais }), situacionais: () => this.situacionaisDoTeste()
     }, { sabor: FACEDOWN.dica, ...opcoes, modo: modoDaMesa(modo) });
   }
+
+  // Ser reconhecido pela fama é só 1d10 abaixo da Reputação, separado do Facedown (wiki, p. 193).
+  rolarReputacao(opcoes = {}) { return rolarReputacao(this, opcoes); }
 
   // A Interface do Netrunner (regras.HABILIDADES_DE_INTERFACE; o CPRInterfaceRoll do CORE): o Rank de Interface + 1d10,
   // com o bônus dos programas ativos naquela habilidade, as penalidades e os situacionais de todas as ações (e os da

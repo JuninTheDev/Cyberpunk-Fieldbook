@@ -34,6 +34,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
       <div class="medida movimento"><span>AÇÃO DE MOVIMENTO</span> <b>{{movimento.metros}} m</b></div>
       {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="correr" data-tooltip="{{#if corrida.bloqueio}}{{corrida.bloqueio}}{{else}}Depois de usar o Movimento normal, gasta a Ação para mais um Movimento{{/if}}"{{#if corrida.bloqueio}} disabled{{/if}}>CORRER (1 AÇÃO)</button></div>{{/if}}
       {{#if corrida.bloqueio}}<p class="dica corrida">{{corrida.bloqueio}}</p>{{else}}<p class="dica corrida">+{{corrida.metros}} m · {{corrida.total}} m no turno.</p>{{/if}}
+      {{#if editavel}}{{#unless capanga}}<div class="botoes-resumo"><button type="button" class="acao" data-action="rolarReputacao" data-tooltip="Ao conhecer alguém: 1d10 abaixo do nível de Reputação indica que já ouviu falar de você. Má fama conta sem o sinal: −5 conta como 5.">RECONHECIMENTO</button></div>{{/unless}}{{/if}}
       {{#if capanga}}{{#if movimento.caido}}<div class="botoes-resumo"><button type="button" class="acao" data-action="levantar" data-tooltip="Caído: não usa Movimento até levantar-se (1 Ação)">LEVANTAR-SE (1 AÇÃO)</button></div>{{/if}}{{/if}}
     </section>
   </div>

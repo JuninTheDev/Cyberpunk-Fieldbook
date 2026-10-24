@@ -38,6 +38,10 @@
         <span class="valor"><b>{{facedown.valor}}</b></span>
         <i>FACEDOWN</i>
       </button>
+      {{#if editavel}}<button type="button" class="indicador corte rola reconhecimento" data-action="rolarReputacao" data-tooltip="Ao conhecer alguém: 1d10 abaixo do nível de Reputação indica que já ouviu falar de você. Má fama conta sem o sinal: −5 conta como 5.">
+        <span class="valor"><b>1d10</b></span>
+        <i>RECONHECIMENTO</i>
+      </button>{{/if}}
     </div>
   </div>
 </header>

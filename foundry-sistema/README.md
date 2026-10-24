@@ -6,6 +6,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## O que já faz
 
+- **Reconhecimento por Reputação (C41, parte 3, ciclo 164):** o botão **Reconhecimento** nas abas Perícias e Combate
+  e na ficha do capanga rola um d10 simples ao conhecer alguém. A pessoa já ouviu falar de você se o resultado for
+  estritamente menor que o nível; empate falha. Má fama usa a magnitude: Reputação −5 reconhece como nível 5,
+  preservando o valor assinado do Facedown. O cartão segue a visibilidade escolhida no chat, com Sorte e recursos
+  da ficha preservados. O encontro e o sentido da fama são narrados pela mesa. Valores fora de −10 a 10 são avisados
+  antes de rolar, sem limitar ou alterar o campo da ficha.
 - **Escudo humano (C41, parte 2, ciclo 163):** quem está Agarrando pode gastar uma Ação para usar a pessoa agarrada
   como escudo. Na reação, **Interpor escudo humano** substitui a esquiva: o agarrado recebe o tiro com sua própria
   armadura, HP, lesões e efeitos da munição. Ele não esquiva de tiros enquanto é usado como escudo. Corpo a corpo e

@@ -8989,7 +8989,7 @@ module.exports = async ({ edge, servidores, r }) => {
           && c.pistola && c.armadura && c.instalados && c.kerenzikov === 12 && c.grip === 3 && c.medscanner === 'equipado' && c.bala === 10
           && c.hum === 35 && c.humMax === 46 && c.ini === 8 && c.sp === 11
           && JSON.stringify(c.itens) === JSON.stringify([['Heavy Pistol', 'Equipada'], ['Light Armorjack (Body)', 'Vestida'], ['Heavy Pistol (Basic)', ''], ['Grip Foot', 'Instalado'], ['Kerenzikov', 'Instalado'], ['Medscanner', 'Equipado']])
-          && c.tabela.join() === 'Heavy Pistol' && c.cabecalho.join('|') === '0/11 SP CABEÇA/CORPO|8 INICIATIVA|6 ESQUIVA|REPUTAÇÃO|5 FACEDOWN'
+          && c.tabela.join() === 'Heavy Pistol' && c.cabecalho.join('|') === '0/11 SP CABEÇA/CORPO|8 INICIATIVA|6 ESQUIVA|REPUTAÇÃO|5 FACEDOWN|1d10 RECONHECIMENTO'
           && soltos.every(Boolean)
           && tiro1.linha.resultado === 'acertou' && tiro1.linha.dv === 15 && tiro1.linha.dano?.dano === 16 && tiro1.linha.dano.recebido === 5
           && tiro1.t1.join() === '30,10' && tiro1.t2.join() === '35,11' && tiro1.ator.join() === '35,11'
@@ -16862,6 +16862,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await require('../lib/c34-exclusao')(r, edge, jogador);
     await require('../lib/c41-correr')(r, edge, jogador);
     await require('../lib/c41-escudo-humano')(r, edge, jogador);
+    await require('../lib/c41-reputacao')(r, edge, jogador);
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

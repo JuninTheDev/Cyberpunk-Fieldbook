@@ -3,6 +3,7 @@
 // dos dados. A API fica em game.system.api (macros e testes).
 import * as agarrao from './agarrao.mjs';
 import * as escudoHumano from './escudo-humano.mjs';
+import * as reputacao from './reputacao.mjs';
 import { registrarArvoreItens } from './arvore-itens.mjs';
 import * as artesMarciais from './artes-marciais.mjs';
 import * as avanco from './avanco.mjs';
@@ -104,7 +105,7 @@ Hooks.once('init', () => {
   reguaDv.registrarReguaDv();
   // Os perigos do ambiente (o C38): os estados novos, o /perigo, o botão do HUD do token e os botões dos cartões.
   perigos.registrarPerigos();
-  game.system.api = { agarrao, escudoHumano, artesMarciais, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, perigos: perigos.API, veiculos: direcao.API, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
+  game.system.api = { agarrao, escudoHumano, reputacao, artesMarciais, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, perigos: perigos.API, veiculos: direcao.API, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
 });

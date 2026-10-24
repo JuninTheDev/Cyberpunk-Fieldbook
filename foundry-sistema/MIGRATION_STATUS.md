@@ -42,6 +42,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE e wiki | configurações de criação de itens, perícias do capanga, lesões repetidas e confirmação de exclusão (C34.2) | portadas nos ciclos 158, 159 e 161; reroll continua padrão pela wiki e a confirmação é por cliente |
 | wiki e CORE | Correr pela ficha: Movimento extra pela Ação, com confirmação e cartão (C41, parte 1) | portado no ciclo 162 (sessão Codex); usa MOVE preparado, com o gasto de ações confirmado pela mesa |
 | wiki e decisão do usuário | escudo humano a partir do agarrão, reação, dano no receptor e proteção de cadáver (C41, parte 2) | ciclo 163 (sessão Codex); vítima recebe uma vez na área, com Desfazer por UUID e PV de cadáver persistentes |
+| wiki e decisão do usuário | reconhecimento por Reputação ao conhecer alguém (C41, parte 3) | ciclo 164 (sessão Codex); d10 simples estritamente abaixo do nível, má fama pela magnitude, sem mudar o Facedown |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | wiki | os perigos do ambiente (C38): a queda, o fogo, a eletrocução, o afogamento e a asfixia, o veneno, a droga como arma e a radiação | portados no ciclo 156 (sessão Junin, com o Codex); o CORE 0.92.4 não tem nenhum (ver as dúvidas) |
 | wiki | os veículos fora do dano (C40): a direção sob pressão, as manobras, a batida e desviar a pé; o tipo do veículo | portados no ciclo 157 (sessão Junin, com o Codex); o CORE 0.92.4 não automatiza nenhum (ver as dúvidas) |
@@ -8028,6 +8029,40 @@ nenhuma mudança concorrente. Trabalho na worktree própria; o master da wiki e 
   esperas e a leitura de ator apagado foram incorporadas. A revisão final aprovou o diff e os ajustes de regressão.
 - **Próximo:** Reputação, hospital/instalação de cyberware e Cryopump/Cryotank; as reservas das outras sessões
   continuam preservadas.
+
+### Ciclo 164 (2026-10-24): C41, parte 3, reconhecimento por Reputação (sessão Codex)
+
+- **Fontes:** wiki, `system-rules.js:539`, Reputação e facedown (p. 193–194): ao conhecer alguém novo, role um d10
+  abaixo da própria Reputação para a pessoa já ter ouvido falar de você, para o bem ou para o mal. CORE 0.92.4,
+  `cpr-actor.js:1017` e `:1085`, a fábrica de rolagens e o Facedown, e o ledger da ficha; o reconhecimento segue
+  a regra da wiki, separado desses fluxos existentes.
+- **Dúvida resolvida pelo usuário em 2026-10-24:** má fama conta pela magnitude no reconhecimento. Reputação −5
+  equivale ao nível 5 para este d10; o valor persistido continua −5, inclusive no Facedown e no extrato.
+- **Entrega:** botão Reconhecimento nas abas Perícias e Combate e no capanga; API `ator.rolarReputacao()` e
+  `game.system.api.reputacao.rolarReputacao(ator)`. Um único `1d10`, sem crítico, atributos, penalidades,
+  modificadores ou Sorte; sucesso estrito abaixo do nível, inclusive empate falho. O cartão exibe valor assinado,
+  nível e resultado e usa o modo selecionado do chat, ou o `modo` pedido pela macro.
+- **Guardas:** só dono de personagem/capanga; identidade por UUID, permissões, usuário, nome e Reputação relidos
+  depois da rolagem e da renderização. Alteração durante a espera cancela o cartão e pede outra rolagem. A trava
+  por ator impede duplicação pelo clique duplo e é liberada também em erros. Não escreve no ator nem no alvo;
+  Sorte preparada, recursos, efeitos, extrato e modelos de tokens soltos ficam preservados.
+- **Limites:** a mesa escolhe quando há um encontro novo e narra o sentido da fama. Não há memória automática de
+  conhecidos, alvo obrigatório ou gasto de Ação. O campo assinado continua sem alteração de schema ou importação;
+  para este reconhecimento, valores não inteiros ou fora dos níveis da tabela (magnitude 0–10) avisam antes do dado,
+  sem coerção, arredondamento ou limitação silenciosa do campo.
+- **Portões:** G1, 167 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 491/491 no Node 24.
+  G4 completo, 264/264 em 538 s no Foundry 14.369; nenhum aviso de compatibilidade nem erro do sistema
+  nos navegadores do mestre e jogador. Os quatro passos novos passaram também em execução focada e nos controles
+  restaurados: três botões reais com clique duplo, dado 1/10 sem crítico ou Sorte, empate, má fama, limites,
+  snapshot alterado durante evaluate, dono/observador, revogação, ator apagado, token solto e os quatro modos do chat.
+  O teste antigo do cabeçalho do capanga continua exato e passa a exigir também o indicador de Reconhecimento.
+- **Mutações:** 50 detectadas e restauradas por MD5: 16 da regra pura, 28 da API (guardas após rolar/renderizar,
+  integridade do cartão, modo capturado, concorrência e erros liberando a trava) e seis no Foundry real (delegar
+  ao Facedown, marcar crítico, forçar público, speaker do modelo, retirar trava e desligar botão de Combate).
+  Controles aprovados antes e depois; o G4 completo rodou após a restauração.
+- **Revisão:** auditorias independentes de fonte, arquitetura, UI e API; nomes escapados, UUID sintético e
+  preservação dos recursos conferidos. A decisão de magnitude veio do usuário antes da implementação final.
+- **Próximo:** hospital/instalação de cyberware e Cryopump/Cryotank; reservas das outras sessões preservadas.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
