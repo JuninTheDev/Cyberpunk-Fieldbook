@@ -19,6 +19,7 @@ import { ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cy
 import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
+import { BARRAS_SP, mudarSpPelaBarra } from './barras-sp.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -30,6 +31,13 @@ const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[o
 export const encaixeDe = item => ({ tipo: item.system.tipo, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', slots: item.system.slots, tamanho: item.system.tamanho });
 
 export class AtorCPR extends Actor {
+  // O HUD das barras de SP muda os itens de armadura, sem gravar por cima dos derivados do ator.
+  async modifyTokenAttribute(atributo, valor, delta = false, barra = true) {
+    if (!Object.hasOwn(BARRAS_SP, atributo)) return super.modifyTokenAttribute(atributo, valor, delta, barra);
+    await mudarSpPelaBarra(this, BARRAS_SP[atributo], valor, delta);
+    return this;
+  }
+
   get veiculoAtivo() { return veiculos.veiculoAtivo(this); }
   usarVeiculo(id = '') { return veiculos.usarVeiculo(this, id); }
   dirigirVeiculo(dirigindo = true) { return veiculos.dirigirVeiculo(this, dirigindo); }

@@ -349,6 +349,12 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
       abertas: lesão repetida, exibição das perícias do capanga e confirmação ao apagar.
   - [~] parte 3, a mesa (sessão Codex, 2026-10-23): a SP na barra do token; a árvore dos instalados no diretório de itens; a imagem padrão de cada
     tipo; escolher a armadura de cada local (o "track" do CORE; conferir antes o que muda, já que o C18 usa a de maior SP).
+    - [~] Barras de SP preparadas em revisão (sessão Codex, 2026-10-23): corpo e cabeça na configuração do token,
+      com o maior SP atual do local (C18) e o máximo da mesma peça. O ajuste pelo HUD abla todas as camadas ao reduzir;
+      ao aumentar, restaura só a peça exibida. Personagem e capanga, inclusive solto, com permissão na API e fila local.
+      G1, 142 arquivos; G2 aprovado; G3, 418/418; 24 mutações detectadas, com hashes restaurados. Dois cenários G4
+      preparados, sem execução por falta do Foundry 14 neste ambiente. Sem ciclo de conclusão; árvore no diretório,
+      imagens padrão e escolha manual da peça acompanhada continuam abertas.
 - [ ] **C35. Gerar a cena da arquitetura** com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de
   acesso é um Tile numa cena que já existe.
 

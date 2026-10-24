@@ -4,6 +4,16 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 **Esta é a versão 0.2.0, um protótipo.** O combate do Fluxo de Combate já está dentro do sistema. A campanha continua no Foundry 12 com o CORE 0.92.4 até este sistema estar provado na mesa.
 
+## Em revisão (C34.3, barras de SP)
+
+Na configuração das barras do token de personagem ou capanga, `armadura.corpo` e `armadura.cabeca` acompanham o maior
+SP atual do local e o máximo da mesma peça. O dono pode ajustar pelo HUD: diminuir abla todas as camadas vestidas do
+local; aumentar restaura só a peça exibida, até o máximo dela, como no CORE. A peça é escolhida pelo SP atual, como
+no dano (C18). Sem peça, a barra vale zero. Cada capanga solto usa a proteção do próprio token.
+
+Preparação em rascunho: G1/G2 aprovados, 418 testes no G3 e 24 mutações detectadas. Os dois cenários novos do G4
+(configuração, HUD, redesenho e permissões) ainda precisam rodar num Foundry 14 ativado para concluir esta subparte.
+
 ## O que já faz
 
 - **Criação de itens na ficha (C34.2, ciclo 158):** a configuração do mundo **Jogadores podem criar itens**, desligada

@@ -46,6 +46,13 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Barras e proteção derivada (C34.3, em revisão):** o SP mostrado vem da mesma peça usada pelo dano (maior valor
+  atual, não maior máximo). O HUD escreve nos itens, sem gravar SP derivado no ator. Diminuir abla as camadas do local;
+  aumentar restaura só a fonte exibida. A fila só libera após a gravação terminar e relê a permissão e a peça ao sair
+  da espera. Os testes também provocam recusa e erro para provar a liberação. O G4 preparado observa o redesenho
+  automático após mudanças dos itens, chamando o desenho original: não força um redesenho que esconderia um gatilho
+  ausente. Configuração, eventos reais do HUD, token solto e permissões em dois clientes aguardam execução no Foundry.
+
 - **Opção de criação e ficha aberta (C34.2):** esconder o botão não basta; a ação relê a opção e a permissão. O G4
   revoga a opção com o botão antigo ainda desenhado, clica no botão real das fichas de personagem e capanga e confere
   também o observador. Nas mutações de navegador, rode um controle sem mutação e confira que a falha é a esperada,

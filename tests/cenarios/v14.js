@@ -136,6 +136,122 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    // C34.3: o SP da barra usa a mesma fonte do dano (C18), traduzida pelo TokenCPR.
+    await r.passo('barras de SP (C34.3): configuração, HUD, camadas, conserto e troca de peça no personagem e no capanga solto, com HP e outro token preservados', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async f => { for (let i=0;i<80&&!f();i++) await new Promise(r=>setTimeout(r,100)); return Boolean(f()); };
+        const anterior = canvas.scene, atores = [], desenhistas = [], mensagens = new Set(game.messages.map(m=>m.id)); let cena;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo(), resultados = [];
+          cena = await Scene.implementation.create({ name:'C34.3 Barras', width:1200, height:1000, grid:{type:1,size:100,distance:2,units:'m'} });
+          await cena.activate(); await esperar(()=>canvas.ready&&canvas.scene?.id===cena.id);
+          for (const tipo of ['personagem','capanga']) {
+            const roupa = (id,nome,valor,equipada=true) => { const d=foundry.utils.deepClone(cat[id]);d.name=nome;d.system.equipada=equipada;d.system.sp.corpo.value=valor;return d; };
+            const cabeca=roupa('core_armor:light-armorjack-head','Cabeça',0);cabeca.system.sp.cabeca.value=9;
+            const ator=await Actor.implementation.create({name:'C34.3 '+tipo,type:tipo,system:{hp:{value:35}},items:[
+              roupa('core_armor:metalgear-body','Metalgear',5),roupa('core_armor:kevlar-body','Kevlar',7),
+              roupa('core_armor:skin-weave','Pele',1),cabeca,roupa('core_armor:metalgear-body','Reserva',18,false)]});atores.push(ator);
+            const dados=await ator.getTokenDocument({x:200,y:200,bar1:{attribute:'hp'},bar2:{attribute:'armadura.corpo'},displayBars:CONST.TOKEN_DISPLAY_MODES.ALWAYS});
+            const [token,irmao]=await cena.createEmbeddedDocuments('Token',[dados.toObject(),{...dados.toObject(),x:400}]);
+            await esperar(()=>canvas.tokens.get(token.id));
+            const a=token.actor, item=nome=>a.items.getName(nome), barra=()=>token.getBarAttribute('bar2'), ler=()=>['Metalgear','Kevlar','Pele','Cabeça','Reserva'].map(n=>[item(n).system.sp.corpo.value,item(n).system.sp.cabeca.value]);
+            const inicial={corpo:[barra()?.value,barra()?.max],cabeca:token.getBarAttribute('bar1',{alternative:'armadura.cabeca'})?.value,
+              hp:token.getBarAttribute('bar1')?.value,editavel:barra()?.editable,solto:!token.actorLink};
+            await token.sheet.render({force:true});
+            const opcoes=()=>token.sheet.element?.querySelector('select[name="bar2.attribute"]');
+            await esperar(opcoes);
+            const escolhas=[...(opcoes()?.options??[])].map(o=>o.value);
+            const configuracao=['hp','humanidade','sorte','armadura.corpo','armadura.cabeca'].every(c=>escolhas.includes(c));
+            await token.sheet.close();
+            const visual=canvas.tokens.get(token.id), original=visual._drawBar, desenhos=[];
+            desenhistas.push({visual,original});
+            visual._drawBar=function(indice,grafico,dados){desenhos.push([indice,dados.value,dados.max]);return original.call(this,indice,grafico,dados);};
+            const desenhou=async(valor,max)=>esperar(()=>desenhos.some(d=>d[0]===1&&d[1]===valor&&d[2]===max));
+            await canvas.tokens.hud.bind(visual);
+            const campo=()=>canvas.tokens.hud.element?.querySelector('input[name="bar2"],input[name="bar2.value"],input[data-bar="bar2"]');
+            await esperar(campo);
+            const hud={valor:Number(campo()?.value),editavel:Boolean(campo()&&!campo().disabled&&!campo().readOnly)};
+            if(campo()){campo().value='-2';campo().dispatchEvent(new Event('change',{bubbles:true}));}
+            hud.gravou=await esperar(()=>barra()?.value===5&&item('Metalgear').system.sp.corpo.value===3);
+            const ablou=ler(), redesenhouAblacao=await desenhou(5,7);
+            await canvas.tokens.hud.close();
+            await a.modifyTokenAttribute('armadura.corpo',2,true);
+            const restaurou=ler();
+            await a.modifyTokenAttribute('armadura.cabeca',-1,true);
+            const cabecaDepois=token.getBarAttribute('bar1',{alternative:'armadura.cabeca'})?.value;
+            desenhos.length=0;await item('Metalgear').consertar();
+            const conserto=[barra()?.value,barra()?.max], redesenhouConserto=await desenhou(18,18);
+            desenhos.length=0;await item('Metalgear').update({'system.equipada':false});
+            const trocou=[barra()?.value,barra()?.max], redesenhouTroca=await desenhou(7,7);
+            desenhos.length=0;await item('Kevlar').delete();
+            const removida=[barra()?.value,barra()?.max], redesenhouRemocao=await desenhou(0,7);
+            await a.modifyTokenAttribute('armadura.corpo',-99,true);
+            const zero=[barra()?.value,barra()?.max];
+            await a.modifyTokenAttribute('armadura.corpo',2,true);
+            const doZero=[barra()?.value,barra()?.max];
+            await item('Pele').delete();
+            const semPeca=[barra()?.value,barra()?.max];
+            await a.modifyTokenAttribute('hp',-1,true);
+            const hpMenos=token.getBarAttribute('bar1')?.value;
+            await a.modifyTokenAttribute('hp',1,true);
+            const isolado=tipo==='personagem'||(ator.items.getName('Metalgear').system.sp.corpo.value===5&&irmao.getBarAttribute('bar2')?.value===7);
+            resultados.push({tipo,inicial,configuracao,hud,ablou,restaurou,cabecaDepois,conserto,trocou,removida,zero,doZero,semPeca,hpMenos,hp:a.system.hp.value,isolado,redesenhos:[redesenhouAblacao,redesenhouConserto,redesenhouTroca,redesenhouRemocao]});
+            await cena.deleteEmbeddedDocuments('Token',[token.id,irmao.id]);
+          }
+          return {resultados};
+        } finally {
+          for(const {visual,original} of desenhistas)if(!visual.destroyed)visual._drawBar=original;
+          await canvas.tokens.hud.close();
+          if(anterior&&game.scenes.has(anterior.id))await anterior.activate();
+          await cena?.delete();for(const ator of atores){await ator.sheet.close();await ator.delete();}
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.has(m.id)).map(m=>m.id));
+        }
+      })()`);
+      return [info.resultados.length===2&&info.resultados.every(v=>v.inicial.corpo.join()==='7,7'&&v.inicial.cabeca===9&&v.inicial.hp===35&&v.inicial.editavel&&v.inicial.solto===(v.tipo==='capanga')
+        &&v.configuracao&&v.hud.valor===7&&v.hud.editavel&&v.hud.gravou
+        &&JSON.stringify(v.ablou)===JSON.stringify([[3,0],[5,0],[0,7],[0,9],[18,0]])
+        &&JSON.stringify(v.restaurou)===JSON.stringify([[3,0],[7,0],[0,7],[0,9],[18,0]])
+        &&v.cabecaDepois===8&&v.conserto.join()==='18,18'&&v.trocou.join()==='7,7'&&v.removida.join()==='0,7'
+        &&v.zero.join()==='0,7'&&v.doZero.join()==='2,7'&&v.semPeca.join()==='0,0'&&v.hpMenos===34&&v.hp===35&&v.isolado&&v.redesenhos.every(Boolean)),JSON.stringify(info)];
+    });
+
+    await r.passo('barras de SP (C34.3): no jogador, dono ajusta a proteção e observador só lê; a API recusa alteração do observado', async () => {
+      let cliente;
+      const preparo=await edge.evaluate(`(async()=>{
+        const atores=[];let usuario;
+        try{
+          usuario=await User.implementation.create({name:'Jogador C34.3',role:CONST.USER_ROLES.PLAYER});
+          const cat=await game.system.api.wiki.carregarCatalogo(), d=foundry.utils.deepClone(cat['core_armor:light-armorjack-body']);d.system.equipada=true;d.system.sp.corpo.value=9;
+          for(const tipo of ['personagem','capanga'])for(const dono of [true,false]){
+            const ator=await Actor.implementation.create({name:'C34.3 '+tipo+' '+dono,type:tipo,ownership:{[usuario.id]:dono?CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER:CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER},items:[d]});atores.push(ator);
+          }
+          return {usuario:usuario.id,atores:atores.map(a=>a.id)};
+        }catch(erro){for(const ator of atores)await ator.delete();await usuario?.delete();throw erro;}
+      })()`);
+      try{
+        cliente=await abrirEdge({porta:9481,saida:path.join(servidores.raiz,'tests','.saida'),prefixo:'v14-c34-3-'});
+        await foundry14.capturarAvisos(cliente);await foundry14.entrarComo(cliente,mesa.url,'Jogador C34.3');
+        const info=await cliente.evaluate(`(async()=>{
+          const ids=${JSON.stringify(preparo.atores)},resultados=[];
+          for(let i=0;i<80&&!ids.every(id=>game.actors.has(id));i++)await new Promise(r=>setTimeout(r,100));
+          for(const id of ids){
+            const ator=game.actors.get(id),dono=ator.isOwner;
+            const token=await ator.getTokenDocument({bar2:{attribute:'armadura.corpo'}}),antes=token.getBarAttribute('bar2');
+            await ator.modifyTokenAttribute('armadura.corpo',-2,true);
+            const depois=(await ator.getTokenDocument({bar2:{attribute:'armadura.corpo'}})).getBarAttribute('bar2');
+            resultados.push({tipo:ator.type,dono,editavel:antes?.editable,antes:antes?.value,depois:depois?.value,sp:ator.items.contents[0].system.sp.corpo.value});
+          }
+          return {resultados};
+        })()`);
+        const protegido=await edge.evaluate(`(async()=>{for(let i=0;i<80&&!game.actors.get('${preparo.atores[0]}')?.items.some(i=>i.system.sp?.corpo?.value===7);i++)await new Promise(r=>setTimeout(r,100));return ${JSON.stringify(preparo.atores)}.map(id=>game.actors.get(id).items.contents[0].system.sp.corpo.value);})()`);
+        const avisos=await foundry14.avisosDoSistema(cliente),erros=cliente.erros.slice();
+        return [info.resultados.length===4&&info.resultados.every(v=>v.editavel===v.dono&&v.antes===9&&v.depois===(v.dono?7:9)&&v.sp===(v.dono?7:9))&&protegido.join()==='7,9,7,9'&&!avisos.length&&!erros.length,JSON.stringify({info,protegido,avisos,erros})];
+      }finally{
+        await cliente?.fechar();
+        await edge.evaluate(`(async()=>{for(const id of ${JSON.stringify(preparo.atores)})await game.actors.get(id)?.delete();await game.users.get('${preparo.usuario}')?.delete();})()`);
+      }
+    });
+
     // CORE 0.92.4, CPRActorSheet._rollCriticalInjury: rolar a tabela à mão não altera HP.
     // Wiki, p. 187–188 e 223: corpo/cabeça, repetir lesão já existente, paliativo e tratamento pela DV.
     await r.passo('lesões (C19): personagem e capanga rolam corpo e cabeça pela ficha, criam os efeitos e o cartão sem perder HP; fechar a escolha não rola nem cria', async () => {

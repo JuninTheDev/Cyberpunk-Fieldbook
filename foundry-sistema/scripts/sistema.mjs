@@ -40,6 +40,7 @@ import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
 import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolagens.mjs';
 import * as terapia from './terapia.mjs';
+import { registrarBarrasDeSp } from './token.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
@@ -58,6 +59,7 @@ Hooks.once('init', () => {
   CONFIG.Actor.dataModels.demonio = DadosDemonio;
   // O contêiner (o container do CORE): a loja, o saque, o esconderijo ou um personalizado, com as permissões do tipo.
   CONFIG.Actor.dataModels.conteiner = DadosConteiner;
+  registrarBarrasDeSp();
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,
     cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo,
