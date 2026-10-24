@@ -2,6 +2,7 @@
 // as fichas, o crítico do d10, as configurações, o combate, os turnos, a NET na mesa, a importação da wiki e a migração
 // dos dados. A API fica em game.system.api (macros e testes).
 import * as agarrao from './agarrao.mjs';
+import { registrarArvoreItens } from './arvore-itens.mjs';
 import * as artesMarciais from './artes-marciais.mjs';
 import * as avanco from './avanco.mjs';
 import { registrarArmasDoCyberware, sincronizarArmaMontada } from './armas-cyberware.mjs';
@@ -71,6 +72,7 @@ Hooks.once('init', () => {
   CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrado, name: 'Agarrado', img: 'icons/svg/net.svg' });
   registrarCritico();
   registrarConfiguracoes();
+  registrarArvoreItens();
   // O Painel Tático (o C25): as configurações deste navegador e a tecla H; a barra monta no ready.
   registrarPainel();
   municoes.registrarMunicoes();

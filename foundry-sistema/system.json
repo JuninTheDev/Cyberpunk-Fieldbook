@@ -29,6 +29,10 @@
     {
       "src": "styles/painel-tatico.css",
       "layer": "system"
+    },
+    {
+      "src": "styles/arvore-itens.css",
+      "layer": "system"
     }
   ],
   "languages": [

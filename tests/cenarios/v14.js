@@ -224,7 +224,8 @@ module.exports = async ({ edge, servidores, r }) => {
           await esperar(()=>canvas.ready&&canvas.scene?.id===cena.id);
           const tokens=await cena.createEmbeddedDocuments('Token',[(await base.getTokenDocument({x:300,y:300})).toObject(),(await medico.getTokenDocument({x:600,y:300})).toObject()]);
           await esperar(()=>tokens.every(t=>canvas.tokens.get(t.id)));
-          ferido=tokens[0].actor; canvas.tokens.get(tokens[0].id).control({releaseOthers:true});canvas.tokens.get(tokens[1].id).control({releaseOthers:false});
+          const tokenFerido=tokens.find(t=>t.actorId===base.id),tokenMedico=tokens.find(t=>t.actorId===medico.id);
+          ferido=tokenFerido.actor; canvas.tokens.get(tokenFerido.id).control({releaseOthers:true});canvas.tokens.get(tokenMedico.id).control({releaseOthers:false});
           await ferido.sheet.render({force:true});
           const painel=()=>ferido.sheet.element?.querySelector('.lesoes'), lesao=id=>ferido.items.find(i=>i.getFlag('${S}','catalogo')===id);
           const cervical=lesao('core_critical-injuries-head:whiplash'), quebrada=lesao('core_critical-injuries-body:broken-leg');
@@ -260,7 +261,7 @@ module.exports = async ({ edge, servidores, r }) => {
           const empate=await fazer(quebrada,'tratarLesao',0,true), permaneceu=ferido.items.has(quebrada.id);
           const tratou=await fazer(quebrada,'tratarLesao',1,true);
           return {antes,correcao,suspensa,recusaCorrecao,voltou,definitiva,cervicalCurada,paliativo,efeitosAntes,retorno,empate,permaneceu,tratou,curada:!ferido.items.has(quebrada.id)&&ferido.system.atributos.move.valor===5,
-            modelo:{move:base.system.atributos.move.valor,death:base.system.deathSave.base,lesoes:base.items.filter(i=>i.type==='lesao').length,corrigida:base.items.some(i=>i.getFlag('${S}','corrigida'))},solto:!tokens[0].actorLink};
+            modelo:{move:base.system.atributos.move.valor,death:base.system.deathSave.base,lesoes:base.items.filter(i=>i.type==='lesao').length,corrigida:base.items.some(i=>i.getFlag('${S}','corrigida'))},solto:!tokenFerido.actorLink};
         } finally {
           CONFIG.Dice.randomUniform=random;dialogo()?.querySelector('.window-header [data-action="close"]')?.click();await ferido?.sheet.close();
           if(anterior&&game.scenes.has(anterior.id))await anterior.activate();await cena?.delete();await base?.delete();await medico?.delete();
@@ -15180,7 +15181,10 @@ module.exports = async ({ edge, servidores, r }) => {
           await w.personagensDaWiki();
           await w.personagensDaWiki();
           await w.entregarPedidos();
-          const ator = game.actors.get(m.antigo), saiu = ator.getFlag('${S}', 'saiu');
+          const ator = game.actors.get(m.antigo);
+          // A entrega periódica pode já estar transferindo este ator; as chamadas acima pulam a operação em curso.
+          for (let i = 0; i < 60 && !ator.getFlag('${S}', 'saiu'); i++) await new Promise(resolve => setTimeout(resolve, 100));
+          const saiu = ator.getFlag('${S}', 'saiu');
           const antes = m.chamadas.filter(c => c.rota === '/api/personagens/' + m.ids.viajante + '/mesa' && c.metodo === 'PUT').length;
           await game.settings.set('${S}', 'wikiMesa', true);
           await ator.update({ 'system.hp.value': 22 });
@@ -16851,6 +16855,8 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await require('../lib/c34-imagens')(r, edge);
+    await require('../lib/c34-mesa')(r, edge, jogador);
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

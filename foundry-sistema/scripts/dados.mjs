@@ -7,7 +7,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES, ROLES_ANTIGAS } from '.
 import * as regras from './regras.mjs';
 import { protecoesDoVeiculo, TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
 import { scannerPreferido, tipoDeScanner } from './regras-inventario.mjs';
-import { armaduraDoLocal } from './regras-armadura.mjs';
+import { armaduraDoLocal, armaduraMonitoradaDoLocal } from './regras-armadura.mjs';
 import { penalidadeDeDeathSave } from './tratamento.mjs';
 
 const { fields } = foundry.data;
@@ -57,6 +57,9 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       hp: recurso(40, 40),
       humanidade: recurso(50, 50),
       sorte: recurso(5, 5),
+      armaduraMonitorada: new fields.SchemaField({ cabeca: texto(), corpo: texto() }),
+      // Campos reconhecidos nativamente pelo HUD v14; o valor é sempre recalculado dos itens.
+      spMonitorado: new fields.SchemaField({ cabeca: recurso(0, 0), corpo: recurso(0, 0) }),
       // Pela chave da perícia ("handgun", "language-streetslang"). As de família guardam qual família e o nome.
       pericias: new fields.TypedObjectField(new fields.SchemaField({
         nivel: inteiro(0, { min: 0 }),
@@ -160,6 +163,10 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     this.armadura = Object.fromEntries(['cabeca', 'corpo'].map(local => {
       const item = armaduraDoLocal(this.parent.items, local);
       return [local, { sp: item ? item.system.sp[local].value : 0, max: item ? item.system.sp[local].max : 0, item: item?.id ?? null }];
+    }));
+    this.spMonitorado = Object.fromEntries(['cabeca', 'corpo'].map(local => {
+      const item = armaduraMonitoradaDoLocal(this.parent.items, local, this.armaduraMonitorada[local]);
+      return [local, { value: item?.system.sp[local].value ?? 0, max: item?.system.sp[local].max ?? 0 }];
     }));
     this.iniciativa = a.ref.valor + this.bonus.iniciativa + this.consciencia.iniciativa;
   }

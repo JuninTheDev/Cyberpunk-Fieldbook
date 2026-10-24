@@ -38,6 +38,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | a janela de rolagem (modificador avulso, os modificadores comuns do livro, os efeitos situacionais; Ctrl pula) | portada nos ciclos 24 (os testes), 25 (o ataque e a iniciativa) e 27 (no computador do jogador, a defesa, o dano e o Death Save; na ficha, o dano e o Death Save) |
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
+| CORE | SP monitorado na barra, escolha da peça por local, árvore no diretório e imagens padrão por tipo (C34.3) | portados no ciclo 160 (sessão Codex); o track não muda a proteção do C18 |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | wiki | os perigos do ambiente (C38): a queda, o fogo, a eletrocução, o afogamento e a asfixia, o veneno, a droga como arma e a radiação | portados no ciclo 156 (sessão Junin, com o Codex); o CORE 0.92.4 não tem nenhum (ver as dúvidas) |
 | wiki | os veículos fora do dano (C40): a direção sob pressão, as manobras, a batida e desviar a pé; o tipo do veículo | portados no ciclo 157 (sessão Junin, com o Codex); o CORE 0.92.4 não automatiza nenhum (ver as dúvidas) |
@@ -7857,6 +7858,53 @@ foi integrada antes de começar; o C34.3 não foi alterado. O C34.2 já estava r
   esperado em cada mutante. O G4 completo foi executado depois da restauração.
 - **Revisão:** outro agente conferiu a fonte e o diff, sem achados impeditivos, sem editar ou rodar navegador.
 - **Próximo:** no C34.2, lesão repetida e confirmação ao apagar item; o C34.3 continua reservado pela outra sessão.
+
+### Ciclo 160 (2026-10-24): C34.3, os detalhes da mesa (sessão Codex)
+
+Commit anterior: `f1453ad` (retomada da reserva do C34.3 a pedido do usuário). Trabalho numa worktree própria;
+as reservas das partes 1 e 2 foram preservadas.
+
+- **Referência:** CORE 0.92.4, `modules/actor/cpr-actor.js:968–1006` (track), `:1377–1387` (maior SP no dano),
+  `:1565–1625` (ablação), `hooks/actor/sync-tracked-armor.js` (edição pela barra),
+  `hooks/foundry/ui/item-folder-upgraded-display.js` (árvore) e `utils/cpr-systemUtils.js:523` (imagens).
+  No Foundry 14.369, foram conferidos `TokenDocument.getBarAttribute`, a descoberta de atributos pelo schema,
+  `Actor.modifyTokenAttribute` e `getDefaultArtwork`. O C18 continua seguindo a armadura da wiki (p. 186).
+- **SP na barra:** personagem e capanga acompanham corpo ou cabeça, com escolha automática pelo maior SP atual,
+  uma peça vestida ou nenhuma. Peça apagada, guardada ou incompatível usa a automática. A escolha só muda a barra:
+  o combate conserva o C18. Baixar o SP abla todas as camadas do local; subir repara só a monitorada. Os valores são
+  derivados dos itens, sem manter outro estoque de SP. A fila serializa edições do mesmo ator neste cliente.
+- **Tokens e permissão:** novos personagens e capangas usam o corpo na segunda barra; uma barra explícita é
+  preservada. “Mostrar na barra” muda o protótipo e os tokens ligados da cena atual; no token solto, muda só ele.
+  As APIs exigem dono e usam o ator sintético. O G4 rebaixa o jogador de dono para observador e confere a recusa.
+- **Árvore:** apresenta `instaladoEm` recursivamente, com prioridades do CORE, sem alterar vínculos ou pastas.
+  Respeita visibilidade, abre fichas e guarda expansão por usuário. A busca usa as linhas nativas. Órfãos e ciclos
+  conservam cada item uma vez; a montagem profunda usa iteração. Munição carregada continua sendo referência ao
+  estoque compartilhado, sem ser reparentada como instalação única.
+- **Imagens:** padrões locais para os cinco tipos de ator e treze de item, inclusive itens da ficha e inventário
+  aninhado na criação. Imagens explícitas, cópias e texturas próprias são preservadas. Os 16 SVGs são idênticos aos
+  do CORE, com origem e licença registradas; o sistema não depende de o CORE estar instalado.
+- **Portões:** G1, 151 arquivos sem erro; G2, nenhum erro, incluindo as duas bibliotecas novas do G4 no lint;
+  G3, 419/419 no Node 24; G4 completo, 245/245 em 488 s, sem avisos de compatibilidade nem erros
+  do sistema nos dois navegadores. Os quatro passos focados também passaram sem avisos, inclusive sem cena prévia.
+  A primeira rodada completa deu 244/245: o teste novo de SP dependia da cena removida por casos anteriores.
+  O caso passou a criar e limpar a própria cena, restaurando a anterior quando existir. A segunda rodada também
+  deu 244/245: a checagem de imagens assumia ordem no retorno de criação em lote. No mesmo mundo, reproduziu duas
+  falhas e um acerto com as imagens sempre corretas; identificar cada item por nome retirou a dependência de ordem.
+  As comparações individuais foram mantidas. Na terceira rodada, os quatro casos novos passaram e só o caso antigo
+  de lesões C19 falhou: também supunha a ordem de dois tokens e confundia médico com ferido. O teste passou a
+  identificar cada token pelo `actorId`, conservando todas as verificações. Nenhuma regra do sistema mudou nessas
+  correções dos testes; os casos de imagens e de C19 passaram três vezes no mundo preservado após as correções.
+  A quarta rodada passou C34.3 e C19, mas capturou `saiu` antes de terminar uma transferência C27 iniciada pela
+  entrega periódica. O teste agora aguarda essa marca por até 6 s e mantém todas as expectativas de transporte;
+  o código da wiki não mudou. A revisão confirmou a corrida pelo `transferenciasEmCurso` e pelo log completo.
+- **Mutações:** 29 caíram, com MD5 original restaurado: 19 no G3 (escolha, fallback, ablação, reparo, delta,
+  permissão, tipo, fila, visibilidade, vínculos, ciclos, prioridade, raízes e imagens) e 10 no navegador (artwork de
+  ator e item, rota do HUD, escolha no derivado, barra inicial, nome como HTML, CSS da busca, expansão salva,
+  atualização da montagem e limpeza ao redesenhar). As de navegador alteram só a instalação descartável, com
+  controles aprovados antes e depois e falha pelo motivo esperado. O G4 completo rodou após a restauração.
+- **Revisão e limites:** revisões separadas de armadura, árvore e imagens não encontraram bloqueios. A fila não é
+  uma transação entre clientes. Os padrões não substituem imagens já gravadas nos documentos.
+- **Próximo:** no C34.2, lesão repetida e confirmação ao apagar item; os demais itens abertos do ROADMAP.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

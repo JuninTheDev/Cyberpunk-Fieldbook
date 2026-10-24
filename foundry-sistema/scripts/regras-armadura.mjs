@@ -11,3 +11,22 @@ export function armaduraDoLocal(itens, local) {
 }
 
 export const spComVariacao = ({ value, max }, delta) => Math.max(0, Math.min(max, value + delta));
+
+// Track do CORE: monitorar uma peça não muda a proteção efetiva do C18.
+export function armaduraMonitoradaDoLocal(itens, local, id = '') {
+  if (id === 'nenhuma') return null;
+  return armadurasDoLocal(itens, local).find(item => item.id === id) ?? armaduraDoLocal(itens, local);
+}
+
+export function mudancasDoSPMonitorado(itens, local, id, valor, delta = false) {
+  if (!Number.isSafeInteger(valor)) return [];
+  const item = armaduraMonitoradaDoLocal(itens, local, id);
+  if (!item) return [];
+  const atual = item.system.sp[local];
+  const novo = spComVariacao(atual, delta ? valor : valor - atual.value);
+  const diferenca = novo - atual.value;
+  if (!diferenca) return [];
+  const pecas = diferenca < 0 ? armadurasDoLocal(itens, local) : [item];
+  return pecas.map(peca => ({ id: peca.id, valor: spComVariacao(peca.system.sp[local], diferenca) }))
+    .filter(mudanca => itens.find(peca => peca.id === mudanca.id).system.sp[local].value !== mudanca.valor);
+}

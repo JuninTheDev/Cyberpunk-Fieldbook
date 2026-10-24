@@ -6,6 +6,18 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## O que já faz
 
+- **SP na barra e armadura monitorada (C34.3, ciclo 160):** nas fichas de personagem e capanga, **Acompanhar**
+  escolhe a peça vestida de corpo ou cabeça, a automática (maior SP atual) ou nenhuma. **Mostrar na barra** põe esse
+  local na segunda barra do token; atores novos já vêm com o corpo. Baixar o SP pelo HUD abla todas as camadas do
+  local; subir repara só a peça monitorada, até seu máximo. O combate continua usando o maior SP vestido do C18.
+  Peça guardada ou apagada volta à automática. Exige dono; no token solto, muda só ele.
+- **Itens instalados no diretório (C34.3, ciclo 160):** a seta do item expande sua montagem, com os filhos e netos;
+  clicar no nome abre a ficha. A expansão fica guardada por usuário. Busca, pastas e permissões continuam valendo,
+  e montar ou desmontar atualiza a árvore. Só apresenta os vínculos `instaladoEm`: não move itens nem muda pastas.
+- **Imagens padrão por tipo (C34.3, ciclo 160):** os cinco tipos de ator e treze de item usam os ícones locais do
+  CORE 0.92.4, inclusive o item em branco da ficha. Imagens explícitas, cópias e texturas próprias são preservadas;
+  o CORE não precisa estar instalado. Origem e licença estão em `icones/padrao/ORIGEM.md`.
+
 - **Criação de itens na ficha (C34.2, ciclo 158):** a configuração do mundo **Jogadores podem criar itens**, desligada
   por padrão como no CORE, permite ao dono criar itens em branco nas fichas de personagem e capanga. O mestre pode
   sempre criar. Desligada, os botões somem e a ação recusa a criação mesmo numa ficha aberta anteriormente. Os

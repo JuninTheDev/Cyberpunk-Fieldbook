@@ -7,7 +7,7 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 | Portão | Como roda | Passa quando | Estado |
 | --- | --- | --- | --- |
 | G1 Sintaxe | `node --check` em cada `.mjs` do sistema (com as subpastas, como `scripts/netrun/`) e nos testes | nenhum erro | ativo |
-| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
+| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/c34-*.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
 | G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam: as regras puras com os valores de referência, e o conteúdo gerado contra a própria wiki (tabelas de DV faixa por faixa, lesões pelo 2d6, perícias, os itens da loja) | ativo |
 | G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam, inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
 | G5 Wiki | `node tests/rodar.js` (a suíte inteira) | nenhuma falha nova; as conhecidas estão listadas abaixo | ativo |
@@ -45,6 +45,24 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   o `reversao` (o clone com o `campaign-map.js` antigo).
 
 ## Regras
+
+- **SP monitorado e proteção efetiva (C34.3):** o track do CORE acompanha uma peça na barra, enquanto o dano usa
+  o maior SP vestido e abla todas as camadas. Mantenha os dados separados. A barra edita os itens pelo
+  `modifyTokenAttribute`, com permissão na API e usando o ator sintético do token solto. Um schema com `value` e
+  `max` numéricos já fornece barra editável no v14. O G4 confere o HUD real, reparo, C18, Desfazer e duas edições juntas.
+- **Árvore e busca nativa (C34.3):** esconder as linhas originais por `hidden` conflita com o filtro nativo.
+  Use CSS fora da busca, conserve as linhas e confira o resultado com `getComputedStyle`. Nomes entram por
+  `textContent`, com visibilidade conferida novamente ao abrir a ficha. Teste redesenho no mesmo HTMLElement e
+  montagem alterada sem renderização manual, além de busca, expansão salva e documentos privados nos dois clientes.
+  Cada caso que usa o canvas cria e limpa sua própria cena: o cenário completo pode chegar sem cena ativa.
+- **Operação periódica em curso (C27, observado no C34.3):** a consulta da wiki pula uma transferência já iniciada
+  pelo processamento periódico. Antes de fotografar a marca de saída, o G4 aguarda a condição com prazo de 6 s.
+  Se a marca não chegar, continuam falhando os mesmos asserts de destino, data, envio único e ausência de nova ficha.
+- **Imagens padrão nativas (C34.3):** `getDefaultArtwork` alcança também os itens aninhados na criação do ator.
+  Confira os documentos gravados e os SVGs servidos pelo Foundry, além de imagem explícita, cópia e textura própria.
+  Criação em lote não garante a ordem dos documentos retornados: identifique cada item por nome ou ID antes de
+  conferir sua imagem, sem trocar uma comparação individual por um conjunto que aceitaria imagens trocadas.
+  Em lotes de tokens, use `actorId` para distinguir o médico do ferido, preservando todas as contas do tratamento.
 
 - **Exibição de perícias do capanga (C34.2):** o Total do template do CORE não é o total fixo de uma rolagem. Confira
   o atributo preparado, não o da fonte, e separe bônus persistente de Role e ferimento. Não sobrescreva o total usado

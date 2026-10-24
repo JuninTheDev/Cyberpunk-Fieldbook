@@ -6,6 +6,11 @@
     <div data-local="{{local}}">
       <b>{{sp}}</b>{{rotulo}}{{#if max}}<small>de {{max}}</small>{{/if}}
       <small class="fonte-sp">{{nome}}</small>
+      <small class="monitorada-sp">Na barra: {{monitorada}} · {{spMonitorado}}/{{maxMonitorado}}</small>
+      {{#if @root.editavel}}
+      <button type="button" class="acao" data-action="escolherArmaduraMonitorada" data-local="{{local}}" aria-label="Escolher armadura para acompanhar: {{rotulo}}">Acompanhar</button>
+      <button type="button" class="acao" data-action="mostrarSPNoToken" data-local="{{local}}" aria-label="Mostrar SP na barra do token: {{rotulo}}">Mostrar na barra</button>
+      {{/if}}
       {{#if @root.editavel}}{{#if item}}<button type="button" class="acao" data-action="ablarArmadura" data-local="{{local}}" data-tooltip="Abla 1 SP de todas as armaduras vestidas deste local" aria-label="Ablar armadura: {{rotulo}}">−1 SP</button>{{/if}}{{/if}}
     </div>
     {{/each}}

@@ -2,6 +2,8 @@
 // recarregar).
 import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { roleDaWiki } from './dados.mjs';
+import { escolherArmaduraMonitorada, mudarSPMonitorado, mostrarSPNoToken } from './armadura-monitorada.mjs';
+import { imagemPadrao } from './imagens-padrao.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
@@ -30,6 +32,16 @@ const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[o
 export const encaixeDe = item => ({ tipo: item.system.tipo, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', slots: item.system.slots, tamanho: item.system.tamanho });
 
 export class AtorCPR extends Actor {
+  static getDefaultArtwork(dados) {
+    const img = imagemPadrao('Actor', dados.type);
+    return img ? { img, texture: { src: img } } : super.getDefaultArtwork(dados);
+  }
+  escolherArmaduraMonitorada(local, id = '') { return escolherArmaduraMonitorada(this, local, id); }
+  mostrarSPNoToken(local) { return mostrarSPNoToken(this, local); }
+  modifyTokenAttribute(atributo, valor, delta = false, barra = true) {
+    if (atributo.startsWith('spMonitorado.')) return mudarSPMonitorado(this, atributo, valor, delta);
+    return super.modifyTokenAttribute(atributo, valor, delta, barra);
+  }
   get veiculoAtivo() { return veiculos.veiculoAtivo(this); }
   usarVeiculo(id = '') { return veiculos.usarVeiculo(this, id); }
   dirigirVeiculo(dirigindo = true) { return veiculos.dirigirVeiculo(this, dirigindo); }
@@ -51,7 +63,8 @@ export class AtorCPR extends Actor {
   // contêiner) e as permissões do tipo.
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
-    const token = { bar1: { attribute: 'hp' }, sight: { enabled: true } };
+    const token = { bar1: { attribute: 'hp' }, sight: { enabled: true },
+      ...(!Object.hasOwn(dados.prototypeToken ?? {}, 'bar2') ? { bar2: { attribute: 'spMonitorado.corpo' } } : {}) };
     if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, ...token } });
     if (this.type === 'capanga' && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, ...token } });
     if (ATORES_DA_NET.includes(this.type) && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, bar1: { attribute: 'rez' } } });
@@ -649,6 +662,10 @@ export class AtorCPR extends Actor {
 }
 
 export class ItemCPR extends Item {
+  static getDefaultArtwork(dados) {
+    const img = imagemPadrao('Item', dados.type);
+    return img ? { img } : super.getDefaultArtwork(dados);
+  }
   dividirPilha(quantidade) { return dividirPilha(this, quantidade); }
 
   async _preCreate(dados, opcoes, usuario) {

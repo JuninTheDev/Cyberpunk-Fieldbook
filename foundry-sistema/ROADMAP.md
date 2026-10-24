@@ -350,8 +350,10 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     - [x] Perícias do capanga por nível, base ou total (ciclo 159, sessão Codex, 2026-10-24): escolha por navegador,
       Base por padrão, com o atributo preparado e os bônus persistentes da perícia no Total, como o CORE. A coluna
       não muda o total interno, a ordem nem a rolagem. G1 e G2 passam; G3, 409/409; G4 completo, 241/241; 16 mutações caem.
-  - [~] parte 3, a mesa (sessão Codex deste chat, retomada a pedido do usuário em 2026-10-24): a SP na barra do token; a árvore dos instalados no diretório de itens; a imagem padrão de cada
-    tipo; escolher a armadura de cada local (o "track" do CORE; conferir antes o que muda, já que o C18 usa a de maior SP).
+  - [x] parte 3, a mesa (ciclo 160, sessão Codex, 2026-10-24): SP editável na barra do token, escolha da armadura
+    monitorada por local, árvore dos instalados no diretório e imagem padrão por tipo. O track só muda a barra;
+    o dano conserva o maior SP vestido do C18. Busca e permissões nativas são preservadas; ícones locais conservam
+    imagens explícitas. G1 e G2 passam; G3, 419/419; G4 completo, 245/245; 29 mutações caem.
 - [ ] **C35. Gerar a cena da arquitetura** com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de
   acesso é um Tile numa cena que já existe.
 

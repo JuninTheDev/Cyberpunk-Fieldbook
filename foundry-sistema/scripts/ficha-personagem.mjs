@@ -7,6 +7,7 @@ import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './ag
 import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
 import { criarItemNaFicha, podeCriarItemNaFicha } from './criar-item.mjs';
+import { armadurasDoLocal, armaduraMonitoradaDoLocal } from './regras-armadura.mjs';
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { avancarComIp } from './avanco.mjs';
@@ -145,6 +146,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       mudarQuantidade: FichaPersonagem.#mudarQuantidade,
       dividirPilha: FichaPersonagem.#dividirPilha,
       ablarArmadura: FichaPersonagem.#ablarArmadura,
+      escolherArmaduraMonitorada: FichaPersonagem.#escolherArmaduraMonitorada,
+      mostrarSPNoToken: FichaPersonagem.#mostrarSPNoToken,
       consertarArmadura: FichaPersonagem.#consertarArmadura,
       usarItem: FichaPersonagem.#usarItem,
       usarDroga: FichaPersonagem.#usarDroga,
@@ -414,7 +417,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       armas, armasDeCombate, armasSemVeiculo, armasEquipadas: armasDeCombate.filter(arma => arma.pronta),
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
       locaisArmadura: ['cabeca', 'corpo'].map(local => ({ local, rotulo: local === 'cabeca' ? 'CABEÇA' : 'CORPO',
-        ...s.armadura[local], nome: ator.items.get(s.armadura[local].item)?.name ?? 'Sem armadura' })),
+        ...s.armadura[local], nome: ator.items.get(s.armadura[local].item)?.name ?? 'Sem armadura',
+        monitorada: armaduraMonitoradaDoLocal(ator.items, local, s.armaduraMonitorada[local])?.name ?? 'Nenhuma',
+        spMonitorado: s.spMonitorado[local].value, maxMonitorado: s.spMonitorado[local].max })),
       // O estado mental pela EMP de agora (a ciberpsicose da wiki; terapia.mjs), com os traços de Hare na dica.
       estadoMental: (chave => ({ chave, ...ESTADOS_MENTAIS[chave], tracos: ['dissociativo', 'ciberpsicose'].includes(chave) ? TRACOS_DE_HARE.join('; ') : '' }))(estadoMental(s.humanidade.value, s.atributos.emp.valor)),
       cyberwares, cyberInstalado: cyberwares.filter(item => item.sistema.instalado).map(item => ({ ...item, detalhe: [item.tipo, item.sistema.perdaHumanidade.sofrida ? `Humanidade −${item.sistema.perdaHumanidade.sofrida}` : ''].filter(Boolean).join(' // ') })),
@@ -744,6 +749,20 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #dividirPilha(evento, alvo) { return perguntarDivisao(this.#item(alvo)); }
   static #ablarArmadura(evento, alvo) { return this.isEditable ? this.actor.ablarArmaduras(alvo.dataset.local) : null; }
+  static #mostrarSPNoToken(evento, alvo) { return this.isEditable ? this.actor.mostrarSPNoToken(alvo.dataset.local) : null; }
+  static async #escolherArmaduraMonitorada(evento, alvo) {
+    if (!this.isEditable) return null;
+    const local = alvo.dataset.local;
+    if (!['cabeca', 'corpo'].includes(local)) return null;
+    const pecas = armadurasDoLocal(this.actor.items, local);
+    const atual = this.actor.system.armaduraMonitorada[local];
+    const selecionada = ['', 'nenhuma'].includes(atual) || pecas.some(p => p.id === atual) ? atual : '';
+    const opcoes = [{ id: '', nome: 'Automática (maior SP)' }, { id: 'nenhuma', nome: 'Não acompanhar' }, ...pecas.map(p => ({ id: p.id, nome: `${p.name} (${p.system.sp[local].value}/${p.system.sp[local].max})` }))];
+    const id = await DialogV2.prompt({ window: { title: `Acompanhar SP: ${local === 'corpo' ? 'corpo' : 'cabeça'}` }, rejectClose: false,
+      content: `<p>A escolha muda a barra. O combate usa o maior SP vestido.</p><label>Armadura <select name="armadura">${opcoes.map(p => `<option value="${foundry.utils.escapeHTML(p.id)}"${p.id === selecionada ? ' selected' : ''}>${foundry.utils.escapeHTML(p.nome)}</option>`).join('')}</select></label>`,
+      ok: { label: 'Acompanhar', callback: (e, botao) => botao.form.elements.armadura.value } });
+    return this.isEditable && id !== null && id !== undefined ? this.actor.escolherArmaduraMonitorada(local, id) : null;
+  }
   static #consertarArmadura(evento, alvo) { return this.isEditable ? this.#item(alvo)?.consertar() : null; }
   static #instalar(evento, alvo) {
     const item = this.#item(alvo);
