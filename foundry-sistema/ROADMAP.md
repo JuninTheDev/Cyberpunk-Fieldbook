@@ -377,9 +377,10 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   (60 × o Rank novo), um nível por vez, pelo extrato.
 - [x] **C40. Veículos fora do dano:** feito no ciclo 157 (sessão Junin, com o Codex, 2026-10-23) (p. 189–192, `:538`): a
   direção sob pressão no começo do turno, as manobras pela ficha, a batida (na janela de perigos) e desviar a pé.
-- [ ] **C41. O resto:** correr (a Ação de Movimento a mais, `:501` e `:514`), o escudo humano (`:537`), a Reputação ao
-  conhecer alguém (`:539`), o hospital e a instalação de cyberware (`:564`), o Cryopump e o Cryotank
-  (`system-catalog.js:218-228`).
+- [ ] **C41. O resto:**
+  - [~] parte 1, correr (sessão Codex, 2026-10-24): a Ação de Movimento a mais (`:501` e `:514`).
+  - [ ] o escudo humano (`:537`), a Reputação ao conhecer alguém (`:539`), o hospital e a instalação de cyberware
+    (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`).
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
 - [ ] **C42. Dice So Nice:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
