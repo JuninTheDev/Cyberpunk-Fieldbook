@@ -20,6 +20,7 @@ import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
 import { BARRAS_SP, mudarSpPelaBarra } from './barras-sp.mjs';
+import { itensNoContexto } from './instalados.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -719,10 +720,10 @@ export class ItemCPR extends Item {
   }
 
   // Cyberdeck, arma, veículo e a fundação do cyberware: os itens instalados neles (programas, hardware, acessórios,
-  // upgrades, as opções do cyberware, no mesmo ator) e os slots que ocupam.
+  // upgrades, as opções do cyberware, no mesmo ator ou entre modelos do mundo) e os slots que ocupam.
   get instalados() {
     const recebe = ['cyberdeck', 'arma', 'veiculo'].includes(this.type) || (this.type === 'cyberware' && this.system.fundacional);
-    return recebe ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
+    return recebe ? itensNoContexto(this).filter(item => item.id !== this.id && item.system.instaladoEm === this.id) : [];
   }
 
   get slotsUsados() {
@@ -808,11 +809,11 @@ export class ItemCPR extends Item {
     return resultado;
   }
 
-  // O item (do mesmo ator) onde este está instalado, ou null: o deck de um programa, a arma de um acessório, o veículo da
+  // O item (do mesmo ator ou do mundo) onde este está instalado, ou null: o deck de um programa, a arma de um acessório, o veículo da
   // arma montada, o cyberware ou o acessório da arma deles.
   get instaladoNo() {
     const id = this.system.instaladoEm;
-    const item = (id && this.actor?.items.get(id)) || null;
+    const item = (id && id !== this.id && itensNoContexto(this).find(item => item.id === id)) || null;
     if (this.type !== 'arma') return item;
     return item?.type === 'veiculo' || (['cyberware', 'upgrade'].includes(item?.type) && idDaOrigem(this) === item.id) ? item : null;
   }

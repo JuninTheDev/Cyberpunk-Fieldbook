@@ -2,6 +2,7 @@
 // a Role, o nome, o apelido e os indicadores (HP, Sorte, dinheiro, IP, reputação), e as abas Perícias (o painel geral:
 // atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
 // (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
+import { itemDoMundo } from './instalados.mjs';
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar } from './agarrao.mjs';
 import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
@@ -62,8 +63,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (origem && !this.actor.isOwner) return null;
     const empunhado = this.actor.uuid !== item.parent?.uuid && item.system.equipada
       && (item.type === 'arma' || (item.type === 'armadura' && item.system.escudo));
-    const copiarPilha = !item.parent && EMPILHAVEIS.includes(item.type);
-    const criado = origem || copiarPilha ? await levarItem(item, this.actor, { manterNaOrigem: copiarPilha }) : await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
+    const copiarPilha = !item.parent && EMPILHAVEIS.includes(item.type), copiarMundo = itemDoMundo(item);
+    const criado = origem || copiarPilha || copiarMundo ? await levarItem(item, this.actor, { manterNaOrigem: copiarPilha || copiarMundo }) : await super._onDropItem(evento, empunhado ? item.clone({ 'system.equipada': false }, { keepId: true }) : item);
     if (criado && empunhado) await criado.update({ 'system.equipada': true });
     return criado;
   }

@@ -252,6 +252,107 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    // C34.3: o diretório do CORE (item-folder-upgraded-display.js), com os vínculos instaladoEm dos modelos daqui.
+    await r.passo('instalados no diretório (C34.3): expandir, consultar sem editar, buscar, remontar e arrastar conjunto para personagem e capanga conservando o modelo', async () => {
+      const info=await edge.evaluate(`(async()=>{
+        const esperar=async f=>{for(let i=0;i<80&&!f();i++)await new Promise(r=>setTimeout(r,100));return Boolean(f());};
+        const itens=[],atores=[],mensagens=new Set(game.messages.map(m=>m.id)),flag=foundry.utils.deepClone(game.user.getFlag('${S}','instaladosAbertos'));let pasta;
+        const modulo=await import('/systems/${S}/scripts/diretorio-itens.mjs');
+        try{
+          pasta=await Folder.implementation.create({name:'C34.3 Modelos',type:'Item'});
+          const criar=async d=>{const i=await Item.implementation.create(d);itens.push(i);return i;};
+          const veiculo=await criar({name:'C34.3 Veículo',type:'veiculo',folder:pasta.id});
+          const arma=await criar({name:'C34.3 Arma',type:'arma',system:{instaladoEm:veiculo.id,slots:3}});
+          const acessorio=await criar({name:'C34.3 Acessório',type:'upgrade',system:{alvo:'arma',instaladoEm:arma.id}});
+          const deck=await criar({name:'C34.3 Deck',type:'cyberdeck'}),programa=await criar({name:'C34.3 Programa',type:'programa',system:{instaladoEm:deck.id}});
+          const solto=await criar({name:'C34.3 Sem pai',type:'upgrade',system:{instaladoEm:'PaiAusente000001'}});
+          await ui.items.activate();await ui.items.render({force:true});
+          const html=()=>ui.items.element,linha=id=>[...html().querySelectorAll('li[data-document-id],li[data-entry-id]')].find(e=>(e.dataset.documentId??e.dataset.entryId)===id);
+          const bloco=id=>[...html().querySelectorAll('.cprf-arvore-instalados')].find(e=>e.dataset.raiz===id),botao=id=>linha(id)?.querySelector('.cprf-expandir-instalados');
+          await esperar(()=>botao(veiculo.id)&&botao(deck.id));
+          const inicial={recolhida:bloco(veiculo.id)?.hidden,filhos:[arma,acessorio].every(i=>linha(i.id)?.classList.contains('cprf-item-instalado')),orfao:!linha(solto.id)?.classList.contains('cprf-item-instalado')};
+          botao(veiculo.id).click();
+          const abriu=await esperar(()=>!bloco(veiculo.id)?.hidden&&game.user.getFlag('${S}','instaladosAbertos')?.[veiculo.id]===true);
+          const nomes=[...bloco(veiculo.id).querySelectorAll('.cprf-consultar-instalado')].map(e=>e.textContent);
+          bloco(veiculo.id).querySelector('.cprf-consultar-instalado').click();
+          const consulta=()=>[...foundry.applications.instances.values()].find(a=>a.constructor.name==='ConsultaDeInstalado'&&a.document?.id===arma.id&&a.rendered);
+          await esperar(consulta);const janela=consulta();
+          const soLeitura=Boolean(janela&&!janela.isEditable&&janela.element.querySelector('[name="name"]')?.disabled);
+          await janela?._processSubmitData({}, {'name':'Não gravar'});
+          const preservou=arma.name==='C34.3 Arma';await janela?.close();
+          await arma.sheet.render({force:true});const originalEditavel=arma.sheet.isEditable;await arma.sheet.close();
+          const campo=html().querySelector('input[name="search"],input[type="search"]');campo.value='C34.3 Acessório';campo.dispatchEvent(new Event('input',{bubbles:true}));
+          const busca=await esperar(()=>!linha(acessorio.id)?.classList.contains('cprf-item-instalado')&&bloco(veiculo.id)?.hidden);
+          campo.value='';campo.dispatchEvent(new Event('input',{bubbles:true}));
+          await esperar(()=>linha(acessorio.id)?.classList.contains('cprf-item-instalado'));
+          await ui.items.render({force:true});modulo.montarArvoreNoDiretorio(ui.items,html());modulo.montarArvoreNoDiretorio(ui.items,html());
+          const remontou=botao(veiculo.id)?.getAttribute('aria-expanded')==='true'&&[...html().querySelectorAll('.cprf-arvore-instalados')].filter(e=>e.dataset.raiz===veiculo.id).length===1&&linha(veiculo.id).querySelectorAll('.cprf-expandir-instalados').length===1;
+          const contexto=await programa.sheet._prepareContext({});
+          const lugares=contexto.lugares[deck.id]==='C34.3 Deck'&&contexto.lugarAtual===deck.id&&deck.instalados.some(i=>i.id===programa.id)&&programa.instaladoNo?.id===deck.id;
+          const copias=[];
+          for(const tipo of ['personagem','capanga']){
+            const ator=await Actor.implementation.create({name:'C34.3 Cópia '+tipo,type:tipo});atores.push(ator);
+            const raiz=await ator.sheet._onDropItem(new Event('drop'),veiculo);
+            const a=ator.items.find(i=>i.type==='arma'),u=ator.items.find(i=>i.type==='upgrade');
+            copias.push({tipo,total:ator.items.size,novos:ator.items.contents.every(i=>!itens.some(original=>original.id===i.id)),vinculos:raiz?.type==='veiculo'&&a?.system.instaladoEm===raiz.id&&u?.system.instaladoEm===a.id,semPasta:ator.items.contents.every(i=>!i.folder)});
+          }
+          const origem=game.items.has(veiculo.id)&&arma.system.instaladoEm===veiculo.id&&acessorio.system.instaladoEm===arma.id;
+          await veiculo.delete();await ui.items.render({force:true});
+          const paiRemovido=!linha(arma.id)?.classList.contains('cprf-item-instalado')&&arma.instaladoNo===null;
+          return {inicial,abriu,nomes,soLeitura,preservou,originalEditavel,busca,remontou,lugares,copias,origem,paiRemovido};
+        }finally{
+          for(const janela of foundry.applications.instances.values())if(itens.some(i=>i.id===janela.document?.id))await janela.close();
+          for(const ator of atores){await ator.sheet.close();await ator.delete();}
+          for(const i of itens)if(game.items.has(i.id))await i.delete();await pasta?.delete();
+          await game.user.unsetFlag('${S}','instaladosAbertos');if(flag!==undefined)await game.user.setFlag('${S}','instaladosAbertos',flag);
+          const campo=ui.items.element?.querySelector('input[name="search"],input[type="search"]');if(campo){campo.value='';campo.dispatchEvent(new Event('input',{bubbles:true}));}
+          await ui.items.render({force:true});await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.has(m.id)).map(m=>m.id));
+        }
+      })()`);
+      return [info.inicial.recolhida&&info.inicial.filhos&&info.inicial.orfao&&info.abriu&&info.nomes.join()==='C34.3 Arma,C34.3 Acessório'&&info.soLeitura&&info.preservou&&info.originalEditavel&&info.busca&&info.remontou&&info.lugares
+        &&info.copias.length===2&&info.copias.every(c=>c.total===3&&c.novos&&c.vinculos&&c.semPasta)&&info.origem&&info.paiRemovido,JSON.stringify(info)];
+    });
+
+    await r.passo('instalados no diretório (C34.3): jogador vê só componentes consultáveis; pai oculto não esconde órfão; expansão é por usuário e permissão revogada bloqueia botão antigo', async () => {
+      let cliente;
+      const preparo=await edge.evaluate(`(async()=>{
+        const itens=[];let usuario;
+        try{
+          usuario=await User.implementation.create({name:'Jogador C34.3 Itens',role:CONST.USER_ROLES.PLAYER});
+          const criar=async(nome,type,pai='',visivel=true)=>{const d=await Item.implementation.create({name:nome,type,system:{instaladoEm:pai},ownership:{[usuario.id]:visivel?CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER:CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE}});itens.push(d);return d;};
+          const pai=await criar('C34.3 Público','cyberdeck'),filho=await criar('C34.3 Consulta','programa',pai.id),secreto=await criar('C34.3 SEGREDO','upgrade',pai.id,false),oculto=await criar('C34.3 PAI OCULTO','cyberdeck','',false),orfao=await criar('C34.3 Órfão visível','programa',oculto.id);
+          return {usuario:usuario.id,pai:pai.id,filho:filho.id,secreto:secreto.id,orfao:orfao.id,itens:itens.map(i=>i.id)};
+        }catch(erro){for(const i of itens)await i.delete();await usuario?.delete();throw erro;}
+      })()`);
+      try{
+        cliente=await abrirEdge({porta:9482,saida:path.join(servidores.raiz,'tests','.saida'),prefixo:'v14-c34-3-itens-'});
+        await foundry14.capturarAvisos(cliente);await foundry14.entrarComo(cliente,mesa.url,'Jogador C34.3 Itens');
+        const info=await cliente.evaluate(`(async()=>{
+          const esperar=async f=>{for(let i=0;i<80&&!f();i++)await new Promise(r=>setTimeout(r,100));return Boolean(f());};
+          await ui.items.activate();await ui.items.render({force:true});
+          const html=()=>ui.items.element,linha=id=>[...html().querySelectorAll('li[data-document-id],li[data-entry-id]')].find(e=>(e.dataset.documentId??e.dataset.entryId)===id);
+          const botao=()=>linha('${preparo.pai}')?.querySelector('.cprf-expandir-instalados');await esperar(botao);botao().click();
+          await esperar(()=>game.user.getFlag('${S}','instaladosAbertos')?.['${preparo.pai}']===true);
+          const bloco=[...html().querySelectorAll('.cprf-arvore-instalados')].find(e=>e.dataset.raiz==='${preparo.pai}');
+          window.__c34Botao=bloco.querySelector('.cprf-consultar-instalado');
+          const {abrirConsultaDeInstalado}=await import('/systems/${S}/scripts/diretorio-itens.mjs');
+          return {nomes:[...bloco.querySelectorAll('button')].map(b=>b.textContent),semSegredo:!html().textContent.includes('C34.3 SEGREDO')&&!html().textContent.includes('C34.3 PAI OCULTO'),orfao:!linha('${preparo.orfao}')?.classList.contains('cprf-item-instalado'),recusou:abrirConsultaDeInstalado('${preparo.secreto}')===null,aberto:game.user.getFlag('${S}','instaladosAbertos')?.['${preparo.pai}']===true};
+        })()`);
+        const mestre=await edge.evaluate(`(async()=>{const separado=game.user.getFlag('${S}','instaladosAbertos')?.['${preparo.pai}']!==true;await game.items.get('${preparo.filho}').update({'ownership.${preparo.usuario}':CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE});return separado;})()`);
+        const revogou=await cliente.evaluate(`(async()=>{
+          const {podeConsultarItem}=await import('/systems/${S}/scripts/instalados.mjs');
+          for(let i=0;i<80&&podeConsultarItem(game.items.get('${preparo.filho}'));i++)await new Promise(r=>setTimeout(r,100));
+          window.__c34Botao.click();delete window.__c34Botao;
+          const {abrirConsultaDeInstalado}=await import('/systems/${S}/scripts/diretorio-itens.mjs');
+          return abrirConsultaDeInstalado('${preparo.filho}')===null&&![...foundry.applications.instances.values()].some(a=>a.constructor.name==='ConsultaDeInstalado'&&a.document?.id==='${preparo.filho}'&&a.rendered);
+        })()`);
+        const avisos=await foundry14.avisosDoSistema(cliente),erros=cliente.erros.slice();
+        return [info.nomes.join()==='C34.3 Consulta'&&info.semSegredo&&info.orfao&&info.recusou&&info.aberto&&mestre&&revogou&&!avisos.length&&!erros.length,JSON.stringify({info,mestre,revogou,avisos,erros})];
+      }finally{
+        await cliente?.fechar();await edge.evaluate(`(async()=>{for(const id of ${JSON.stringify(preparo.itens)}){const item=game.items.get(id);await item?.sheet?.close();await item?.delete();}await game.users.get('${preparo.usuario}')?.delete();await ui.items.render({force:true});})()`);
+      }
+    });
+
     // CORE 0.92.4, CPRActorSheet._rollCriticalInjury: rolar a tabela à mão não altera HP.
     // Wiki, p. 187–188 e 223: corpo/cabeça, repetir lesão já existente, paliativo e tratamento pela DV.
     await r.passo('lesões (C19): personagem e capanga rolam corpo e cabeça pela ficha, criam os efeitos e o cartão sem perder HP; fechar a escolha não rola nem cria', async () => {

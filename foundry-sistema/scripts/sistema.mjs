@@ -41,6 +41,7 @@ import * as reguaDv from './regua-dv.mjs';
 import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolagens.mjs';
 import * as terapia from './terapia.mjs';
 import { registrarBarrasDeSp } from './token.mjs';
+import { registrarDiretorioDeItens } from './diretorio-itens.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
@@ -98,6 +99,7 @@ Hooks.once('init', () => {
   estados.registrarEstados();
   // "Mostrar aos jogadores" no clique direito da imagem das fichas (o C33; o modo do chat nos cartões fica nas rolagens).
   registrarMesa();
+  registrarDiretorioDeItens();
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
   reguaDv.registrarReguaDv();

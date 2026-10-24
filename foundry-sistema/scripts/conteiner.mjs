@@ -5,13 +5,16 @@ import { SISTEMA, TIPOS_QUE_A_LOJA_COMPRA } from './config.mjs';
 import { custoDaCompra, EMPILHAVEIS, ofertaDaLoja, quantidadeDe } from './regras.mjs';
 import { mesmaPilha } from './regras-inventario.mjs';
 import { naFilaDoInventario, upgradesDaPilha } from './pilhas.mjs';
+import { itemDoMundo, itensNoContexto, podeConsultarItem } from './instalados.mjs';
 
 // O item e tudo o que está instalado nele, nos andares de baixo (o upgrade na arma, a arma no veículo, o programa no
 // deck, a opção na fundação).
 function arvoreDe(item) {
-  const ator = item.parent;
-  const arvore = [item];
-  for (let i = 0; i < arvore.length; i++) arvore.push(...(ator?.items.filter(outro => outro.system.instaladoEm === arvore[i].id) ?? []));
+  const itens = item.actor?.items ?? item.parent?.items ?? (itemDoMundo(item) ? itensNoContexto(item) : []);
+  const arvore = [item], vistos = new Set([item.id]);
+  for (let i = 0; i < arvore.length; i++) for (const filho of itens.filter(outro => outro.system.instaladoEm === arvore[i].id)) {
+    if (!vistos.has(filho.id)) { vistos.add(filho.id); arvore.push(filho); }
+  }
   return arvore;
 }
 
@@ -25,7 +28,7 @@ export function levarItem(item, destino, opcoes = {}) {
 }
 async function transferirItem(item, destino, { quantidade = null, manterNaOrigem = false } = {}) {
   const origem = item.parent ?? null;
-  if (!destino.isOwner || origem?.uuid === destino.uuid) return null;
+  if (!destino.isOwner || origem?.uuid === destino.uuid || (itemDoMundo(item) && !podeConsultarItem(item))) return null;
   if (origem && !origem.items.has(item.id)) return null;
   if (item.type === 'cyberware' && item.system.instalado) { ui.notifications.warn(`${item.name}: cyberware instalado não sai da ficha; desinstale antes.`); return null; }
   if (origem && !manterNaOrigem && !origem.isOwner) { ui.notifications.warn(`${item.name}: sem permissão para tirar da ficha de ${origem.name}.`); return null; }
@@ -55,6 +58,7 @@ async function transferirItem(item, destino, { quantidade = null, manterNaOrigem
       dados = arvore.map((parteDaArvore, i) => {
         const d = parteDaArvore.inCompendium ? game.items.fromCompendium(parteDaArvore, { clearFolder: true }) : parteDaArvore.toObject();
         d._id = ids.get(parteDaArvore.id);
+        delete d.folder;
         if ('instaladoEm' in d.system) d.system.instaladoEm = i === 0 ? '' : ids.get(d.system.instaladoEm) ?? '';
         if ('equipada' in d.system) d.system.equipada = false;
         if (i === 0 && EMPILHAVEIS.includes(item.type)) d.system.quantidade = levar;

@@ -4,15 +4,22 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 **Esta é a versão 0.2.0, um protótipo.** O combate do Fluxo de Combate já está dentro do sistema. A campanha continua no Foundry 12 com o CORE 0.92.4 até este sistema estar provado na mesa.
 
-## Em revisão (C34.3, barras de SP)
+## Em revisão (C34.3)
 
 Na configuração das barras do token de personagem ou capanga, `armadura.corpo` e `armadura.cabeca` acompanham o maior
 SP atual do local e o máximo da mesma peça. O dono pode ajustar pelo HUD: diminuir abla todas as camadas vestidas do
 local; aumentar restaura só a peça exibida, até o máximo dela, como no CORE. A peça é escolhida pelo SP atual, como
 no dano (C18). Sem peça, a barra vale zero. Cada capanga solto usa a proteção do próprio token.
 
-Preparação em rascunho: G1/G2 aprovados, 418 testes no G3 e 24 mutações detectadas. Os dois cenários novos do G4
-(configuração, HUD, redesenho e permissões) ainda precisam rodar num Foundry 14 ativado para concluir esta subparte.
+O diretório de itens agrupa componentes sob o modelo principal, com expandir/recolher por usuário e consulta sem
+editar. A busca continua encontrando as peças recolhidas. As fichas dos modelos do mundo oferecem os destinos de
+montagem, respeitando a permissão de consulta; itens de ator e compêndio ficam na própria origem. Pais ausentes e
+ciclos antigos não escondem itens. Arrastar um modelo para personagem ou capanga copia o conjunto consultável, com
+novos IDs e vínculos remapeados, conservando os modelos do mundo. Arrastar só um componente solta a cópia do pai.
+
+Preparação em rascunho: G1/G2 aprovados, 431 testes no G3; 34 mutações novas (25 no G3 e 9 no DOM), além das 24 das
+barras de SP. A verificação opcional do DOM está em `tests/sistema/instalados-dom.mjs`. Os quatro cenários novos do
+G4 (barras e diretório) ainda precisam rodar num Foundry 14 ativado para concluir essas subpartes.
 
 ## O que já faz
 

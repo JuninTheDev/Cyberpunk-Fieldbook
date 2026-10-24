@@ -7897,3 +7897,46 @@ passa para um mundo novo, e o Foundry 12 fica instalado ao lado, só para consul
   integração num Foundry 14 ativado, com o harness de Windows/Edge. A subparte permanece em revisão; não recebeu
   número de ciclo nem marca de conclusão. Árvore dos instalados no diretório de itens, imagens padrão por tipo e
   seleção manual da armadura acompanhada continuam pendentes no C34.3.
+
+### C34.3 em revisão (2026-10-23): árvore dos instalados no diretório, sem ciclo de conclusão
+
+- **Sessão e publicação:** Codex, continuando a reserva da parte 3. Preparação na mesma branch
+  `codex/c34-3-barras-sp` e no PR #3; as barras de SP continuam incluídas, com a pendência do G4.
+- **Fontes:** CORE 0.92.4, `modules/hooks/foundry/ui/item-folder-upgraded-display.js` (hierarquia, ordenação,
+  expansão por usuário e ficha só para consulta), e `modules/actor/cpr-actor.js:184-267` (copiar os instalados).
+  Os vínculos daqui continuam sendo o `system.instaladoEm` já usado no inventário; não há mudança de regra da wiki.
+  A adaptação consulta a documentação oficial de
+  [renderApplicationV2](https://foundryvtt.com/api/v14/functions/hookEvents.renderApplicationV2.html) e de
+  [DocumentSheetV2](https://foundryvtt.com/api/v14/classes/foundry.applications.api.DocumentSheetV2.html).
+- **Diretório preparado:** componentes sob a raiz, programas antes do hardware no deck, ordem por tipo e nome,
+  profundidade visual, expandir/recolher por usuário e consulta em outra janela. Não interpola nomes como HTML.
+  O render parcial remove os controles anteriores; a busca usa as linhas nativas, incluindo componentes recolhidos.
+  Pais ausentes ou sem acesso deixam o componente visível na raiz. Ciclos antigos são quebrados só na apresentação,
+  preservando todos os documentos e seus descendentes; nenhuma correção silenciosa é gravada no modelo.
+- **Contexto e consulta:** `ItemCPR.instalados` e `instaladoNo` resolvem a coleção do ator ou os modelos consultáveis
+  do mundo. O compêndio não procura IDs no mundo. As fichas do mundo oferecem os destinos do programa, upgrade,
+  arma e opção de cyberware. A fundação usa a conferência existente de tipo e slots. A consulta tem `isEditable`
+  falso, bloqueia submissão e ações de edição e conserva a ficha normal. O clique relê a permissão atual.
+- **Arrastar o modelo:** o fluxo de cópia do inventário recebe também modelos do mundo, levando os descendentes
+  consultáveis sem apagar a origem. Os IDs e `instaladoEm` apontam para as novas cópias, sem pasta do mundo;
+  arrastar só o componente o deixa solto. A travessia não revisita IDs. Criação parcial usa a compensação já existente.
+  Itens do mesmo ator e compêndios conservam seu fluxo anterior.
+- **Referências verificadas:** 13 novos testes no G3 (`tests/sistema/instalados.test.mjs`) com três níveis,
+  homônimos, prioridade e nomes numéricos, órfãos, ciclos, cadeia de 2.000 itens, isolamento de contexto, permissões,
+  destinos, slots, consulta sem edição, cópia com novos IDs e criação parcial. Há uma verificação opcional do DOM
+  (`tests/sistema/instalados-dom.mjs`), com LinkeDOM 0.18.12 instalado fora das dependências do sistema; o G3 não
+  depende dele. Ela cobre ambas as formas de ID das linhas, expansão e persistência após cliques rápidos,
+  busca, render repetido, texto sem HTML e botão antigo após revogação.
+- **Portões locais:** G1, 147 arquivos; G2, ESLint 10.12.0; G3, 431/431, sem falhas nem testes pulados. A verificação
+  adicional do DOM passou nos dois formatos de linha. Detectadas por asserções 34 mutações novas: 25 pelo G3 e 9
+  pelo DOM. Os quatro módulos voltaram aos hashes SHA-256 originais ao fim da rodada. As 24 mutações das barras de
+  SP continuam registradas na preparação anterior.
+- **G4 preparado:** dois passos novos no cenário. O primeiro abre o diretório e a consulta, usa a busca, remonta
+  sem duplicar, lê os destinos da ficha, arrasta o conjunto para personagem e capanga e remove o pai. O segundo usa
+  outro navegador com jogador, pai e componentes públicos e ocultos, preferências separadas e revogação antes de
+  clicar num botão antigo. Atores, modelos, pasta, janelas, usuário e flags da verificação são descartáveis.
+- **Limite:** o Foundry 14 segue ausente (`tests/lib/foundry14.js`: “Foundry 14 não encontrado em
+  Programs/Foundry Virtual Tabletop/resources/app”). Os quatro cenários novos do PR #3, o G4 completo e suas mutações
+  de integração ainda precisam rodar na instalação ativada de Windows/Edge. A verificação do DOM não simula a
+  implementação do Foundry. A árvore permanece em revisão, sem número de ciclo nem marca de conclusão.
+  No C34.3 ainda faltam imagens padrão e escolha manual da armadura acompanhada.
