@@ -384,7 +384,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     ficha, dono e turno depois da pergunta; o cartão preserva recursos e a posição do token. O gasto de ações é
     confirmado pela mesa, como nas outras ações da ficha. G1 e G2 passam; G3, 444/444; G4 completo, 253/253;
     31 mutações detectadas. A régua continua no C44.
-  - [ ] o escudo humano (`:537`), a Reputação ao conhecer alguém (`:539`), o hospital e a instalação de cyberware
+  - [~] parte 2, o escudo humano (sessão Codex, 2026-10-24): a partir do agarrão (`:537`).
+  - [ ] a Reputação ao conhecer alguém (`:539`), o hospital e a instalação de cyberware
     (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`).
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
