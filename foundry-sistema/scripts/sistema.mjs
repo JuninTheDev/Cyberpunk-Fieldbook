@@ -40,6 +40,8 @@ import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
 import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolagens.mjs';
 import * as terapia from './terapia.mjs';
+import { registrarBarrasDeSp } from './token.mjs';
+import { registrarDiretorioDeItens } from './diretorio-itens.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
@@ -58,6 +60,7 @@ Hooks.once('init', () => {
   CONFIG.Actor.dataModels.demonio = DadosDemonio;
   // O contêiner (o container do CORE): a loja, o saque, o esconderijo ou um personalizado, com as permissões do tipo.
   CONFIG.Actor.dataModels.conteiner = DadosConteiner;
+  registrarBarrasDeSp();
   Object.assign(CONFIG.Item.dataModels, {
     arma: DadosArma, armadura: DadosArmadura, municao: DadosMunicao, cyberware: DadosCyberware, lesao: DadosLesao, equipamento: DadosEquipamento, roupa: DadosRoupa, droga: DadosDroga,
     cyberdeck: DadosCyberdeck, programa: DadosPrograma, upgrade: DadosUpgrade, veiculo: DadosVeiculo,
@@ -96,6 +99,7 @@ Hooks.once('init', () => {
   estados.registrarEstados();
   // "Mostrar aos jogadores" no clique direito da imagem das fichas (o C33; o modo do chat nos cartões fica nas rolagens).
   registrarMesa();
+  registrarDiretorioDeItens();
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
   reguaDv.registrarReguaDv();

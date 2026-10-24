@@ -3,6 +3,7 @@
 import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, QUALIDADES, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
+import { destinosDeInstalacao, itensNoContexto } from './instalados.mjs';
 import { PERICIAS } from './gerado.mjs';
 import { ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
@@ -116,10 +117,11 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const item = this.item;
     const fonte = item._source.system;
     const tipo = item.type;
+    const colecao = itensNoContexto(item);
     const tipoDoLugar = tipo === 'programa' ? 'cyberdeck' : tipo === 'upgrade' ? fonte.alvo : null;
     // O lado (o C30): a fundação e a peça solta escolhem; a opção numa fundação fica no lado dela, que a ficha só mostra.
     const naFundacao = tipo === 'cyberware' && !fonte.fundacional && item.instaladoNo?.type === 'cyberware' && item.instaladoNo.system.fundacional;
-    const veiculosDaArma = { '': 'Sem montagem', ...Object.fromEntries((item.actor?.items.filter(i => i.type === 'veiculo') ?? []).map(i => [i.id, i.name])) };
+    const veiculosDaArma = { '': 'Sem montagem', ...Object.fromEntries(colecao.filter(i => i.id !== item.id && i.type === 'veiculo').map(i => [i.id, i.name])) };
     if (tipo === 'arma' && fonte.instaladoEm && !(fonte.instaladoEm in veiculosDaArma)) veiculosDaArma[fonte.instaladoEm] = 'Veículo ausente';
     return Object.assign(contexto, {
       item, sistema: item.system, fonte, editavel: this.isEditable, ...cabecalhoDoItem(item), usavel: item.usavelAMao, emUso: item.emUso,
@@ -169,14 +171,15 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       alvosUpgrade: comAtual(ALVOS_UPGRADE, tipo === 'upgrade' && fonte.alvo),
       // Onde o programa ou o upgrade pode ser instalado: os itens do tipo certo no mesmo ator. Um lugar que não existe mais
       // conta como não instalado.
-      lugares: { '': tipo === 'programa' ? 'Fora do deck' : 'Não instalado', ...Object.fromEntries((item.actor?.items.filter(i => i.type === tipoDoLugar) ?? []).map(i => [i.id, i.name])) },
+      lugares: { '': tipo === 'programa' ? 'Fora do deck' : 'Não instalado', ...Object.fromEntries(colecao.filter(i => i.id !== item.id && i.type === tipoDoLugar).map(i => [i.id, i.name])) },
       lugarAtual: tipoDoLugar && item.instaladoNo?.type === tipoDoLugar ? item.instaladoNo.id : '',
       instalados: item.instalados.map(i => i.name).join(', '),
       slotsUsados: item.slotsUsados,
       // A opção instalada de um ator: a fundação onde está, entre as instaladas em que ela cabe (e a de agora), ou nenhuma.
       fundacoes: item.type === 'cyberware' && item.actor && item.system.instalado && !item.system.fundacional
         ? Object.fromEntries([['', 'Sem fundação'], ...[...new Set([item.instaladoNo, ...item.actor.fundacoesPara(item)].filter(Boolean))].map(fundacao => [fundacao.id, fundacao.name])])
-        : null,
+        : item.type === 'cyberware' && !item.actor && !item.inCompendium && !fonte.fundacional
+          ? Object.fromEntries([['', 'Sem fundação'], ...destinosDeInstalacao(item).map(pai => [pai.id, pai.name])]) : null,
       efeitos: item.effects.map(efeito => ({
         id: efeito.id, nome: efeito.name, ativo: efeito.active, desligado: efeito.disabled, ligavel: ligaAMao(item),
         mudancas: efeito.system.changes.map(c => `${c.key.replace(/^system\./, '')} ${c.type === 'add' ? '+' : c.type} ${c.value}`).join(' · ')

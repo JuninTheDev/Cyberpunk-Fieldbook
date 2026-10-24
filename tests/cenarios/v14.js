@@ -136,6 +136,223 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.geracao === 14 && info.sistema === S && info.gm && info.api.includes('combate'), JSON.stringify(info)];
     });
 
+    // C34.3: o SP da barra usa a mesma fonte do dano (C18), traduzida pelo TokenCPR.
+    await r.passo('barras de SP (C34.3): configuração, HUD, camadas, conserto e troca de peça no personagem e no capanga solto, com HP e outro token preservados', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async f => { for (let i=0;i<80&&!f();i++) await new Promise(r=>setTimeout(r,100)); return Boolean(f()); };
+        const anterior = canvas.scene, atores = [], desenhistas = [], mensagens = new Set(game.messages.map(m=>m.id)); let cena;
+        try {
+          const cat = await game.system.api.wiki.carregarCatalogo(), resultados = [];
+          cena = await Scene.implementation.create({ name:'C34.3 Barras', width:1200, height:1000, grid:{type:1,size:100,distance:2,units:'m'} });
+          await cena.activate(); await esperar(()=>canvas.ready&&canvas.scene?.id===cena.id);
+          for (const tipo of ['personagem','capanga']) {
+            const roupa = (id,nome,valor,equipada=true) => { const d=foundry.utils.deepClone(cat[id]);d.name=nome;d.system.equipada=equipada;d.system.sp.corpo.value=valor;return d; };
+            const cabeca=roupa('core_armor:light-armorjack-head','Cabeça',0);cabeca.system.sp.cabeca.value=9;
+            const ator=await Actor.implementation.create({name:'C34.3 '+tipo,type:tipo,system:{hp:{value:35}},items:[
+              roupa('core_armor:metalgear-body','Metalgear',5),roupa('core_armor:kevlar-body','Kevlar',7),
+              roupa('core_armor:skin-weave','Pele',1),cabeca,roupa('core_armor:metalgear-body','Reserva',18,false)]});atores.push(ator);
+            const dados=await ator.getTokenDocument({x:200,y:200,bar1:{attribute:'hp'},bar2:{attribute:'armadura.corpo'},displayBars:CONST.TOKEN_DISPLAY_MODES.ALWAYS});
+            const [token,irmao]=await cena.createEmbeddedDocuments('Token',[dados.toObject(),{...dados.toObject(),x:400}]);
+            await esperar(()=>canvas.tokens.get(token.id));
+            const a=token.actor, item=nome=>a.items.getName(nome), barra=()=>token.getBarAttribute('bar2'), ler=()=>['Metalgear','Kevlar','Pele','Cabeça','Reserva'].map(n=>[item(n).system.sp.corpo.value,item(n).system.sp.cabeca.value]);
+            const inicial={corpo:[barra()?.value,barra()?.max],cabeca:token.getBarAttribute('bar1',{alternative:'armadura.cabeca'})?.value,
+              hp:token.getBarAttribute('bar1')?.value,editavel:barra()?.editable,solto:!token.actorLink};
+            await token.sheet.render({force:true});
+            const opcoes=()=>token.sheet.element?.querySelector('select[name="bar2.attribute"]');
+            await esperar(opcoes);
+            const escolhas=[...(opcoes()?.options??[])].map(o=>o.value);
+            const configuracao=['hp','humanidade','sorte','armadura.corpo','armadura.cabeca'].every(c=>escolhas.includes(c));
+            await token.sheet.close();
+            const visual=canvas.tokens.get(token.id), original=visual._drawBar, desenhos=[];
+            desenhistas.push({visual,original});
+            visual._drawBar=function(indice,grafico,dados){desenhos.push([indice,dados.value,dados.max]);return original.call(this,indice,grafico,dados);};
+            const desenhou=async(valor,max)=>esperar(()=>desenhos.some(d=>d[0]===1&&d[1]===valor&&d[2]===max));
+            await canvas.tokens.hud.bind(visual);
+            const campo=()=>canvas.tokens.hud.element?.querySelector('input[name="bar2"],input[name="bar2.value"],input[data-bar="bar2"]');
+            await esperar(campo);
+            const hud={valor:Number(campo()?.value),editavel:Boolean(campo()&&!campo().disabled&&!campo().readOnly)};
+            if(campo()){campo().value='-2';campo().dispatchEvent(new Event('change',{bubbles:true}));}
+            hud.gravou=await esperar(()=>barra()?.value===5&&item('Metalgear').system.sp.corpo.value===3);
+            const ablou=ler(), redesenhouAblacao=await desenhou(5,7);
+            await canvas.tokens.hud.close();
+            await a.modifyTokenAttribute('armadura.corpo',2,true);
+            const restaurou=ler();
+            await a.modifyTokenAttribute('armadura.cabeca',-1,true);
+            const cabecaDepois=token.getBarAttribute('bar1',{alternative:'armadura.cabeca'})?.value;
+            desenhos.length=0;await item('Metalgear').consertar();
+            const conserto=[barra()?.value,barra()?.max], redesenhouConserto=await desenhou(18,18);
+            desenhos.length=0;await item('Metalgear').update({'system.equipada':false});
+            const trocou=[barra()?.value,barra()?.max], redesenhouTroca=await desenhou(7,7);
+            desenhos.length=0;await item('Kevlar').delete();
+            const removida=[barra()?.value,barra()?.max], redesenhouRemocao=await desenhou(0,7);
+            await a.modifyTokenAttribute('armadura.corpo',-99,true);
+            const zero=[barra()?.value,barra()?.max];
+            await a.modifyTokenAttribute('armadura.corpo',2,true);
+            const doZero=[barra()?.value,barra()?.max];
+            await item('Pele').delete();
+            const semPeca=[barra()?.value,barra()?.max];
+            await a.modifyTokenAttribute('hp',-1,true);
+            const hpMenos=token.getBarAttribute('bar1')?.value;
+            await a.modifyTokenAttribute('hp',1,true);
+            const isolado=tipo==='personagem'||(ator.items.getName('Metalgear').system.sp.corpo.value===5&&irmao.getBarAttribute('bar2')?.value===7);
+            resultados.push({tipo,inicial,configuracao,hud,ablou,restaurou,cabecaDepois,conserto,trocou,removida,zero,doZero,semPeca,hpMenos,hp:a.system.hp.value,isolado,redesenhos:[redesenhouAblacao,redesenhouConserto,redesenhouTroca,redesenhouRemocao]});
+            await cena.deleteEmbeddedDocuments('Token',[token.id,irmao.id]);
+          }
+          return {resultados};
+        } finally {
+          for(const {visual,original} of desenhistas)if(!visual.destroyed)visual._drawBar=original;
+          await canvas.tokens.hud.close();
+          if(anterior&&game.scenes.has(anterior.id))await anterior.activate();
+          await cena?.delete();for(const ator of atores){await ator.sheet.close();await ator.delete();}
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.has(m.id)).map(m=>m.id));
+        }
+      })()`);
+      return [info.resultados.length===2&&info.resultados.every(v=>v.inicial.corpo.join()==='7,7'&&v.inicial.cabeca===9&&v.inicial.hp===35&&v.inicial.editavel&&v.inicial.solto===(v.tipo==='capanga')
+        &&v.configuracao&&v.hud.valor===7&&v.hud.editavel&&v.hud.gravou
+        &&JSON.stringify(v.ablou)===JSON.stringify([[3,0],[5,0],[0,7],[0,9],[18,0]])
+        &&JSON.stringify(v.restaurou)===JSON.stringify([[3,0],[7,0],[0,7],[0,9],[18,0]])
+        &&v.cabecaDepois===8&&v.conserto.join()==='18,18'&&v.trocou.join()==='7,7'&&v.removida.join()==='0,7'
+        &&v.zero.join()==='0,7'&&v.doZero.join()==='2,7'&&v.semPeca.join()==='0,0'&&v.hpMenos===34&&v.hp===35&&v.isolado&&v.redesenhos.every(Boolean)),JSON.stringify(info)];
+    });
+
+    await r.passo('barras de SP (C34.3): no jogador, dono ajusta a proteção e observador só lê; a API recusa alteração do observado', async () => {
+      let cliente;
+      const preparo=await edge.evaluate(`(async()=>{
+        const atores=[];let usuario;
+        try{
+          usuario=await User.implementation.create({name:'Jogador C34.3',role:CONST.USER_ROLES.PLAYER});
+          const cat=await game.system.api.wiki.carregarCatalogo(), d=foundry.utils.deepClone(cat['core_armor:light-armorjack-body']);d.system.equipada=true;d.system.sp.corpo.value=9;
+          for(const tipo of ['personagem','capanga'])for(const dono of [true,false]){
+            const ator=await Actor.implementation.create({name:'C34.3 '+tipo+' '+dono,type:tipo,ownership:{[usuario.id]:dono?CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER:CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER},items:[d]});atores.push(ator);
+          }
+          return {usuario:usuario.id,atores:atores.map(a=>a.id)};
+        }catch(erro){for(const ator of atores)await ator.delete();await usuario?.delete();throw erro;}
+      })()`);
+      try{
+        cliente=await abrirEdge({porta:9481,saida:path.join(servidores.raiz,'tests','.saida'),prefixo:'v14-c34-3-'});
+        await foundry14.capturarAvisos(cliente);await foundry14.entrarComo(cliente,mesa.url,'Jogador C34.3');
+        const info=await cliente.evaluate(`(async()=>{
+          const ids=${JSON.stringify(preparo.atores)},resultados=[];
+          for(let i=0;i<80&&!ids.every(id=>game.actors.has(id));i++)await new Promise(r=>setTimeout(r,100));
+          for(const id of ids){
+            const ator=game.actors.get(id),dono=ator.isOwner;
+            const token=await ator.getTokenDocument({bar2:{attribute:'armadura.corpo'}}),antes=token.getBarAttribute('bar2');
+            await ator.modifyTokenAttribute('armadura.corpo',-2,true);
+            const depois=(await ator.getTokenDocument({bar2:{attribute:'armadura.corpo'}})).getBarAttribute('bar2');
+            resultados.push({tipo:ator.type,dono,editavel:antes?.editable,antes:antes?.value,depois:depois?.value,sp:ator.items.contents[0].system.sp.corpo.value});
+          }
+          return {resultados};
+        })()`);
+        const protegido=await edge.evaluate(`(async()=>{for(let i=0;i<80&&!game.actors.get('${preparo.atores[0]}')?.items.some(i=>i.system.sp?.corpo?.value===7);i++)await new Promise(r=>setTimeout(r,100));return ${JSON.stringify(preparo.atores)}.map(id=>game.actors.get(id).items.contents[0].system.sp.corpo.value);})()`);
+        const avisos=await foundry14.avisosDoSistema(cliente),erros=cliente.erros.slice();
+        return [info.resultados.length===4&&info.resultados.every(v=>v.editavel===v.dono&&v.antes===9&&v.depois===(v.dono?7:9)&&v.sp===(v.dono?7:9))&&protegido.join()==='7,9,7,9'&&!avisos.length&&!erros.length,JSON.stringify({info,protegido,avisos,erros})];
+      }finally{
+        await cliente?.fechar();
+        await edge.evaluate(`(async()=>{for(const id of ${JSON.stringify(preparo.atores)})await game.actors.get(id)?.delete();await game.users.get('${preparo.usuario}')?.delete();})()`);
+      }
+    });
+
+    // C34.3: o diretório do CORE (item-folder-upgraded-display.js), com os vínculos instaladoEm dos modelos daqui.
+    await r.passo('instalados no diretório (C34.3): expandir, consultar sem editar, buscar, remontar e arrastar conjunto para personagem e capanga conservando o modelo', async () => {
+      const info=await edge.evaluate(`(async()=>{
+        const esperar=async f=>{for(let i=0;i<80&&!f();i++)await new Promise(r=>setTimeout(r,100));return Boolean(f());};
+        const itens=[],atores=[],mensagens=new Set(game.messages.map(m=>m.id)),flag=foundry.utils.deepClone(game.user.getFlag('${S}','instaladosAbertos'));let pasta;
+        const modulo=await import('/systems/${S}/scripts/diretorio-itens.mjs');
+        try{
+          pasta=await Folder.implementation.create({name:'C34.3 Modelos',type:'Item'});
+          const criar=async d=>{const i=await Item.implementation.create(d);itens.push(i);return i;};
+          const veiculo=await criar({name:'C34.3 Veículo',type:'veiculo',folder:pasta.id});
+          const arma=await criar({name:'C34.3 Arma',type:'arma',system:{instaladoEm:veiculo.id,slots:3}});
+          const acessorio=await criar({name:'C34.3 Acessório',type:'upgrade',system:{alvo:'arma',instaladoEm:arma.id}});
+          const deck=await criar({name:'C34.3 Deck',type:'cyberdeck'}),programa=await criar({name:'C34.3 Programa',type:'programa',system:{instaladoEm:deck.id}});
+          const solto=await criar({name:'C34.3 Sem pai',type:'upgrade',system:{instaladoEm:'PaiAusente000001'}});
+          await ui.items.activate();await ui.items.render({force:true});
+          const html=()=>ui.items.element,linha=id=>[...html().querySelectorAll('li[data-document-id],li[data-entry-id]')].find(e=>(e.dataset.documentId??e.dataset.entryId)===id);
+          const bloco=id=>[...html().querySelectorAll('.cprf-arvore-instalados')].find(e=>e.dataset.raiz===id),botao=id=>linha(id)?.querySelector('.cprf-expandir-instalados');
+          await esperar(()=>botao(veiculo.id)&&botao(deck.id));
+          const inicial={recolhida:bloco(veiculo.id)?.hidden,filhos:[arma,acessorio].every(i=>linha(i.id)?.classList.contains('cprf-item-instalado')),orfao:!linha(solto.id)?.classList.contains('cprf-item-instalado')};
+          botao(veiculo.id).click();
+          const abriu=await esperar(()=>!bloco(veiculo.id)?.hidden&&game.user.getFlag('${S}','instaladosAbertos')?.[veiculo.id]===true);
+          const nomes=[...bloco(veiculo.id).querySelectorAll('.cprf-consultar-instalado')].map(e=>e.textContent);
+          bloco(veiculo.id).querySelector('.cprf-consultar-instalado').click();
+          const consulta=()=>[...foundry.applications.instances.values()].find(a=>a.constructor.name==='ConsultaDeInstalado'&&a.document?.id===arma.id&&a.rendered);
+          await esperar(consulta);const janela=consulta();
+          const soLeitura=Boolean(janela&&!janela.isEditable&&janela.element.querySelector('[name="name"]')?.disabled);
+          await janela?._processSubmitData({}, {'name':'Não gravar'});
+          const preservou=arma.name==='C34.3 Arma';await janela?.close();
+          await arma.sheet.render({force:true});const originalEditavel=arma.sheet.isEditable;await arma.sheet.close();
+          const campo=html().querySelector('input[name="search"],input[type="search"]');campo.value='C34.3 Acessório';campo.dispatchEvent(new Event('input',{bubbles:true}));
+          const busca=await esperar(()=>!linha(acessorio.id)?.classList.contains('cprf-item-instalado')&&bloco(veiculo.id)?.hidden);
+          campo.value='';campo.dispatchEvent(new Event('input',{bubbles:true}));
+          await esperar(()=>linha(acessorio.id)?.classList.contains('cprf-item-instalado'));
+          await ui.items.render({force:true});modulo.montarArvoreNoDiretorio(ui.items,html());modulo.montarArvoreNoDiretorio(ui.items,html());
+          const remontou=botao(veiculo.id)?.getAttribute('aria-expanded')==='true'&&[...html().querySelectorAll('.cprf-arvore-instalados')].filter(e=>e.dataset.raiz===veiculo.id).length===1&&linha(veiculo.id).querySelectorAll('.cprf-expandir-instalados').length===1;
+          const contexto=await programa.sheet._prepareContext({});
+          const lugares=contexto.lugares[deck.id]==='C34.3 Deck'&&contexto.lugarAtual===deck.id&&deck.instalados.some(i=>i.id===programa.id)&&programa.instaladoNo?.id===deck.id;
+          const copias=[];
+          for(const tipo of ['personagem','capanga']){
+            const ator=await Actor.implementation.create({name:'C34.3 Cópia '+tipo,type:tipo});atores.push(ator);
+            const raiz=await ator.sheet._onDropItem(new Event('drop'),veiculo);
+            const a=ator.items.find(i=>i.type==='arma'),u=ator.items.find(i=>i.type==='upgrade');
+            copias.push({tipo,total:ator.items.size,novos:ator.items.contents.every(i=>!itens.some(original=>original.id===i.id)),vinculos:raiz?.type==='veiculo'&&a?.system.instaladoEm===raiz.id&&u?.system.instaladoEm===a.id,semPasta:ator.items.contents.every(i=>!i.folder)});
+          }
+          const origem=game.items.has(veiculo.id)&&arma.system.instaladoEm===veiculo.id&&acessorio.system.instaladoEm===arma.id;
+          await veiculo.delete();await ui.items.render({force:true});
+          const paiRemovido=!linha(arma.id)?.classList.contains('cprf-item-instalado')&&arma.instaladoNo===null;
+          return {inicial,abriu,nomes,soLeitura,preservou,originalEditavel,busca,remontou,lugares,copias,origem,paiRemovido};
+        }finally{
+          for(const janela of foundry.applications.instances.values())if(itens.some(i=>i.id===janela.document?.id))await janela.close();
+          for(const ator of atores){await ator.sheet.close();await ator.delete();}
+          for(const i of itens)if(game.items.has(i.id))await i.delete();await pasta?.delete();
+          await game.user.unsetFlag('${S}','instaladosAbertos');if(flag!==undefined)await game.user.setFlag('${S}','instaladosAbertos',flag);
+          const campo=ui.items.element?.querySelector('input[name="search"],input[type="search"]');if(campo){campo.value='';campo.dispatchEvent(new Event('input',{bubbles:true}));}
+          await ui.items.render({force:true});await ChatMessage.implementation.deleteDocuments(game.messages.filter(m=>!mensagens.has(m.id)).map(m=>m.id));
+        }
+      })()`);
+      return [info.inicial.recolhida&&info.inicial.filhos&&info.inicial.orfao&&info.abriu&&info.nomes.join()==='C34.3 Arma,C34.3 Acessório'&&info.soLeitura&&info.preservou&&info.originalEditavel&&info.busca&&info.remontou&&info.lugares
+        &&info.copias.length===2&&info.copias.every(c=>c.total===3&&c.novos&&c.vinculos&&c.semPasta)&&info.origem&&info.paiRemovido,JSON.stringify(info)];
+    });
+
+    await r.passo('instalados no diretório (C34.3): jogador vê só componentes consultáveis; pai oculto não esconde órfão; expansão é por usuário e permissão revogada bloqueia botão antigo', async () => {
+      let cliente;
+      const preparo=await edge.evaluate(`(async()=>{
+        const itens=[];let usuario;
+        try{
+          usuario=await User.implementation.create({name:'Jogador C34.3 Itens',role:CONST.USER_ROLES.PLAYER});
+          const criar=async(nome,type,pai='',visivel=true)=>{const d=await Item.implementation.create({name:nome,type,system:{instaladoEm:pai},ownership:{[usuario.id]:visivel?CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER:CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE}});itens.push(d);return d;};
+          const pai=await criar('C34.3 Público','cyberdeck'),filho=await criar('C34.3 Consulta','programa',pai.id),secreto=await criar('C34.3 SEGREDO','upgrade',pai.id,false),oculto=await criar('C34.3 PAI OCULTO','cyberdeck','',false),orfao=await criar('C34.3 Órfão visível','programa',oculto.id);
+          return {usuario:usuario.id,pai:pai.id,filho:filho.id,secreto:secreto.id,orfao:orfao.id,itens:itens.map(i=>i.id)};
+        }catch(erro){for(const i of itens)await i.delete();await usuario?.delete();throw erro;}
+      })()`);
+      try{
+        cliente=await abrirEdge({porta:9482,saida:path.join(servidores.raiz,'tests','.saida'),prefixo:'v14-c34-3-itens-'});
+        await foundry14.capturarAvisos(cliente);await foundry14.entrarComo(cliente,mesa.url,'Jogador C34.3 Itens');
+        const info=await cliente.evaluate(`(async()=>{
+          const esperar=async f=>{for(let i=0;i<80&&!f();i++)await new Promise(r=>setTimeout(r,100));return Boolean(f());};
+          await ui.items.activate();await ui.items.render({force:true});
+          const html=()=>ui.items.element,linha=id=>[...html().querySelectorAll('li[data-document-id],li[data-entry-id]')].find(e=>(e.dataset.documentId??e.dataset.entryId)===id);
+          const botao=()=>linha('${preparo.pai}')?.querySelector('.cprf-expandir-instalados');await esperar(botao);botao().click();
+          await esperar(()=>game.user.getFlag('${S}','instaladosAbertos')?.['${preparo.pai}']===true);
+          const bloco=[...html().querySelectorAll('.cprf-arvore-instalados')].find(e=>e.dataset.raiz==='${preparo.pai}');
+          window.__c34Botao=bloco.querySelector('.cprf-consultar-instalado');
+          const {abrirConsultaDeInstalado}=await import('/systems/${S}/scripts/diretorio-itens.mjs');
+          return {nomes:[...bloco.querySelectorAll('button')].map(b=>b.textContent),semSegredo:!html().textContent.includes('C34.3 SEGREDO')&&!html().textContent.includes('C34.3 PAI OCULTO'),orfao:!linha('${preparo.orfao}')?.classList.contains('cprf-item-instalado'),recusou:abrirConsultaDeInstalado('${preparo.secreto}')===null,aberto:game.user.getFlag('${S}','instaladosAbertos')?.['${preparo.pai}']===true};
+        })()`);
+        const mestre=await edge.evaluate(`(async()=>{const separado=game.user.getFlag('${S}','instaladosAbertos')?.['${preparo.pai}']!==true;await game.items.get('${preparo.filho}').update({'ownership.${preparo.usuario}':CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE});return separado;})()`);
+        const revogou=await cliente.evaluate(`(async()=>{
+          const {podeConsultarItem}=await import('/systems/${S}/scripts/instalados.mjs');
+          for(let i=0;i<80&&podeConsultarItem(game.items.get('${preparo.filho}'));i++)await new Promise(r=>setTimeout(r,100));
+          window.__c34Botao.click();delete window.__c34Botao;
+          const {abrirConsultaDeInstalado}=await import('/systems/${S}/scripts/diretorio-itens.mjs');
+          return abrirConsultaDeInstalado('${preparo.filho}')===null&&![...foundry.applications.instances.values()].some(a=>a.constructor.name==='ConsultaDeInstalado'&&a.document?.id==='${preparo.filho}'&&a.rendered);
+        })()`);
+        const avisos=await foundry14.avisosDoSistema(cliente),erros=cliente.erros.slice();
+        return [info.nomes.join()==='C34.3 Consulta'&&info.semSegredo&&info.orfao&&info.recusou&&info.aberto&&mestre&&revogou&&!avisos.length&&!erros.length,JSON.stringify({info,mestre,revogou,avisos,erros})];
+      }finally{
+        await cliente?.fechar();await edge.evaluate(`(async()=>{for(const id of ${JSON.stringify(preparo.itens)}){const item=game.items.get(id);await item?.sheet?.close();await item?.delete();}await game.users.get('${preparo.usuario}')?.delete();await ui.items.render({force:true});})()`);
+      }
+    });
+
     // CORE 0.92.4, CPRActorSheet._rollCriticalInjury: rolar a tabela à mão não altera HP.
     // Wiki, p. 187–188 e 223: corpo/cabeça, repetir lesão já existente, paliativo e tratamento pela DV.
     await r.passo('lesões (C19): personagem e capanga rolam corpo e cabeça pela ficha, criam os efeitos e o cartão sem perder HP; fechar a escolha não rola nem cria', async () => {

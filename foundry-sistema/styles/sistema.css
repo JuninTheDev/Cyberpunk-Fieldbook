@@ -46,3 +46,11 @@
 .cpr-fieldbook.janela-wiki .aviso.erro { border-color: #b33; }
 .cpr-fieldbook.janela-wiki .aviso ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
 .cpr-fieldbook.janela-wiki .itens select { flex: 0 0 auto; width: auto; max-width: 9rem; }
+
+/* C34.3: os modelos instalados no diretório. Na busca, a classe é retirada para o filtro nativo encontrar cada peça. */
+.cprf-item-instalado { display: none !important; }
+.cprf-arvore-instalados { list-style: none; padding: 0 8px 4px 26px; }
+.cprf-arvore-instalados[hidden], .cprf-expandir-instalados[hidden] { display: none; }
+.cprf-arvore-instalados ol { list-style: none; margin: 0; padding: 0; }
+.cprf-consultar-instalado { width: 100%; height: auto; min-height: 24px; padding: 2px 4px; text-align: start; white-space: normal; }
+.cprf-expandir-instalados { flex: 0 0 24px; width: 24px; min-height: 24px; padding: 0; margin-inline-start: auto; }
