@@ -24,6 +24,8 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
         </div>
         <div class="medida"><span>MOVE</span><b>{{sistema.atributos.move.valor}}</b></div>
         <div class="medida movimento"><span>AÇÃO DE MOVIMENTO</span> <b>{{movimento.metros}} m</b></div>
+        {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="correr" data-tooltip="{{#if corrida.bloqueio}}{{corrida.bloqueio}}{{else}}Depois de usar o Movimento normal, gasta a Ação para mais um Movimento{{/if}}"{{#if corrida.bloqueio}} disabled{{/if}}>CORRER (1 AÇÃO)</button></div>{{/if}}
+        {{#if corrida.bloqueio}}<p class="dica corrida">{{corrida.bloqueio}}</p>{{else}}<p class="dica corrida">+{{corrida.metros}} m · {{corrida.total}} m no turno.</p>{{/if}}
         <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.semPerna}} · SEM A PERNA: NÃO ESQUIVA{{/if}}</div>
       </section>
 

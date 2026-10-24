@@ -1,6 +1,6 @@
 // ESLint só do sistema do Foundry 14 (foundry-sistema/) e dos testes dele; a wiki não passa por aqui. Roda pelo npx,
 // sem node_modules (o repositório fica no OneDrive):
-//   npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/c34-*.js tests/cenarios/v14.js
+//   npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/c34-*.js tests/lib/c41-*.js tests/cenarios/v14.js
 // As regras vão escritas aqui, sem importar pacote: as do "recommended" que pegam erro de verdade.
 const regras = {
   'no-undef': 'error',
@@ -51,7 +51,7 @@ export default [
   },
   {
     // O harness e o cenário do Foundry 14 e a trava dos testes (Node, CommonJS, como o resto de tests/).
-    files: ['tests/lib/foundry14.js', 'tests/lib/trava.js', 'tests/lib/c34-*.js', 'tests/cenarios/v14.js'],
+    files: ['tests/lib/foundry14.js', 'tests/lib/trava.js', 'tests/lib/c34-*.js', 'tests/lib/c41-*.js', 'tests/cenarios/v14.js'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'commonjs', globals: node },
     rules: regras
   }

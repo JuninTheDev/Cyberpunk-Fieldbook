@@ -378,7 +378,12 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [x] **C40. Veículos fora do dano:** feito no ciclo 157 (sessão Junin, com o Codex, 2026-10-23) (p. 189–192, `:538`): a
   direção sob pressão no começo do turno, as manobras pela ficha, a batida (na janela de perigos) e desviar a pé.
 - [ ] **C41. O resto:**
-  - [~] parte 1, correr (sessão Codex, 2026-10-24): a Ação de Movimento a mais (`:501` e `:514`).
+  - [x] parte 1, correr (ciclo 162, sessão Codex, 2026-10-24): a Ação de Movimento a mais (`:501` e `:514`). Botão
+    nas abas Perícias e Combate e no capanga, com confirmação do Movimento prévio e da Ação disponível. O MOVE
+    preparado dá o extra (×2) e o limite total do turno (×4); caído, agarrado e quem dirige não correm. Revalida
+    ficha, dono e turno depois da pergunta; o cartão preserva recursos e a posição do token. O gasto de ações é
+    confirmado pela mesa, como nas outras ações da ficha. G1 e G2 passam; G3, 444/444; G4 completo, 253/253;
+    31 mutações detectadas. A régua continua no C44.
   - [ ] o escudo humano (`:537`), a Reputação ao conhecer alguém (`:539`), o hospital e a instalação de cyberware
     (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`).
 

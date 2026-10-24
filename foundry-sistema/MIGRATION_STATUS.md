@@ -40,6 +40,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
 | CORE | SP monitorado na barra, escolha da peça por local, árvore no diretório e imagens padrão por tipo (C34.3) | portados no ciclo 160 (sessão Codex); o track não muda a proteção do C18 |
 | CORE e wiki | configurações de criação de itens, perícias do capanga, lesões repetidas e confirmação de exclusão (C34.2) | portadas nos ciclos 158, 159 e 161; reroll continua padrão pela wiki e a confirmação é por cliente |
+| wiki e CORE | Correr pela ficha: Movimento extra pela Ação, com confirmação e cartão (C41, parte 1) | portado no ciclo 162 (sessão Codex); usa MOVE preparado, com o gasto de ações confirmado pela mesa |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | wiki | os perigos do ambiente (C38): a queda, o fogo, a eletrocução, o afogamento e a asfixia, o veneno, a droga como arma e a radiação | portados no ciclo 156 (sessão Junin, com o Codex); o CORE 0.92.4 não tem nenhum (ver as dúvidas) |
 | wiki | os veículos fora do dano (C40): a direção sob pressão, as manobras, a batida e desviar a pé; o tipo do veículo | portados no ciclo 157 (sessão Junin, com o Codex); o CORE 0.92.4 não automatiza nenhum (ver as dúvidas) |
@@ -7946,6 +7947,43 @@ o C34.2. Trabalho numa worktree própria, sem mudar o master da wiki ou instalar
   Controles aprovados antes e depois; a última mutação e seus controles já incluem o token solto e a montagem concorrente.
 - **Próximo:** C34.2 concluído; C34.1 e os demais itens reservados continuam com seus responsáveis. Seguem os itens
   abertos do ROADMAP.
+
+### Ciclo 162 (2026-10-24): C41, parte 1, Correr (sessão Codex)
+
+Commit anterior: `71ab2bd` (reserva de C41.1, sobre o ciclo 161). Conferido o remoto antes de começar e antes de fechar;
+nenhuma mudança concorrente. Trabalho na worktree própria; o master da wiki e a campanha real não foram alterados.
+
+- **Referências:** wiki, `system-rules.js:497`, `:499`, `:501` e `:514`, p. 168–169: uma Ação de Movimento e uma Ação;
+  Correr usa a Ação para outro Movimento, só depois do Movimento normal. `:535`, agarrado não usa Movimento; `:538`,
+  quem dirige também não. CORE 0.92.4, `modules/actor/cpr-actor.js:349-351`, deriva walk = MOVE × 2 e run = MOVE × 4;
+  não tem uma ação Correr. A integração de faixas de `drag-ruler.js:20-27` continua no C44.
+- **Regra e API:** `corridaPorEstado` separa o extra (MOVE × 2) do limite total do turno (MOVE × 4), com custo de
+  uma Ação. `corridaDe` usa o MOVE já preparado com armadura, efeitos e ferimento; não reaplica penalidades. Caído,
+  agarrado e quem efetivamente dirige um veículo são recusados. Um ponteiro de veículo ausente não bloqueia.
+  `game.system.api.estados.correr` exige dono, personagem/capanga e identidade atual resolvida pelo UUID, inclusive
+  no ator sintético. A API não grava atributos, recursos, efeitos ou posição.
+- **Ficha e cartão:** botão nas abas Perícias e Combate do personagem e no capanga, com extra e limite à vista.
+  A pergunta confirma Movimento já usado e Ação disponível; Ctrl e Rolar direto não pulam esse requisito.
+  Depois da espera, relê permissão, presença, MOVE e impedimentos. Mudança de combate, rodada, turno ou identidade
+  do combatente ativo cancela a confirmação antiga. No mesmo cliente, o clique duplo produz uma pergunta e um cartão; cancelar,
+  fechar, erro ou recusa de criação liberam a trava. Nomes são escapados, e o cartão do token solto tem seu speaker.
+- **Limites:** como Levantar-se e a carga Tech, a Ação é registrada no chat, sem um orçamento automático de ações.
+  O jogador confirma o Movimento prévio e a Ação disponível; uma macro pode confirmar explicitamente com
+  `{ confirmado: true }`. O deslocamento do token e sua distância são conduzidos pela mesa. Não há estado
+  persistente de corrida nem alteração temporária de MOVE. A régua Andar/Correr é o C44.
+- **Portões:** G1, 158 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros, incluindo o helper C41;
+  G3, 444/444 no Node 24; G4 completo, 253/253 em 545 s no Foundry 14.369. Nenhum aviso de compatibilidade nem erro
+  do sistema nos navegadores do mestre e jogador. Os três passos novos passaram também em execução focada: três
+  vistas da ficha, MOVE 10 com −4 de lesão e −2 de armadura, cancelamentos, clique duplo, bloqueios, releitura após
+  a espera, dono/observador, revogação da permissão e token solto com modelo, posição, HP e Sorte intactos.
+- **Mutações:** 31 detectadas, com bytes restaurados por MD5: 10 da regra pura, 15 da API e seis no Foundry real
+  (confirmação ignorada, MOVE da fonte, permissão não revalidada, motorista liberado, turno ignorado e botão de Combate
+  desligado). Controles reais aprovados antes e depois; o G4 completo rodou após a restauração. A primeira tentativa
+  da bateria de navegador parou antes dos cenários, na abertura do mundo; a repetição passou sem alterar os prazos.
+- **Revisão:** auditorias separadas da wiki/CORE e da integração existente orientaram o escopo; a revisão independente
+  do código confirmou as guardas e sugeriu incluir a identidade do combatente no snapshot, incorporada e testada.
+- **Próximo:** os demais itens do C41 (escudo humano, Reputação, hospital/instalação e Cryopump/Cryotank); as reservas
+  das outras sessões e os itens abertos do ROADMAP continuam preservados.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

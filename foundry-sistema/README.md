@@ -6,6 +6,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## O que já faz
 
+- **Correr (C41, parte 1, ciclo 162):** nas abas Perícias e Combate do personagem e na ficha do capanga, **Correr
+  (1 Ação)** confirma que o Movimento normal já foi usado e que a Ação está disponível. O cartão registra mais
+  MOVE × 2 metros, até MOVE × 4 metros no turno, com o MOVE atual da ficha (armadura, lesões e ferimento incluídos).
+  Caído, agarrado ou dirigindo não corre. A confirmação relê a ficha e cancela se o turno mudar enquanto aguarda.
+  O gasto de ações continua com a mesa, como nas outras ações da ficha; os atributos e a posição do token são preservados.
 - **Lesões críticas repetidas (C34.2, ciclo 161):** a opção do mundo **Lesões críticas repetidas** permite outra cópia
   em **Desligado**; **Avisar e permitir** também cria a cópia, com aviso; **Rolar novamente** busca uma lesão ausente.
   O padrão continua **Rolar novamente**, pela wiki e pelo comportamento anterior do Fieldbook (o CORE começa em

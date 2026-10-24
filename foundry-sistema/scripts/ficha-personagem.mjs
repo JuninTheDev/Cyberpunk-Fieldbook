@@ -12,7 +12,7 @@ import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { avancarComIp } from './avanco.mjs';
 import { abrirExtrato } from './extrato.mjs';
-import { levantar, movimentoDe } from './estados.mjs';
+import { correr, corridaDe, levantar, movimentoDe } from './estados.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
 import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem, podeEditarParaApagar } from './exclusao-item.mjs';
@@ -92,6 +92,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       rolarIniciativa: FichaPersonagem.#rolarIniciativa,
       protegerSe: FichaPersonagem.#protegerSe,
       levantar: FichaPersonagem.#levantar,
+      correr: FichaPersonagem.#correr,
       agarrar: FichaPersonagem.#agarrar, movimento: FichaPersonagem.#movimento,
       soltar: FichaPersonagem.#soltar,
       estrangular: FichaPersonagem.#estrangular,
@@ -414,6 +415,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       vitais: { hp: porcento(s.hp.value, s.hp.max), humanidade: porcento(s.humanidade.value, s.humanidade.max), grave: Math.ceil(s.hp.max / 2) },
       deathSavePenalidade: s.deathSave.base + s.deathSave.penalidade,
       movimento: movimentoDe(ator),
+      corrida: corridaDe(ator),
       todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length, busca: this.#busca,
       armas, armasDeCombate, armasSemVeiculo, armasEquipadas: armasDeCombate.filter(arma => arma.pronta),
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
@@ -551,6 +553,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return this.render();
   }
   static #levantar() { return levantar(this.actor); }
+  static #correr() { return this.isEditable ? correr(this.actor) : null; }
   // O agarrão (as maquetes do usuário; a wiki, p. 177; agarrao.mjs): "Agarrar" (o alvo marcado, T, resiste pela janela
   // de reação do dono); agarrando, "Estrangular", "Derrubar" e "Soltar"; agarrado, "Escapar" (quem agarra resiste).
   static #agarrar(evento) { return agarrar(this.actor, { perguntar: comJanela(evento) }); }

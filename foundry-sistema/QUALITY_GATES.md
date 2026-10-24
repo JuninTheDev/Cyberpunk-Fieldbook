@@ -7,7 +7,7 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 | Portão | Como roda | Passa quando | Estado |
 | --- | --- | --- | --- |
 | G1 Sintaxe | `node --check` em cada `.mjs` do sistema (com as subpastas, como `scripts/netrun/`) e nos testes | nenhum erro | ativo |
-| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/c34-*.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
+| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/c34-*.js tests/lib/c41-*.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
 | G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam: as regras puras com os valores de referência, e o conteúdo gerado contra a própria wiki (tabelas de DV faixa por faixa, lesões pelo 2d6, perícias, os itens da loja) | ativo |
 | G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam, inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
 | G5 Wiki | `node tests/rodar.js` (a suíte inteira) | nenhuma falha nova; as conhecidas estão listadas abaixo | ativo |
@@ -46,6 +46,14 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Correr e o turno confirmado (C41):** o MOVE preparado já inclui armadura, efeitos e ferimento. A corrida concede
+  outro Movimento (MOVE × 2), e MOVE × 4 é o limite total do turno. Deslocar o token não prova que a Ação de Movimento
+  foi gasta: a mesa confirma o requisito e a Ação disponível. Releia ficha e permissões depois da pergunta e confira
+  combate, rodada, turno e identidade do combatente ativo; remover ou reordenar alguém pode conservar o mesmo índice.
+  O clique duplo usa uma trava por ator, liberada também ao cancelar ou falhar a criação do cartão.
+- **Scripts de auditoria no PowerShell (C41):** o pipe para o Node pode trocar acentos por `?`, conforme o
+  `$OutputEncoding`. Grave o script em UTF-8; filtros ASCII dos nomes dos passos evitam depender dessa conversão.
+  O executor deve exigir que o passo selecionado realmente rodou, além de conferir a falha e os controles restaurados.
 - **Duplicatas e lesões certas (C34.2):** no CORE, `warn` permite criar outra cópia e apenas avisa; não é uma recusa.
   O padrão do Fieldbook continua `reroll`, pela wiki. Separe os resultados da tabela (inclusive a escolha posterior
   do Monowire) dos IDs certos de golpes e perigos, que continuam idempotentes. Confira exclusões nos três modos,
