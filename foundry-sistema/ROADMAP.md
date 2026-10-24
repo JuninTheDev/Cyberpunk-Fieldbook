@@ -388,7 +388,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     para ativar; reação opcional em lugar da esquiva, com dano, armadura, lesões e munição na vítima. Corpo a corpo
     e cabeça não oferecem interposição; na área, a vítima recebe uma vez. Cadáver tem PV persistentes de BODY,
     com Desfazer por diferença e tokens exatos. G1/G2 passam; G3, 473/473; G4 completo, 260/260; 60 mutações detectadas.
-  - [ ] a Reputação ao conhecer alguém (`:539`), o hospital e a instalação de cyberware
+  - [~] parte 3, a Reputação ao conhecer alguém (`:539`) (sessão Codex, 2026-10-24).
+  - [ ] o hospital e a instalação de cyberware
     (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`).
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
