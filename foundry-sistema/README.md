@@ -6,6 +6,15 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## O que já faz
 
+- **Lesões críticas repetidas (C34.2, ciclo 161):** a opção do mundo **Lesões críticas repetidas** permite outra cópia
+  em **Desligado**; **Avisar e permitir** também cria a cópia, com aviso; **Rolar novamente** busca uma lesão ausente.
+  O padrão continua **Rolar novamente**, pela wiki e pelo comportamento anterior do Fieldbook (o CORE começa em
+  Desligado). Vale nas tabelas e na escolha do Monowire; exclusões continuam obrigatórias. Lesões certas de golpes,
+  quedas e batidas continuam sem duplicar. Rolar ou anunciar a lesão à mão não tira HP.
+- **Confirmação ao apagar item (C34.2, ciclo 161):** **Confirmar ao apagar item**, ligada por padrão, é uma preferência
+  de cada navegador para as fichas de personagem, capanga e contêiner. Desligada, apaga itens comuns diretamente;
+  itens instalados, cyberware no corpo, munição carregada e a decisão sobre o conteúdo continuam exigindo confirmação.
+  A ficha relê permissões e montagem depois das esperas. No token solto, a exclusão afeta só sua ficha.
 - **SP na barra e armadura monitorada (C34.3, ciclo 160):** nas fichas de personagem e capanga, **Acompanhar**
   escolhe a peça vestida de corpo ou cabeça, a automática (maior SP atual) ou nenhuma. **Mostrar na barra** põe esse
   local na segunda barra do token; atores novos já vêm com o corpo. Baixar o SP pelo HUD abla todas as camadas do
@@ -257,7 +266,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **o estilo de cada jogador** (Configurações → Sistema → Estilo do Painel Tático): o tema, as cores, a fonte, o
     tamanho, a posição (arrastar pela alça), as seções e os botões de HP; o código PT1 leva o visual de um para outro; o
     mestre define o padrão da mesa. A tecla H recolhe e abre.
-- **Na ficha, como no CORE** (o C32): o "+" de cada lista (munição, armas, armaduras, equipamento, roupas, drogas, upgrades, veículos, cyberware, cyberdecks, programas e lesões) cria um item em branco do tipo dela ("Arma nova") e abre a ficha dele. A busca do cabeçalho filtra pelo nome, sem diferença de maiúsculas e acentos, as perícias (todas à vista enquanto há texto) e as listas de itens de todas as abas; ela não grava nada no ator e continua quando a ficha se redesenha. Na tabela de armas, além de recarregar, dá para trocar a munição (a sobra do pente volta para a que estava nele) e descarregar (as balas voltam para a munição). Apagar uma arma carregada devolve as balas ao estoque. Apagar um item com algo instalado pergunta se só tira (o que está nele se desinstala e fica solto: o cyberware para de valer e devolve a Humanidade máxima, sem a atual; o programa sai desativado) ou se apaga junto. A ficha do capanga tem a busca, as armas, as lesões e o apagar iguais.
+- **Na ficha, como no CORE** (o C32): o "+" de cada lista (munição, armas, armaduras, equipamento, roupas, drogas, upgrades, veículos, cyberware, cyberdecks, programas e lesões) cria um item em branco do tipo dela ("Arma nova") e abre a ficha dele. A busca do cabeçalho filtra pelo nome, sem diferença de maiúsculas e acentos, as perícias (todas à vista enquanto há texto) e as listas de itens de todas as abas; ela não grava nada no ator e continua quando a ficha se redesenha. Na tabela de armas, além de recarregar, dá para trocar a munição (a sobra do pente volta para a que estava nele) e descarregar (as balas voltam para a munição). Apagar uma arma carregada devolve as balas ao estoque na exclus?o simples e em S? tirar, quando a muni??o est? na ficha; Apagar junto descarta as balas do pente. Apagar um item com algo instalado pergunta se só tira (o que está nele se desinstala e fica solto: o cyberware para de valer e devolve a Humanidade máxima, sem a atual; o programa sai desativado) ou se apaga junto. A ficha do capanga tem a busca, as armas, as lesões e o apagar iguais.
 - **Arrastar um item de uma ficha para outra** (da aba Equipamento) leva o item, com o que está instalado nele, e o tira
   da origem, como no CORE (ciclo 122). O cyberware instalado não sai.
 - **Barra de macros** (C20, ciclo 139; o hotbarDrop do CORE): arraste da ficha para a barra a linha da arma (aba Combate
@@ -354,10 +363,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Fumaça:** o cartão informa a área e a duração da wiki; a mesa continua resolvendo a área de fumaça e suas penalidades.
   - **O dano rolado à parte** (o botão "Dano" da ficha, ciclo 64): o cartão tem os botões do mestre. "Aplicar dano" aplica nos alvos marcados (T), no corpo (a cabeça só pelo tiro mirado), com as mesmas regras do ataque (a armadura, o +5 do crítico, a ablação, a Deflexão, a borracha), e o resultado sai no cartão do ataque, com o "Desfazer". No dano crítico, "Rolar a lesão" rola a tabela do corpo em cada alvo marcado, uma vez por alvo naquele cartão (o alvo cuja lesão a ficha recusou pode ser rolado de novo). O dano rolado dentro do ataque não tem esses botões (o ataque já aplica). Os botões do mestre nos cartões valem um clique por vez: o segundo clique, enquanto o primeiro ainda corre, não faz nada (o clique duplo no "Desfazer" devolvia o HP duas vezes).
 - **Lesão Crítica** (dois 6 no dano; também rolada à mão):
-  - **Tabelas:** 2d6 na tabela do corpo, ou na da cabeça no tiro mirado na cabeça, sem repetir uma que o alvo já tem.
+  - **Tabelas:** 2d6 na tabela do corpo, ou na da cabeça no tiro mirado na cabeça; por padrão, sem repetir uma que o alvo
+    já tem. A opção **Lesões críticas repetidas** permite duplicatas com ou sem aviso (C34.2, ciclo 161).
   - **Rolar lesão (C19):** nas abas Perícias e Combate e na ficha de capanga, escolhe corpo ou cabeça, rola 2d6 e
     acrescenta a lesão com efeitos e cartão. Essa rolagem não altera HP; o dano é resolvido à parte. Fechar a escolha
-    não rola nem cria. A tabela esgotada ou uma sequência sem lesão nova avisa e para. Correção, tratamento e "Voltou"
+    não rola nem cria. Em **Rolar novamente**, a tabela esgotada ou uma sequência sem lesão nova avisa e para. Correção, tratamento e "Voltou"
     também estão disponíveis no painel geral e no capanga.
   - **Parte cibernética (C19):** na janela de correção ou tratamento, marque a opção para usar Cybertecnologia na DV
     escolhida. O teste usa TECH + Cybertecnologia + 1d10, inclusive no lugar da Cirurgia, conservando a DV da tabela.
@@ -510,7 +520,7 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 
 ## Configurações (Configurações → Sistema)
 
-As mesmas do Fluxo de Combate, com os mesmos padrões:
+As opções de combate, com os padrões da mesa:
 - **Resolver os ataques** (padrão: sim). Desligado, só a rolagem do ataque.
 - **O jogador rola os próprios dados** (padrão: sim). Desligado, a reação continua, mas sem janela pessoal dos dados; o dano fica com o mestre.
 - **Dano:** Automático ou Manual (botão do sistema), padrão Automático.
@@ -519,6 +529,8 @@ As mesmas do Fluxo de Combate, com os mesmos padrões:
 - **Tempo para o jogador responder** (padrão: 60 s).
 - **Defesa dos NPCs:** o mestre escolhe, ou automática (padrão: o mestre).
 - **Lesão crítica:** na ficha, só anunciar, ou desligada (padrão: na ficha).
+- **Lesões críticas repetidas:** desligado (permite outra cópia), avisar e permitir, ou rolar novamente (padrão;
+  opção do mundo). Lesões certas de golpes e perigos continuam idempotentes.
 - **Mortalmente ferido sofre lesão a cada acerto** (padrão: sim).
 - **Death Save no começo do turno:** jogadores e NPCs, só jogadores, ou desligado (padrão: todos).
 - **Explosivos pegam toda a área** (padrão: sim).
@@ -542,6 +554,8 @@ E as da wiki:
 - **Avisos da wiki** (de cada navegador; padrão: sim): avisa o mestre sobre novos envios e pedidos pendentes. Desligar não suspende a entrega dos pedidos aprovados.
 
 E a do navegador de cada um:
+- **Confirmar ao apagar item:** ligada por padrão. Itens instalados e a decisão sobre conteúdo continuam exigindo
+  confirmação nas fichas de personagem, capanga e contêiner.
 - **Rolar direto, sem a janela de rolagem** (padrão: não, como no CORE): ligado, o clique rola na hora e Ctrl + clique abre a janela.
 - **O Painel Tático** (ciclo 125): mostrar o painel (padrão: sim), sem token selecionado mostrar o meu personagem (padrão: sim), escolher o alvo antes do ataque (padrão: quando não houver alvo marcado) e o estilo do painel.
 

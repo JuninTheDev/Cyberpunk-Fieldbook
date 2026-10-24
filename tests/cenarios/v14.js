@@ -16857,6 +16857,8 @@ module.exports = async ({ edge, servidores, r }) => {
 
     await require('../lib/c34-imagens')(r, edge);
     await require('../lib/c34-mesa')(r, edge, jogador);
+    await require('../lib/c34-lesoes')(r, edge, jogador);
+    await require('../lib/c34-exclusao')(r, edge, jogador);
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

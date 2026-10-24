@@ -340,16 +340,22 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [ ] **C34. Os detalhes do CORE**, um ciclo por parte:
   - [~] parte 1, a ficha (sessão KouArt, 2026-10-22): a aba de efeitos do ator; o +1 à mão na penalidade do Death Save;
     expandir e recolher as listas;
-  - [~] parte 2, as configurações (sessão Codex, 2026-10-23): a lesão repetida (desligado, avisar, rolar de novo: o
+  - [x] parte 2, as configurações (ciclos 158, 159 e 161, sessão Codex, 2026-10-24): a lesão repetida (desligado, avisar, rolar de novo: o
     `preventDuplicateCriticalInjuries`); as perícias do capanga por nível, base ou total; a confirmação ao apagar item e o
     jogador que cria itens;
     - [x] Jogadores podem criar itens (ciclo 158, sessão Codex, 2026-10-23): opção do mundo desligada por padrão como
       no CORE; o mestre continua criando. Botão e ação respeitam dono e opção atual nas fichas de personagem e capanga.
-      G1 e G2 passam; G3, 406/406; G4 completo, 240/240; 11 mutações caem. As outras configurações desta parte continuam
-      abertas: lesão repetida e confirmação ao apagar.
+      G1 e G2 passam; G3, 406/406; G4 completo, 240/240; 11 mutações caem.
     - [x] Perícias do capanga por nível, base ou total (ciclo 159, sessão Codex, 2026-10-24): escolha por navegador,
       Base por padrão, com o atributo preparado e os bônus persistentes da perícia no Total, como o CORE. A coluna
       não muda o total interno, a ordem nem a rolagem. G1 e G2 passam; G3, 409/409; G4 completo, 241/241; 16 mutações caem.
+    - [x] Lesões repetidas (ciclo 161, sessão Codex, 2026-10-24): off permite outra cópia, warn cria e avisa, reroll
+      busca outra. O padrão fica reroll pela wiki; exclusões e lesões certas de golpes/perigos mantêm seus limites.
+      O Monowire avisa só na escolha e conserva o cartão quando reroll recusa uma colisão.
+    - [x] Confirmação ao apagar item (ciclo 161, sessão Codex, 2026-10-24): opção por navegador, ligada por padrão;
+      instalação e conteúdo continuam exigindo confirmação. Nas fichas de personagem, capanga e contêiner, relê
+      permissões e montagem após as esperas; o token solto preserva o modelo. Aviso se atualiza se a raiz muda de lugar.
+      Validação final: G1 e G2 passam; G3, 431/431; G4 completo, 250/250; 49 mutações detectadas.
   - [x] parte 3, a mesa (ciclo 160, sessão Codex, 2026-10-24): SP editável na barra do token, escolha da armadura
     monitorada por local, árvore dos instalados no diretório e imagem padrão por tipo. O track só muda a barra;
     o dano conserva o maior SP vestido do C18. Busca e permissões nativas são preservadas; ícones locais conservam

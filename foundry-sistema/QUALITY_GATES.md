@@ -46,6 +46,14 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Duplicatas e lesões certas (C34.2):** no CORE, `warn` permite criar outra cópia e apenas avisa; não é uma recusa.
+  O padrão do Fieldbook continua `reroll`, pela wiki. Separe os resultados da tabela (inclusive a escolha posterior
+  do Monowire) dos IDs certos de golpes e perigos, que continuam idempotentes. Confira exclusões nos três modos,
+  tabela cheia, efeitos das duas cópias, HP intacto e o cartão ainda disponível após uma colisão em `reroll`.
+- **Excluir e esperar um diálogo (C34.2):** a preferência é do cliente; instalação e conteúdo exigem confirmação
+  mesmo desligada. Releia dono, edição, existência e permissões do contêiner após cada espera. Compare a identidade
+  resolvida pelo UUID, inclusive no ator sintético do token solto. O teste muda a opção com a ficha aberta, revoga
+  permissões com o diálogo aberto e instala conteúdo durante a confirmação; cancelar preserva toda a montagem.
 - **SP monitorado e proteção efetiva (C34.3):** o track do CORE acompanha uma peça na barra, enquanto o dano usa
   o maior SP vestido e abla todas as camadas. Mantenha os dados separados. A barra edita os itens pelo
   `modifyTokenAttribute`, com permissão na API e usando o ator sintético do token solto. Um schema com `value` e

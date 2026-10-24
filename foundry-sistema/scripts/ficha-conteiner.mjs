@@ -7,7 +7,9 @@ import { levarItem, parceirosDoUsuario, pegarDoConteiner, venderParaALoja } from
 import { abrirExtrato } from './extrato.mjs';
 import { custoDaCompra, EMPILHAVEIS, parteSugerida, parteValida, precoDaUnidade, precoNaLista, quantidadeDe } from './regras.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
-import { divisaoDaPilha } from './regras-inventario.mjs';
+import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem } from './exclusao-item.mjs';
+import { apagarComInstalados, divisaoDaPilha } from './regras-inventario.mjs';
+import { config } from './configuracoes.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -126,12 +128,20 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
   // Apagar: o mestre, ou o jogador com "Apagar itens" (o players-delete do CORE). O que está instalado no item sai junto.
   static async #apagarItem(evento, alvo) {
     const item = this.#item(alvo);
-    if (!item || (!game.user.isGM && !this.actor.system.permissoes.apagar)) return;
-    const ok = await DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${foundry.utils.escapeHTML(item.name)}</b> do contêiner?</p>` });
-    if (!ok) return;
-    const ids = [item.id];
-    for (let i = 0; i < ids.length; i++) ids.push(...this.actor.items.filter(outro => outro.system.instaladoEm === ids[i]).map(outro => outro.id));
-    await this.actor.deleteEmbeddedDocuments('Item', ids);
+    const contexto = () => ({ editavel: this.isEditable, presente: fromUuidSync(this.actor.uuid) === this.actor, mestre: game.user.isGM });
+    const permitido = () => podeApagarItem(this.actor, item, contexto());
+    if (!permitido()) return;
+    const arvore = () => apagarComInstalados(item.id, this.actor.items.map(outro => ({ id: outro.id, instaladoEm: outro.system.instaladoEm ?? '' })), true).apagar;
+    const dentro = arvore().slice(1);
+    const locais = lugaresDaInstalacao(item, this.actor.items.contents);
+    const aviso = locais.length ? '<p class="dica">Instalado em: ' + locais.map(local => foundry.utils.escapeHTML(local)).join(', ') + '.</p>' : '';
+    // O contêiner conserva o C25: o conteúdo instalado sai junto, com um aviso obrigatório mesmo sem a opção.
+    const conteudo = dentro.length ? '<p class="dica">O conteúdo instalado sai junto: ' + dentro.map(id => foundry.utils.escapeHTML(this.actor.items.get(id).name)).join(', ') + '.</p>' : '';
+    const confirmar = dentro.length || pedeConfirmacaoAoApagar(config('confirmarExclusaoItem'), locais);
+    const ok = !confirmar || await DialogV2.confirm({ window: { title: 'Apagar item' }, rejectClose: false, content: '<p>Apagar <b>' + foundry.utils.escapeHTML(item.name) + '</b> do contêiner?</p>' + aviso + conteudo });
+    if (!ok || !permitido()) return;
+    if ((!dentro.length && arvore().length > 1) || lugaresDaInstalacao(item, this.actor.items.contents).some(local => !locais.includes(local))) return FichaConteiner.#apagarItem.call(this, evento, alvo);
+    await this.actor.deleteEmbeddedDocuments('Item', arvore());
   }
 
   static #pegarTudo(evento, alvo) {

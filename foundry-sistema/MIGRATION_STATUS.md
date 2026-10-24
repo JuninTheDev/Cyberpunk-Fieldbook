@@ -39,6 +39,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | Facedown | portado no ciclo 39, com a penalidade de ferimento, pela wiki (ver as dúvidas) |
 | CORE e wiki | armadura por local, ablação de todas as camadas, Desfazer por item e conserto pela ficha (C18) | portado no ciclo 137 (sessão Codex); o conserto na ficha do item já existia desde o ciclo 70 |
 | CORE | SP monitorado na barra, escolha da peça por local, árvore no diretório e imagens padrão por tipo (C34.3) | portados no ciclo 160 (sessão Codex); o track não muda a proteção do C18 |
+| CORE e wiki | configurações de criação de itens, perícias do capanga, lesões repetidas e confirmação de exclusão (C34.2) | portadas nos ciclos 158, 159 e 161; reroll continua padrão pela wiki e a confirmação é por cliente |
 | CORE e wiki | rolar lesão à mão; paliativo e tratamento nas fichas de personagem e capanga (C19) | portado no ciclo 142 (sessão Codex), com a decisão sobre Death Save nas dúvidas |
 | wiki | os perigos do ambiente (C38): a queda, o fogo, a eletrocução, o afogamento e a asfixia, o veneno, a droga como arma e a radiação | portados no ciclo 156 (sessão Junin, com o Codex); o CORE 0.92.4 não tem nenhum (ver as dúvidas) |
 | wiki | os veículos fora do dano (C40): a direção sob pressão, as manobras, a batida e desviar a pé; o tipo do veículo | portados no ciclo 157 (sessão Junin, com o Codex); o CORE 0.92.4 não automatiza nenhum (ver as dúvidas) |
@@ -7905,6 +7906,46 @@ as reservas das partes 1 e 2 foram preservadas.
 - **Revisão e limites:** revisões separadas de armadura, árvore e imagens não encontraram bloqueios. A fila não é
   uma transação entre clientes. Os padrões não substituem imagens já gravadas nos documentos.
 - **Próximo:** no C34.2, lesão repetida e confirmação ao apagar item; os demais itens abertos do ROADMAP.
+
+### Ciclo 161 (2026-10-24): C34.2, lesões repetidas e confirmação ao apagar item (sessão Codex)
+
+Commit anterior: `572e9e9` (ciclo 160, C34.3). A continuação conferiu o remoto e manteve a reserva desta sessão para
+o C34.2. Trabalho numa worktree própria, sem mudar o master da wiki ou instalar na campanha real.
+
+- **Referências:** CORE 0.92.4, `modules/system/settings.js:117-129` (`preventDuplicateCriticalInjuries`, mundo,
+  off/warn/reroll, padrão off), `:152-159` (`deleteItemConfirmation`, cliente, padrão true),
+  `modules/actor/sheet/cpr-actor-sheet.js:980-1074` (exclusão de itens) e `:1191-1278` (tabela de lesões).
+  Wiki `system-rules.js:549`, não repetir a lesão na tabela. Conferidos no código local de referência.
+- **Lesões repetidas:** nova opção do mundo, `lesoesRepetidas`. Off cria outra cópia sem aviso; warn cria e avisa;
+  reroll procura uma lesão ausente. O padrão fica reroll, preservando a wiki e o comportamento anterior do Fieldbook,
+  diferença intencional em relação ao padrão off do CORE. A tabela cheia só impede reroll; `excluir` continua absoluto.
+  A API relê as lesões e a opção após as esperas, mantém as filas por ator e não altera HP. IDs certos de golpes,
+  quedas, batidas e outras consequências continuam idempotentes nos três modos. O Monowire distingue seu resultado
+  de tabela do ID certo: prévias silenciosas não avisam nem criam; a escolha permite duplicata em off/warn e a
+  colisão em reroll conserva o cartão disponível para outra escolha, sem inventar uma terceira rolagem.
+- **Excluir itens:** `confirmarExclusaoItem`, cliente, ligada por padrão. Nas fichas de personagem, capanga e
+  contêiner, desligar dispensa a pergunta do item comum. Instalados, cyberware no ator e munição carregada continuam
+  exigindo aviso. O C32 conserva uma única escolha sobre os filhos (soltar/apagar junto/cancelar); o contêiner
+  conserva a exclusão conjunta com aviso obrigatório. Na exclusão simples e em Só tirar, a arma descarrega se a
+  munição está na ficha; Apagar junto descarta as balas do pente. A montagem é relida, e dono,
+  edição, presença e permissão do contêiner são reconferidos depois das esperas. O UUID resolve também o ator
+  sintético: apagar no token solto preserva o modelo. A configuração se limita à exclusão manual de Item nessas
+  fichas; ações automáticas e exclusões de outros modelos mantêm seus fluxos próprios.
+- **Revisão:** a revisão independente confirmou a resolução do UUID e a separação entre lesão certa e Monowire.
+  Encontrou o aviso de local antigo quando a própria raiz era instalada em outro item enquanto o C32 aguardava.
+  Corrigido: reabre a escolha mostrando o novo receptor antes de apagar. O G4 instala a arma num veículo durante o
+  diálogo, cancela a nova pergunta e confere toda a montagem intacta.
+- **Portões:** G1, 156 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 431/431 no Node 24;
+  G4 completo, 250/250 em 573 s no Foundry 14.369, sem avisos de compatibilidade nem erros do sistema nos navegadores
+  do mestre e do jogador. Os cinco passos novos passaram também em execução focada; a extensão de exclusão com
+  token solto e montagem concorrente passou antes da rodada completa. Revisão independente do código e dos textos.
+- **Mutações:** 49 detectadas, com bytes restaurados por MD5: 39 no G3 (21 de lesões/configurações e 18 dos auxiliares
+  de exclusão) e 10 no Foundry real. As de navegador alteraram somente a instalação descartável: opção de lesões
+  ignorada, aviso ausente, origem do Monowire, preferência de confirmação ignorada, instalação sem aviso, escolha C32
+  ausente, contêiner sem respeitar a preferência, permissão congelada, escopo world incorreto e aviso com local antigo.
+  Controles aprovados antes e depois; a última mutação e seus controles já incluem o token solto e a montagem concorrente.
+- **Próximo:** C34.2 concluído; C34.1 e os demais itens reservados continuam com seus responsáveis. Seguem os itens
+  abertos do ROADMAP.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

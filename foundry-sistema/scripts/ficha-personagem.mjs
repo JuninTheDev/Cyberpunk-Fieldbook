@@ -15,6 +15,7 @@ import { abrirExtrato } from './extrato.mjs';
 import { levantar, movimentoDe } from './estados.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
+import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem, podeEditarParaApagar } from './exclusao-item.mjs';
 import { apagarComInstalados, descarregaAoApagar, divisaoDaPilha, passaNaBusca } from './regras-inventario.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
 import { trocarMunicao } from './painel/acoes.mjs';
@@ -819,35 +820,50 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // com ele, pelo gancho (armas-cyberware.mjs), com as balas de volta.
   static async #apagarItem(evento, alvo) {
     const item = this.#item(alvo);
-    if (!item) return;
+    const contexto = () => ({ editavel: this.isEditable, presente: fromUuidSync(this.actor.uuid) === this.actor, mestre: game.user.isGM });
+    const permitido = () => podeApagarItem(this.actor, item, contexto());
+    if (!permitido()) return;
     const nome = foundry.utils.escapeHTML(item.name);
     const montagem = junto => apagarComInstalados(item.id, this.actor.items.map(outro => ({ id: outro.id, instaladoEm: outro.system.instaladoEm ?? '', propria: ehArmaMontadaEmItem(outro) })), junto);
+    const locais = lugaresDaInstalacao(item, this.actor.items.contents);
+    const mudouDeLugar = () => lugaresDaInstalacao(item, this.actor.items.contents).some(local => !locais.includes(local));
+    const aviso = locais.length ? '<p class="dica">Instalado em: ' + locais.map(local => foundry.utils.escapeHTML(local)).join(', ') + '.</p>' : '';
     // Sem a munição carregada na ficha, a arma só sai (sem o aviso do descarregar).
     const descarregar = junto => (descarregaAoApagar({ tipo: item.type, pente: item.system.pente?.value, municaoNaFicha: Boolean(item.municaoCarregada), junto }) ? item.descarregar() : null);
     const dentro = montagem(false).soltar.map(id => this.actor.items.get(id)?.name).filter(Boolean);
     if (!dentro.length) {
-      const ok = await DialogV2.confirm({ window: { title: 'Apagar item' }, content: `<p>Apagar <b>${nome}</b> da ficha?</p>` });
-      if (!ok || !this.actor.items.has(item.id)) return;
+      const confirmar = pedeConfirmacaoAoApagar(config('confirmarExclusaoItem'), locais);
+      const ok = !confirmar || await DialogV2.confirm({ window: { title: 'Apagar item' }, rejectClose: false, content: '<p>Apagar <b>' + nome + '</b> da ficha?</p>' + aviso });
+      if (!ok || !permitido()) return;
+      // O que foi instalado enquanto a pergunta estava aberta precisa aparecer na nova confirmação.
+      const mudou = () => montagem(false).soltar.length || mudouDeLugar();
+      if (mudou()) return FichaPersonagem.#apagarItem.call(this, evento, alvo);
       await descarregar(false);
+      if (!permitido()) return;
+      if (mudou()) return FichaPersonagem.#apagarItem.call(this, evento, alvo);
       await item.delete();
       return;
     }
     const escolha = await DialogV2.wait({
       window: { title: 'Apagar item' }, classes: [SISTEMA, 'apagar-com-instalados'], rejectClose: false,
-      content: `<p>Apagar <b>${nome}</b> da ficha? Instalado nele: ${dentro.map(outro => foundry.utils.escapeHTML(outro)).join(', ')}.</p><p class="dica">Só tirar: o que está nele fica solto no inventário. Apagar junto: sai tudo.</p>`,
+      content: '<p>Apagar <b>' + nome + '</b> da ficha? Instalado nele: ' + dentro.map(outro => foundry.utils.escapeHTML(outro)).join(', ') + '.</p>' + aviso + '<p class="dica">Só tirar: o que está nele fica solto no inventário. Apagar junto: sai tudo.</p>',
       buttons: [{ action: 'soltar', label: 'Só tirar', default: true }, { action: 'junto', label: 'Apagar junto' }, { action: 'cancelar', label: 'Cancelar' }]
     });
-    // A montagem se lê de novo depois da pergunta: o que entrou ou saiu do item enquanto ela estava aberta.
-    if (!['soltar', 'junto'].includes(escolha) || !this.actor.items.has(item.id)) return;
+    if (!['soltar', 'junto'].includes(escolha) || !permitido()) return;
+    if (mudouDeLugar()) return FichaPersonagem.#apagarItem.call(this, evento, alvo);
     const junto = escolha === 'junto';
-    const { apagar, soltar } = montagem(junto);
     await descarregar(junto);
-    // O item sai antes de o resto se desinstalar: o acessório que sai da arma faz o gancho acertar o pente dela
-    // (armas-cyberware.acertarPentes), e a arma apagada no meio disso daria erro.
+    if (!permitido()) return;
+    if (mudouDeLugar()) return FichaPersonagem.#apagarItem.call(this, evento, alvo);
+    // A montagem se lê depois das esperas: o que entrou ou saiu enquanto a pergunta ou a descarga aguardava.
+    const { apagar, soltar } = montagem(junto);
     await this.actor.deleteEmbeddedDocuments('Item', apagar);
-    // Recusado o apagar (um gancho pode devolver nada sem erro), o que está nele fica onde estava.
+    // Recusado o apagar, o que está nele fica onde estava. Cada desinstalação relê também a permissão e o vínculo.
     if (this.actor.items.has(item.id)) return;
-    for (const outro of soltar.map(id => this.actor.items.get(id)).filter(Boolean)) {
+    for (const id of soltar) {
+      if (!podeEditarParaApagar(this.actor, contexto())) return;
+      const outro = this.actor.items.get(id);
+      if (!outro || outro.system.instaladoEm !== item.id) continue;
       if (outro.type === 'cyberware' && outro.system.instalado) await this.actor.desinstalarCyberware(outro);
       else await outro.update({ 'system.instaladoEm': '', ...(outro.type === 'programa' ? { 'system.ativo': false } : {}) });
     }

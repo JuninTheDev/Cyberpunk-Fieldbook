@@ -107,11 +107,12 @@ test('C19: duas chamadas simultâneas leem a criação anterior, sem duplicar id
 });
 
 test('C19: uma lesão recebida durante o sorteio não cria duplicata nem anuncia resultado falso', async () => {
-  const globais = { fetch: globalThis.fetch, foundry: globalThis.foundry, Roll: globalThis.Roll, ui: globalThis.ui };
+  const globais = { fetch: globalThis.fetch, foundry: globalThis.foundry, Roll: globalThis.Roll, ui: globalThis.ui, game: globalThis.game };
   const itens = [], avisos = [];
   const dados = { name: 'Perna quebrada', type: 'lesao', system: {}, flags: { 'cpr-fieldbook': { catalogo: PERNA } } };
   globalThis.fetch = async () => ({ json: async () => ({ itens: { [PERNA]: dados } }) });
   globalThis.foundry = { utils: { deepClone: structuredClone } };
+  globalThis.game = { settings: { get: () => 'reroll' } };
   globalThis.ui = { notifications: { warn: aviso => avisos.push(aviso) } };
   globalThis.Roll = class {
     constructor(formula) { assert.equal(formula, '2d6'); this.total = 8; }
@@ -133,7 +134,7 @@ test('C19: uma lesão recebida durante o sorteio não cria duplicata nem anuncia
     assert.equal(repetida.item, null);
   } finally {
     globalThis.fetch = globais.fetch;
-    for (const chave of ['foundry', 'Roll', 'ui']) {
+    for (const chave of ['foundry', 'Roll', 'ui', 'game']) {
       if (globais[chave] === undefined) delete globalThis[chave];
       else globalThis[chave] = globais[chave];
     }

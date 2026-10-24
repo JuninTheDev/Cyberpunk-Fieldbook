@@ -1,11 +1,12 @@
-// Lesão Crítica (p. 187): 2d6 na tabela escolhida, sem repetir uma lesão que o alvo já tem; o item entra na ficha com
+// Lesão Crítica (p. 187): 2d6 na tabela escolhida; por padrão, sem repetir uma lesão que o alvo já tem. O item entra com
 // os efeitos (Perna quebrada: −4 MOVE) e o cartão sai no chat. No ataque, cabeça só no tiro mirado na cabeça.
 // A tabela não altera HP: como o _rollCriticalInjury do CORE, só acrescenta a lesão. O ataque já aplica o dano bônus.
 import { itemDoCatalogo } from './catalogo.mjs';
 import { caminho, SISTEMA } from './config.mjs';
+import { config } from './configuracoes.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { TABELAS_LESAO } from './gerado.mjs';
-import { MAXIMO_ROLAGENS_LESAO, sortearLesao } from './regras-lesoes.mjs';
+import { MAXIMO_ROLAGENS_LESAO, modoDeLesoesRepetidas, sortearLesao } from './regras-lesoes.mjs';
 
 export const PERNA_QUEBRADA = 'core_critical-injuries-body:broken-leg';
 
@@ -30,14 +31,14 @@ export async function lesaoCritica(ator, opcoes = {}) {
   }
 }
 
-async function criarLesao(ator, { cabeca = false, id = null, naFicha = true, falar = true, excluir = [] } = {}) {
+async function criarLesao(ator, { cabeca = false, id = null, naFicha = true, falar = true, excluir = [], daTabela = false } = {}) {
   if (!podeReceberLesao(ator)) return null;
   const tem = lesoesDoAtor(ator);
   let escolhido = id;
   let roll = null;
   if (!escolhido) {
     const faixas = TABELAS_LESAO[cabeca ? 'cabeca' : 'corpo'];
-    const sorteio = await sortearLesao({ faixas, tem, excluir, rolar: () => new Roll('2d6').evaluate() });
+    const sorteio = await sortearLesao({ faixas, tem, excluir, repetidas: config('lesoesRepetidas'), rolar: () => new Roll('2d6').evaluate() });
     if (sorteio.motivo) {
       ui.notifications.warn(sorteio.motivo === 'esgotada'
         ? `${ator.name}: não há lesão disponível na tabela ${cabeca ? 'da cabeça' : 'do corpo'}.`
@@ -50,15 +51,21 @@ async function criarLesao(ator, { cabeca = false, id = null, naFicha = true, fal
   const dados = escolhido && !excluir.includes(escolhido) && await itemDoCatalogo(escolhido);
   if (!dados || dados.type !== 'lesao' || !podeReceberLesao(ator)) return null;
   const repetida = lesoesDoAtor(ator).has(escolhido);
-  if (!id && repetida) {
+  // IDs certos de golpes/perigos continuam idempotentes; o cartão do Monowire aplica um resultado de tabela.
+  const modo = !id || daTabela ? modoDeLesoesRepetidas(config('lesoesRepetidas')) : 'reroll';
+  const permiteRepetida = modo !== 'reroll';
+  if ((!id || daTabela) && repetida && !permiteRepetida) {
     ui.notifications.warn(`${ator.name} passou a ter ${dados.name} durante a rolagem. Role novamente.`);
     return null;
   }
-  const [item] = naFicha && !repetida ? await ator.createEmbeddedDocuments('Item', [dados]) : [null];
-  if (naFicha && !repetida && !item) {
+  const criar = naFicha && (!repetida || permiteRepetida);
+  const [item] = criar ? await ator.createEmbeddedDocuments('Item', [dados]) : [null];
+  if (criar && !item) {
     ui.notifications.warn(`Não consegui acrescentar ${dados.name} à ficha de ${ator.name}.`);
     return null;
   }
+  // As duas prévias silenciosas do Monowire ainda não aplicam nada; o aviso vem ao escolher a lesão.
+  if (repetida && modo === 'warn' && (naFicha || falar)) ui.notifications.warn(`${ator.name} já tem a lesão ${dados.name}.`);
   if (falar) {
     const content = await foundry.applications.handlebars.renderTemplate(caminho('templates/chat/lesao.hbs'), {
       alvo: ator.name, nome: dados.name, descricao: dados.system.descricao, cabeca, repetida, naFicha, dados: roll ? dadosDoCartao(roll, { critico: false }) : ''
@@ -94,7 +101,7 @@ export async function escolherLesao(mensagem, id) {
   if (!game.user.isGM || !dados || dados.escolhida || !dados.opcoes.some(opcao => opcao.id === id)) return null;
   const alvo = await fromUuid(dados.alvo);
   if (!alvo) return null;
-  const feita = await lesaoCritica(alvo, { id, cabeca: dados.cabeca, naFicha: dados.naFicha });
+  const feita = await lesaoCritica(alvo, { id, cabeca: dados.cabeca, naFicha: dados.naFicha, daTabela: true });
   if (!feita) return null;
   const escolhida = feita?.nome ?? dados.opcoes.find(opcao => opcao.id === id).nome;
   await mensagem.update({ content: await cartaoDaEscolha({ ...dados, escolhida }), [`flags.${SISTEMA}.escolhaDeLesao.escolhida`]: escolhida });

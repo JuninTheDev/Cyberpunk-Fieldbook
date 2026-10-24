@@ -15,6 +15,15 @@ export function registrarConfiguracoes() {
     name: 'Perícias na ficha do capanga', hint: 'Neste navegador, ao desenhar a ficha: Nível mostra só o nível; Base soma o atributo preparado; Total soma também os bônus persistentes da perícia. A rolagem mantém os demais modificadores.',
     scope: 'client', type: String, default: 'base', choices: { nivel: 'Nível', base: 'Base', total: 'Total' }
   });
+  // preventDuplicateCriticalInjuries do CORE; a wiki pede reroll, preservado como padrão da mesa.
+  registrar('lesoesRepetidas', {
+    name: 'Lesões críticas repetidas', hint: 'Desligado permite outra cópia; Avisar também cria a cópia, com aviso; Rolar novamente busca uma lesão ausente, como a wiki. Não altera lesões certas de golpes, quedas ou batidas.',
+    type: String, default: 'reroll', choices: { off: 'Desligado (permite repetidas)', warn: 'Avisar e permitir', reroll: 'Rolar novamente' }
+  });
+  registrar('confirmarExclusaoItem', {
+    name: 'Confirmar ao apagar item', hint: 'Neste navegador, pergunta antes de apagar um item comum da ficha. Itens instalados e a escolha do que fazer com seu conteúdo continuam exigindo confirmação.',
+    scope: 'client', type: Boolean, default: true
+  });
   registrar('ativo', {
     name: 'Resolver os ataques', hint: 'Todo ataque com alvo marcado (pela ficha, pelo Token Action HUD ou pelo Combat HUD) pergunta a defesa ao alvo e aplica o dano. Desligado, o sistema funciona como sempre.',
     type: Boolean, default: true
@@ -39,7 +48,7 @@ export function registrarConfiguracoes() {
     type: String, default: 'mestre', choices: { mestre: 'O mestre escolhe', automatica: 'Automática' }
   });
   registrar('lesaoCritica', {
-    name: 'Lesão crítica', hint: 'Dois ou mais 6 no dano: rola na tabela (cabeça só em tiro mirado na cabeça), sem repetir uma que o alvo já tem. Tiro mirado na perna que passa da armadura dá Perna quebrada.',
+    name: 'Lesão crítica', hint: 'Dois ou mais 6 no dano: rola na tabela (cabeça só em tiro mirado na cabeça), conforme a opção Lesões críticas repetidas. Tiro mirado na perna que passa da armadura dá Perna quebrada.',
     type: String, default: 'ficha', choices: { ficha: 'Na ficha', anunciar: 'Só anunciar', nao: 'Desligada' }
   });
   registrar('mortalmenteFerido', { name: 'Mortalmente ferido sofre lesão a cada acerto', hint: 'Quem já está com HP abaixo de 1 ganha uma lesão crítica a cada ataque que o atinge.', type: Boolean, default: true });
