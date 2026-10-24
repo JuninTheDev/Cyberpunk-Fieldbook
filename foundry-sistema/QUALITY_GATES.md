@@ -46,6 +46,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 
 ## Regras
 
+- **Exibição de perícias do capanga (C34.2):** o Total do template do CORE não é o total fixo de uma rolagem. Confira
+  o atributo preparado, não o da fonte, e separe bônus persistente de Role e ferimento. Não sobrescreva o total usado
+  pela ordenação: acrescente o valor exibido. O G4 compara os três modos com o mesmo d10 e testa a escolha independente
+  nos navegadores do mestre e do jogador, além da lista completa com grupos e da ficha do personagem.
+
 - **Opção de criação e ficha aberta (C34.2):** esconder o botão não basta; a ação relê a opção e a permissão. O G4
   revoga a opção com o botão antigo ainda desenhado, clica no botão real das fichas de personagem e capanga e confere
   também o observador. Nas mutações de navegador, rode um controle sem mutação e confira que a falha é a esperada,

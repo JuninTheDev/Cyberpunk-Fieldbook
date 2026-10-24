@@ -346,7 +346,10 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     - [x] Jogadores podem criar itens (ciclo 158, sessão Codex, 2026-10-23): opção do mundo desligada por padrão como
       no CORE; o mestre continua criando. Botão e ação respeitam dono e opção atual nas fichas de personagem e capanga.
       G1 e G2 passam; G3, 406/406; G4 completo, 240/240; 11 mutações caem. As outras configurações desta parte continuam
-      abertas: lesão repetida, exibição das perícias do capanga e confirmação ao apagar.
+      abertas: lesão repetida e confirmação ao apagar.
+    - [x] Perícias do capanga por nível, base ou total (ciclo 159, sessão Codex, 2026-10-24): escolha por navegador,
+      Base por padrão, com o atributo preparado e os bônus persistentes da perícia no Total, como o CORE. A coluna
+      não muda o total interno, a ordem nem a rolagem. G1 e G2 passam; G3, 409/409; G4 completo, 241/241; 16 mutações caem.
   - [~] parte 3, a mesa (sessão Codex, 2026-10-23): a SP na barra do token; a árvore dos instalados no diretório de itens; a imagem padrão de cada
     tipo; escolher a armadura de cada local (o "track" do CORE; conferir antes o que muda, já que o C18 usa a de maior SP).
 - [ ] **C35. Gerar a cena da arquitetura** com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de

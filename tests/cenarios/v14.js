@@ -6855,6 +6855,102 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('C34.2: perícias do capanga por nível, base ou total; atributo preparado, bônus persistente, rolagem preservada e escolha independente em cada navegador', async () => {
+      const anterior = await edge.evaluate(`game.settings.get('${S}', 'periciasDoCapanga')`);
+      const anteriorDoJogador = await jogador.evaluate(`game.settings.get('${S}', 'periciasDoCapanga')`);
+      let ids = [];
+      try {
+        ids = await edge.evaluate(`(async () => {
+          const dono = game.users.getName('Jogador').id;
+          const atores = [];
+          for (const type of ['capanga', 'personagem']) {
+            atores.push(await Actor.implementation.create({ name: 'C34 Perícias ' + type, type,
+              ownership: { [dono]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
+              system: { atributos: { dex: { valor: 8 }, ref: { valor: 8 }, body: { valor: 8 }, will: { valor: 8 } },
+                hp: { value: 20 }, role: { nome: 'nomad', rank: 3 }, pericias: { evasion: { nivel: 4 }, 'drive-land-vehicle': { nivel: 4 } } },
+              items: [{ name: 'Proteção C34', type: 'armadura', system: { equipada: true, penalidade: -2 } }],
+              effects: [{ name: 'Bônus persistente C34', type: 'base', system: { changes: ['evasion', 'drive-land-vehicle'].map(id => ({ key: 'system.bonus.pericias.' + id, type: 'add', value: '2', phase: 'initial', priority: null })) } }]
+            }));
+          }
+          return atores.map(a => a.id);
+        })()`);
+        await jogador.evaluate(`game.settings.set('${S}', 'periciasDoCapanga', 'base').then(() => true)`);
+        await fixar(edge, [[5, 10], [5, 10], [5, 10]]);
+        const doMestre = await edge.evaluate(`(async () => {
+          const a = game.actors.get('${ids[0]}');
+          const resultados = [];
+          for (const modo of ['nivel', 'base', 'total']) {
+            await game.settings.set('${S}', 'periciasDoCapanga', modo);
+            await a.sheet.render({ force: true });
+            const contexto = await a.sheet._prepareContext({});
+            const raiz = a.sheet.element;
+            const linha = id => raiz.querySelector('li.pericia[data-pericia="' + id + '"]');
+            const ler = id => ({ valor: Number(linha(id).querySelector('.total').textContent), nivel: Number(linha(id).querySelector('input').value), dica: linha(id).querySelector('.total').dataset.tooltip });
+            const drive = contexto.linhasDePericia.find(p => p.id === 'drive-land-vehicle');
+            const rolagem = await a.rolarPericia('drive-land-vehicle', { perguntar: false });
+            resultados.push({ modo, cabecalho: raiz.querySelector('.linha-pericia.cabeca span:last-child').textContent.trim(),
+              evasao: ler('evasion'), dirigir: ler('drive-land-vehicle'), totalInterno: drive.total,
+              ordem: contexto.linhasDePericia.filter(p => !p.grupo).map(p => p.id).join(),
+              ref: a.system.atributos.ref.valor, refFonte: a._source.system.atributos.ref.valor,
+              bonus: a.system.pericia('drive-land-vehicle').bonus, role: a.system.pericia('drive-land-vehicle').role?.valor,
+              ferimento: a.system.penalidade, rolagem: rolagem.total, fila: window.__fila.length });
+          }
+          // O painel completo tem linhas de grupo, que não são perícias e não têm atributo.
+          await a.sheet.options.actions.alternarPericias.call(a.sheet);
+          await a.sheet.render({ force: true });
+          const completo = { grupos: a.sheet.element.querySelectorAll('.grupo-pericias').length,
+            valor: Number(a.sheet.element.querySelector('li[data-pericia="drive-land-vehicle"] .total').textContent) };
+          const p = game.actors.get('${ids[1]}');
+          await p.sheet.render({ force: true });
+          const personagem = { cabecalho: p.sheet.element.querySelector('.linha-pericia.cabeca span:last-child').textContent.trim(),
+            valor: Number(p.sheet.element.querySelector('li[data-pericia="drive-land-vehicle"] .total').textContent) };
+          return { resultados, completo, personagem };
+        })()`);
+        const lerNoJogador = modo => jogador.evaluate(`(async () => {
+          for (let i = 0; i < 50 && !game.actors.has('${ids[0]}'); i++) await new Promise(r => setTimeout(r, 100));
+          if (${JSON.stringify(modo)} !== null) await game.settings.set('${S}', 'periciasDoCapanga', ${JSON.stringify(modo)});
+          const a = game.actors.get('${ids[0]}');
+          await a.sheet.render({ force: true });
+          return { modo: game.settings.get('${S}', 'periciasDoCapanga'),
+            cabecalho: a.sheet.element.querySelector('.linha-pericia.cabeca span:last-child').textContent.trim(),
+            valor: Number(a.sheet.element.querySelector('li[data-pericia="drive-land-vehicle"] .total').textContent) };
+        })()`);
+        const jogadorBase = await lerNoJogador(null);
+        const jogadorNivel = await lerNoJogador('nivel');
+        const mestreDepois = await edge.evaluate(`game.settings.get('${S}', 'periciasDoCapanga')`);
+        const { resultados, completo, personagem } = doMestre;
+        const ok = resultados.length === 3 && resultados.every((r, i) => r.modo === ['nivel', 'base', 'total'][i]
+          && r.cabecalho === ['NÍVEL', 'BASE', 'TOTAL'][i]
+          && r.evasao.valor === [4, 10, 12][i] && r.dirigir.valor === [4, 10, 12][i]
+          && r.evasao.nivel === 4 && r.dirigir.nivel === 4 && r.evasao.dica && r.dirigir.dica
+          && r.totalInterno === 13 && r.rolagem === 18 && r.fila === 2 - i
+          && r.ref === 6 && r.refFonte === 8 && r.bonus === 2 && r.role === 3 && r.ferimento === -2
+          && r.ordem === resultados[0].ordem)
+          && completo.grupos > 0 && completo.valor === 12 && personagem.cabecalho === 'BASE' && personagem.valor === 13
+          && jogadorBase.modo === 'base' && jogadorBase.cabecalho === 'BASE' && jogadorBase.valor === 10
+          && jogadorNivel.modo === 'nivel' && jogadorNivel.cabecalho === 'NÍVEL' && jogadorNivel.valor === 4 && mestreDepois === 'total';
+        return [ok, JSON.stringify({ doMestre, jogadorBase, jogadorNivel, mestreDepois })];
+      } finally {
+        try {
+          await jogador.evaluate(`(async () => {
+            for (const id of ${JSON.stringify(ids)}) { const a = game.actors.get(id); if (a?.sheet.rendered) await a.sheet.close(); }
+            await game.settings.set('${S}', 'periciasDoCapanga', ${JSON.stringify(anteriorDoJogador)});
+            return true;
+          })()`);
+        } finally {
+          await edge.evaluate(`(async () => {
+            const ids = ${JSON.stringify(ids)};
+            for (const id of ids) { const a = game.actors.get(id); if (a?.sheet.rendered) await a.sheet.close(); await a?.delete(); }
+            const mensagens = game.messages.filter(m => ids.includes(m.speaker.actor)).map(m => m.id);
+            if (mensagens.length) await ChatMessage.implementation.deleteDocuments(mensagens);
+            await game.settings.set('${S}', 'periciasDoCapanga', ${JSON.stringify(anterior)});
+            window.__fila = [];
+            return true;
+          })()`);
+        }
+      }
+    });
+
     await r.passo('jogador: a segunda chance da munição Smart melhorada rola no computador de quem atacou (o Alvo, do jogador), como o dano', async () => {
       // O Alvo (REF 8, sem a perícia), com o Subdermal Grip e a Yukimura com a munição Smart melhorada, atira no Longe
       // (18 m, DV 15 da SMG): d10 2 → 8 + 1 + 2 = 11, errou por 4; a segunda chance, no jogador, d10 5 → 14 + 5 = 19, pega;

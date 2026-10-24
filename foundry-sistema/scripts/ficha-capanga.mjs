@@ -8,6 +8,8 @@ import { caminho, USOS } from './config.mjs';
 import { bloco, FichaPersonagem } from './ficha-personagem.mjs';
 import { AO_RECEBER_CAPANGA } from './regras.mjs';
 import { divisaoDaPilha } from './regras-inventario.mjs';
+import { config } from './configuracoes.mjs';
+import { exibirPericiaDoCapanga } from './regras-pericias-capanga.mjs';
 
 const modelo = arquivo => caminho(`templates/capanga/${arquivo}.hbs`);
 
@@ -41,6 +43,14 @@ export class FichaCapanga extends FichaPersonagem {
 
   async _prepareContext(options) {
     const contexto = await super._prepareContext(options);
+    const modo = config('periciasDoCapanga');
+    const linhasDePericia = contexto.linhasDePericia.map(linha => {
+      if (linha.grupo) return linha;
+      const { valor, dica } = exibirPericiaDoCapanga({ nivel: linha.nivel,
+        atributo: this.actor.system.atributos[linha.atributo].valor, bonus: linha.bonus }, modo);
+      return { ...linha, valorExibido: valor, dicaExibida: dica };
+    });
+    const rotuloColunaPericias = exibirPericiaDoCapanga({ nivel: 0, atributo: 0 }, modo).rotulo;
     const ordem = Object.keys(CONFIG.Item.dataModels);
     // Todos os itens, menos as lesões (no painel geral) e a arma do cyberware ou do acessório (na tabela de armas; ela sai
     // com ele), por tipo e nome, com o botão de cada tipo.
@@ -48,7 +58,7 @@ export class FichaCapanga extends FichaPersonagem {
       .sort((a, b) => ordem.indexOf(a.type) - ordem.indexOf(b.type) || a.name.localeCompare(b.name, 'pt-BR'))
       .map(item => ({ id: item.id, nome: item.name, img: item.img, divisivel: Boolean(divisaoDaPilha(item.type, item.system.quantidade, 1)), tipo: game.i18n.localize(CONFIG.Item.typeLabels[item.type]), detalhe: detalheDoItem(item), ...botaoDoItem(item) }));
     // Na ficha de um token, o nome é o do token (o que a cena mostra).
-    return Object.assign(contexto, { capanga: true, naCena: this.actor.isToken, nomeNaFicha: this.token?.name ?? this.actor.name, itensDoCapanga: itens });
+    return Object.assign(contexto, { capanga: true, naCena: this.actor.isToken, nomeNaFicha: this.token?.name ?? this.actor.name, itensDoCapanga: itens, linhasDePericia, rotuloColunaPericias });
   }
 
   // Mudar o nome na ficha de um token muda também o do token na cena, como o mook do CORE (_changeMookName); os outros

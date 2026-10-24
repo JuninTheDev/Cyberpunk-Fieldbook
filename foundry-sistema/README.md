@@ -168,6 +168,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Corpo:** o painel geral da ficha do personagem (sem as armas), a tabela de armas com os ataques, o painel de armadura
     com ablação e conserto, o agarrão (os botões do
     ciclo 81), os itens (equipar, vestir, instalar e o uso de cada um) e as notas;
+  - **Perícias (C34.2, ciclo 159):** a configuração **Perícias na ficha do capanga**, de cada navegador, escolhe a última
+    coluna: Nível, Base (o padrão: nível + atributo atual, já com a armadura) ou Total (base + bônus persistentes da
+    perícia). A escolha vale quando a ficha se redesenha ou reabre. O campo de nível continua editável; a ordem das
+    perícias e a rolagem continuam as mesmas. Como no CORE, a coluna Total não soma a Role calculada separadamente,
+    ferimento, Sorte ou situacionais; esses entram na rolagem. Bônus já derivados na perícia, como os da família e a
+    Detecção de Ameaça, continuam no Total. A ficha do personagem mantém sua exibição;
   - **O token** nasce solto, com o HP na barra: cada capanga na cena tem o próprio HP, a própria munição e o próprio Death
     Save. O nome mudado na ficha de um token vai para o token na cena;
   - **Arrastar um item** para a ficha tenta equipar a arma e o escudo (sem mãos, ficam guardados), veste a armadura e a

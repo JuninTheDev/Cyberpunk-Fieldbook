@@ -10,6 +10,11 @@ export function registrarConfiguracoes() {
     name: 'Jogadores podem criar itens', hint: 'Permite criar itens em branco nas fichas de personagem e capanga que o jogador pode editar. O mestre pode sempre criar; os contêineres usam suas próprias permissões.',
     type: Boolean, default: false
   });
+  // mookSheetSkillDisplay do CORE: a escolha é de cada navegador e só muda a exibição.
+  registrar('periciasDoCapanga', {
+    name: 'Perícias na ficha do capanga', hint: 'Neste navegador, ao desenhar a ficha: Nível mostra só o nível; Base soma o atributo preparado; Total soma também os bônus persistentes da perícia. A rolagem mantém os demais modificadores.',
+    scope: 'client', type: String, default: 'base', choices: { nivel: 'Nível', base: 'Base', total: 'Total' }
+  });
   registrar('ativo', {
     name: 'Resolver os ataques', hint: 'Todo ataque com alvo marcado (pela ficha, pelo Token Action HUD ou pelo Combat HUD) pergunta a defesa ao alvo e aplica o dano. Desligado, o sistema funciona como sempre.',
     type: Boolean, default: true

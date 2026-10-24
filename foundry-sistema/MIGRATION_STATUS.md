@@ -7827,6 +7827,37 @@ agente, sem editar os arquivos durante as rodadas de G4 e mutações.
 - **Próximo:** C34.2 continua reservado para a sessão Codex: lesão repetida, perícias do capanga por nível/base/total e
   confirmação ao apagar item. Esta entrega fecha só a opção de criação de itens.
 
+### Ciclo 159 (2026-10-24): C34.2, exibição das perícias do capanga (sessão Codex)
+
+Commit anterior: `cdb49d5` (reserva do C34.3 por outra sessão, a única mudança publicada desde o ciclo 158). A reserva
+foi integrada antes de começar; o C34.3 não foi alterado. O C34.2 já estava reservado para esta sessão.
+
+- **Referência:** CORE 0.92.4, `modules/system/settings.js:183–198` (`mookSheetSkillDisplay`, client, default base),
+  `templates/actor/mook/cpr-mook-skills.hbs:35–42` e `modules/system/register-helpers.js:1106–1125` (bônus persistentes).
+- **O que muda:** `periciasDoCapanga` escolhe Nível, Base ou Total por navegador, com Base por padrão. O cálculo puro
+  fica em `scripts/regras-pericias-capanga.mjs`; a ficha acrescenta valor e dica de exibição às linhas e o bloco
+  compartilhado muda só a coluna do capanga. Cabeçalho, tooltip e valor acompanham a escolha ao redesenhar ou reabrir.
+  A lista completa preserva as linhas de grupo; o nível editável, a ordenação e a ficha do personagem ficam como eram.
+- **A conta:** Nível é o nível; Base soma o atributo preparado (com a armadura já aplicada); Total soma o bônus
+  persistente de `pericia().bonus`. Não soma Role calculada separadamente, ferimento, Sorte ou situacionais na coluna,
+  como o template do CORE. O Fieldbook mantém os bônus que já derivava em `pericia().bonus`, inclusive família e a
+  Detecção de Ameaça do Solo. O total interno da ficha e as rolagens mantêm todos os modificadores anteriores.
+- **G4 novo:** com REF de fonte 8, armadura −2, nível 4, bônus persistente +2, Moto +3 e ferimento −2, a coluna mostra
+  4 / 10 / 12; o total interno permanece 13 e o d10 5 dá 18 nos três modos. O campo de nível continua 4 e a ordem é
+  preservada. A lista completa desenha os grupos. O personagem continua mostrando 13. Mestre em Total e jogador em
+  Base veem 12 e 10 no mesmo capanga; mudar o jogador para Nível não muda o mestre.
+- **Portões:** G1, 141 arquivos sem erro; G2, nenhum erro; G3, 409/409 no Node 24; G4 completo, 241/241 em 559 s, sem
+  avisos de compatibilidade nem erros do sistema nos dois navegadores. O cenário focado também passou sem avisos.
+  A primeira tentativa focada parou na abertura lenta do app, antes do cenário; a repetição passou sem mudar os prazos
+  do runner nem contornar a checagem de mesa ocupada.
+- **Mutações:** 16 caíram, com MD5 original restaurado: 10 no G3 (nível, atributo, pontos, bônus, bônus negativo,
+  padrão da função, rótulo, escopo, padrão registrado e escolhas); 6 no G4 focado (atributo da fonte, bônus ausente,
+  sobrescrever o total interno, valor e rótulo errados no template e tratar grupo como perícia). As de navegador
+  alteram somente a cópia instalada no Foundry descartável, com controle aprovado antes e depois e falha pelo motivo
+  esperado em cada mutante. O G4 completo foi executado depois da restauração.
+- **Revisão:** outro agente conferiu a fonte e o diff, sem achados impeditivos, sem editar ou rodar navegador.
+- **Próximo:** no C34.2, lesão repetida e confirmação ao apagar item; o C34.3 continua reservado pela outra sessão.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
