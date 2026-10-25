@@ -7,6 +7,14 @@
   <title>Night City Fieldbook · Jogadores</title>
   <link rel="stylesheet" href="cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css">
   <link rel="stylesheet" href="wiki.css">
+  <link rel="stylesheet" href="netwire.css">
+  <script>
+    // O tema escolhido no menu da conta (wikiApp.prefs "tema"), antes de desenhar: sem piscar o outro tema.
+    try {
+      const dono = localStorage.getItem('night-city-dono') || 'aparelho';
+      if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') === '2077') document.documentElement.dataset.tema = '2077';
+    } catch { /* sem armazenamento: fica o Fieldbook */ }
+  </script>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icones/icone-192.png">
   <link rel="apple-touch-icon" href="icones/icone-192.png">

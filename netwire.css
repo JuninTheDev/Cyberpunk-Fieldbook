@@ -1,0 +1,286 @@
+/* ================= NetWire: o tema 2077 e o kit do menu do jogo =================
+   Vem depois do wiki.css, nas duas wikis e na tela do mestre. Duas partes:
+   1. O kit (.nw-*): painel de canto cortado com a diagonal, botões grandes, etiqueta de campo, selo, canal, mensagem e
+      a faixa de título com brilho. Lê só variáveis (--nw-*), então funciona nos dois temas.
+   2. O tema 2077 (<html data-tema="2077">, escolhido no menu da conta): troca os tokens do wiki.css pela paleta do menu
+      do Cyberpunk 2077 e reveste o que já existe (barra de cima, barra lateral, quadros, botões). Sem o atributo, a wiki
+      fica como sempre foi (o tema Fieldbook).
+   O visual parte do "Cyberpunk 2077 HTML" de Marc Woodyard, fork do "Slack / Discord Cyberpunk 2077 redesign" de
+   Hussard (CodePen, licença MIT). Rajdhani e VT323: Google Fonts, licença OFL, na pasta de fontes. */
+
+@font-face { font-family: Rajdhani; font-style: normal; font-weight: 500; font-display: swap; src: url(cyberpunk-css-main/cyberpunk-css-main/fonts/Rajdhani-500.woff2) format('woff2'); }
+@font-face { font-family: Rajdhani; font-style: normal; font-weight: 600; font-display: swap; src: url(cyberpunk-css-main/cyberpunk-css-main/fonts/Rajdhani-600.woff2) format('woff2'); }
+@font-face { font-family: Rajdhani; font-style: normal; font-weight: 700; font-display: swap; src: url(cyberpunk-css-main/cyberpunk-css-main/fonts/Rajdhani-700.woff2) format('woff2'); }
+/* A VT323 desenha bem menor que as outras no mesmo tamanho: o size-adjust a deixa do tamanho da Share Tech Mono, então
+   os rótulos de 10–11 px do wiki.css continuam legíveis sem mexer em cada um. */
+@font-face { font-family: VT323; font-style: normal; font-weight: 400; font-display: swap; size-adjust: 135%; src: url(cyberpunk-css-main/cyberpunk-css-main/fonts/VT323.woff2) format('woff2'); }
+
+/* ---------- Tokens do kit: o tema Fieldbook (o de sempre) ---------- */
+:root {
+  --nw-primary: var(--y);          /* bordas e texto de destaque */
+  --nw-primary-soft: #fff36b;      /* texto no hover */
+  --nw-primary-deep: #2a2a12;      /* fundo do hover */
+  --nw-secondary: var(--c);        /* títulos, ação principal */
+  --nw-secondary-deep: #10302c;
+  --nw-tertiary: var(--y);         /* selos e mensagens dos NPCs */
+  --nw-active: var(--g);           /* online, mesa aberta */
+  --nw-surface: var(--p);
+  --nw-well: var(--w);
+  --nw-border: var(--l);
+  --nw-border-strong: #566060;
+  --nw-active-bg: #1c2123;
+  --nw-on-accent: #0b0d0f;         /* texto sobre a cor de destaque cheia */
+  --nw-glow: none;
+  --nw-glow-text: none;
+  --nw-font: var(--ui);
+  --nw-font-label: var(--lbl);
+  --nw-notch: 14px;
+  --nw-notch-path: polygon(0 0, 100% 0, 100% calc(100% - var(--nw-notch) + 2px), calc(100% - var(--nw-notch) + 2px) 100%, 0 100%);
+  --nw-notch-line: calc(var(--nw-notch) * 1.4142 + 2px);
+}
+
+/* ---------- Tokens do tema 2077 (o vermelho do menu do jogo) ---------- */
+:root[data-tema="2077"] {
+  --nw-primary: #e8615a;
+  --nw-primary-soft: #f4908b;
+  --nw-primary-mid: #ea6f69;
+  --nw-primary-dim: #9c3230;
+  --nw-primary-deep: #451717;
+  --nw-secondary: #2be4ea;
+  --nw-secondary-deep: #295459;
+  --nw-tertiary: #fed33f;
+  --nw-active: #2bfea0;
+  --nw-surface: #1e181e;
+  --nw-well: #170f13;
+  --nw-border: #5d2322;
+  --nw-border-strong: #9c3230;
+  --nw-active-bg: #391419;
+  --nw-on-accent: #1e181e;
+  --nw-glow: 0 0 5px #e8615a;
+  --nw-glow-text: -9px -6px 40px currentcolor;
+  --nw-font: Rajdhani, 'Segoe UI', sans-serif;
+  --nw-font-label: VT323, Consolas, monospace;
+  --nw-notch: 1rem;
+
+  /* Os tokens do wiki.css (Visual 2026): o que já existe troca de cor sozinho. */
+  --y: #e8615a; --c: #2be4ea; --r: #fed33f; --g: #2bfea0;
+  --l: #5d2322; --mu: #c27b75; --p: #1e181e; --w: #170f13; --tx: #f4b3ae; --row: #3c181a;
+  --ui: Rajdhani, 'Segoe UI', sans-serif;
+  --lbl: VT323, Consolas, monospace;
+  --bg: #191a1e; --panel-raised: #2a1a1f;
+  color-scheme: dark;
+}
+
+/* ================= 1. O kit ================= */
+/* Painel com o canto de baixo à direita cortado e a diagonal desenhada (o "pad" do exemplo). */
+.nw-pad { position: relative; padding: .75rem .75rem var(--nw-notch); border: 2px solid var(--nw-primary-dim, var(--nw-border)); background: var(--nw-surface); clip-path: var(--nw-notch-path); }
+.nw-pad::before, .nw-notched::before {
+  content: ''; position: absolute; z-index: 1; right: -6px; bottom: 5px; width: var(--nw-notch-line); height: 3px;
+  background: var(--nw-primary-dim, var(--nw-border)); transform: rotate(-45deg); pointer-events: none;
+}
+.nw-pad-title { margin: 0 0 .5rem; color: var(--nw-secondary); font: 600 1rem/1.2 var(--nw-font); letter-spacing: .06em; text-transform: uppercase; }
+
+/* Botões: vazado na cor principal; --primary na secundária (a ação principal); --lg e --xl com o canto cortado. */
+.nw-btn { position: relative; display: inline-flex; align-items: center; gap: .5rem; min-height: 40px; padding: .45rem .7rem; border: 1px solid var(--nw-primary); border-radius: 2px; background: transparent; color: var(--nw-primary); cursor: pointer; font: 600 .95rem/1.1 var(--nw-font); letter-spacing: .045em; text-align: left; text-transform: uppercase; text-decoration: none; transition: background-color .2s; }
+.nw-btn:hover { background: var(--nw-primary-deep); color: var(--nw-primary-soft); }
+.nw-btn:focus-visible { outline: 2px solid var(--nw-secondary); outline-offset: 2px; }
+.nw-btn--primary { border-color: var(--nw-secondary); color: var(--nw-secondary); }
+.nw-btn--primary:hover { background: var(--nw-secondary-deep); color: var(--nw-secondary); }
+.nw-btn--lg, .nw-btn--xl { border-width: 2px; border-radius: 0; clip-path: var(--nw-notch-path); padding: .55rem .7rem .7rem .55rem; }
+.nw-btn--lg::before, .nw-btn--xl::before { content: ''; position: absolute; right: -6px; bottom: 5px; width: var(--nw-notch-line); height: 3px; background: currentcolor; transform: rotate(-45deg); }
+.nw-btn--xl { padding: .55rem 1.5rem 1.5rem .55rem; }
+.nw-btn svg { width: 1.125rem; height: 1.125rem; fill: currentcolor; }
+.nw-toolbar { display: flex; }
+.nw-toolbar .nw-btn { border-radius: 0; }
+.nw-toolbar .nw-btn + .nw-btn { margin-left: -1px; }
+
+/* A etiqueta do campo (cortada na direita) e o campo com o canto cortado. */
+.nw-label { display: inline-block; padding: .125em 2em .125em .75em; background: var(--nw-primary-dim, var(--nw-border)); color: var(--nw-primary-soft); font: 400 .92rem/1 var(--nw-font-label); letter-spacing: .065em; text-transform: uppercase; vertical-align: bottom; clip-path: polygon(.25em 0, calc(100% - 1em) 0, 100% 100%, .33em 100%, 0 100%, 0 .25em); }
+.nw-field { position: relative; border: 1px solid var(--nw-primary-dim, var(--nw-border)); background: var(--nw-surface); clip-path: var(--nw-notch-path); }
+.nw-field :is(input, textarea) { width: 100%; padding: .5rem; border: 0; background: transparent; color: var(--nw-primary); font: 500 1rem var(--nw-font); letter-spacing: .045em; outline: none; resize: none; }
+
+/* Selo (contagem, "novo"). */
+.nw-badge { display: inline-block; padding: .15em .34em; border: 1.5px solid var(--nw-tertiary); border-radius: 3px; color: var(--nw-tertiary); font: 500 .92rem/1 var(--nw-font); vertical-align: middle; }
+
+/* Canal e conversa (a lista da esquerda das Mensagens). */
+.nw-channel { display: flex; align-items: center; gap: .75rem; padding: .5rem .75rem; border: 1px solid transparent; border-radius: 3px; color: var(--nw-secondary); font: 500 1rem var(--nw-font); text-decoration: none; transition: background-color .2s; }
+.nw-channel:hover, .nw-channel:focus-visible { border-color: var(--nw-border); background: var(--nw-surface); }
+.nw-channel[aria-current="true"] { border-color: var(--nw-border-strong); background: var(--nw-active-bg); }
+.nw-channel.nw-unread { font-weight: 700; }
+.nw-channel .nw-badge { margin-left: auto; }
+.nw-dot { flex: 0 0 auto; width: .5em; height: .5em; border-radius: 50%; background: var(--nw-primary); }
+.nw-dot.nw-online { background: var(--nw-active); }
+
+/* Mensagem (balão e rodapé com quem e quando); .nw-mine é a do próprio jogador. */
+.nw-msg { padding-bottom: 1rem; }
+.nw-msg-body { padding: .75rem; border: 1px solid var(--nw-tertiary); border-radius: 3px; background: var(--nw-surface); color: var(--nw-tertiary); }
+.nw-msg-foot { margin-top: .25rem; color: var(--nw-tertiary); font-size: .85rem; }
+.nw-msg-foot b { font-weight: 700; }
+.nw-msg.nw-mine { margin-left: auto; max-width: 80%; text-align: right; }
+.nw-msg.nw-mine .nw-msg-body, .nw-msg.nw-mine .nw-msg-foot { border-color: var(--nw-secondary); color: var(--nw-secondary); }
+.nw-system { margin: .5rem 0 1rem; color: var(--nw-primary-dim, var(--nw-border)); font: 400 1rem var(--nw-font-label); letter-spacing: .1em; text-align: center; text-transform: uppercase; }
+
+/* Faixa de título da área (sobrelinha, título e botões), com a linha que brilha embaixo. */
+.nw-topbar { position: relative; display: flex; justify-content: space-between; gap: 1rem; min-height: 3.5rem; margin-bottom: 1rem; }
+.nw-topbar::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 1px; background: var(--nw-primary); box-shadow: var(--nw-glow); }
+.nw-overline { display: block; color: var(--nw-primary); font: 400 1rem var(--nw-font-label); letter-spacing: .04em; }
+.nw-title { margin: 0; color: var(--nw-secondary); font: 600 1.6rem/1.15 var(--nw-font); letter-spacing: .035em; text-shadow: var(--nw-glow-text); text-transform: uppercase; }
+
+/* Barra segmentada (HP, Humanidade) e relógio. */
+.nw-bar { display: flex; gap: 2px; height: 10px; }
+.nw-bar i { flex: 1 1 0; background: var(--nw-well); outline: 1px solid var(--nw-border); }
+.nw-bar i.on { background: var(--nw-primary); outline-color: var(--nw-primary); }
+.nw-bar.nw-bar--cyan i.on { background: var(--nw-secondary); outline-color: var(--nw-secondary); }
+
+/* ================= 2. O tema 2077 sobre o layout de hoje ================= */
+:root[data-tema="2077"] { background: #191a1e; }
+:root[data-tema="2077"] body {
+  background: #191a1e radial-gradient(ellipse at 33% 10%, #461616 0%, transparent 75%) no-repeat fixed;
+  color: var(--tx); font: 500 16px/1.45 var(--ui);
+}
+:root[data-tema="2077"] ::selection { background: #e8615a; color: #1e181e; }
+
+/* Rótulos em VT323: sem o espaçamento largo da Share Tech Mono (a letra de pixel já é larga). */
+:root[data-tema="2077"] :is(.eyebrow, .nav-label, .tag, th, .entry-tag, .map-filter, .page-toc button, .page-toc-label, .search-filter,
+  .view-switch button, .result small, .section h3 .ref, .cc-badge, .cc-tab, .workspace-tab, .top-meta, summary, .pin-page, .brand-mark,
+  .account-label, .popup-field > span, .cc-card-role, .cc-card-numbers small, .cc-stat span, .pv-me-text p, .note-status, .formula,
+  .dv-finder .map-control, .dv-bands div, .dv-result small) {
+  letter-spacing: .05em;
+}
+
+/* Barra de cima: a linha vermelha que brilha embaixo, a marca em VT323. */
+:root[data-tema="2077"] .topbar { border-bottom: 0; background: rgb(25 26 30 / 94%); box-shadow: 0 2px 0 #e8615a, 0 2px 5px #e8615a; }
+:root[data-tema="2077"] .topbar .brand-name { color: #e8615a; font: 400 20px/1 var(--lbl); letter-spacing: .06em; text-shadow: -9px -6px 40px currentcolor; }
+:root[data-tema="2077"] .brand-name em { color: #e8615a; }
+:root[data-tema="2077"] .search-wrap input { border-color: #9c3230; background: #1e181e; color: #e8615a; font: 500 16px var(--ui); clip-path: var(--nw-notch-path); }
+:root[data-tema="2077"] .search-wrap input::placeholder { color: #c27b75; }
+:root[data-tema="2077"] .search-wrap input:focus { border-color: #e8615a; }
+:root[data-tema="2077"] .search-glyph { color: #e8615a; }
+:root[data-tema="2077"] .top-meta { border-color: var(--campanha-cor, #2be4ea); border-radius: 3px; color: var(--campanha-cor, #2be4ea); }
+:root[data-tema="2077"] .nav-toggle, :root[data-tema="2077"] .account-button { border-color: #5d2322; background: #1e181e; }
+:root[data-tema="2077"] .account-button:hover, :root[data-tema="2077"] .account.open .account-button { border-color: #e8615a; }
+:root[data-tema="2077"] .account-initials, :root[data-tema="2077"] .account-gm { background: #9c3230; color: #f4908b; }
+:root[data-tema="2077"] .account-dot { background: #fed33f; color: #1e181e; }
+:root[data-tema="2077"] .account-menu { border: 2px solid #9c3230; background: #1e181e; }
+:root[data-tema="2077"] .account-section { border-top-color: #3c181a; }
+:root[data-tema="2077"] .account-label { color: #2be4ea; }
+:root[data-tema="2077"] .account-item[aria-current="true"] { background: #391419; color: #f4908b; }
+
+/* Barra lateral: as seções do exemplo (cabeçalho escuro com título em ciano, links em ciano). */
+:root[data-tema="2077"] aside { border-right-color: #3c181a; background: transparent; }
+:root[data-tema="2077"] .workspace-tab { border-color: #5d2322; border-radius: 3px; background: #1e181e; color: #e8615a; }
+:root[data-tema="2077"] .workspace-tab:hover { border-color: #e8615a; }
+:root[data-tema="2077"] .workspace-tab[aria-selected="true"] { border-color: #2be4ea; background: #1e181e; color: #2be4ea; text-shadow: -9px -6px 40px currentcolor; }
+:root[data-tema="2077"] button.nav-group-toggle,
+:root[data-tema="2077"] .nav-label.nav-campaign,
+:root[data-tema="2077"] .campaign-picker .nav-label { color: #2be4ea; }
+:root[data-tema="2077"] .nav-pinned button.nav-group-toggle { color: #fed33f; }
+:root[data-tema="2077"] .nav-group:not(.collapsed) > button.nav-group-toggle { width: calc(100% - 24px); margin: 12px 12px 4px; padding: 7px 10px; border: 1px solid #5d2322; border-radius: 3px; background: #1e181e; font-size: 16px; }
+:root[data-tema="2077"] .nav-group.collapsed button.nav-group-toggle { color: #c27b75; font-size: 16px; }
+:root[data-tema="2077"] .nav-group.collapsed button.nav-group-toggle:hover { background: #1e181e; color: #f4908b; }
+:root[data-tema="2077"] .nav-item { margin: 1px 12px 1px 22px; width: calc(100% - 34px); padding: 7px 10px; border: 1px solid transparent; border-radius: 3px; color: #2be4ea; font: 500 15px/1.3 var(--ui); transition: background-color .2s; }
+:root[data-tema="2077"] .nav-item:hover { border-color: #5d2322; background: #1e181e; color: #2be4ea; }
+:root[data-tema="2077"] .nav-item.active { border-color: #9c3230; background: #391419; color: #2be4ea; }
+:root[data-tema="2077"] .nav-badge { border: 1.5px solid #fed33f; border-radius: 3px; background: transparent; color: #fed33f; }
+:root[data-tema="2077"] body.sidebar-compact .nav-item { margin: 1px 6px; width: calc(100% - 12px); padding: 7px 0; }
+:root[data-tema="2077"] body.sidebar-compact .nav-icon { color: #2be4ea; }
+:root[data-tema="2077"] .side-status { border-top: 2px solid #9c3230; background: #1e181e; box-shadow: 0 -10px 18px rgb(25 26 30 / 85%); }
+:root[data-tema="2077"] .table-status.table-on { color: #2bfea0; }
+:root[data-tema="2077"] .table-status.table-idle { color: #fed33f; }
+:root[data-tema="2077"] .side-status .table-link { border: 2px solid #2be4ea; background: transparent; color: #2be4ea; clip-path: var(--nw-notch-path); }
+:root[data-tema="2077"] .side-status .table-link:hover { background: #295459; }
+
+/* Cabeçalho da página: título em caixa alta com brilho, eyebrow em VT323. */
+:root[data-tema="2077"] h2, :root[data-tema="2077"] h2.cyber-h { color: #2be4ea; font-weight: 600; letter-spacing: .035em; text-shadow: -9px -6px 40px currentcolor; text-transform: uppercase; }
+:root[data-tema="2077"] .page-head { position: relative; padding-bottom: 12px; }
+:root[data-tema="2077"] .page-head::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 1px; background: #e8615a; box-shadow: 0 0 5px #e8615a; }
+:root[data-tema="2077"] .page-head .eyebrow { color: #e8615a; font-size: 13px; letter-spacing: .04em; }
+:root[data-tema="2077"] .lede { color: #c27b75; }
+:root[data-tema="2077"] .lede b { color: #f4908b; }
+:root[data-tema="2077"] .page-toc { background: rgb(25 26 30 / 94%); }
+:root[data-tema="2077"] .page-toc-label { color: #2be4ea; }
+
+/* Quadros e cartões: o painel do exemplo (borda vermelha escura e o canto cortado com a diagonal). */
+:root[data-tema="2077"] :is(.section:not(.cy-screen), .tile, .pv-me-card, .cc-card-grid .cc-card, .person, .entry, .index-item) {
+  position: relative; border: 2px solid #9c3230; background: #1e181e; clip-path: var(--nw-notch-path);
+}
+:root[data-tema="2077"] :is(.section:not(.cy-screen), .tile, .pv-me-card, .cc-card-grid .cc-card, .person, .entry, .index-item)::after {
+  content: ''; position: absolute; z-index: 1; right: -6px; bottom: 5px; width: var(--nw-notch-line); height: 3px;
+  background: #9c3230; transform: rotate(-45deg); pointer-events: none;
+}
+:root[data-tema="2077"] :is(.section:not(.cy-screen), .tile) { padding-bottom: calc(16px + .5rem); }
+:root[data-tema="2077"] :is(.section h3, .tile h3) { color: #2be4ea; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+:root[data-tema="2077"] :is(.section p, .section ul, .section ol, .entry p, .tile p) { color: var(--tx); }
+:root[data-tema="2077"] .section h3 .ref { border-color: #fed33f; border-radius: 3px; color: #fed33f; }
+:root[data-tema="2077"] :is(.entry h4, .person h3, .pv-me-text h3, .cc-card-grid .cc-card strong) { color: #f4908b; }
+:root[data-tema="2077"] .callout { border-color: #5d2322; border-left-color: #fed33f; background: #170f13; }
+:root[data-tema="2077"] .callout b { color: #fed33f; }
+:root[data-tema="2077"] .gm-note.callout, :root[data-tema="2077"] .callout.gm-note { border-left-color: #2be4ea; }
+:root[data-tema="2077"] .result:hover, :root[data-tema="2077"] .result.selected { background: #391419; }
+:root[data-tema="2077"] mark { background: #fed33f; color: #1e181e; }
+/* A ficha e a grade de personagens: os quadros de dentro da ficha ficam sem o corte (já estão num painel). */
+:root[data-tema="2077"] .cc-card-grid .cc-card.cc-selected { border-color: #2be4ea; background: #1a2226; }
+:root[data-tema="2077"] .cc-initials { background: #9c3230; color: #f4908b; }
+:root[data-tema="2077"] .cc-sheet .cc-stat { border-bottom-color: #9c3230; background: #170f13; }
+:root[data-tema="2077"] :is(.cc-sheet .cc-stat b, .cc-card-numbers b, .cc-skill b, .dv-big) { color: #fed33f; }
+:root[data-tema="2077"] .cc-hpbar span { background: #e8615a; }
+:root[data-tema="2077"] .cc-portrait-slot { background: repeating-linear-gradient(135deg, #2a1a1f 0 8px, #1e181e 8px 16px); color: #e8615a; }
+
+/* Tabelas. */
+:root[data-tema="2077"] th { background: #170f13; color: #2be4ea; }
+:root[data-tema="2077"] tbody tr:hover td { background: rgb(232 97 90 / 6%); }
+
+/* Botões: vazados, como no exemplo. A ação principal (o .action cheio) fica em ciano; o que só navega, em vermelho. */
+:root[data-tema="2077"] :is(.action, .tile button) { border: 1px solid #2be4ea; border-radius: 2px; background: transparent; color: #2be4ea; font: 600 14px/1.1 var(--ui); letter-spacing: .06em; transition: background-color .2s; }
+:root[data-tema="2077"] :is(.action, .tile button):hover { border-color: #2be4ea; background: #295459; color: #2be4ea; }
+:root[data-tema="2077"] :is(.action.ghost, .action.cc-ghost, .action[data-page]:not(.solid), .tile button) { border-color: #e8615a; background: transparent; color: #e8615a; }
+:root[data-tema="2077"] :is(.action.ghost, .action.cc-ghost, .action[data-page]:not(.solid), .tile button):hover { border-color: #e8615a; background: #451717; color: #f4908b; }
+:root[data-tema="2077"] :is(.action.cc-danger, .action.cc-ghost.cc-ghost-danger) { border-color: #fed33f; color: #fed33f; }
+:root[data-tema="2077"] :is(.action.cc-danger, .action.cc-ghost.cc-ghost-danger):hover { background: rgb(254 211 63 / 12%); color: #fed33f; }
+:root[data-tema="2077"] :is(.action:disabled, .action[aria-disabled="true"]) { border-color: #3c181a; background: #1e181e; color: #7a4a47; }
+:root[data-tema="2077"] .action:focus-visible { outline-color: #2be4ea; }
+
+/* Chips, abas e filtros: o ativo fica como o link ativo do exemplo. */
+:root[data-tema="2077"] :is(.map-filter, .page-toc button, .search-filter, .view-switch button, .cc-tab, .pin-page, .page-tab) { border-color: #5d2322; border-radius: 3px; background: #1e181e; color: #e8615a; }
+:root[data-tema="2077"] :is(.map-filter, .page-toc button, .search-filter, .view-switch button, .cc-tab, .pin-page, .page-tab):hover { border-color: #e8615a; color: #f4908b; }
+:root[data-tema="2077"] :is(.map-filter.active, .map-filter[aria-pressed="true"], .page-toc button.active, .search-filter.active, .view-switch button.active, .cc-tab.active, .page-tab[aria-current="page"],
+  .cc-steps .map-filter.active, .cc-shop-filters .map-filter.active, .cc-rlp-pick .map-filter.active) {
+  border-color: #2be4ea; background: #1e181e; color: #2be4ea;
+}
+:root[data-tema="2077"] :is(.search-filter.active span, .cc-tab.active .cc-count, .shop-chip.active b) { color: #2be4ea; }
+:root[data-tema="2077"] .pin-page[aria-pressed="true"] { border-color: #fed33f; color: #fed33f; }
+:root[data-tema="2077"] .cc-tab-alert { background: #fed33f; color: #1e181e; }
+:root[data-tema="2077"] .dv-bands div.on { background: #9c3230; color: #f4908b; }
+:root[data-tema="2077"] .dv-bands div.on b { color: #fed33f; }
+
+/* Campos. */
+:root[data-tema="2077"] :is(.cc-login input, .cc-form input, .cc-form textarea, .cc-box textarea, .cc-box select, .cc-shop-row input, .cc-shop-row select, .cc-toolbar select,
+  .cc-shop-top select, .pv-field input, .pv-field textarea, .skill-search input, .dv-finder input, .dv-finder select, .compare-filters select, .map-control select, .note-area,
+  .popup-field input, .popup-field textarea, .campaign-picker select, .account-login input) {
+  border-color: #9c3230; background: #1e181e; color: #f4b3ae; font-family: var(--ui);
+}
+:root[data-tema="2077"] :is(.cc-login input, .cc-form input, .cc-form textarea, .cc-box textarea, .pv-field input, .pv-field textarea, .skill-search input, .note-area, .popup-field input, .popup-field textarea):focus { border-color: #e8615a; }
+:root[data-tema="2077"] input[type=checkbox], :root[data-tema="2077"] input[type=radio] { accent-color: #e8615a; }
+
+/* Janelas e avisos (popup.js). */
+:root[data-tema="2077"] .popup-box { border: 2px solid #9c3230; background: #1e181e; clip-path: var(--nw-notch-path); }
+:root[data-tema="2077"] .popup-box::after { background: #9c3230; }
+:root[data-tema="2077"] .popup-title { color: #2be4ea; }
+:root[data-tema="2077"] :is(.toast, .pv-toast) { border-color: #fed33f; background: #1e181e; color: #fed33f; }
+
+/* A tela de entrar do mestre. */
+:root[data-tema="2077"] .login-box { border: 2px solid #9c3230; background: #1e181e; clip-path: var(--nw-notch-path); }
+:root[data-tema="2077"] .login-box h1 { color: #2be4ea; font-family: var(--ui); text-transform: uppercase; }
+
+/* Os quadradinhos do tema no menu da conta. */
+.account-swatch-fieldbook { background: #f8ef02; }
+.account-swatch-2077 { background: #e8615a; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-btn, .nw-channel, :root[data-tema="2077"] :is(.action, .nav-item) { transition: none; }
+}
+@media print {
+  :root[data-tema="2077"] body { background: #fff; }
+  :root[data-tema="2077"] :is(.section:not(.cy-screen), .tile, .pv-me-card, .cc-card-grid .cc-card, .person, .entry, .index-item) { clip-path: none; }
+  :root[data-tema="2077"] :is(.section:not(.cy-screen), .tile, .pv-me-card, .cc-card-grid .cc-card, .person, .entry, .index-item)::after { display: none; }
+}

@@ -117,6 +117,8 @@
 
   const section = (title, body) => `<div class="account-section"><p class="account-label">${title}</p>${body}</div>`;
   const install = () => (state.instalar ? '<button type="button" class="account-item" data-install>Instalar no celular</button>' : '');
+  // O tema da wiki (wikiApp.theme): Fieldbook ou 2077. Vale para qualquer um, até o visitante (só neste aparelho).
+  const themeList = () => (app.theme ? section('Aparência', app.theme.list().map(item => `<button type="button" class="account-item account-radio" aria-current="${item.id === app.theme.get()}" data-account-theme="${esc(item.id)}"><span class="account-swatch account-swatch-${esc(item.id)}"></span>${esc(item.nome)}</button>`).join('')) : '');
   const campaignList = (items, active) => (items.length > 1 ? section('Campanha', items.map(item => `<button type="button" class="account-item account-radio" aria-current="${item.id === active}" data-account-campaign="${esc(item.id)}"><span class="account-swatch" style="background:${esc(item.cor || item.color || '#888')}"></span>${esc(item.nome || item.name)}</button>`).join('')) : '');
 
   function menuHtml() {
@@ -126,7 +128,7 @@
         <form class="account-login" data-account-login><label for="account-code">Código do jogador</label><div><input id="account-code" name="codigo" autocomplete="off" placeholder="NC-XXXX-XXXX"><button class="action" type="submit">Entrar</button></div></form>
         <p class="account-msg" data-account-msg role="status"></p>
         <p class="account-note">O código vem do mestre. Este aparelho lembra dele.</p>
-        ${install()}${state.login ? '<a class="account-item" href="mestre">Entrar como mestre</a>' : ''}`;
+        ${themeList()}${install()}${state.login ? '<a class="account-item" href="mestre">Entrar como mestre</a>' : ''}`;
     }
     if (me.papel === 'mestre') {
       const active = app.activeCampaign() || {};
@@ -135,6 +137,7 @@
       return `<p class="account-head">Mestre<small>${esc(active.name || '')}</small></p>
         ${campaignList(app.campaigns(), active.id)}
         ${shortcuts.length ? section('Atalhos', shortcuts.map(([id, label]) => `<button type="button" class="account-item" data-account-page="${id}">${label}</button>`).join('')) : ''}
+        ${themeList()}
         <div class="account-section">${app.hasPage('playerView') ? `<a class="account-item" href="jogadores.html?campanha=${encodeURIComponent(active.id || '')}" target="_blank" rel="noopener">Abrir a visão dos jogadores</a>` : '<a class="account-item" href="./">Wiki do mestre</a>'}
         ${state.backup ? '<a class="account-item" href="api/backup">Baixar backup</a>' : ''}${install()}
         ${state.modo === 'hospedado' ? '<button type="button" class="account-item account-danger" data-gm-logout>Sair do modo mestre</button>' : ''}${version}</div>`;
@@ -146,6 +149,7 @@
       ${section('Personagem', `${rows || `<p class="account-note">Nenhum personagem${here ? ` em ${esc(here.name)}` : ''} ainda.</p>`}<button type="button" class="account-item account-new" data-account-new>+ Novo personagem</button>`)}
       ${doc ? `<div class="account-actions"><button type="button" class="action" data-account-open="ficha">Ficha</button><button type="button" class="action" data-account-open="criador">Editar</button><button type="button" class="action" data-account-open="loja">Loja</button></div>` : ''}
       ${campaignList(me.campanhas || [], here && here.id)}
+      ${themeList()}
       <div class="account-section">${install()}<button type="button" class="account-item account-danger" data-account-logout>Sair</button><button type="button" class="account-item account-quiet" data-account-logout-all>Sair de todos os aparelhos</button></div>`;
   }
 
@@ -170,9 +174,16 @@
 
   // ---------------- Ações ----------------
   async function onClick(event) {
-    const target = event.target.closest('[data-account-pick], [data-account-new], [data-account-open], [data-account-campaign], [data-account-page], [data-account-logout], [data-account-logout-all]');
+    const target = event.target.closest('[data-account-pick], [data-account-new], [data-account-open], [data-account-campaign], [data-account-page], [data-account-theme], [data-account-logout], [data-account-logout-all]');
     if (!target) return;
     const close = () => openMenu(false);
+    // Trocar o tema deixa o menu aberto, já com a escolha marcada (sem redesenhar: o botão clicado continua na página,
+    // e o "clicou fora" não fecha o menu).
+    if (target.dataset.accountTheme) {
+      app.theme.set(target.dataset.accountTheme);
+      root.querySelectorAll('[data-account-theme]').forEach(button => button.setAttribute('aria-current', String(button === target)));
+      return;
+    }
     if (target.dataset.accountPick) { select(target.dataset.accountPick); close(); return; }
     if (target.dataset.accountOpen) { const doc = selectedDoc(); close(); if (doc) app.openPage(target.dataset.accountOpen, { section: doc.id }); return; }
     if (target.dataset.accountPage) { close(); app.openPage(target.dataset.accountPage); return; }

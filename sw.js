@@ -4,9 +4,9 @@
 // Guarda os arquivos públicos (os mesmos que qualquer jogador baixa) e, da API, só o que é deste aparelho: quem
 // entrou (api/eu) e o que o mestre publicou nas campanhas dele (api/visao). Entrar ou sair apaga essas duas.
 // A wiki do mestre e o resto da API passam direto.
-const CACHE = 'fieldbook-jogadores-v15';
+const CACHE = 'fieldbook-jogadores-v16';
 const PUBLICOS = [
-  '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js', '/nightcity-map.js',
+  '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/wiki-app.js', '/nightcity-map.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
   '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'

@@ -84,6 +84,30 @@
     get: key => { const synced = SYNCED.includes(key) ? prefs.rawGet(key) : undefined; return synced !== undefined ? synced : localGet(`${storagePrefix}-${key}`); },
     set: (key, value) => { localSet(`${storagePrefix}-${key}`, value); if (SYNCED.includes(key)) prefs.rawSet(key, value); }
   };
+  // ---------------- Tema ----------------
+  // Fieldbook (o amarelo de sempre) ou 2077 (o vermelho do menu do jogo, netwire.css), escolhido no menu da conta. Fica
+  // na conta (prefs "tema"), igual no celular e no computador; o script do <head> já aplica a cópia do aparelho antes de
+  // desenhar, para não piscar o outro tema.
+  const THEMES = { fieldbook: { nome: 'Fieldbook', cor: '#0b0d0f' }, 2077: { nome: '2077', cor: '#191a1e' } };
+  const theme = {
+    list: () => Object.entries(THEMES).map(([id, item]) => ({ id, nome: item.nome })),
+    get: () => (THEMES[prefs.get('tema')] ? prefs.get('tema') : 'fieldbook'),
+    apply() {
+      const id = theme.get();
+      if (id === 'fieldbook') delete document.documentElement.dataset.tema;
+      else document.documentElement.dataset.tema = id;
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEMES[id].cor);
+    },
+    set(id) {
+      if (!THEMES[id]) return;
+      prefs.set('tema', id === 'fieldbook' ? null : id);
+      theme.apply();
+      document.dispatchEvent(new CustomEvent('wiki:tema', { detail: { id } }));
+    }
+  };
+  theme.apply();
+  document.addEventListener('wiki:preferencias', () => theme.apply());
+
   const mapPages = ['campaignMap', ...(config.mapPages || [])];
   const mapData = () => (config.mapData ? config.mapData() : window.campaignMapData);
 
@@ -1894,7 +1918,7 @@
 
     // switchCampaign: troca a campanha ativa (pergunta antes, se a página pedir). setBadges: selos de novidade no menu.
     // status: o último /api/estado. hasPage: a página existe nesta wiki (a do mestre tem páginas que a dos jogadores não tem).
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, theme, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
     // Quem depende da wiki montada (o menu da conta) começa aqui.
     document.dispatchEvent(new Event('wiki:pronta'));
 })();
