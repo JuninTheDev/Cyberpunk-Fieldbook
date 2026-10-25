@@ -17570,6 +17570,63 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('da 0.93 do CORE, a mesa (o C43, parte 2): o "Marcador de turno" do mundo troca o marcador de reserva do Foundry pelos quatro do CORE (o SVG carrega) ou volta ao do Foundry; o upgrade com modificador negativo tira do ataque, do SDP e dos assentos (nunca abaixo de 0; o SDP de agora não passa do máximo), e a ficha do upgrade diz "+ ou −"', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const anterior = game.settings.get('${S}', 'marcadorDeTurno');
+        const ator = await Actor.implementation.create({ name: 'Teste 0.93', type: 'personagem' });
+        const lido = {};
+        try {
+          // 1. O marcador: o padrão é o do sistema; cada escolha troca o de reserva, e o arquivo carrega como textura.
+          lido.padrao = { escolha: anterior, src: CONFIG.Combat.fallbackTurnMarker };
+          const textura = async src => { const t = await foundry.canvas.loadTexture(src); return Boolean(t?.width); };
+          lido.marcadores = {};
+          for (const escolha of ['sem-desenho', 'sem-sombra', 'sem-centro', 'foundry', 'padrao']) {
+            await game.settings.set('${S}', 'marcadorDeTurno', escolha);
+            lido.marcadores[escolha] = { src: CONFIG.Combat.fallbackTurnMarker, carrega: await textura(CONFIG.Combat.fallbackTurnMarker) };
+          }
+          lido.opcoes = Object.keys(game.settings.settings.get('${S}.marcadorDeTurno').choices).join();
+          // 2. A arma com o upgrade de −2 no ataque: a parte entra com o sinal.
+          const [arma] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:medium-pistol'])]);
+          await ator.createEmbeddedDocuments('Item', [{ name: 'Mira torta', type: 'upgrade', system: { alvo: 'arma', instaladoEm: arma.id, modificadores: { ataque: -2 } } }]);
+          lido.ataque = ator.items.get(arma.id).partesDoAtaque().partes.filter(p => p.rotulo === 'Mira torta').map(p => p.valor);
+          // 3. O veículo (SDP 50, 2 assentos): −60 de SDP e −1 assento param no 0 e no 1; +20 de SDP sobe o máximo para 10, e o
+          // SDP de agora (50 guardado) fica em 10.
+          const [carro] = await ator.createEmbeddedDocuments('Item', [{ name: 'Carro 0.93', type: 'veiculo', system: { sdp: { value: 50, max: 50 }, assentos: 2 } }]);
+          const veiculo = () => ator.items.get(carro.id).system;
+          await ator.createEmbeddedDocuments('Item', [{ name: 'Lataria podre', type: 'upgrade', system: { alvo: 'veiculo', instaladoEm: carro.id, modificadores: { sdp: -60, assentos: -1 } } }]);
+          lido.negativo = { max: veiculo().sdp.max, value: veiculo().sdp.value, assentos: veiculo().assentos };
+          await ator.createEmbeddedDocuments('Item', [{ name: 'Reforço', type: 'upgrade', system: { alvo: 'veiculo', instaladoEm: carro.id, modificadores: { sdp: 20 } } }]);
+          lido.soma = { max: veiculo().sdp.max, value: veiculo().sdp.value, guardado: ator.items.get(carro.id)._source.system.sdp.value };
+          // 4. A ficha do upgrade: os rótulos com "+ ou −" e o pente que troca.
+          const upgrade = ator.items.getName('Mira torta');
+          await upgrade.sheet.render({ force: true });
+          await __esperar(() => upgrade.sheet.element?.querySelector('[name="system.modificadores.ataque"]'));
+          const rotulo = nome => upgrade.sheet.element.querySelector('[name="' + nome + '"]')?.closest('label')?.querySelector('span')?.textContent.trim();
+          lido.ficha = ['system.modificadores.pente', 'system.modificadores.ataque', 'system.modificadores.sdp', 'system.modificadores.assentos'].map(rotulo);
+          lido.dicaDoPente = upgrade.sheet.element.querySelector('[name="system.modificadores.pente"]')?.closest('label')?.dataset.tooltip;
+          await upgrade.sheet.close();
+          return lido;
+        } finally {
+          await game.settings.set('${S}', 'marcadorDeTurno', anterior);
+          await ator.delete();
+        }
+      })()`);
+      const v = info;
+      const pasta = 'systems/cpr-fieldbook/icones/marcadores/';
+      const ok = v.padrao.escolha === 'padrao' && v.padrao.src === pasta + 'turn-marker_default.svg'
+        && v.marcadores['sem-desenho'].src === pasta + 'turn-marker_no-graphic.svg' && v.marcadores['sem-sombra'].src === pasta + 'turn-marker_no-shade.svg'
+        && v.marcadores['sem-centro'].src === pasta + 'turn-marker_no-center.svg' && v.marcadores.foundry.src === 'canvas/tokens/turn-marker-square-circle-orange.webp'
+        && v.marcadores.padrao.src === pasta + 'turn-marker_default.svg' && Object.values(v.marcadores).every(m => m.carrega)
+        && v.opcoes === 'padrao,sem-desenho,sem-sombra,sem-centro,foundry'
+        && v.ataque.join() === '-2'
+        && v.negativo.max === 0 && v.negativo.value === 0 && v.negativo.assentos === 1
+        && v.soma.max === 10 && v.soma.value === 10 && v.soma.guardado === 50
+        && v.ficha.join('|') === 'Pente (carregador)|Ataque (+ ou −)|SDP do veículo (+ ou −)|Assentos do veículo (+ ou −)'
+        && v.dicaDoPente === 'O pente que o carregador dá à arma: troca o da arma, não soma';
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

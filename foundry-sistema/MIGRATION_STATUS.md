@@ -8325,6 +8325,33 @@ abaixo).
 - **No G4 completo:** o passo falhou duas vezes antes de passar, pelo que os passos de antes deixam: nenhuma cena ativa (o passo cria a dele e devolve a anterior) e a permissão padrão mudada, que dava dono ao capanga novo e mandava o Death Save para o navegador do jogador, que espera o prazo (o capanga nasce com `ownership: { default: 0 }`, como no passo do C38). Os dois só aparecem no G4 completo.
 - **O C41 está `[x]`** (as partes 1 a 3 da sessão Codex, a 4 desta).
 
+### Ciclo 171 (2026-10-25): C43, parte 2, da 0.93 do CORE, a mesa (sessão Junin)
+
+- **Fontes:** o CHANGELOG da 0.93 (`fvtt-cyberpunk-red-core-dev/CHANGELOG.md:43-44`): "Item upgrades may now be
+  configured with negative modifiers" e "Add 4 new CPR default Turn Marker options that can be selected via the system
+  settings menu". O código: o `tokenMarker` (`src/modules/system/settings.js:46-66`) e o `CONFIG.Combat.fallbackTurnMarker`
+  no init (`src/cpr.js:307`), com os SVGs `src/icons/hud/turn-marker_*.svg`; o `getTotalUpgradeValues`
+  (`src/modules/item/mixins/cpr-upgradable.js:46-80`), que passou a somar o modificador diferente de 0 (antes, só o
+  maior que 0). O Foundry 14 tem o mesmo ponto (`client/config.mjs:299`, o marcador de reserva; o das configurações do
+  combate vale por cima).
+- **Entrega:**
+  - **O marcador de turno:** `marcador-de-turno.mjs` e a configuração do mundo "Marcador de turno" (padrão: o do sistema),
+    com os quatro do CORE e o do Foundry; o init aplica, e trocar redesenha a cena. Os SVGs vão em `icones/marcadores`,
+    cópias sem alteração (GPL v3, `ORIGEM.md`).
+  - **O upgrade negativo:** no sistema, o ataque, o SDP e os assentos já aceitavam o negativo (sem mínimo no modelo), e o
+    ataque já entrava com o sinal. Faltava o limite: o `somaDeUpgrades` (regras.mjs) soma os do veículo sem passar abaixo
+    de 0, e o SDP de agora não passa do máximo (o guardado não muda: tirado o upgrade, volta). A ficha do upgrade diz
+    "+ ou −"; o pente do carregador continua sem mínimo negativo, porque troca o pente da arma (o "override" do CORE),
+    não soma, e a dica diz isso.
+- **Limites:** o CORE 0.93 aplica upgrades em mais pontos (SP de armadura, slots do cyberdeck...); o sistema tem só os
+  quatro do modelo, e esses ficam como estão.
+- **Portões:** G1, 186 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 539/539 (2 testes novos em
+  `tests/sistema/mesa-093.test.mjs`: as cinco escolhas, os SVGs iguais aos do CORE, byte a byte, e a soma dos upgrades);
+  G4 completo, 273/273 em 606 s no Foundry 14.369, sem aviso nem erro do sistema, com o passo novo: cada escolha troca o marcador de reserva e o arquivo carrega como textura; o −2
+  no ataque; o veículo com −60 de SDP e −1 assento (0 e 1) e depois +20 (10, com o guardado em 50); os rótulos da ficha.
+- **Mutações:** 10 caíram, restauradas pelo md5: 3 da regra pura (G3) e 7 no Foundry (G4 focado), entre elas a volta ao comportamento de antes da 0.93 (o ataque só com o modificador positivo).
+- **Próximo:** o C43, parte 3 (o navegador de itens e atores; o tema no resto do Foundry), ou o C42.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

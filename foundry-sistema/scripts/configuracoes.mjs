@@ -1,5 +1,6 @@
 // Configurações do mundo (Configurações → Sistema), as mesmas do Fluxo de Combate, com os mesmos padrões da mesa.
 import { SISTEMA } from './config.mjs';
+import { aplicarMarcadorDeTurno, MARCADORES_DE_TURNO } from './marcador-de-turno.mjs';
 
 export const config = chave => game.settings.get(SISTEMA, chave);
 
@@ -85,6 +86,13 @@ export function registrarConfiguracoes() {
   registrar('iniciativaCritica', {
     name: 'Iniciativa explode no 10 e no 1?', hint: 'Desligado (o padrão da mesa): a iniciativa rola 1d10 sem crítico. Ligado (como o padrão do CORE): um 10 natural soma mais um d10 e um 1 natural tira um d10.',
     type: Boolean, default: false
+  });
+  // O marcador de turno (o C43, parte 2; o "Token Marker" do CORE 0.93): o init o aplica (sistema.mjs), e a cena se
+  // redesenha ao trocar.
+  registrar('marcadorDeTurno', {
+    name: 'Marcador de turno', hint: 'O desenho sob o token da vez no combate, quando as configurações do combate não escolhem outro: os do CORE 0.93 ou o do Foundry.',
+    type: String, default: 'padrao', choices: Object.fromEntries(Object.entries(MARCADORES_DE_TURNO).map(([id, { rotulo }]) => [id, rotulo])),
+    onChange: valor => { aplicarMarcadorDeTurno(valor); if (canvas?.ready) canvas.draw(); }
   });
   // A versão dos dados do mundo (migracao.mjs), escondida, como o "dataModelVersion" do CORE. 0: de antes da migração.
   game.settings.register(SISTEMA, 'versaoDosDados', { scope: 'world', config: false, type: Number, default: 0 });

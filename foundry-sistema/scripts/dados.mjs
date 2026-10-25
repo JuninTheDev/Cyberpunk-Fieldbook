@@ -518,10 +518,11 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
     const max = Math.max(this.sp, protecoes.sp);
     this.blindagem = { max, sp: Math.max(0, max - this.ablacao) };
     this.vidroMax = protecoes.vidro;
-    for (const upgrade of upgrades) {
-      this.sdp.max += upgrade.system.modificadores.sdp;
-      this.assentos += upgrade.system.modificadores.assentos;
-    }
+    // Os upgrades somam no SDP e nos assentos, positivos ou negativos (o C43), nunca abaixo de 0; o SDP de agora não passa
+    // do máximo.
+    this.sdp.max = regras.somaDeUpgrades(this.sdp.max, upgrades.map(upgrade => upgrade.system.modificadores.sdp));
+    this.sdp.value = Math.min(this.sdp.value, this.sdp.max);
+    this.assentos = regras.somaDeUpgrades(this.assentos, upgrades.map(upgrade => upgrade.system.modificadores.assentos));
   }
 }
 

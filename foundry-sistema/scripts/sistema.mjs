@@ -16,6 +16,7 @@ import * as estados from './estados.mjs';
 import * as estabilizacao from './estabilizar.mjs';
 import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
+import { aplicarMarcadorDeTurno } from './marcador-de-turno.mjs';
 import {
   DadosArma, DadosArmadura, DadosArquitetura, DadosBlackIce, DadosConteiner, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
   DadosRoupa, DadosUpgrade, DadosVeiculo
@@ -77,6 +78,8 @@ Hooks.once('init', () => {
   CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrado, name: 'Agarrado', img: 'icons/svg/net.svg' });
   registrarCritico();
   registrarConfiguracoes();
+  // O marcador de turno escolhido (o C43, parte 2), depois de registrado, como o CORE 0.93 no init.
+  aplicarMarcadorDeTurno(game.settings.get(SISTEMA, 'marcadorDeTurno'));
   registrarArvoreItens();
   // O Painel Tático (o C25): as configurações deste navegador e a tecla H; a barra monta no ready.
   registrarPainel();

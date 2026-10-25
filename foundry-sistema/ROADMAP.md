@@ -415,7 +415,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [ ] **C43. Da 0.93**, um ciclo por parte (o CHANGELOG da 0.93 e o código em `fvtt-cyberpunk-red-core-dev/`):
   - [~] parte 1, as fórmulas (sessão KouArt, com o Codex, 2026-10-25): os modificadores `red` e `dmg` nas fórmulas
     (`/r 1d10red`, `2d6dmgab2cd10`) e o crítico configurável por arma e munição;
-  - [~] parte 2, a mesa: o upgrade com modificador negativo e os marcadores de turno (sessão Junin, 2026-10-25);
+  - [x] parte 2, a mesa (ciclo 171, sessão Junin, 2026-10-25): o "Marcador de turno" do mundo, com os quatro do CORE 0.93
+    e o do Foundry; os upgrades com modificador negativo no ataque, no SDP e nos assentos (nunca abaixo de 0);
   - [ ] parte 3, as janelas: o navegador de itens e atores (a loja da wiki já é o carrinho) e o tema do sistema no resto
     do Foundry.
 - [~] **C44. A régua com Andar e Correr** (sessão KouArt, 2026-10-25) (o `drag-ruler.js` do CORE), junto da DV que ela já mostra.

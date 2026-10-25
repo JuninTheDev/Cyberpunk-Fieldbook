@@ -121,10 +121,10 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if eh.upgrade}}
       <label class="celula"><span>Para</span><select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
       <label class="celula"><span>Slots</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
-      <label class="celula"><span>Pente (carregador)</span><input type="number" name="system.modificadores.pente" value="{{fonte.modificadores.pente}}" min="0"></label>
-      <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.modificadores.ataque" value="{{fonte.modificadores.ataque}}"></label>
-      <label class="celula"><span>SDP do veículo</span><input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
-      <label class="celula"><span>Assentos do veículo</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
+      <label class="celula" data-tooltip="O pente que o carregador dá à arma: troca o da arma, não soma"><span>Pente (carregador)</span><input type="number" name="system.modificadores.pente" value="{{fonte.modificadores.pente}}" min="0"></label>
+      <label class="celula"><span>Ataque (+ ou −)</span><input type="number" name="system.modificadores.ataque" value="{{fonte.modificadores.ataque}}"></label>
+      <label class="celula"><span>SDP do veículo (+ ou −)</span><input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
+      <label class="celula"><span>Assentos do veículo (+ ou −)</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
       <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
       {{#if prepararArma}}{{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="prepararArmaVeicular">PREPARAR ARMA</button></div>{{/if}}{{/if}}
       {{/if}}

@@ -1051,6 +1051,9 @@ export const smartgunLinkVale = ({ aDistancia, ligado }) => Boolean(aDistancia &
 // O pente da arma com o carregador instalado (a Tabela de carregadores da wiki): o do carregador; com mais de um (de antes
 // do C11, parte 4), o maior; sem nenhum, o da arma. A sobra: as balas acima do máximo, que voltam para a munição quando o
 // carregador sai.
+// Os upgrades que somam (o C43, parte 2; o CORE 0.93: "Item upgrades may now be configured with negative modifiers"): o
+// SDP e os assentos do veículo com os modificadores dos upgrades, positivos ou negativos, nunca abaixo de 0.
+export const somaDeUpgrades = (base, valores = []) => Math.max(0, (Number(base) || 0) + valores.reduce((soma, valor) => soma + (Number(valor) || 0), 0));
 export const penteComCarregador = (base, carregadores = []) => Math.max(0, ...carregadores.map(Number).filter(Boolean)) || base;
 export const sobraDoPente = ({ value, max }) => Math.max(0, (Number(value) || 0) - (Number(max) || 0));
 // O cyberware do Kit que é arma, nas regras que são conta (o C11, parte 2b; a wiki, system-2077.js; decisão do usuário,
