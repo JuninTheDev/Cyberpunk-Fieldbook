@@ -44,6 +44,7 @@ import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
 import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolagens.mjs';
 import * as terapia from './terapia.mjs';
+import * as hospital from './hospital.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
@@ -106,7 +107,7 @@ Hooks.once('init', () => {
   reguaDv.registrarReguaDv();
   // Os perigos do ambiente (o C38): os estados novos, o /perigo, o botão do HUD do token e os botões dos cartões.
   perigos.registrarPerigos();
-  game.system.api = { agarrao, escudoHumano, reputacao, artesMarciais, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, perigos: perigos.API, veiculos: direcao.API, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
+  game.system.api = { agarrao, escudoHumano, reputacao, artesMarciais, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, perigos: perigos.API, hospital: hospital.API, veiculos: direcao.API, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
   // Estabilizar e a cura natural (o C36): o dano novo tira a marca de estabilizado; a API para as macros e os testes.

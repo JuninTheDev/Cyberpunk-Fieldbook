@@ -17323,6 +17323,102 @@ module.exports = async ({ edge, servidores, r }) => {
     await require('../lib/c41-correr')(r, edge, jogador);
     await require('../lib/c41-escudo-humano')(r, edge, jogador);
     await require('../lib/c41-reputacao')(r, edge, jogador);
+    await r.passo('a conta do hospital (o C41, parte 4; a wiki, p. 223–226): o botão "HOSPITAL" das lesões, só do mestre, abre a janela com a maior DV, as noites e o Trauma Team da ficha (o total na hora); o Executivo inclui a visita, o Prata paga tudo; "Cobrar" tira pelo extrato (sair mais do que tem avisa) e o cartão tem o Desfazer, que devolve uma vez; sem visita nem leito, nada a cobrar; o jogador não tem o botão nem a janela', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const ator = await Actor.implementation.create({ name: 'Teste Hospital', type: 'personagem', system: { dinheiro: 1000, traumaTeam: { custo: 1000, descricao: 'Trauma Team Executivo' } } });
+        const avisos = [];
+        const recados = [];
+        const warn = ui.notifications.warn;
+        const infoOriginal = ui.notifications.info;
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        ui.notifications.info = mensagem => { recados.push(String(mensagem)); };
+        const janela = () => document.querySelector('.application.dialog.conta-hospital:not(.minimizing)');
+        const botao = () => ator.sheet.element?.querySelector('.tab.combate [data-action="contaDoHospital"]');
+        const ultimo = () => game.messages.contents.at(-1);
+        const texto = mensagem => new DOMParser().parseFromString(mensagem.content, 'text/html').body.textContent.replace(/\\s+/g, ' ').trim();
+        // Abre pela ficha, preenche, lê o total da janela e cobra (ou cancela); espera a janela sumir.
+        const conta = async ({ dv, noites, plano }) => {
+          await __esperar(() => botao());
+          botao().click();
+          await __esperar(() => janela()?.querySelector('select[name="dv"]'));
+          const j = janela();
+          const lido = { plano: j.querySelector('select[name="plano"]').value, opcoes: [...j.querySelectorAll('select[name="plano"] option')].map(o => o.textContent.trim()), dvs: [...j.querySelectorAll('select[name="dv"] option')].map(o => o.textContent.trim()) };
+          j.querySelector('select[name="dv"]').value = String(dv);
+          j.querySelector('input[name="noites"]').value = String(noites);
+          if (plano) j.querySelector('select[name="plano"]').value = plano;
+          j.querySelector('input[name="noites"]').dispatchEvent(new Event('input', { bubbles: true }));
+          lido.total = j.querySelector('output[name="total"]').textContent.trim();
+          j.querySelector('button[data-action="ok"]').click();
+          await __esperar(() => !janela());
+          return lido;
+        };
+        try {
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('combate', 'primary');
+          // 1. O plano da ficha (Executivo): DV17 e 2 noites; a visita é incluída, o leito sai (200eb).
+          let mensagens = game.messages.size;
+          const j1 = await conta({ dv: 17, noites: 2 });
+          await __esperar(() => game.messages.size > mensagens && ultimo().getFlag('${S}', 'hospital'));
+          const executivo = { dinheiro: ator.system.dinheiro, motivo: ator.system.extratos.dinheiro.at(-1)?.motivo, cartao: texto(ultimo()), dados: ultimo().getFlag('${S}', 'hospital') };
+          // 2. Trocando para o Prata: DV15 e 1 noite, tudo pago (600eb).
+          mensagens = game.messages.size;
+          const j2 = await conta({ dv: 15, noites: 1, plano: 'prata' });
+          await __esperar(() => game.messages.size > mensagens);
+          const prata = { dinheiro: ator.system.dinheiro, total: ultimo().getFlag('${S}', 'hospital').total };
+          // 3. Sem plano, DV17 com 200eb: cobra e avisa o saldo negativo; o Desfazer do cartão devolve, uma vez só.
+          mensagens = game.messages.size;
+          await conta({ dv: 17, noites: 0, plano: 'nenhum' });
+          await __esperar(() => game.messages.size > mensagens);
+          const m3 = ultimo();
+          const negativo = { dinheiro: ator.system.dinheiro, aviso: avisos.at(-1) };
+          await __esperar(() => document.querySelector('[data-message-id="' + m3.id + '"] [data-cprf-acao="desfazerHospital"]'));
+          document.querySelector('[data-message-id="' + m3.id + '"] [data-cprf-acao="desfazerHospital"]').click();
+          await __esperar(() => ator.system.dinheiro === 200 && game.messages.get(m3.id).getFlag('${S}', 'hospital').desfeito);
+          const segundo = await game.system.api.hospital.desfazerContaDoHospital(game.messages.get(m3.id));
+          const desfeito = { dinheiro: ator.system.dinheiro, motivo: ator.system.extratos.dinheiro.at(-1)?.motivo, cartao: texto(game.messages.get(m3.id)), botao: Boolean(new DOMParser().parseFromString(game.messages.get(m3.id).content, 'text/html').querySelector('[data-cprf-acao]')), segundo, aviso: avisos.at(-1) };
+          // 4. Nada a cobrar: sem visita nem leito, nenhum cartão.
+          mensagens = game.messages.size;
+          await conta({ dv: 0, noites: 0 });
+          await __esperar(() => recados.length);
+          const nada = { recado: recados.at(-1), mensagens: game.messages.size - mensagens, dinheiro: ator.system.dinheiro };
+          return { j1, executivo, j2, prata, negativo, desfeito, nada };
+        } finally {
+          ui.notifications.warn = warn;
+          ui.notifications.info = infoOriginal;
+          for (const app of [...foundry.applications.instances.values()].filter(app => app.element?.classList.contains('conta-hospital'))) await app.close();
+          await ator.sheet.close();
+          await ator.delete();
+        }
+      })()`);
+      // O jogador, na ficha do personagem dele: sem o botão; a API não abre a janela para ele.
+      const doJogador = await jogador.evaluate(`(async () => {
+        const ator = game.user.character;
+        await ator.sheet.render({ force: true });
+        ator.sheet.changeTab('combate', 'primary');
+        for (let i = 0; i < 50 && !ator.sheet.element?.querySelector('.tab.combate .lesoes'); i++) await new Promise(r => setTimeout(r, 100));
+        const lesoes = Boolean(ator.sheet.element?.querySelector('.tab.combate .lesoes'));
+        const botao = Boolean(ator.sheet.element?.querySelector('[data-action="contaDoHospital"]'));
+        // Sem a recusa, a janela abriria e a chamada esperaria para sempre: 5 s, e a janela que tiver aberto fecha.
+        const api = await Promise.race([game.system.api.hospital.abrirContaDoHospital(ator), new Promise(r => setTimeout(() => r('não terminou'), 5000))]);
+        const janela = Boolean(document.querySelector('.application.dialog.conta-hospital'));
+        for (const app of [...foundry.applications.instances.values()].filter(app => app.element?.classList.contains('conta-hospital'))) await app.close();
+        await ator.sheet.close();
+        return { lesoes, botao, api, janela };
+      })()`);
+      const { j1, executivo, j2, prata, negativo, desfeito, nada } = info;
+      const ok = j1.plano === 'executivo' && j1.opcoes.join() === 'Sem Trauma Team,Trauma Team Prata,Trauma Team Executivo (o da ficha)'
+        && j1.dvs.join() === 'Nenhuma (só o leito),DV10: 50eb,DV13: 100eb,DV15: 500eb,DV17 ou mais: 1.000eb' && j1.total === '200eb'
+        && executivo.dinheiro === 800 && executivo.motivo === 'Hospital: visita DV17 incluída no Trauma Team Executivo (seria 1.000eb); 2 noites no leito: 200eb'
+        && executivo.cartao.includes('Total: 200eb pelo extrato (Trauma Team Executivo)') && executivo.dados.incluida && executivo.dados.visita === 0 && executivo.dados.leito === 200
+        && j2.total === '600eb' && prata.dinheiro === 200 && prata.total === 600
+        && negativo.dinheiro === -800 && negativo.aviso === 'Eurodólares: saiu mais do que tinha (o saldo ficou em -800).'
+        && desfeito.dinheiro === 200 && desfeito.motivo === 'Desfeita: conta do hospital' && desfeito.cartao.includes('Desfeita: o dinheiro voltou.') && !desfeito.botao
+        && desfeito.segundo === null && desfeito.aviso === 'Esta conta já foi desfeita.'
+        && nada.recado === 'Nada a cobrar: sem visita nem leito.' && nada.mensagens === 0 && nada.dinheiro === 200
+        && doJogador.lesoes && !doJogador.botao && doJogador.api === null && !doJogador.janela;
+      return [ok, JSON.stringify({ ...info, doJogador })];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

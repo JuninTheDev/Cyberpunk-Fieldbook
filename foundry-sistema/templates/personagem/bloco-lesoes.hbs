@@ -1,7 +1,7 @@
 {{!-- Lesão manual, paliativo e tratamento nas fichas de personagem e capanga. --}}
 <section class="painel corte perigo lesoes{{#if crescer}} crescer{{/if}}">
   <div class="titulo">LESÕES CRÍTICAS<span>{{lesoes.length}} ATIVA{{#unless (eq lesoes.length 1)}}S{{/unless}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="lesao" data-tooltip="Criar uma lesão em branco e abrir a ficha dela" aria-label="Criar lesão crítica">+</button>{{/if}}</span></div>
-  {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="rolarLesao" data-tooltip="Rolar 2d6 na tabela do corpo ou da cabeça e acrescentar a lesão à ficha">ROLAR LESÃO</button></div>{{/if}}
+  {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="rolarLesao" data-tooltip="Rolar 2d6 na tabela do corpo ou da cabeça e acrescentar a lesão à ficha">ROLAR LESÃO</button>{{#if contaDoHospital}}<button type="button" class="acao" data-action="contaDoHospital" data-tooltip="Conta do hospital (só o mestre; wiki, p. 223–226): a maior DV da visita, as noites no leito e o Trauma Team, cobrados pelo extrato">HOSPITAL</button>{{/if}}</div>{{/if}}
   {{#each lesoes}}
   <div class="item-linha" data-item-id="{{id}}">
     <a class="nome" data-action="editarItem" data-tooltip="{{resumo}}" role="button" tabindex="0">{{nome}}<small>{{tratar}}</small></a>

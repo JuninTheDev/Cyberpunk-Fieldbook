@@ -4,6 +4,7 @@ import { SISTEMA } from '../config.mjs';
 import { config } from '../configuracoes.mjs';
 import { animar, textoFlutuante } from '../efeitos.mjs';
 import { aplicarPerdaDeHumanidade } from '../humanidade.mjs';
+import { desfazerContaDoHospital } from '../hospital.mjs';
 import { escolherLesao, lesaoCritica } from '../lesoes.mjs';
 import { desfazerMunicao, escolherEmp, encerrarEfeitos, apagarFogo } from '../municoes.mjs';
 import { aplicarDanoDeNet } from '../net.mjs';
@@ -212,6 +213,7 @@ export function ligarBotoes(mensagem, html) {
         else if (botao.dataset.cprfAcao === 'aplicarEmp') await escolherEmp(mensagem, botao.dataset.ator);
         else if (botao.dataset.cprfAcao === 'encerrarMunicao') await encerrarEfeitos(mensagem, botao.dataset.ator);
         else if (botao.dataset.cprfAcao === 'apagarFogo') await apagarFogo(await fromUuid(botao.dataset.ator));
+        else if (botao.dataset.cprfAcao === 'desfazerHospital') await desfazerContaDoHospital(mensagem);
       } finally {
         cliquesEmAndamento.delete(chave);
       }

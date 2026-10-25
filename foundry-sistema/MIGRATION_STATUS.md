@@ -8260,6 +8260,37 @@ abaixo).
 - **Próximo:** os itens abertos da Fase 7: o C35 (a cena da arquitetura), o C41 parte 4 (com a sessão Junin) e o
   C42 a C44 (o bom de ter).
 
+### Ciclo 169 (2026-10-25): C41, parte 4, a conta do hospital (sessão Junin)
+
+- **Fontes:** wiki, `system-rules.js:564`, "Hospital, Trauma Team e instalação" (p. 223–226): a maior DV da visita dá o
+  custo (DV10 50eb, DV13 100eb, DV15 500eb, DV17 ou mais 1.000eb; o membro clonado e o cyberware médico de reposição
+  incluídos), e o leito é 100eb por noite; o Trauma Team Prata (500eb/mês) cobra as cirurgias pelo preço do hospital, e
+  o Executivo (1.000eb/mês) as inclui. Os planos vêm da criação da wiki (`system-criacao.js`, `traumaTeam`) e chegam à
+  ficha pela moradia (o C22, `system.traumaTeam`). O CORE 0.92.4 não tem conta de hospital.
+- **Decisão do usuário (2026-10-25):** uma janela do mestre que cobra pelo extrato, com cartão e Desfazer.
+- **Entrega:** `regras-hospital.mjs` (`custoDaVisita`, `planoDoTraumaTeam`, `contaDoHospital`) e `hospital.mjs` (a janela
+  `conta-hospital`, a cobrança, o cartão e o `desfazerContaDoHospital`). O botão "HOSPITAL" fica nas lesões críticas da
+  ficha do personagem, só para o mestre; a janela traz a maior DV, as noites (0 a 365) e o plano da ficha (que o mestre
+  pode trocar), com o total na hora. "Cobrar" tira pelo extrato ("Hospital: visita DV15: 500eb; 1 noite no leito:
+  100eb"); sair mais do que tem só avisa, como o extrato. O cartão vai para o mestre e os donos; o Desfazer (o
+  `desfazerHospital` em `combate/cartao.mjs`) devolve uma vez e marca o cartão. API: `game.system.api.hospital`.
+- **Leitura da regra (minha):** "cirurgia incluída" do Executivo zera a visita, não o leito; entre as linhas da tabela
+  (DV11, 12, 14, 16) vale a de baixo, e abaixo de DV10 a visita não custa nada.
+- **Limites:** o Trauma Team que chega (1d6 rodadas, a chamada sozinha com Agent e Biomonitor) fica fora; a conta não
+  olha as lesões da ficha (o mestre escolhe a maior DV). O capanga não tem o botão.
+- **Portões:** G1, 181 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 531/531 depois da integração (3
+  testes novos em `tests/sistema/hospital.test.mjs`, que conferem os custos e o leito com a tabela da wiki e os planos
+  com a criação). G4 completo, 271/271 em 595 s no Foundry 14.369, sem aviso nem erro do sistema, com o passo novo no fim (antes do "nenhum aviso"), onde o navegador do jogador já
+  existe: o Executivo da ficha (só o leito), o Prata, o saldo negativo, o Desfazer pelo botão do cartão e o segundo
+  Desfazer recusado, o "nada a cobrar" e, no jogador, nem o botão nem a janela.
+- **Mutações:** 20 caíram, restauradas pelo md5: 9 da regra pura (G3) e 11 no Foundry (G4 focado, ~35 s). Uma travou
+  na primeira rodada em vez de cair (o jogador que abre a janela: a chamada esperava o clique para sempre); a checagem
+  do jogador passou a correr contra 5 s e fechar a janela que abrir (a "janela sem prazo" do QUALITY_GATES), e a
+  mutação caiu.
+- **Integração:** a KouArt publicou o ciclo 168 (o C37) e a reserva do C35, do C44 e do C43 parte 1; o ciclo passou de
+  168 para 169, sem conflito.
+- **Próximo:** o Cryopump e o Cryotank (parte 4, terceiro ciclo).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

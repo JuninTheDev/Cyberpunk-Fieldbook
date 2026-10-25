@@ -29,6 +29,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { instalarComCirurgia, retirarComCirurgia } from './cirurgia.mjs';
+import { abrirContaDoHospital } from './hospital.mjs';
 import { lesaoCritica } from './lesoes.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { alcanceDoJackIn, bonusDeRole, custoMensalDeMoradia, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
@@ -133,6 +134,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       favoritarPericia: FichaPersonagem.#favoritarPericia,
       favoritarItem: FichaPersonagem.#favoritarItem,
       terapia: FichaPersonagem.#terapia,
+      contaDoHospital: FichaPersonagem.#contaDoHospital,
       atacar: FichaPersonagem.#atacar,
       mirar: FichaPersonagem.#mirar,
       deathSave: FichaPersonagem.#deathSave,
@@ -443,7 +445,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     return Object.assign(contexto, {
       podeAtualizarWiki: game.user.isGM && Boolean(ator.getFlag(SISTEMA, 'wiki')) && !ator.isToken,
-      ator, sistema: s, fonte, editavel: this.isEditable, podeCriarItem: this.isEditable && podeCriarItemNaFicha(ator), versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
+      ator, sistema: s, fonte, editavel: this.isEditable, podeCriarItem: this.isEditable && podeCriarItemNaFicha(ator), contaDoHospital: game.user.isGM && this.isEditable, versao: game.system.version, daWiki: Boolean(ator.getFlag(SISTEMA, 'wiki')), sortePreparada: ator.sortePreparada,
       // A Sorte usada na sessão (as maquetes do usuário, "Luck used"): o máximo menos a que resta.
       sorteUsada: Math.max(0, s.sorte.max - s.sorte.value),
       roles: ROLES,
@@ -701,6 +703,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #favoritarPericia(evento, alvo) { return alternarPericiaFavorita(this.actor, alvo.dataset.pericia); }
   // A terapia (terapia.mjs, pela wiki): quem trata é o Medtech selecionado.
   static #terapia() { return fazerTerapia(this.actor); }
+  // A conta do hospital (hospital.mjs, o C41): só o mestre.
+  static #contaDoHospital() { return abrirContaDoHospital(this.actor); }
   static #favoritarItem(evento, alvo) { const item = this.#item(alvo); return item && alternarItemFavorito(item); }
   static async #tirarPericia(evento, alvo) {
     const chave = alvo.dataset.pericia;

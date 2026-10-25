@@ -401,7 +401,9 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
       (onde, quem opera e a perda) e a do "Instalado" (só tirar ou a cirurgia); o ripperdoc cobra o lugar (100, 500 ou
       1.000eb), o Medtech rola TECH + Cirurgia contra DV13, 15 ou 17; a cirurgia que falha não instala e, na retirada,
       destrói a peça. Shift e a peça sem lugar pulam a janela.
-    - [ ] a conta do hospital (a maior DV da visita, o leito, o Trauma Team);
+    - [x] a conta do hospital (ciclo 169, sessão Junin, 2026-10-25): o botão "HOSPITAL" das lesões (só o mestre) abre
+      a janela com a maior DV da visita (50, 100, 500 ou 1.000eb), as noites no leito (100eb) e o Trauma Team da ficha (o
+      Executivo inclui a visita); cobra pelo extrato, com o cartão e o Desfazer.
     - [ ] o Cryopump e o Cryotank (a estase, as cargas, a cobertura).
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
