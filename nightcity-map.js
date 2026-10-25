@@ -2,6 +2,10 @@
 // Os tiles locais usam a grade XYZ do mapa fornecido (256 px, níveis 3 a 7).
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
+  // Ao substituir a cartografia, trocar esta versão também no servidor e no service worker.
+  const TILE_VERSION = '20261025';
+  const MAX_LOADING = 24;
+  const ZOOM_SETTLE_MS = 120;
   const width = 7168;
   const height = 6912;
   // Registro dos mesmos pontos geográficos nas duas imagens. O espaço dos lugares publicados
@@ -41,12 +45,73 @@
     let destroyed = false;
     let warned = false;
     let frame = 0;
+    let settleTimer = 0;
+    let loading = 0;
+    let queue = [];
+    let screenScale = 1;
+    let detailLevel = 0;
     let lastView;
 
-    function tile(z, x, y, parent, wanted) {
+    function remove(entry) {
+      entry.state = 'removed';
+      entry.image.onload = null;
+      entry.image.onerror = null;
+      entry.image.removeAttribute('href');
+      entry.image.remove();
+      images.delete(entry.key);
+    }
+
+    function pending() {
+      group.dataset.pending = String(Boolean(frame || settleTimer || [...images.values()].some(entry =>
+        entry.required && (entry.state === 'queued' || entry.state === 'loading'))));
+    }
+
+    function prune() {
+      // O detalhe anterior continua visível até a nova região terminar de chegar.
+      const replacing = frame || settleTimer || [...images.values()].some(entry => entry.required
+        && (entry.state === 'queued' || entry.state === 'loading'));
+      for (const entry of images.values()) {
+        if (entry.required || entry.state === 'loading') continue;
+        if (replacing && entry.z !== 3 && entry.state === 'loaded' && intersects(entry, lastView)) continue;
+        remove(entry);
+      }
+    }
+
+    function pump() {
+      if (!enabled || destroyed) return;
+      while (loading < MAX_LOADING && queue.length) {
+        const entry = queue.shift();
+        if (!entry.required || entry.state !== 'queued') continue;
+        entry.state = 'loading';
+        loading++;
+        const finish = failed => {
+          if (destroyed || entry.state !== 'loading') return;
+          loading--;
+          entry.state = failed ? 'failed' : 'loaded';
+          entry.image.dataset[failed ? 'failed' : 'loaded'] = 'true';
+          if (failed) {
+            entry.image.style.visibility = 'hidden';
+            if (entry.z === 3 && !warned && enabled) { warned = true; onError(); }
+          }
+          prune();
+          pump();
+          pending();
+        };
+        entry.image.onload = () => finish(false);
+        entry.image.onerror = () => finish(true);
+        entry.image.setAttribute('href', `assets/nightcity-map/tiles/${entry.key}.webp?v=${TILE_VERSION}`);
+      }
+      pending();
+    }
+
+    function tile(z, x, y, parent, distance) {
       const key = `${z}/${x}/${y}`;
-      wanted.add(key);
-      if (images.has(key)) return;
+      if (images.has(key)) {
+        const entry = images.get(key);
+        entry.required = true;
+        entry.distance = distance;
+        return;
+      }
       const image = document.createElementNS(NS, 'image');
       const size = 256 / 2 ** (z - 5);
       image.dataset.mapTile = key;
@@ -58,30 +123,35 @@
       image.setAttribute('width', size);
       image.setAttribute('height', size);
       image.setAttribute('preserveAspectRatio', 'none');
-      image.onload = () => { image.dataset.loaded = 'true'; };
-      // Uma peça de detalhe ausente deixa a visão geral por baixo. Nunca usa imagens externas.
-      image.onerror = () => {
-        image.dataset.failed = 'true';
-        image.style.visibility = 'hidden';
-        if (z === 3 && !warned && !destroyed && enabled) { warned = true; onError(); }
-      };
-      image.setAttribute('href', `assets/nightcity-map/tiles/${key}.webp`);
-      images.set(key, image);
+      images.set(key, { key, z, x, y, size, image, state: 'queued', required: true, distance, scale: 0 });
       parent.append(image);
     }
 
-    function visibleTiles(z, view, parent, wanted) {
+    function region(view) {
+      return { left: view.x * registration.x + registration.offsetX,
+        top: view.y * registration.y + registration.offsetY,
+        right: (view.x + view.width) * registration.x + registration.offsetX,
+        bottom: (view.y + view.height) * registration.y + registration.offsetY };
+    }
+
+    function intersects(entry, view) {
+      const r = region(view), { x, y, size } = entry;
+      return x * size < r.right && (x + 1) * size > r.left && y * size < r.bottom && (y + 1) * size > r.top;
+    }
+
+    function visibleTiles(z, view, parent) {
       const size = 256 / 2 ** (z - 5);
-      const left = view.x * registration.x + registration.offsetX;
-      const top = view.y * registration.y + registration.offsetY;
-      const right = (view.x + view.width) * registration.x + registration.offsetX;
-      const bottom = (view.y + view.height) * registration.y + registration.offsetY;
-      const startX = Math.max(0, Math.floor(left / size) - 1);
-      const startY = Math.max(0, Math.floor(top / size) - 1);
-      const endX = Math.min(levels[z].maxX, Math.floor(right / size) + 1);
-      const endY = Math.min(levels[z].maxY, Math.floor(bottom / size) + 1);
+      const { left, top, right, bottom } = region(view);
+      // Não disputa a rede com uma borda inteira de imagens fora da tela.
+      const startX = Math.max(0, Math.floor(left / size));
+      const startY = Math.max(0, Math.floor(top / size));
+      const endX = Math.min(levels[z].maxX, Math.ceil(right / size) - 1);
+      const endY = Math.min(levels[z].maxY, Math.ceil(bottom / size) - 1);
+      const centerX = (left + right) / (2 * size), centerY = (top + bottom) / (2 * size);
       for (let x = startX; x <= endX; x++) {
-        for (let y = startY; y <= endY; y++) tile(z, x, y, parent, wanted);
+        for (let y = startY; y <= endY; y++) {
+          tile(z, x, y, parent, (x + .5 - centerX) ** 2 + (y + .5 - centerY) ** 2);
+        }
       }
     }
 
@@ -89,24 +159,34 @@
       frame = 0;
       if (destroyed || !enabled || !svg.isConnected || !lastView) return;
       const view = lastView;
-      const screenScale = Math.min(svg.clientWidth / view.width, svg.clientHeight / view.height);
+      screenScale = Math.min(svg.clientWidth / view.width, svg.clientHeight / view.height);
       const z = Math.max(3, Math.min(7, Math.ceil(5 + Math.log2(Math.max(screenScale, 0.001) / registration.x))));
       group.dataset.level = z;
-      const wanted = new Set();
-      // A visão geral fica por baixo enquanto chega o detalhe; só baixa a região visível.
-      visibleTiles(3, view, overview, wanted);
-      if (z !== 3) visibleTiles(z, view, detail, wanted);
-      for (const [key, image] of images) {
-        if (!wanted.has(key)) { image.remove(); images.delete(key); }
-        else {
+      for (const entry of images.values()) entry.required = false;
+      // A cidade aparece primeiro; o detalhe só é pedido quando o zoom assenta.
+      visibleTiles(3, view, overview);
+      if (!settleTimer) {
+        if (z !== detailLevel) {
+          // Só promove nós na troca de nível, sem reorganizar centenas deles a cada pan.
+          for (const entry of images.values()) if (entry.z === z && z !== 3) detail.append(entry.image);
+          detailLevel = z;
+        }
+        if (z !== 3) visibleTiles(z, view, detail);
+      }
+      prune();
+      for (const entry of images.values()) {
+        if (entry.scale !== screenScale) {
           // Sobreposição de um pixel da tela evita frestas entre imagens quando
           // as bordas do SVG caem em posições fracionárias, em qualquer zoom.
-          const size = 256 / 2 ** (Number(image.dataset.z) - 5);
-          image.setAttribute('width', size + registration.x / Math.max(screenScale, 0.001));
-          image.setAttribute('height', size + registration.y / Math.max(screenScale, 0.001));
+          entry.image.setAttribute('width', entry.size + registration.x / Math.max(screenScale, 0.001));
+          entry.image.setAttribute('height', entry.size + registration.y / Math.max(screenScale, 0.001));
+          entry.scale = screenScale;
         }
       }
-      group.dataset.pending = 'false';
+      // Uma fila só: visão geral antes do detalhe e, em cada nível, centro antes das bordas.
+      queue = [...images.values()].filter(entry => entry.required && entry.state === 'queued')
+        .sort((a, b) => (a.z === 3 ? 0 : 1) - (b.z === 3 ? 0 : 1) || a.distance - b.distance);
+      pump();
     }
 
     return {
@@ -114,11 +194,29 @@
         enabled = value;
         group.dataset.pending = 'false';
         group.style.display = enabled ? '' : 'none';
-        if (!enabled) { for (const image of images.values()) image.remove(); images.clear(); }
+        if (!enabled) {
+          cancelAnimationFrame(frame); frame = 0;
+          clearTimeout(settleTimer); settleTimer = 0;
+          queue = []; loading = 0;
+          for (const entry of images.values()) remove(entry);
+        }
       },
       update(view) {
+        const scaleChanged = !lastView || view.width !== lastView.width || view.height !== lastView.height;
+        const viewChanged = scaleChanged || view.x !== lastView.x || view.y !== lastView.y;
         lastView = view;
         if (enabled && !destroyed) {
+          if (viewChanged) {
+            queue = [];
+            for (const entry of images.values()) if (entry.state === 'queued') entry.required = false;
+          }
+          if (scaleChanged) {
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(() => {
+              settleTimer = 0;
+              if (!destroyed && enabled && !frame) frame = requestAnimationFrame(draw);
+            }, ZOOM_SETTLE_MS);
+          }
           group.dataset.pending = 'true';
           if (!frame) frame = requestAnimationFrame(draw);
         }
@@ -126,8 +224,9 @@
       destroy() {
         destroyed = true;
         cancelAnimationFrame(frame);
-        for (const image of images.values()) { image.onload = null; image.onerror = null; }
-        images.clear();
+        clearTimeout(settleTimer);
+        queue = [];
+        for (const entry of images.values()) remove(entry);
         group.remove();
       }
     };

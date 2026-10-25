@@ -344,10 +344,12 @@ http.createServer((request, response) => {
     // Os dados publicados mudam durante a sessão, e arquivo do mestre não pode ficar no cache do túnel
     // (senão o Cloudflare entregaria a cópia a um jogador): nunca guardar em cache. As imagens do mestre (o mapa de
     // referência, 2,7 MB) ficam só no navegador dele ("private") e são conferidas a cada vez.
-    // O resto (o que os jogadores baixam): o navegador guarda e confere a cada vez (no-cache); se o arquivo não mudou,
-    // a resposta é um 304 sem corpo, em vez de baixar o mapa de novo a cada abertura.
+    // A edição explícita dos tiles públicos é imutável; trocar a cartografia exige trocar ?v= no renderer e no SW.
+    // O restante público continua conferido a cada abertura, com 304 quando o arquivo não mudou.
     const image = ['.webp', '.jpg', '.jpeg', '.png', '.svg'].includes(extension);
-    const cacheControl = extension === '.json' || (!playerFile && !image) ? 'private, no-store' : playerFile ? 'no-cache' : 'private, no-cache';
+    const versionedTile = publicMapTile.test(servedPath) && url.search === '?v=20261025';
+    const cacheControl = versionedTile ? 'public, max-age=31536000, immutable'
+      : extension === '.json' || (!playerFile && !image) ? 'private, no-store' : playerFile ? 'no-cache' : 'private, no-cache';
     const etag = `W/"${stats.size.toString(36)}-${Math.round(stats.mtimeMs).toString(36)}"`;
     const cacheable = cacheControl !== 'private, no-store';
     if (cacheable && request.headers['if-none-match'] === etag) {

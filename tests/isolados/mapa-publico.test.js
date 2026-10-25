@@ -37,6 +37,23 @@ test('mapa público: HEAD não envia o tile, todos os zooms locais servem e coor
   assert.equal((await wiki.pedir(TILE, { method: 'POST' })).status, 405);
 });
 
+test('mapa público: só a edição explícita dos tiles ganha cache longo, sem ampliar o acesso público', async t => {
+  const wiki = criarServidorIsolado(t);
+  const arquivo = TILE + '?v=20261025', resposta = await wiki.pedir(arquivo);
+  assert.equal(resposta.status, 200);
+  assert.equal(resposta.headers['cache-control'], 'public, max-age=31536000, immutable');
+  const confirmado = await wiki.pedir(arquivo, { headers: { 'If-None-Match': resposta.headers.etag } });
+  assert.equal(confirmado.status, 304);
+  assert.equal(confirmado.headers['cache-control'], resposta.headers['cache-control']);
+  for (const sufixo of ['', '?v=outra-edicao', '?v=20261025&outro=1']) {
+    assert.equal((await wiki.pedir(TILE + sufixo)).headers['cache-control'], 'no-cache');
+  }
+  assert.equal((await wiki.pedir('/nightcity-map.js?v=20261025')).headers['cache-control'], 'no-cache');
+  for (const privado of ['/campaign-map.js', '/nightcity-map-reference.webp']) {
+    assert.equal((await wiki.pedir(privado + '?v=20261025')).status, 403);
+  }
+});
+
 test('mapa público: somente caminho numérico de tile é liberado; pasta, outras extensões e escapes não expõem arquivos do mestre', async t => {
   const wiki = criarServidorIsolado(t);
   for (const url of [
@@ -56,7 +73,8 @@ test('mapa público: somente caminho numérico de tile é liberado; pasta, outra
 
 function serviceWorker() {
   const origem = 'https://wiki.example', ouvintes = new Map(), stores = new Map();
-  const e = { rede: true, fetches: [], precache: [], respostas: new Map(), stores, falharGravacao: false, skipWaiting: 0, claim: 0 };
+  const e = { rede: true, fetches: [], precache: [], respostas: new Map(), stores, falharGravacao: false, adiarGravacao: null,
+    falharCache: false, gravacoes: 0, listagens: 0, skipWaiting: 0, claim: 0 };
   const endereco = pedido => new URL(typeof pedido === 'string' ? pedido : pedido.url, origem).href;
   const cacheDe = nome => {
     if (!stores.has(nome)) {
@@ -65,11 +83,13 @@ function serviceWorker() {
         respostas,
         match: async pedido => respostas.get(endereco(pedido))?.clone(),
         put: async (pedido, resposta) => {
+          e.gravacoes++;
+          if (e.adiarGravacao) await e.adiarGravacao;
           if (e.falharGravacao) throw new Error('Quota excedida');
           respostas.delete(endereco(pedido));
           respostas.set(endereco(pedido), resposta.clone());
         },
-        keys: async () => [...respostas.keys()].map(url => new Request(url)),
+        keys: async () => { e.listagens++; return [...respostas.keys()].map(url => new Request(url)); },
         delete: async pedido => respostas.delete(endereco(pedido)),
         addAll: async urls => {
           e.precache.push(...urls);
@@ -80,7 +100,8 @@ function serviceWorker() {
     return stores.get(nome);
   };
   const caches = {
-    open: async nome => cacheDe(nome), keys: async () => [...stores.keys()], delete: async nome => stores.delete(nome),
+    open: async nome => { if (e.falharCache) throw new Error('Cache indisponível'); return cacheDe(nome); },
+    keys: async () => [...stores.keys()], delete: async nome => stores.delete(nome),
     match: async pedido => {
       for (const cache of stores.values()) { const r = await cache.match(pedido); if (r) return r; }
       return undefined;
@@ -101,12 +122,17 @@ function serviceWorker() {
     const pendentes = []; ouvintes.get(nome)({ waitUntil: p => pendentes.push(p) });
     await Promise.all(pendentes);
   };
-  e.pedir = async (url, { method = 'GET', mode = 'cors' } = {}) => {
-    const pendentes = []; let resposta;
+  e.iniciarPedido = (url, { method = 'GET', mode = 'cors' } = {}) => {
+    const pendentes = []; let resposta, ativo = true;
     ouvintes.get('fetch')({ request: { url: endereco(url), method, mode },
-      waitUntil: p => pendentes.push(p), respondWith: p => { resposta = p; } });
-    const recebida = resposta ? await resposta : null;
-    await Promise.all(pendentes);
+      waitUntil: p => { assert.equal(ativo, true, 'waitUntil deve ser registrado durante o evento'); pendentes.push(p); },
+      respondWith: p => { resposta = p; } });
+    ativo = false;
+    return { resposta: resposta || Promise.resolve(null), concluido: Promise.all(pendentes) };
+  };
+  e.pedir = async (url, options) => {
+    const pedido = e.iniciarPedido(url, options), recebida = await pedido.resposta;
+    await pedido.concluido;
     return recebida;
   };
   e.cache = () => [...stores.values()][0];
@@ -115,55 +141,112 @@ function serviceWorker() {
 }
 
 test('mapa offline: instalação guarda só renderer leve, nunca baixa os tiles; atualização remove cache antigo', async () => {
-  const e = serviceWorker(); e.stores.set('fieldbook-jogadores-v14', {});
+  const e = serviceWorker(); e.stores.set('fieldbook-jogadores-v15', {});
   await e.evento('install'); await e.evento('activate');
   assert.ok(e.precache.includes('/nightcity-map.js'));
   assert.equal(e.precache.some(url => url.startsWith('/assets/nightcity-map/tiles/')), false);
   assert.equal(e.precache.includes('/index.html'), false); assert.equal(e.precache.includes('/campaign-map.js'), false);
   assert.equal(e.fetches.length, 0); assert.equal(e.skipWaiting, 1); assert.equal(e.claim, 1);
-  assert.equal(e.stores.has('fieldbook-jogadores-v14'), false); assert.equal(e.stores.size, 1);
+  assert.equal(e.stores.has('fieldbook-jogadores-v15'), false); assert.equal(e.stores.size, 1);
+  assert.ok(e.stores.has('fieldbook-jogadores-v16'));
 });
 
-test('mapa offline: tile solicitado fica disponível sem rede e tile ainda não visitado não ganha cópia fictícia', async () => {
-  const e = serviceWorker(), primeira = await e.pedir(TILE);
+test('mapa offline: tile versionado é cache-first, funciona sem rede e não inventa regiões ainda não visitadas', async () => {
+  const tile = TILE + '?v=20261025', e = serviceWorker(), primeira = await e.pedir(tile);
   assert.equal(await primeira.text(), 'rede ' + TILE);
-  assert.deepEqual(await e.caminhos(), [TILE]);
+  assert.deepEqual(await e.caminhos(), [tile]);
+  e.respostas.set('https://wiki.example' + tile, new Response('não precisa buscar'));
+  assert.equal(await (await e.pedir(tile)).text(), 'rede ' + TILE);
+  assert.equal(e.fetches.length, 1, 'Uma segunda visita não revalida o tile conhecido');
   e.rede = false;
-  assert.equal(await (await e.pedir(TILE)).text(), 'rede ' + TILE);
-  await assert.rejects(e.pedir('/assets/nightcity-map/tiles/3/0/1.webp'), /Sem internet/);
-  assert.deepEqual(await e.caminhos(), [TILE]);
+  assert.equal(await (await e.pedir(tile)).text(), 'rede ' + TILE);
+  assert.equal(e.fetches.length, 1);
+  await assert.rejects(e.pedir('/assets/nightcity-map/tiles/3/0/1.webp?v=20261025'), /Sem internet/);
+  assert.deepEqual(await e.caminhos(), [tile]);
 });
 
-test('mapa offline: cache responde primeiro e atualiza o tile para a próxima visita; 404 não substitui uma cópia válida', async () => {
-  const e = serviceWorker(); await e.pedir(TILE);
-  e.respostas.set('https://wiki.example' + TILE, new Response('novo tile'));
-  assert.equal(await (await e.pedir(TILE)).text(), 'rede ' + TILE);
-  assert.equal(await (await e.pedir(TILE)).text(), 'novo tile');
-  e.respostas.set('https://wiki.example' + TILE, new Response('ausente', { status: 404 }));
-  assert.equal(await (await e.pedir(TILE)).text(), 'novo tile');
-  e.rede = false; assert.equal(await (await e.pedir(TILE)).text(), 'novo tile');
+test('mapa offline: somente a versão exata usa chave própria; tiles legados, desconhecidos, mapa base e fontes continuam SWR', async () => {
+  for (const arquivo of [TILE, TILE + '?v=20261024', TILE + '?v=20261025&extra=1', '/nightcity-map-base.webp',
+    '/cyberpunk-css-main/cyberpunk-css-main/fonts/Oxanium.woff2']) {
+    const e = serviceWorker(), pathname = new URL(arquivo, 'https://wiki.example').pathname;
+    await e.pedir(arquivo);
+    e.respostas.set('https://wiki.example' + arquivo, new Response('atualizado'));
+    assert.equal(await (await e.pedir(arquivo)).text(), 'rede ' + pathname);
+    assert.equal(await (await e.pedir(arquivo)).text(), 'atualizado');
+    assert.equal(e.fetches.length, 3, arquivo);
+    assert.deepEqual(await e.caminhos(), [pathname]);
+    e.respostas.set('https://wiki.example' + arquivo, new Response('ausente', { status: 404 }));
+    assert.equal(await (await e.pedir(arquivo)).text(), 'atualizado');
+    e.rede = false; assert.equal(await (await e.pedir(arquivo)).text(), 'atualizado');
+  }
+});
+
+test('mapa offline: versões desconhecidas não substituem nem satisfazem a cópia versionada conhecida', async () => {
+  const e = serviceWorker(), atual = TILE + '?v=20261025', antiga = TILE + '?v=20261024';
+  e.respostas.set('https://wiki.example' + antiga, new Response('versão antiga'));
+  await e.pedir(antiga);
+  e.respostas.set('https://wiki.example' + atual, new Response('versão atual'));
+  assert.equal(await (await e.pedir(atual)).text(), 'versão atual');
+  e.respostas.set('https://wiki.example' + antiga, new Response('antiga alterada'));
+  await e.pedir(antiga);
+  e.rede = false;
+  assert.equal(await (await e.pedir(atual)).text(), 'versão atual');
+  assert.deepEqual(await e.caminhos(), [atual, TILE]);
+});
+
+test('mapa offline: exibe a rede antes de gravar ou podar e espera o trabalho em segundo plano com waitUntil síncrono', async () => {
+  for (const arquivo of [TILE + '?v=20261025', '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/fonts/Oxanium.woff2']) {
+    const e = serviceWorker(); let liberar;
+    e.adiarGravacao = new Promise(resolve => { liberar = resolve; });
+    const pedido = e.iniciarPedido(arquivo); let terminou = false;
+    pedido.concluido.then(() => { terminou = true; });
+    try {
+      const resultado = await Promise.race([pedido.resposta.then(response => ({ response })),
+        new Promise(resolve => setTimeout(() => resolve({ atrasou: true }), 100))]);
+      assert.equal(resultado.atrasou, undefined, 'A imagem não pode esperar CacheStorage.put');
+      assert.equal(resultado.response.status, 200);
+      assert.equal(await resultado.response.text(), 'rede ' + new URL(arquivo, 'https://wiki.example').pathname);
+      assert.equal(terminou, false, 'O trabalho de persistência deve manter o evento vivo');
+      assert.equal(e.gravacoes, 1); assert.equal(e.listagens, 0);
+    } finally { liberar(); await pedido.concluido; }
+    assert.equal(terminou, true);
+    assert.equal((await e.caminhos()).length, 1);
+  }
 });
 
 test('mapa offline: 404 sem cópia e cota de armazenamento excedida não são guardados nem impedem exibir a resposta da rede', async () => {
-  const e = serviceWorker();
-  e.respostas.set('https://wiki.example' + TILE, new Response('ausente', { status: 404 }));
-  assert.equal((await e.pedir(TILE)).status, 404); assert.deepEqual(await e.caminhos(), []);
-  e.respostas.delete('https://wiki.example' + TILE); e.falharGravacao = true;
-  assert.equal(await (await e.pedir(TILE)).text(), 'rede ' + TILE); assert.deepEqual(await e.caminhos(), []);
+  const e = serviceWorker(), tile = TILE + '?v=20261025';
+  e.respostas.set('https://wiki.example' + tile, new Response('ausente', { status: 404 }));
+  assert.equal((await e.pedir(tile)).status, 404); assert.deepEqual(await e.caminhos(), []);
+  e.respostas.delete('https://wiki.example' + tile); e.falharGravacao = true;
+  assert.equal(await (await e.pedir(tile)).text(), 'rede ' + TILE); assert.deepEqual(await e.caminhos(), []);
+  const indisponivel = serviceWorker(); indisponivel.falharCache = true;
+  assert.equal(await (await indisponivel.pedir(tile)).text(), 'rede ' + TILE);
 });
 
-test('mapa offline: só 256 tiles recentes ficam guardados; a limitação preserva regras e visões privadas por campanha', async () => {
+test('mapa offline: uma visão de 581 tiles cabe inteira, sem rede na revisita e com manutenção em lote', async () => {
+  const e = serviceWorker(), tile = i => `/assets/nightcity-map/tiles/7/${Math.floor(i / 108)}/${i % 108}.webp?v=20261025`;
+  await Promise.all(Array.from({ length: 581 }, (_, i) => e.pedir(tile(i))));
+  assert.equal(e.gravacoes, 581);
+  assert.ok(e.listagens <= 3, `A rajada não pode enumerar o cache por imagem: ${e.listagens}`);
+  assert.equal((await e.caminhos()).length, 581);
+  e.rede = false;
+  await Promise.all(Array.from({ length: 581 }, (_, i) => e.pedir(tile(i))));
+  assert.equal(e.fetches.length, 581);
+});
+
+test('mapa offline: orçamento de 768 tiles preserva regras, visões privadas por campanha e a saída da conta', async () => {
   const e = serviceWorker(); await e.evento('install');
   await e.cache().put('/api/eu', new Response('identidade'));
   await e.cache().put('/api/visao?campanha=morana', new Response('somente publicado'));
-  const tile = i => `/assets/nightcity-map/tiles/7/${Math.floor(i / 108)}/${i % 108}.webp`;
-  for (let i = 0; i < 259; i++) await e.pedir(tile(i));
+  const tile = i => `/assets/nightcity-map/tiles/7/${Math.floor(i / 108)}/${i % 108}.webp?v=20261025`;
+  await Promise.all(Array.from({ length: 780 }, (_, i) => e.pedir(tile(i))));
   const caminhos = await e.caminhos(), tiles = caminhos.filter(p => p.startsWith('/assets/nightcity-map/tiles/'));
-  assert.equal(tiles.length, 256); assert.equal(tiles.includes(tile(0)), false); assert.equal(tiles.includes(tile(258)), true);
+  assert.equal(tiles.length, 768); assert.equal(tiles.includes(tile(0)), false); assert.equal(tiles.includes(tile(779)), true);
   assert.ok(caminhos.includes('/system-rules.js')); assert.ok(caminhos.includes('/api/eu')); assert.ok(caminhos.includes('/api/visao?campanha=morana'));
   await e.pedir('/api/sair', { method: 'POST' });
   const depois = await e.caminhos();
-  assert.equal(depois.some(p => p.startsWith('/api/')), false); assert.equal(depois.filter(p => p.startsWith('/assets/nightcity-map/tiles/')).length, 256);
+  assert.equal(depois.some(p => p.startsWith('/api/')), false); assert.equal(depois.filter(p => p.startsWith('/assets/nightcity-map/tiles/')).length, 768);
 });
 
 test('mapa offline: caminhos privados, vizinhos dos tiles e outro domínio passam direto sem cache', async () => {

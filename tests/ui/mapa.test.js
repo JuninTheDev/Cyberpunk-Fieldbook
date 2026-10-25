@@ -97,7 +97,7 @@ test('mapa imersivo mantém navegação e coordenadas, funciona no celular e pro
         const contexto = canvas.getContext('2d'); contexto.drawImage(bitmap, 0, 0);
         const dados = contexto.getImageData(0, 0, canvas.width, canvas.height).data, cores = new Set();
         for (let i = 0; i < dados.length; i += 64) cores.add(dados[i] + ',' + dados[i + 1] + ',' + dados[i + 2]);
-        const resultado = { url: url.pathname, origem: url.origin === location.origin, largura: bitmap.width,
+        const resultado = { url: url.pathname, versao: url.searchParams.get('v'), origem: url.origin === location.origin, largura: bitmap.width,
           altura: bitmap.height, cores: cores.size, z: Number(tile.dataset.z), x: Number(tile.dataset.x), y: Number(tile.dataset.y) };
         bitmap.close(); return resultado;
       }));
@@ -121,6 +121,7 @@ test('mapa imersivo mantém navegação e coordenadas, funciona no celular e pro
       await avaliar(`wikiApp.openPage('campaignMap')`);
       await ate(pronto);
       await ate(`Array.from(document.querySelectorAll('#nightcity-map-tiles image[data-map-tile]')).some(i => i.dataset.loaded === 'true')`);
+      await carregar();
       const inicial = await decodificar();
       assert.equal(await avaliar(`document.getElementById('map-source').value`), 'improved');
       assert.deepEqual(await avaliar(`Array.from(document.getElementById('map-source').options, o => o.value)`), ['improved', 'base', 'reference']);
@@ -137,7 +138,7 @@ test('mapa imersivo mantém navegação e coordenadas, funciona no celular e pro
       assert.equal(await avaliar(`getComputedStyle(document.querySelector('#nightcity-map-tiles')).display !== 'none'`), true);
       assert.ok(inicial.imagens.length > 0);
       assert.ok(inicial.imagens.every(i => i.origem && /^\/assets\/nightcity-map\/tiles\/\d+\/\d+\/\d+\.webp$/.test(i.url)
-        && i.largura > 0 && i.altura > 0 && Number.isInteger(i.z) && Number.isInteger(i.x) && Number.isInteger(i.y)), JSON.stringify(inicial));
+        && i.versao === '20261025' && i.largura > 0 && i.altura > 0 && Number.isInteger(i.z) && Number.isInteger(i.x) && Number.isInteger(i.y)), JSON.stringify(inicial));
       assert.ok(inicial.imagens.some(i => i.cores > 4), 'As imagens devem conter o mapa, com variação de pixels; não um fundo vazio.');
       const pinos = await avaliar(`Array.from(document.querySelectorAll('#nightcity-map-pins .map-pin'), p => ({ id: p.dataset.mapMarker, transform: p.getAttribute('transform') }))`);
       assert.ok(pinos.length >= 3);
@@ -154,6 +155,84 @@ test('mapa imersivo mantém navegação e coordenadas, funciona no celular e pro
       }
       await fecharPainel('layers');
       await carregar();
+    });
+
+    await t.test('zoom rapido pede apenas o detalhe final, limita a fila e preserva o detalhe anterior durante a rede lenta', async () => {
+      await zoom(3); await carregar();
+      const nivelInicial = await avaliar(`Number(document.querySelector('#nightcity-map-tiles').dataset.level)`);
+      assert.ok(nivelInicial > 3 && nivelInicial < 7, 'A medicao comeca com detalhe real carregado, antes do zoom maximo.');
+      await comando('Network.setCacheDisabled', { cacheDisabled: true });
+      await comando('Network.emulateNetworkConditions', { offline: false, latency: 120, downloadThroughput: 350000, uploadThroughput: 350000 });
+      try {
+        await avaliar(`(() => {
+          const grupo = document.querySelector('#nightcity-map-tiles'), svg = document.querySelector('#nightcity-map');
+          const anteriores = [...grupo.querySelectorAll('image[data-map-tile]')].filter(i => Number(i.dataset.z) === ${nivelInicial} && i.dataset.loaded === 'true');
+          const centro = { x: innerWidth / 2, y: innerHeight / 2 };
+          const centrais = anteriores.filter(i => { const r = i.getBoundingClientRect(); return r.left <= centro.x && r.right >= centro.x && r.top <= centro.y && r.bottom >= centro.y; });
+          if (!centrais.length) throw Error('A fixture precisa de um tile de detalhe carregado no centro da camera.');
+          const vistos = new Set([...grupo.querySelectorAll('image[href]')].map(i => i.getAttribute('href')));
+          const dados = { pico: 0, niveis: [], urls: [], preservado: 0, perdeuAntes: false, amostras: 0 };
+          const medir = () => {
+            const imagens = [...grupo.querySelectorAll('image[data-map-tile]')];
+            const voando = imagens.filter(i => i.hasAttribute('href') && !i.dataset.loaded && !i.dataset.failed);
+            dados.pico = Math.max(dados.pico, voando.length); dados.amostras++;
+            for (const i of imagens) {
+              const url = i.getAttribute('href');
+              if (!url || vistos.has(url)) continue;
+              vistos.add(url); dados.urls.push(url); dados.niveis.push(Number(i.dataset.z));
+            }
+            if (voando.some(i => Number(i.dataset.z) > ${nivelInicial})) {
+              const livre = centrais.some(i => { const r = i.getBoundingClientRect(); return i.isConnected && i.dataset.loaded === 'true'
+                && getComputedStyle(i).visibility !== 'hidden' && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight; });
+              if (livre) dados.preservado++; else dados.perdeuAntes = true;
+            }
+          };
+          const observador = new MutationObserver(medir);
+          observador.observe(grupo, { childList: true, subtree: true, attributes: true, attributeFilter: ['href', 'data-loaded', 'data-failed', 'data-pending'] });
+          const intervalo = setInterval(medir, 10); medir();
+          window.__mapaMedicao = { dados, parar() { medir(); observador.disconnect(); clearInterval(intervalo); return dados; } };
+        })()`);
+        // Cada passo atravessa frames de renderizacao, sem dar os 120 ms de repouso entre cliques.
+        await avaliar(`(async () => { for (let i = 0; i < 5; i++) {
+          document.querySelector('[data-map-action="zoom-in"]').click();
+          await new Promise(r => setTimeout(r, 40));
+        } })()`);
+        await ate(`window.__mapaMedicao.dados.preservado > 0`);
+        await carregar();
+        await captura('mapa-performance-final', '.campaign-map-canvas');
+        const medicao = await avaliar(`window.__mapaMedicao.parar()`);
+        const nivelFinal = await avaliar(`Number(document.querySelector('#nightcity-map-tiles').dataset.level)`);
+        assert.equal(nivelFinal, 7);
+        assert.deepEqual([...new Set(medicao.niveis.filter(z => z !== 3))], [nivelFinal], JSON.stringify(medicao));
+        assert.ok(medicao.pico > 6 && medicao.pico <= 24, 'A fila SVG deve explorar a rede sem superar 24 imagens em voo: ' + JSON.stringify(medicao));
+        assert.ok(medicao.preservado > 0 && !medicao.perdeuAntes, 'O detalhe carregado continua visivel ate chegar a substituicao: ' + JSON.stringify(medicao));
+        assert.ok(medicao.urls.length > 24, 'A regiao final exige mais tiles que o limite de voo, exercitando a fila: ' + JSON.stringify(medicao));
+        assert.ok(medicao.urls.every(href => { const u = new URL(href, base); return /^\/assets\/nightcity-map\/tiles\/\d+\/\d+\/\d+\.webp$/.test(u.pathname) && u.searchParams.get('v') === '20261025'; }));
+        t.diagnostic('Zoom rapido: niveis ' + [...new Set(medicao.niveis)] + ', pico ' + medicao.pico + ', ' + medicao.urls.length + ' tiles.');
+      } finally {
+        await avaliar(`window.__mapaMedicao?.parar(); delete window.__mapaMedicao`);
+        await comando('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+        await comando('Network.setCacheDisabled', { cacheDisabled: false });
+      }
+      await clicar('[data-map-action="reset"]'); await carregar();
+    });
+
+    await t.test('ultrawide conserva proporcao, preenche a tela e carrega detalhe sem rolagem', async () => {
+      try {
+        await comando('Emulation.setDeviceMetricsOverride', { width: 3440, height: 1440, deviceScaleFactor: 1, mobile: false });
+        await clicar('[data-map-action="reset"]'); await carregar();
+        await conferirTela();
+        await captura('mapa-ultrawide-geral', '.campaign-map-canvas');
+        await zoom(12); await carregar();
+        await conferirTela();
+        const detalhe = await decodificar();
+        assert.equal(detalhe.nivel, 7);
+        assert.ok(detalhe.imagens.some(i => i.z === 7 && i.cores > 4));
+        await captura('mapa-ultrawide-detalhe', '.campaign-map-canvas');
+      } finally {
+        await comando('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
+        await clicar('[data-map-action="reset"]'); await carregar();
+      }
     });
 
     let fator;

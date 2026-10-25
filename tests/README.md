@@ -86,6 +86,9 @@ O menu prende o foco por teclado, fecha com Esc e restaura a preferência da bar
 a busca e Esc o recompõe. Em tela móvel, confere painel único, ficha de metade da altura com expansão,
 rotação e ausência de rolagem da página. O caso de 1025×768 exige que a lista saia do caminho quando o limite
 da câmera impede revelar o pino por pan. Capturas aguardam o desenho agendado e o carregamento das tiles.
+O zoom rápido com rede lenta confere o limite de 24 imagens em carga, a ausência de pedidos de níveis
+intermediários e a permanência do detalhe anterior durante a troca. A resolução 3440×1440 também tem
+verificação de proporção, ausência de rolagem e capturas nos enquadramentos inicial e ampliado.
 Voltar e repetir setup não pode acumular ações. A publicação e o login
 usam a API real: o jogador recebe apenas lugares revelados,
 sem notas ou script do mestre e sem a fonte privada de referência. As capturas ficam em `tests/.saida/`.
