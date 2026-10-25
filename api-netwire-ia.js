@@ -202,7 +202,7 @@ function createDrafter({ ia = {}, docsDir = '', campaigns }) {
     const where = channel.tipo === 'direto'
       ? `Conversa direta de ${channel.contato.nome || channel.nome}${channel.contato.descricao ? ` (${channel.contato.descricao})` : ''} com os personagens.`
       : `Canal da cidade #${channel.nome}${channel.contato.descricao ? ` (${channel.contato.descricao})` : ''}: posts de quem anda por ali.`;
-    const history = messages.slice(-30).map(item => `[${item.autor.tipo === 'jogador' ? `${item.autor.nome} (personagem de jogador)` : item.autor.nome}] ${item.texto}`).join('\n');
+    const history = messages.slice(-30).map(item => `[${item.autor.tipo === 'jogador' ? `${item.autor.nome} (personagem de jogador)` : item.autor.nome}] ${item.texto}${item.anexo ? `${item.texto ? ' ' : ''}(mandou o arquivo "${item.anexo.titulo || 'sem título'}")` : ''}`).join('\n');
     const lastPlayer = [...messages].reverse().find(item => item.autor.tipo === 'jogador');
     const task = request.tipo === 'resposta' && lastPlayer
       ? `Escreva ${count === 1 ? 'a próxima mensagem' : `${count} opções diferentes para a próxima mensagem`} de ${speaker}, respondendo ao que ${lastPlayer.autor.nome} disse por último.`

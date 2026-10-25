@@ -115,12 +115,14 @@
   // ---------------- Mensagens do jogador ----------------
   const player = { root: null, canal: '' };
   const channelLabel = channel => (channel.tipo === 'direto' ? esc(channel.contato && channel.contato.nome ? channel.contato.nome : channel.nome) : `<span class="nw-hash">#</span>${esc(channel.nome)}`);
+  // O arquivo anexo (um handout): a etiqueta, o título e o texto formatado, dentro do balão da mensagem.
+  const attachmentHtml = anexo => (anexo ? `<div class="nw-anexo"><span class="nw-anexo-tag">Arquivo</span><b class="nw-anexo-titulo">${esc(anexo.titulo || 'Sem título')}</b><div class="md-doc">${app().renderMarkdown(anexo.texto || '')}</div></div>` : '');
   function messageHtml(item) {
     const mine = item.autor && item.autor.minha;
     const kind = mine ? ' nw-mine' : item.autor && item.autor.tipo === 'jogador' ? ' nw-player' : '';
     const body = item.titulo !== undefined
       ? `<b>${esc(item.titulo)}</b><div class="md-doc">${app().renderMarkdown(item.texto || '')}</div>`
-      : lines(item.texto);
+      : `${item.texto ? lines(item.texto) : ''}${attachmentHtml(item.anexo)}`;
     return `<div class="nw-msg${kind}"><div class="nw-msg-body">${body}</div><div class="nw-msg-foot"><b>${esc(item.autor ? item.autor.nome : '')}</b>${item.quando ? ` - ${esc(when(item.quando))}` : item.data ? ` - ${esc(item.data)}` : ''}</div></div>`;
   }
   function renderPlayer() {
@@ -197,14 +199,18 @@
     const mine = item.origem === 'jogador';
     return `<article class="nw-pad nw-card" data-nw-msg="${esc(item.id)}">
       <p class="nw-card-head"><span class="nw-card-tag">${tag}</span><b>${esc(item.autor.nome)}</b><span class="nw-badge">${mine ? 'Jogador' : item.origem === 'ia' ? 'IA' : 'Mestre'}</span><span class="nw-card-state">${state}</span></p>
-      <div class="nw-msg${mine ? ' nw-player' : ''}"><div class="nw-msg-body">${lines(item.texto)}</div></div>
+      <div class="nw-msg${mine ? ' nw-player' : ''}"><div class="nw-msg-body">${item.texto ? lines(item.texto) : ''}${attachmentHtml(item.anexo)}</div></div>
       ${item.nota ? `<p class="nw-card-note">nota: ${esc(item.nota)}</p>` : ''}
       ${mine
     // A mensagem do jogador não se edita (é dele), mas o mestre pode tirá-la do NetWire.
     ? '<div class="nw-toolbar"><button type="button" class="nw-btn" data-nw-delete data-nw-delete-player>Excluir</button></div>'
-    : `<div class="nw-toolbar">${item.estado !== 'entregue' && !item.entregue ? '<button type="button" class="nw-btn nw-btn--primary" data-nw-deliver>Entregar agora</button>' : ''}<button type="button" class="nw-btn" data-nw-edit>Editar</button><button type="button" class="nw-btn" data-nw-delete>Excluir</button></div>`}
+    : `<div class="nw-toolbar">${item.estado !== 'entregue' && !item.entregue ? '<button type="button" class="nw-btn nw-btn--primary" data-nw-deliver>Entregar agora</button>' : ''}<button type="button" class="nw-btn" data-nw-edit>Editar</button><button type="button" class="nw-btn" data-nw-delete>Excluir</button>${aiRedo(item)}</div>`}
     </article>`;
   }
+  // No rascunho que veio da IA (com o pedido guardado): refazer o mesmo, ou pedir uma versão diferente.
+  const aiRedo = item => (item.origem === 'ia' && item.estado === 'rascunho' && item.pedido && data.ia && data.ia.ligada
+    ? '<button type="button" class="nw-btn nw-ai-redo" data-nw-ai-redo title="Pede de novo o mesmo e troca este rascunho">Gerar de novo</button><button type="button" class="nw-btn" data-nw-ai-vary title="Pede uma versão diferente e guarda as duas">Variação</button>'
+    : '');
   function composerHtml(preset = {}) {
     const editing = gm.editing && data.mensagens.find(item => item.id === gm.editing);
     const base = editing || preset;
@@ -213,7 +219,7 @@
     return `<form class="nw-pad nw-composer" data-nw-compose>
       <p class="nw-pad-title">${editing ? 'Editar mensagem' : preset.title || 'Nova mensagem'}</p>
       <div class="nw-row"><label>Canal<select data-nw-field="canal">${options}</select></label><label>Quem fala<input data-nw-field="autor" maxlength="60" placeholder="o contato do canal" value="${esc(base.autor ? base.autor.nome : '')}"></label></div>
-      <label class="nw-wide">Mensagem<textarea data-nw-field="texto" rows="4" maxlength="4000" required>${esc(base.texto || '')}</textarea></label>
+      <label class="nw-wide">Mensagem<textarea data-nw-field="texto" rows="4" maxlength="4000"${base.anexo ? '' : ' required'}>${esc(base.texto || '')}</textarea></label>${base.anexo ? `<p class="note-status">Esta mensagem leva o arquivo <b>${esc(base.anexo.titulo || 'sem título')}</b>, que continua anexado.</p>` : ''}
       <div class="nw-row"><label>Nota (só você vê)<input data-nw-field="nota" maxlength="500" value="${esc(base.nota || '')}"></label><label>Entregar em (para agendar)<input type="datetime-local" data-nw-field="quando" value="${esc(isoToLocal(base.estado === 'agendada' ? base.quando : ''))}"></label></div>
       <div class="nw-toolbar"><button type="submit" class="nw-btn nw-btn--primary" data-nw-as="entregue">Entregar agora</button><button type="submit" class="nw-btn" data-nw-as="agendada">Agendar</button><button type="submit" class="nw-btn" data-nw-as="rascunho">Salvar rascunho</button>${editing ? '<button type="button" class="nw-btn" data-nw-cancel>Cancelar</button>' : ''}</div>
       <p class="note-status" data-nw-status role="status"></p>
@@ -256,7 +262,7 @@
       return;
     }
     const count = (answer.data.mensagens || []).length;
-    toast(`${count} rascunho${count === 1 ? '' : 's'} da IA (${dollars(answer.data.uso.custo)}). Confira e entregue em Rascunhos.`, 'ok');
+    toast(answer.data.substituiu ? `Rascunho refeito pela IA (${dollars(answer.data.uso.custo)}).` : `${count} rascunho${count === 1 ? '' : 's'} da IA (${dollars(answer.data.uso.custo)}). Confira e entregue em Rascunhos.`, 'ok');
     gm.view = 'rascunhos';
     await load();
     renderGm();
@@ -372,6 +378,8 @@
     }
     if (event.target.closest('[data-nw-edit]') && id) { gm.editing = id; renderGm(); gm.root.querySelector('[data-nw-compose]')?.scrollIntoView({ block: 'nearest' }); return; }
     if (event.target.closest('[data-nw-cancel]')) { gm.editing = null; renderGm(); return; }
+    const redo = event.target.closest('[data-nw-ai-redo], [data-nw-ai-vary]');
+    if (redo && id) { await askAi({ base: id, modo: 'nwAiVary' in redo.dataset ? 'variar' : 'regenerar' }, null, redo); return; }
     const quick = event.target.closest('[data-nw-ai-quick]');
     if (quick) { await askAi({ canal: quick.dataset.nwAiQuick, tipo: 'resposta', quantidade: 2 }, null, quick); return; }
     if (event.target.closest('[data-nw-delete]') && id) {
@@ -416,7 +424,7 @@
       const seen = (readMarks() || {})[channel.id] || '';
       const fresh = data.mensagens.filter(item => item.canal === channel.id && item.quando && item.quando > seen && !(item.autor && item.autor.minha));
       const last = fresh[fresh.length - 1];
-      return { canal: channel.id, nome: channel.tipo === 'direto' ? (channel.contato && channel.contato.nome) || channel.nome : `#${channel.nome}`, autor: last.autor.nome, texto: last.texto, quando: last.quando, total: fresh.length };
+      return { canal: channel.id, nome: channel.tipo === 'direto' ? (channel.contato && channel.contato.nome) || channel.nome : `#${channel.nome}`, autor: last.autor.nome, texto: last.texto || (last.anexo ? `mandou o arquivo "${last.anexo.titulo || 'sem título'}"` : ''), quando: last.quando, total: fresh.length };
     });
   }
   window.netwire = { setupPlayer, setupGm, load, unread: () => (data ? data.canais.reduce((sum, channel) => sum + unreadIn(channel.id), 0) : 0), unreadItems, when, polledAt: () => polled };

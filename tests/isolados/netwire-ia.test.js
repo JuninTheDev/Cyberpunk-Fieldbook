@@ -200,3 +200,36 @@ test('NetWire IA: o preço do Gemini muda na data anunciada pelo Google', () => 
   assert.equal(costOf('gemini-3.8-flash', { saida: 1e6 }, '2026-12-31').custo, 3.75);
   assert.equal(costOf('gemini-3.8-flash', { saida: 1e6 }, '2027-01-01').custo, 7.5);
 });
+
+test('NetWire IA: "Gerar de novo" troca o rascunho no lugar; "Variação" guarda os dois e pede outro texto', async t => {
+  let n = 0;
+  const api = apiFalsa(() => resposta([{ autor: 'Wakako Okada', texto: `Versão ${++n}.`, nota_para_o_mestre: '' }]));
+  const { servidor, mestre, ana, canal, rascunhar } = await preparar(t, { api });
+  const primeiro = (await rascunhar({ quantidade: 1, instrucao: 'Ela quer pressa.' })).json.mensagens[0];
+  // O pedido fica guardado no rascunho (só o mestre vê).
+  const caixa = await servidor.pedir('/api/netwire?campanha=morana', { cookie: mestre });
+  assert.equal(caixa.json.mensagens.find(item => item.id === primeiro.id).pedido.instrucao, 'Ela quer pressa.');
+  // Gerar de novo: o mesmo pedido; o rascunho novo entra no lugar do antigo.
+  const refeito = await rascunhar({ base: primeiro.id, modo: 'regenerar' });
+  assert.equal(refeito.status, 200, refeito.text);
+  assert.equal(refeito.json.substituiu, primeiro.id);
+  assert.equal(api.pedidos[1].body.messages[0].content, api.pedidos[0].body.messages[0].content);
+  const depois = (await servidor.pedir('/api/netwire?campanha=morana', { cookie: mestre })).json.mensagens.filter(item => item.origem === 'ia');
+  assert.deepEqual(depois.map(item => item.texto), ['Versão 2.']);
+  // Variação: pede algo diferente daquele texto e guarda os dois.
+  const variacao = await rascunhar({ base: refeito.json.mensagens[0].id, modo: 'variar' });
+  assert.equal(variacao.status, 200, variacao.text);
+  assert.match(api.pedidos[2].body.messages[0].content, /versão diferente desta/);
+  assert.match(api.pedidos[2].body.messages[0].content, /"Versão 2\."/);
+  const agora = (await servidor.pedir('/api/netwire?campanha=morana', { cookie: mestre })).json.mensagens.filter(item => item.origem === 'ia');
+  assert.deepEqual(agora.map(item => item.texto), ['Versão 2.', 'Versão 3.']);
+  // A variação guarda o pedido original (sem a instrução de variar).
+  assert.equal(agora[1].pedido.instrucao, 'Ela quer pressa.');
+  // Não refaz o que não veio da IA nem o que já foi entregue; o jogador não vê o pedido.
+  const doMestre = (await servidor.pedir('/api/netwire/mensagens', { method: 'POST', cookie: mestre, body: { campanha: 'morana', canal: canal.id, texto: 'À mão.', estado: 'rascunho' } })).json.mensagem;
+  assert.equal((await rascunhar({ base: doMestre.id, modo: 'regenerar' })).status, 409);
+  await servidor.pedir(`/api/netwire/mensagens/${agora[0].id}?campanha=morana`, { method: 'PUT', cookie: mestre, body: { campanha: 'morana', estado: 'entregue' } });
+  assert.equal((await rascunhar({ base: agora[0].id, modo: 'variar' })).status, 409);
+  const visao = await servidor.pedir('/api/netwire', { cookie: ana.cookie });
+  assert.ok(visao.text.includes('Versão 2.') && !visao.text.includes('"pedido"') && !visao.text.includes('Ela quer pressa'));
+});

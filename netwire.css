@@ -504,3 +504,13 @@
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-casca="classica"]) .content.nw-entra, .top-tab.nw-glitch { animation: none; }
 }
+
+/* O arquivo anexo numa mensagem (um handout mandado pelo NetWire): a etiqueta, o título e o texto formatado. */
+.nw-anexo { margin-top: .5rem; padding: .6rem .75rem; border: 1px dashed currentcolor; border-radius: 3px; background: var(--nw-well); color: var(--tx); }
+.nw-msg-body > .nw-anexo:first-child { margin-top: 0; }
+.nw-anexo-tag { display: inline-block; margin-right: .5rem; padding: .05em .4em; border: 1px solid var(--nw-tertiary); border-radius: 2px; color: var(--nw-tertiary); font: 400 13px var(--nw-font-label); letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
+.nw-anexo-titulo { color: var(--nw-tertiary); }
+.nw-anexo .md-doc { margin-top: .4rem; color: var(--tx); }
+.nw-anexo .md-doc blockquote { margin: .3rem 0; padding-left: .75rem; border-left: 2px solid var(--nw-border); }
+/* Os botões da IA no rascunho dela (Gerar de novo, Variação). */
+.nw-toolbar .nw-ai-redo { margin-left: auto; }

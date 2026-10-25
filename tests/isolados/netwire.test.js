@@ -142,3 +142,15 @@ test('NetWire: o mestre exclui a mensagem do jogador; some para todos e a conver
   assert.ok(!doMestre.text.includes('MENSAGEM-DO-JOGADOR'));
   assert.deepEqual(doMestre.json.aguardando, []);
 });
+
+test('NetWire: o handout vai como arquivo anexo (sem texto); o jogador recebe o arquivo, não a nota', async t => {
+  const { servidor, mestre, ana, wakako } = await preparar(t);
+  const handout = await servidor.pedir('/api/netwire/mensagens', { method: 'POST', cookie: mestre, body: { campanha: 'morana', canal: wakako.id, estado: 'entregue', texto: '', anexo: { titulo: 'Recibo do Dr. Kabuki', texto: '> **Pago:** 150eb\n> Sem perguntas.' }, nota: 'Handout H-04#1 · do documento' } });
+  assert.equal(handout.status, 200, handout.text);
+  const visao = await servidor.pedir('/api/netwire', { cookie: ana.cookie });
+  const recebido = visao.json.mensagens.find(item => item.id === handout.json.mensagem.id);
+  assert.deepEqual(recebido.anexo, { titulo: 'Recibo do Dr. Kabuki', texto: '> **Pago:** 150eb\n> Sem perguntas.' });
+  assert.ok(!visao.text.includes('H-04'));
+  // Nem texto nem arquivo: não há mensagem.
+  assert.equal((await servidor.pedir('/api/netwire/mensagens', { method: 'POST', cookie: mestre, body: { campanha: 'morana', canal: wakako.id, texto: ' ', anexo: { titulo: 'Vazio', texto: '' } } })).status, 400);
+});

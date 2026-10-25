@@ -21,6 +21,8 @@ const MAX_CHANNELS = 60;
 const MAX_MESSAGES = 2000;
 const MAX_TEXT_GM = 4000;
 const MAX_TEXT_PLAYER = 1000;
+// O arquivo anexo (um handout): um documento inteiro cabe.
+const MAX_ATTACHMENT = 20000;
 // O jogador manda no máximo 12 mensagens a cada 10 minutos (por conta).
 const PLAYER_LIMIT = { count: 12, ms: 10 * 60 * 1000 };
 const STATES = ['rascunho', 'agendada', 'entregue'];
@@ -135,6 +137,7 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
     const ids = new Set(channels.map(channel => channel.id));
     const messages = data.mensagens.filter(message => ids.has(message.canal) && delivered(message, at)).map(message => ({
       id: message.id, canal: message.canal, texto: message.texto,
+      ...(message.anexo ? { anexo: { titulo: message.anexo.titulo, texto: message.anexo.texto } } : {}),
       quando: message.estado === 'agendada' ? message.quando : message.quando || message.criada,
       autor: { tipo: message.autor.tipo === 'jogador' ? 'jogador' : 'npc', nome: message.autor.nome, ...(message.autor.conta === me ? { minha: true } : {}) }
     }));
@@ -176,9 +179,18 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
       para: [...new Set((Array.isArray(input.para) ? input.para : base.para || []).map(String).filter(item => /^[\w-]{1,40}$/.test(item)))].slice(0, 20)
     };
   }
+  // O arquivo anexo (um handout, por exemplo): título e texto em Markdown, que a mensagem mostra formatado.
+  function cleanAttachment(value, base) {
+    if (value === null) return null;
+    if (!value || typeof value !== 'object') return base || null;
+    const anexo = { titulo: text(value.titulo, 120), texto: text(value.texto, MAX_ATTACHMENT) };
+    return anexo.texto ? anexo : null;
+  }
   function cleanMessage(input, channel, base = {}) {
     const texto = text(input.texto ?? base.texto, MAX_TEXT_GM);
-    if (!texto) return null;
+    const anexo = cleanAttachment(input.anexo, base.anexo);
+    // A mensagem tem texto, um arquivo, ou os dois.
+    if (!texto && !anexo) return null;
     const estado = STATES.includes(input.estado) ? input.estado : base.estado || 'rascunho';
     const quando = isIso(input.quando) ? new Date(input.quando).toISOString() : input.quando === null ? null : base.quando || null;
     const autorNome = text(input.autor && input.autor.nome, 60) || (base.autor && base.autor.nome) || channel.contato.nome || channel.nome;
@@ -187,11 +199,14 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
       canal: channel.id,
       autor: { tipo: input.autor && input.autor.tipo === 'mestre' ? 'mestre' : 'npc', nome: autorNome },
       texto,
+      ...(anexo ? { anexo } : {}),
       quando: estado === 'agendada' ? quando : estado === 'entregue' ? quando || now() : quando,
       criada: base.criada || now(),
       estado,
       origem: ORIGINS.includes(input.origem) ? input.origem : base.origem || 'mestre',
-      nota: text(input.nota ?? base.nota, 500)
+      nota: text(input.nota ?? base.nota, 500),
+      // O pedido que gerou um rascunho da IA (para "Gerar de novo" e "Variação"): só o mestre vê.
+      ...(base.pedido ? { pedido: base.pedido } : {})
     };
   }
 
@@ -292,14 +307,31 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
       if (method !== 'POST') return json(response, 405, { erro: 'Use POST.' });
       if (!drafter.enabled) return json(response, 503, { erro: 'A IA está desligada: falta a ANTHROPIC_API_KEY ou a GEMINI_API_KEY no servidor.' });
       const before = read(id);
-      const channel = before.canais.find(item => item.id === body.canal);
+      // A partir de um rascunho da IA (base): "regenerar" pede de novo o mesmo e troca o rascunho no lugar dele;
+      // "variar" pede uma versão diferente daquele texto e guarda as duas.
+      let request = body;
+      let source = null;
+      if (body.base) {
+        source = before.mensagens.find(item => item.id === body.base);
+        if (!source) return json(response, 404, { erro: 'Rascunho não encontrado.' });
+        if (source.origem !== 'ia' || !source.pedido) return json(response, 409, { erro: 'Esse rascunho não veio da IA: não há pedido para refazer.' });
+        if (source.estado !== 'rascunho') return json(response, 409, { erro: 'Só dá para refazer um rascunho (este já foi agendado ou entregue).' });
+        const varying = body.modo === 'variar';
+        request = {
+          ...source.pedido, canal: source.canal, quantidade: 1,
+          ...(varying ? { instrucao: `${source.pedido.instrucao ? `${source.pedido.instrucao}\n` : ''}Faça uma versão diferente desta (outro tom, outro detalhe ou outro caminho), sem repeti-la: "${source.texto}"` } : {})
+        };
+      }
+      const channel = before.canais.find(item => item.id === request.canal);
       if (!channel) return json(response, 404, { erro: 'Canal não encontrado.' });
       if (usageToday(before).pedidos >= dailyLimit) return json(response, 429, { erro: `Chegou ao limite de ${dailyLimit} pedidos de hoje à IA nesta campanha.` });
       const at = now();
       const messages = before.mensagens.filter(item => item.canal === channel.id && delivered(item, at));
+      // O que se guarda para refazer depois (sem a instrução da variação, que é desta vez só).
+      const kept = source ? source.pedido : { tipo: request.tipo === 'resposta' ? 'resposta' : 'nova', instrucao: text(request.instrucao, 2000), modelo: String(request.modelo || ''), autor: text(request.autor, 60), contexto: { base: !(request.contexto && request.contexto.base === false), estado: !(request.contexto && request.contexto.estado === false), diario: !(request.contexto && request.contexto.diario === false) } };
       let result;
       try {
-        result = await drafter.draft({ campaign: id, channel, messages, request: body });
+        result = await drafter.draft({ campaign: id, channel, messages, request });
       } catch (error) {
         // Mesmo um pedido que falhou pode ter custado (a recusa, a resposta cortada): conta no uso de hoje.
         if (error.uso) await update(id, data => { recordUsage(data, error.uso); return {}; });
@@ -311,10 +343,12 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
         recordUsage(data, result.uso);
         const created = result.rascunhos.map(item => ({
           id: newId(), canal: channel.id, autor: { tipo: 'npc', nome: item.autor || channel.contato.nome || channel.nome }, texto: item.texto.slice(0, MAX_TEXT_GM),
-          quando: null, criada: now(), estado: 'rascunho', origem: 'ia', nota: text(`${item.nota ? `${item.nota} · ` : ''}IA: ${result.uso.modelo}, ${price}`, 500)
+          quando: null, criada: now(), estado: 'rascunho', origem: 'ia', nota: text(`${item.nota ? `${item.nota} · ` : ''}IA: ${result.uso.modelo}, ${price}`, 500), pedido: kept
         }));
-        data.mensagens.push(...created);
-        return { mensagens: created, uso: result.uso, hoje: usageToday(data) };
+        const index = source && body.modo !== 'variar' ? data.mensagens.findIndex(item => item.id === source.id && item.estado === 'rascunho') : -1;
+        if (index >= 0) data.mensagens.splice(index, 1, ...created);
+        else data.mensagens.push(...created);
+        return { mensagens: created, uso: result.uso, hoje: usageToday(data), ...(index >= 0 ? { substituiu: source.id } : {}) };
       }));
     }
 

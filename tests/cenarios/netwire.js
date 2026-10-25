@@ -194,7 +194,41 @@ module.exports = async ({ edge, r }) => {
       const visao = await (await fetch(`${base}/api/netwire`, { headers: { ...TUNEL, Cookie: cookie } })).text();
       return [/Rascunho do Gemini/.test(visao) && !/NOTA-DA-IA|IA: gemini/.test(visao), ''];
     });
+    await r.passo('IA: "Gerar de novo" troca o rascunho no lugar; "Variação" acrescenta outro', async () => {
+      const cartoes = () => ev(`document.querySelectorAll('.nw-card').length`);
+      const antes = await cartoes();
+      const pedidos = recebidos.length;
+      await ev(`document.querySelector('.nw-card [data-nw-ai-redo]').click()`);
+      // A API falsa conta os pedidos que chegam a ela.
+      for (let i = 0; i < 40 && recebidos.length < pedidos + 1; i++) await edge.sleep(250);
+      const refez = recebidos.length === pedidos + 1;
+      await esperar(`/Rascunho refeito/.test(document.querySelector('.toast-stack')?.textContent || '')`, 20);
+      const mesmoTotal = (await cartoes()) === antes;
+      await ev(`document.querySelector('.nw-card [data-nw-ai-vary]').click()`);
+      const variou = await esperar(`document.querySelectorAll('.nw-card').length === ${antes + 1}`, 40);
+      const pediuDiferente = /versão diferente desta/.test(JSON.stringify(recebidos[recebidos.length - 1].body));
+      return [refez && mesmoTotal && variou && pediuDiferente, `refez ${refez} · mesmo total ${mesmoTotal} · variou ${variou} · pediu diferente ${pediuDiferente}`];
+    });
+    await r.passo('handout: "Mandar pelo NetWire" na página de Handouts chega ao jogador como arquivo', async () => {
+      await ev(`wikiApp.openPage('docHandouts')`);
+      const botao = await esperar(`!!document.querySelector('[data-handout-netwire]')`, 40);
+      if (!botao) return [false, 'sem o botão Mandar pelo NetWire'];
+      const codigo = await ev(`document.querySelector('[data-handout-netwire]').closest('[data-handout]').dataset.handout`);
+      await ev(`document.querySelector('[data-handout-netwire]').click()`);
+      await esperar(`!!document.querySelector('dialog[open] select')`, 20);
+      await ev(`(() => { const s = document.querySelector('dialog[open] select'); s.value = ${JSON.stringify(wakako.id)}; })()`);
+      await confirmar();
+      const marcado = await esperar(`[...document.querySelectorAll('[data-handout="${codigo}"] [data-handout-status]')].some(s => /Mandado pelo NetWire/.test(s.textContent))`, 40);
+      const visao = await (await fetch(`${base}/api/netwire`, { headers: { ...TUNEL, Cookie: cookie } })).json();
+      const arquivo = visao.mensagens.find(item => item.anexo && item.canal === wakako.id);
+      return [marcado && Boolean(arquivo) && !JSON.stringify(visao).includes(`Handout ${codigo}`), `${codigo} · situação ${marcado} · arquivo "${arquivo ? arquivo.anexo.titulo : ''}"`];
+    });
     await edge.shot('caixa');
+    // Como o jogador vê o handout que chegou como arquivo (captura para conferir o visual).
+    await edge.send('Network.setExtraHTTPHeaders', { headers: TUNEL });
+    await edge.ir(`${base}/jogadores.html?arquivo=1#pvMensagens/${wakako.id}`, 1500);
+    await esperar(`!!document.querySelector('.nw-anexo')`, 20);
+    await edge.shot('jogador-arquivo');
   } finally {
     if (servidor) servidor.kill();
     await new Promise(pronto => ia.close(pronto));
