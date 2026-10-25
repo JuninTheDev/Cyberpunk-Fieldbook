@@ -12,6 +12,7 @@ import { config } from './configuracoes.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
 import * as R from './regras.mjs';
 import { testar } from './rolagens.mjs';
+import { ehArremesso, podeArremessar } from './arremessar.mjs';
 import { CANAL, combateDe, conferirArmaVeicular, conferirDestinos, distancia, esc, tokenNaCena } from './combate/apoio.mjs';
 import { resolver } from './combate/modos.mjs';
 import { naFila } from './combate/socket.mjs';
@@ -54,10 +55,12 @@ async function perguntarDestinos(alvos, modo) {
 export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, destinos = null, perguntar = false, movimento = null, pericia: periciaDoGolpe = null } = {}) {
   const atacante = arma.actor;
   if (!atacante) return null;
+  if (pedido === 'arremesso' && !podeArremessar(arma) && arma.system.tipo !== 'thrownWeapon') { ui.notifications.warn('Só uma arma branca solta pode ser arremessada.'); return null; }
+  const arremesso = ehArremesso(arma, pedido);
   // As Artes Marciais pedem pelo menos 1 ponto numa forma (o C10).
   if (arma.motivoSemAtaque) { ui.notifications.warn(`${arma.name}: ${arma.motivoSemAtaque}`); return null; }
   // O Aperto de ferro (Aikido, o C10): agarrado nele, nada de ataques à distância.
-  if (arma.system.aDistancia && atacante.effects.find(e => e.statuses.has(STATUS_AGARRAO.agarrado))?.getFlag(SISTEMA, 'agarrao')?.apertoDeFerro) {
+  if ((arma.system.aDistancia || arremesso) && atacante.effects.find(e => e.statuses.has(STATUS_AGARRAO.agarrado))?.getFlag(SISTEMA, 'agarrao')?.apertoDeFerro) {
     ui.notifications.warn(`${atacante.name} está no Aperto de ferro: nada de ataques à distância enquanto agarrado.`);
     return null;
   }
@@ -75,10 +78,10 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
     return false;
   };
   if (!conferirMira()) return null;
-  const pelaArma = { aDistancia: arma.system.aDistancia, tipoDeArma: arma.perfilPelaMunicao?.tipo ?? arma.system.tipo, municao: municao?.system.tipo };
+  const pelaArma = { aDistancia: arma.system.aDistancia || arremesso, tipoDeArma: arma.perfilPelaMunicao?.tipo ?? arma.system.tipo, municao: municao?.system.tipo };
   // O ricochete de um cartucho (o Kit) continua cartucho: o leque sai da superfície do ricochete.
   const pelaMunicao = R.classificar(pelaArma);
-  const modo = pedido === 'ricochete' && pelaMunicao === 'cartucho' ? 'cartucho' : R.classificar({ pedido, ...pelaArma });
+  const modo = arremesso ? pelaMunicao : pedido === 'ricochete' && pelaMunicao === 'cartucho' ? 'cartucho' : R.classificar({ pedido, ...pelaArma });
   if (!conferirArmaVeicular(arma, modo)) return null;
   const montada = Boolean(arma.system.instaladoEm || arma.getFlag(SISTEMA, 'armaVeicular'));
   const tokenAtq = tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
@@ -111,14 +114,14 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const balasDaCarga = comPente && carga ? R.balasDaCarga({ modo, perfil, pente: arma.system.pente.value }) : null;
   const balas = comPente ? (balasDaCarga ?? porTiro?.balas ?? R.balasDoModo(modo, { autofogo: perfil?.balasDoAutofogo, doisCanos })) : 0;
   if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
-  const { pericia, partes } = arma.partesDoAtaque(modo, { pericia: periciaDoGolpe });
+  const { pericia, partes } = arma.partesDoAtaque(arremesso ? 'arremesso' : modo, { pericia: periciaDoGolpe });
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
   // O ricochete (o Kit): −4, ou −2 com o Ballistic Coprocessor; num tiro mirado, só a penalidade do mirado.
   const ricochete = pedido === 'ricochete' ? { penalidade: R.penalidadeDoRicochete({ coprocessador: atacante.temCoprocessador, mirado: Boolean(R.LOCAIS_MIRADOS[local]) }), cartucho: modo === 'cartucho' } : null;
   if (ricochete?.penalidade) partes.push({ rotulo: atacante.temCoprocessador ? 'Ricochete (Ballistic Coprocessor)' : 'Ricochete', valor: ricochete.penalidade });
   const golpe = R.MOVIMENTOS[movimento]?.teste === 'ataque' ? R.MOVIMENTOS[movimento] : null;
-  const descricao = `${golpe ? `${golpe.nome}, ` : ''}${R.descreverAtaque({ modo, local, doisCanos, ricochete, carga })}`;
+  const descricao = arremesso ? 'Arremesso' : `${golpe ? `${golpe.nome}, ` : ''}${R.descreverAtaque({ modo, local, doisCanos, ricochete, carga })}`;
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
   // Os situacionais (a luneta, pela distância do primeiro alvo) e a janela de rolagem: fechada ou cancelada, não ataca nem
   // gasta bala. Sem a janela, entram os ligados por padrão.
@@ -152,7 +155,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   }
   if (montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const dados = {
-    id: foundry.utils.randomID(), modo, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
+    id: foundry.utils.randomID(), modo, arremesso, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
     carga, doisCanos, porTiro, ricochete, ferrolho, destinos, movimento: golpe ? movimento : null,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };

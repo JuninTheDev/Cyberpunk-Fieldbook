@@ -8211,6 +8211,55 @@ e 3 do C34 (os ciclos 158 a 161 da sessão Codex) já na branch. Com ela, o C34 
   QUALITY_GATES: o `__esperar` não falha); o passo passou a conferir, e as duas caíram.
 - **Próximo:** a conta do hospital (parte 4, segundo ciclo).
 
+### Ciclo 168 (2026-10-25): o C37, arremessar (sessão KouArt, com o Codex)
+
+Commit anterior: `50a6869d` (o ciclo 166, o C34 parte 1). O código e os testes saíram do Codex (`codex exec`, numa
+worktree própria a partir do `1c4be022`), revisados e integrados aqui pelo patch. A primeira tentativa (de 2026-10-22)
+se perdeu com a limpeza da pasta de rascunho: ela passava no G1 a G3, mas um passo do G4 falhava, e o relatório do G4
+cortava o JSON antes do motivo. Desta vez o passo devolve só os campos que confere, e o motivo apareceu de primeira (ver
+abaixo).
+
+- **As fontes:** a wiki (`system-rules.js:16-24`, as faixas e a linha `grenade`; `:516`, o teto de 25 m; `:535`, DEX +
+  Atletismo e o SP inteiro da arma branca arremessada; `:522`, a faca leve 1d6; `:521`, a explosão de 10 × 10 m, o dano
+  rolado uma vez e a esquiva de cada um; `system-catalog.js:153`, o lança-granadas 6d6; `:188-201`, as munições de
+  granada) e o CORE 0.92.4 (`cpr-attackable.js:95-102`, a Thrown Weapon com DEX; o item
+  `weapon.thrown.weapon.yaml` dos compêndios, a granada de mão com 6d6, a Atletismo e a munição de granada).
+- **O que muda:**
+  - **`scripts/arremesso-regras.mjs` (novo, sem Foundry):** a base DEX + Atletismo, a DV pela distância na linha do
+    arremesso e o teto de 25 m;
+  - **`scripts/arremessar.mjs` (novo):** `podeArremessar` (a arma branca solta, fora de cyberware, acessório e veículo),
+    `ehArremesso` (também a Thrown Weapon), a DV, o SP inteiro e o "Dano do arremesso" do cartão manual (recusa a
+    munição sem dano);
+  - **o fluxo do ataque** (`combate.mjs`, `combate/modos.mjs`, `combate/cartao.mjs`, `documentos.mjs`): o modo
+    `arremesso` ataca com DEX + Atletismo e os modificadores de ataque à distância, pela DV e pelo alcance do arremesso,
+    com o SP inteiro no dano; a granada usa a área e a munição do explosivo; o Aperto de ferro também impede o
+    arremesso; o cartão guarda o arremesso para o dano manual (`rolagens.mjs` leva o contexto no cartão do dano);
+  - **a ficha:** o botão Arremessar na linha da arma branca (`data-action="atacar" data-modo="arremesso"`).
+- **Na integração:** a descrição do ataque passou de "arremesso" para "Arremesso", como as outras ("Tiro",
+  "Autofogo"); os três passos novos do G4 chamavam `game.user.updateTokenTargets`, que não existe no Foundry 14, e
+  passaram a marcar o alvo pelo `canvas.tokens.setTargets` (`client/canvas/layers/tokens.mjs:341`). Era a falha que a
+  primeira tentativa não deixou ver.
+- **Dúvidas** (a fonte não define): onde a arma arremessada vai parar, se volta ou se perde, fica com o mestre (ela
+  continua na ficha); a granada que erra cai onde o mestre decidir, pelo fluxo do explosivo; nenhum dano foi inventado
+  para objetos que não são armas. A Thrown Weapon do CORE aponta para a tabela `DV Thrown Weapon`, que até 25 m é a mesma
+  linha do lança-granadas da wiki.
+- **Testes:**
+  - **G3:** `arremessar.test.mjs` (novo, 15 testes: a soma, as faixas lidas da própria wiki, o teto de 25 m, as entradas
+    inválidas, quem pode arremessar, o SP inteiro, o golpe normal intacto, o contexto do dano manual, a recusa das sete
+    munições sem dano, a arma relida depois da espera);
+  - **G4:** três passos novos, depois do "corpo a corpo: DEX + Arma Branca": a faca pelo botão da ficha a 5 m (DV16) e
+    pela API a 20 m (DV15) e a 30 m (fora), 6 contra SP 3 (3 de HP e 1 de SP) e o Desfazer; o dano manual pelos botões
+    do chat, com o SP inteiro e o Desfazer; a granada de mão (a Thrown Weapon com munição perfurante), 6d6 na área, o
+    alvo dentro, o de fora intacto, o que esquiva saindo, o consumo e o Desfazer.
+- **Portões:** G1, 229 arquivos sem erro; G2, nenhum erro; G3, 523/523; G4 completo, 269/269, com a checagem dos dois
+  navegadores sem avisos ou erros de JS. Depois de juntar o ciclo 167 da sessão Junin (publicado enquanto este rodava; por isso este é o 168),
+  de novo na árvore juntada: G1, 232 arquivos; G2, nenhum erro; G3, 528/528; G4, 270/270.
+- **Mutações:** as oito do Codex caíram, uma por vez, e os arquivos voltaram exatos: no G3, a base que subtrai o
+  Atletismo (M1), os 25 m fora (M2), a tabela da pistola (M3) e a metade do SP (M5); no G4, o arremesso com REF (M4), o
+  dano manual que perde o arremesso (M6), o botão que ataca como tiro (M7) e a granada sem a área (M8).
+- **Próximo:** os itens abertos da Fase 7: o C35 (a cena da arquitetura), o C41 parte 4 (com a sessão Junin) e o
+  C42 a C44 (o bom de ter).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

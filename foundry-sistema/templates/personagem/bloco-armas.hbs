@@ -16,6 +16,7 @@ para a barra vira a macro do ataque (o C20). O pente recarrega, troca de muniç�
         <td>{{#if sistema.pente.max}}{{sistema.pente.value}}/{{sistema.pente.max}}{{#if municao}} <small>{{municao}}</small>{{/if}}{{else}}—{{/if}}</td>
         <td class="acoes"><div class="botoes">
           <button type="button" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">Atacar</button>
+          {{#if podeArremessar}}<button type="button" data-action="atacar" data-modo="arremesso" data-tooltip="DEX + Atletismo, até 25 m; a armadura usa o SP inteiro">Arremessar</button>{{/if}}
           <button type="button" data-action="mirar" data-tooltip="Mirado (−8): cabeça, perna ou item na mão">Mirar</button>
           {{#if sistema.autofogo}}<button type="button" data-action="atacar" data-modo="autofogo" data-tooltip="Autofogo (×{{sistema.autofogo}}): {{balasAutofogo}} balas">Autofogo</button>{{/if}}
           {{#if sistema.supressivo}}<button type="button" data-action="atacar" data-modo="supressivo" data-tooltip="Fogo supressivo: 10 balas, todos a até 25 m">Supressivo</button>{{/if}}

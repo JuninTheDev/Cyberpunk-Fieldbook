@@ -16,6 +16,7 @@ import { modoDaMesa } from './mesa.mjs';
 import { avisarCiberpsicose, estadoMental } from './terapia.mjs';
 import { rolarDano, testar } from './rolagens.mjs';
 import { rolarReputacao } from './reputacao.mjs';
+import { ehArremesso } from './arremessar.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
 import { ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
@@ -923,13 +924,14 @@ export class ItemCPR extends Item {
   // pericia: a de um golpe das Artes Marciais (a forma do movimento; artes-marciais.mjs), no lugar da da arma.
   partesDoAtaque(modo = null, { pericia: periciaDoGolpe = null } = {}) {
     const ator = this.actor;
-    const atributo = this.system.aDistancia ? 'ref' : 'dex';
-    const pericia = ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : periciaDoGolpe ?? this.periciaDaArma;
+    const arremesso = ehArremesso(this, modo);
+    const atributo = arremesso ? 'dex' : this.system.aDistancia ? 'ref' : 'dex';
+    const pericia = arremesso ? 'athletics' : ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : periciaDoGolpe ?? this.periciaDaArma;
     const { pericia: p, partes } = ator.partesDaPericia(pericia, { situacionais: [] });
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
     if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
     if (this.system.aDistancia && this.perfil2077?.smart) partes.push({ rotulo: 'Arma Smart', valor: BONUS_SMART });
-    const daLesao = this.system.aDistancia ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
+    const daLesao = this.system.aDistancia || arremesso ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
     if (daLesao) partes.push({ rotulo: 'Lesões', valor: daLesao });
     if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });
     // A coronha retrátil recolhida (a Dian, de 2077): dá para esconder a arma, mas o ataque leva −1 até estender.

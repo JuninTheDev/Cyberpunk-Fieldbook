@@ -22,6 +22,7 @@ import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem, podeEdita
 import { alternarRecolhida, apagarComInstalados, descarregaAoApagar, divisaoDaPilha, marcarRecolhidas, passaNaBusca } from './regras-inventario.mjs';
 import { controlesDoEfeito, estadoDoEfeito, resumoDasMudancas, usoQueLiga } from './regras-efeitos.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
+import { podeArremessar } from './arremessar.mjs';
 import { trocarMunicao } from './painel/acoes.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
@@ -269,6 +270,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       const de2077 = acoesDe2077(arma);
       const { partes } = arma.partesDoAtaque(null);
       return { id: arma.id, nome: arma.name, img: arma.img, sistema: arma.system, dano: arma.danoDaArma, ataque: partes.reduce((soma, p) => soma + p.valor, 0), municao: arma.municaoCarregada?.name ?? '', qualidade: QUALIDADES[arma.system.qualidade] ?? '', acessorios: arma.instalados.map(item => item.name).join(', '), favorito: favorito(arma),
+        podeArremessar: podeArremessar(arma),
         classe2077: CLASSES_2077[arma.perfil2077?.classe] ?? '', modos2077: de2077.modos, alternar2077: de2077.alternar, avisos2077: de2077.avisos,
         dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo, soAutofogo: Boolean(arma.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
         // A arma do cyberware instalado (o C11) está sempre pronta, sem ocupar as mãos; a do acessório, com a arma onde ele

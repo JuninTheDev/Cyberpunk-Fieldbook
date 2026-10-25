@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 167). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 169). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -367,7 +367,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [x] **C36. Estabilizar e a cura natural:** feito no ciclo 165 (sessão KouArt, com um worker, 2026-10-25) (p. 222–223, `:552`): TECH + Primeiros Socorros ou Paramédico contra DV10,
   13 ou 15 pelo ferimento; o mortal estabilizado volta a 1 HP, inconsciente por 1 minuto; descansar um dia devolve HP
   igual ao BODY (o Skin Weave e o Subdermal Armor, +1 SP por dia; o Reinforced Antibodies, o dobro).
-- [~] **C37. Arremessar** (sessão KouArt, com o Codex, 2026-10-22) (p. 177, `:535`): DEX + Atletismo + 1d10, até 25 m, contra a DV da linha do lança-granadas;
+- [x] **C37. Arremessar:** feito no ciclo 168 (sessão KouArt, com o Codex, 2026-10-25) (p. 177, `:535`): DEX + Atletismo + 1d10, até 25 m, contra a DV da linha do lança-granadas;
   a granada de mão pela área.
 - [x] **C38. Os perigos do ambiente:** feito no ciclo 156 (sessão Junin, com o Codex, 2026-10-23) (p. 180–181, `:555-563`):
   a janela "Perigo do ambiente" do mestre (o `/perigo` e o botão no HUD do token) aplica a queda, o fogo pela intensidade

@@ -8,6 +8,7 @@ import { escolherLesao, lesaoCritica } from '../lesoes.mjs';
 import { desfazerMunicao, escolherEmp, encerrarEfeitos, apagarFogo } from '../municoes.mjs';
 import { aplicarDanoDeNet } from '../net.mjs';
 import { desfazerEscudoHumano } from '../escudo-humano.mjs';
+import { rolarDanoDoArremesso } from '../arremessar.mjs';
 import * as R from '../regras.mjs';
 import { CANAL, STATUS_SUPRIMIDO, ROTULO, conferirArmaVeicular, renderizar } from './apoio.mjs';
 import { ferir, linhaDe } from './modos.mjs';
@@ -34,7 +35,7 @@ export async function cartaoDoResultado(ctx) {
     receptor: l.token.actor?.uuid ?? null
   }));
   const resumo = {
-    id: ctx.pedido.id, modo: ctx.modo, descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, segundaChance: ctx.segundaChance ?? null, atacante: ctx.nomeAtq, arma: ctx.arma.name,
+    id: ctx.pedido.id, modo: ctx.modo, arremesso: Boolean(ctx.pedido.arremesso), descricao: ctx.descricao, local: ctx.local, ataque: ctx.pedido.total, segundaChance: ctx.segundaChance ?? null, atacante: ctx.nomeAtq, arma: ctx.arma.name,
     cabecalho: ctx.cabecalho, notas: ctx.notas, falhaDaArma: ctx.falhaDaArma ?? null, linhas
   };
   const desfazer = ctx.linhas.filter(l => l.dano || l.cadaver?.perdeu || l.veicular?.perdeu || l.veicular?.ablado || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
@@ -43,9 +44,10 @@ export async function cartaoDoResultado(ctx) {
     dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, armaduras: l.dano.armaduras, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
   }));
   if (ctx.lesoesDoAtirador?.length) desfazer.push({ ator: ctx.atacante.uuid, suprimido: false, municao: null, lesoes: ctx.lesoesDoAtirador, dano: null });
-  const content = await renderizar('ataque.hbs', { ...resumo, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 || (ctx.devolver?.length ?? 0) > 0 });
+  const danoDoArremesso = resumo.arremesso && ctx.pedido.total !== null && config('dano') === 'manual' && !R.MUNICAO_SEM_DANO[ctx.arma.municaoCarregada?.system.efeito] && linhas.some(l => l.resultado === 'acertou');
+  const content = await renderizar('ataque.hbs', { ...resumo, danoDoArremesso, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 || (ctx.devolver?.length ?? 0) > 0 });
   const para = destinatarios(ctx);
-  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [] } } });
+  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, ...(danoDoArremesso ? { armaDoArremesso: ctx.arma.uuid } : {}), desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [] } } });
   mostrarNaMesa(ctx, para);
   return resumo;
 }
@@ -138,12 +140,13 @@ export async function aplicarDanoDoCartao(mensagem) {
   if (!dados || !game.user.isGM) return null;
   const arma = await fromUuid(dados.arma);
   if (!arma?.actor) { ui.notifications.warn('A arma deste dano não está mais na ficha.'); return null; }
+  if (dados.arremesso && R.MUNICAO_SEM_DANO[arma.municaoCarregada?.system.efeito]) { ui.notifications.warn('Esta munição aplica seu efeito, sem o dano da arma.'); return null; }
   if (!conferirArmaVeicular(arma, 'tiro')) return null;
   const alvos = alvosComHp();
   if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) do dano.'); return null; }
   const ctx = {
-    pedido: { id: foundry.utils.randomID(), total: null }, usuario: game.user, arma, atacante: arma.actor, tokenAtq: null, cena: alvos[0].parent, alvos,
-    modo: 'tiro', local: 'corpo', descricao: 'dano rolado à parte', nomeAtq: arma.actor.name, perfil: null, linhas: [], rolagens: [], marcas: [],
+    pedido: { id: foundry.utils.randomID(), total: null, arremesso: Boolean(dados.arremesso) }, usuario: game.user, arma, atacante: arma.actor, tokenAtq: null, cena: alvos[0].parent, alvos,
+    modo: dados.arremesso && dados.modoDoArremesso === 'explosivo' ? 'explosivo' : 'tiro', local: 'corpo', descricao: dados.arremesso ? 'dano do arremesso' : 'dano rolado à parte', nomeAtq: arma.actor.name, perfil: null, linhas: [], rolagens: [], marcas: [],
     notas: dados.critico ? ['Crítico: a lesão sai pelo botão "Rolar a lesão" do cartão do dano.'] : [], cabecalho: `${dados.total} de dano${dados.critico ? ', crítico' : ''}, no corpo`
   };
   for (const token of alvos) {
@@ -202,6 +205,7 @@ export function ligarBotoes(mensagem, html) {
         else if (botao.dataset.cprfAcao === 'responder') await desistir(botao.dataset.pedido, { escolha: botao.dataset.escolha, forcada: true });
         else if (botao.dataset.cprfAcao === 'aplicarNet') await aplicarDanoDeNet(mensagem, botao.dataset.onde);
         else if (botao.dataset.cprfAcao === 'aplicarDano') await aplicarDanoDoCartao(mensagem);
+        else if (botao.dataset.cprfAcao === 'rolarDanoArremesso') await rolarDanoDoArremesso(mensagem);
         else if (botao.dataset.cprfAcao === 'rolarLesao') await rolarLesaoDoCartao(mensagem);
         else if (botao.dataset.cprfAcao === 'escolherLesao') await escolherLesao(mensagem, botao.dataset.lesao);
         else if (botao.dataset.cprfAcao === 'aplicarHumanidade') await aplicarPerdaDeHumanidade(mensagem);

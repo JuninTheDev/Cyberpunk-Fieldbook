@@ -90,7 +90,7 @@ export async function executarComandoRed(mensagem, ator = null) {
 // Lesão Crítica). Com a janela
 // (perguntar), o modificador do mestre; fechada, null. paraAplicar: o dano rolado à parte (o botão "Dano" da ficha), com
 // os botões do mestre no cartão (combate.aplicarDanoDoCartao e rolarLesaoDoCartao); o do fluxo do ataque, não.
-export async function rolarDano(arma, { falar = false, modo, formula = null, multiplicador = 1, perguntar = false, aoAbrir = null, paraAplicar = false } = {}) {
+export async function rolarDano(arma, { falar = false, modo, formula = null, multiplicador = 1, perguntar = false, aoAbrir = null, paraAplicar = false, arremesso = false, modoDoArremesso = null } = {}) {
   // A Briga e as Artes Marciais rolam o dano pelo BODY do dono (o C10; ItemCPR.danoDaArma).
   const base = formula || (arma.danoDaArma ?? arma.system.dano) || '0';
   let modificador = 0;
@@ -107,8 +107,8 @@ export async function rolarDano(arma, { falar = false, modo, formula = null, mul
   const resultado = { roll, total: roll.total, critico, bonus: critico ? bonusDoCritico(arma.perfil2077) : 0, resultados, formula: expressao };
   if (falar) {
     const botoes = paraAplicar ? [{ acao: 'aplicarDano', rotulo: 'Aplicar dano' }, ...(critico ? [{ acao: 'rolarLesao', rotulo: 'Rolar a lesão' }] : [])] : [];
-    const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, botoes, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
-    const flags = paraAplicar ? { [SISTEMA]: { danoDeArma: { arma: arma.uuid, total: roll.total, bonus: resultado.bonus, critico, formula: expressao } } } : {};
+    const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${arremesso ? ' (arremesso)' : ''}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, botoes, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
+    const flags = paraAplicar ? { [SISTEMA]: { danoDeArma: { arma: arma.uuid, total: roll.total, bonus: resultado.bonus, critico, formula: expressao, ...(arremesso ? { arremesso: true, modoDoArremesso } : {}) } } } : {};
     resultado.mensagem = await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: arma.actor }), content, rolls: [roll], flags }, { messageMode: modo });
   }
   return resultado;

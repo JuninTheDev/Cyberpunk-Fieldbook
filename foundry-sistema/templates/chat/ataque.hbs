@@ -50,5 +50,6 @@
     {{/each}}
   </ol>
   {{#each notas}}<p class="nota">{{this}}</p>{{/each}}
+  {{#if danoDoArremesso}}<div class="botoes"><button type="button" data-cprf-acao="rolarDanoArremesso">Dano do arremesso</button></div>{{/if}}
   {{#if desfazer}}<div class="botoes"><button type="button" data-cprf-acao="desfazer">Desfazer</button></div>{{/if}}
 </div>

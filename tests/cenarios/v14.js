@@ -6289,6 +6289,153 @@ module.exports = async ({ edge, servidores, r }) => {
         && !p.notas.includes('em cobertura') && !s.notas.includes('em cobertura'), JSON.stringify(info)];
     });
 
+    // Wiki, system-rules.js:24, :516, :521 e :535: linha do lança-granadas, teto de 25 m e SP inteiro.
+    // O cenário tem documentos próprios: não depende da cena que o passo anterior deixou aberta.
+    const comArremessos = async teste => {
+      await edge.evaluate(`(() => { window.__c37Dados = { random: CONFIG.Dice.randomUniform, fila: window.__fila }; return true; })()`);
+      try {
+        await fixar(edge, []);
+        return await edge.evaluate(`(async () => {
+      const esperar = async f => { for (let i = 0; i < 80 && !f(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(f()); };
+      const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id,
+        alvos: [...game.user.targets].map(t => t.id), mensagens: game.messages.map(m => m.id),
+        config: Object.fromEntries(['ativo', 'area', 'dano', 'defesaDosNpcs', 'exigeRef8', 'rolarDireto', 'animacoes', 'resultado'].map(k => [k, game.settings.get('${S}', k)])) };
+      const atores = [];
+      let cena;
+      try {
+        for (const [k, v] of Object.entries({ ativo: true, area: true, dano: 'automatico', defesaDosNpcs: 'automatica', exigeRef8: true, rolarDireto: true, animacoes: 'nao', resultado: 'publico' })) await game.settings.set('${S}', k, v);
+        const cat = await game.system.api.wiki.carregarCatalogo(), pegar = id => foundry.utils.deepClone(cat[id]);
+        const criar = async dados => { const a = await Actor.implementation.create(dados); atores.push(a); return a; };
+        const faca = pegar('core_weapons:light-melee'); faca.name = 'C37 Faca'; faca.system.equipada = true;
+        const protecao = pegar('core_armor:light-armorjack-body'); protecao.system.equipada = true; protecao.system.sp.corpo.value = 3;
+        const a = await criar({ name: 'C37 Arremessadora', type: 'personagem', system: { atributos: { dex: { valor: 7 }, ref: { valor: 2 } }, pericias: { athletics: { nivel: 4 }, 'melee-weapon': { nivel: 1 } } }, items: [faca] });
+        const alvo = await criar({ name: 'C37 Alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 }, ref: { valor: 0 } } }, items: [protecao] });
+        cena = await Scene.implementation.create({ name: 'C37 Arremessos', active: false, width: 3800, height: 1600, grid: { size: 100, distance: 1, units: 'm' } });
+        await cena.activate();
+        await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        for (const [ator, x] of [[a, 100], [alvo, 600]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 500, actorLink: true })).toObject()]);
+        await esperar(() => canvas.tokens.placeables.length === 2);
+        const arma = a.items.getName('C37 Faca'), armadura = alvo.items.find(i => i.type === 'armadura');
+        const token = cena.tokens.find(t => t.actorId === alvo.id), estado = () => [alvo.system.hp.value, armadura.system.sp.corpo.value];
+        const dados = fila => { window.__fila = fila; };
+        const cartaoDe = r => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === r?.id);
+        return await (${teste})({ a, alvo, arma, armadura, token, cena, pegar, criar, esperar, dados, estado, cartaoDe });
+      } finally {
+        for (const ator of atores) { for (const item of ator.items) await item.sheet?.close(); await ator.sheet?.close(); }
+        await cena?.delete();
+        for (const ator of atores) await ator.delete();
+        for (const m of game.messages.filter(m => !antes.mensagens.includes(m.id))) await m.delete();
+        for (const [k, v] of Object.entries(antes.config)) await game.settings.set('${S}', k, v);
+        if (game.scenes.has(antes.ativa)) await game.scenes.get(antes.ativa).activate();
+        if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
+        canvas.tokens.setTargets(antes.alvos);
+      }
+        })()`);
+      } finally {
+        await edge.evaluate(`(() => { const salvo = window.__c37Dados; if (salvo) { CONFIG.Dice.randomUniform = salvo.random; window.__fila = salvo.fila; } delete window.__c37Dados; return true; })()`);
+      }
+    };
+
+    // O relatório corta em 220 caracteres: mostre os dois primeiros campos divergentes, sem HTML nem o resumo inteiro.
+    const conferirArremessos = campos => {
+      const falhas = Object.entries(campos).filter(([, [lido, esperado]]) => JSON.stringify(lido) !== JSON.stringify(esperado));
+      const primeiras = falhas.slice(0, 2).map(([campo, [lido]]) => [campo, typeof lido === 'string' || Array.isArray(lido) ? String(lido).slice(0, 50) : lido ?? null]);
+      return [!falhas.length, JSON.stringify({ falhas: falhas.length, primeiras })];
+    };
+
+    await r.passo('arremesso (C37): a faca da aba Combate usa DEX + Atletismo; 5 m DV16, 20 m DV15 e 30 m fora do alcance; SP inteiro e Desfazer', async () => {
+      // Wiki, system-rules.js:522 e :535: faca leve 1d6; arremessada, 6 contra SP3 tira 3 HP e 1 SP.
+      const info = await comArremessos(`async ({ a, alvo, arma, token, esperar, dados, estado, cartaoDe }) => {
+        await a.sheet.render({ force: true });
+        const seletor = '.tab.combate tr[data-item-id="' + arma.id + '"] [data-action="atacar"][data-modo="arremesso"]';
+        await esperar(() => a.sheet.element?.querySelector(seletor));
+        const botao = a.sheet.element?.querySelector(seletor), casos = [];
+        for (const metros of [5, 20, 30]) {
+          await token.update({ x: 100 + metros * 100 }, { animate: false });
+          dados([[8, 10], [6, 6]]);
+          let r;
+          if (metros === 5 && botao) {
+            const mensagens = game.messages.map(m => m.id);
+            canvas.tokens.setTargets([token.id]);
+            botao.click();
+            await esperar(() => game.messages.some(m => !mensagens.includes(m.id) && m.getFlag('cpr-fieldbook', 'ataque')?.arma === arma.name));
+            r = game.messages.find(m => !mensagens.includes(m.id) && m.getFlag('cpr-fieldbook', 'ataque')?.arma === arma.name)?.getFlag('cpr-fieldbook', 'ataque');
+          } else r = await arma.atacar({ modo: 'arremesso', alvo: token, destinos: {} });
+          const m = cartaoDe(r), l = r?.linhas[0], texto = new DOMParser().parseFromString(m?.content ?? '', 'text/html').body.textContent.replace(/\\s+/g, ' ').trim();
+          const formula = game.messages.contents.filter(m => m.getFlag('cpr-fieldbook', 'teste')?.ataque).at(-1)?.rolls[0]?.formula;
+          const depois = estado(), desfeito = l?.dano ? await game.system.api.combate.desfazer(m) : null;
+          casos.push({ metros: l?.metros, dv: l?.dv, resultado: l?.resultado, ataque: r?.ataque, modo: r?.modo, arremesso: r?.arremesso, formula,
+            dano: l?.dano ? [l.dano.dano, l.dano.spEfetivo, l.dano.recebido, l.dano.ablado] : null,
+            cartao: metros === 30 ? texto.includes('fora do alcance') : texto.includes('Dano 6 contra SP 3'), depois, desfeito, voltou: estado(), fila: window.__fila.length });
+        }
+        return { botao: Boolean(botao), arma: [arma.system.dano, arma.system.ignorarArmadura], casos, hp: alvo.system.hp.value };
+      }`);
+      const [cinco, vinte, trinta] = info.casos;
+      const campos = { botao: [info.botao, true], arma: [info.arma, ['1d6', 50]], hp: [info.hp, 80] };
+      for (const [c, metros, dv] of [[cinco, 5, 16], [vinte, 20, 15], [trinta, 30, null]]) {
+        const fora = metros === 30;
+        for (const [chave, esperado] of Object.entries({ metros, dv, resultado: fora ? 'fora' : 'acertou', ataque: 19, modo: 'tiro', arremesso: true, formula: '1d10crit + 7 + 4',
+          dano: fora ? null : [6, 3, 3, 1], cartao: true, depois: fora ? [80, 3] : [77, 2], desfeito: fora ? null : true, voltou: [80, 3], fila: fora ? 1 : 0 })) campos[metros + '.' + chave] = [c?.[chave], esperado];
+      }
+      return conferirArremessos(campos);
+    });
+
+    await r.passo('arremesso (C37), Dano manual: o botão do cartão conserva o arremesso no dano, aplica contra SP inteiro e permite Desfazer', async () => {
+      const info = await comArremessos(`async ({ arma, token, esperar, dados, estado, cartaoDe }) => {
+        await game.settings.set('cpr-fieldbook', 'dano', 'manual');
+        dados([[8, 10], [6, 6]]);
+        const r = await arma.atacar({ modo: 'arremesso', alvo: token, destinos: {} }), ataque = cartaoDe(r);
+        const seletor = '[data-message-id="' + ataque?.id + '"] [data-cprf-acao="rolarDanoArremesso"]';
+        await esperar(() => document.querySelector(seletor));
+        const botao = document.querySelector(seletor), semDano = estado(), fila = window.__fila.length, mensagens = game.messages.map(m => m.id);
+        botao?.click();
+        await esperar(() => game.messages.some(m => !mensagens.includes(m.id) && m.getFlag('cpr-fieldbook', 'danoDeArma')?.arma === arma.uuid));
+        const dano = game.messages.find(m => !mensagens.includes(m.id) && m.getFlag('cpr-fieldbook', 'danoDeArma')?.arma === arma.uuid);
+        const contexto = dano?.getFlag('cpr-fieldbook', 'danoDeArma'), aplicar = '[data-message-id="' + dano?.id + '"] [data-cprf-acao="aplicarDano"]';
+        await esperar(() => document.querySelector(aplicar));
+        const botaoAplicar = document.querySelector(aplicar);
+        canvas.tokens.setTargets([token.id]);
+        botaoAplicar?.click();
+        await esperar(() => game.messages.some(m => !mensagens.includes(m.id) && m.getFlag('cpr-fieldbook', 'ataque')));
+        const m = game.messages.find(m => !mensagens.includes(m.id) && m.getFlag('cpr-fieldbook', 'ataque')), aplicado = m?.getFlag('cpr-fieldbook', 'ataque'), l = aplicado?.linhas[0];
+        const depois = estado(), desfeito = m ? await game.system.api.combate.desfazer(m) : false;
+        return { botao: Boolean(botao), aplicar: Boolean(botaoAplicar), acertou: r?.linhas[0]?.resultado, semDano, fila,
+          contexto: [contexto?.arremesso, contexto?.total, contexto?.formula], aplicado: [aplicado?.arremesso, l?.dano?.spEfetivo, l?.dano?.recebido, l?.dano?.ablado], depois, desfeito, voltou: estado(), sobrou: window.__fila.length };
+      }`);
+      return conferirArremessos({ botao: [info.botao, true], aplicar: [info.aplicar, true], acertou: [info.acertou, 'acertou'], semDano: [info.semDano, [80, 3]], fila: [info.fila, 1],
+        contexto: [info.contexto, [true, 6, '1d6']], aplicado: [info.aplicado, [true, 3, 3, 1]], depois: [info.depois, [77, 2]], desfeito: [info.desfeito, true], voltou: [info.voltou, [80, 3]], sobrou: [info.sobrou, 0] });
+    });
+
+    await r.passo('arremesso (C37), granada de mão: Thrown Weapon usa DEX + Atletismo, 6d6 e munição perfurante; área de 10 × 10 m, quem esquiva sai e quem está fora fica intacto', async () => {
+      // CORE, .cache/cpr-core-v0.92.4/src/packs/core/weapons/weapon.thrown.weapon.yaml:12–13, :21 e :62: granada, 6d6 e Atletismo.
+      // Wiki, system-catalog.js:190 e system-rules.js:521: perfurante abla 2; a área é 10 × 10 m e a esquiva deve superar o ataque.
+      const info = await comArremessos(`async ({ a, alvo, armadura, token, cena, pegar, criar, esperar, dados, cartaoDe }) => {
+        const dentro = await criar({ name: 'C37 Dentro', type: 'personagem', system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 }, ref: { valor: 0 } } } });
+        const fora = await criar({ name: 'C37 Fora', type: 'personagem', system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 }, ref: { valor: 0 } } } });
+        const esquiva = await criar({ name: 'C37 Esquiva', type: 'personagem', system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 }, ref: { valor: 8 }, dex: { valor: 8 } }, pericias: { evasion: { nivel: 6 } } } });
+        await token.update({ x: 2100 }, { animate: false });
+        for (const [ator, x, y] of [[dentro, 2500, 500], [fora, 2700, 500], [esquiva, 2100, 900]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y, actorLink: true })).toObject()]);
+        await esperar(() => canvas.tokens.placeables.length === 5);
+        const granada = pegar('core_ammo:grenade-armor-piercing'); granada.system.quantidade = 1;
+        const arremesso = pegar('core_weapons:thrown-weapon'); arremesso.system.equipada = true;
+        const criados = await a.createEmbeddedDocuments('Item', [arremesso, granada]), arma = criados.find(i => i.type === 'arma'), municao = criados.find(i => i.type === 'municao');
+        await arma.recarregar();
+        dados([[9, 10], [9, 10], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6], [3, 6]]);
+        const r = await arma.atacar({ alvo: token, destinos: {} }), m = cartaoDe(r);
+        const linhas = r?.linhas.map(l => ({ nome: l.nome.replace('C37 ', ''), resultado: l.resultado, defesa: l.defesa, recebido: l.dano?.recebido ?? null, ablado: l.dano?.ablado ?? null }));
+        const hp = [alvo.system.hp.value, dentro.system.hp.value, fora.system.hp.value, esquiva.system.hp.value], sp = armadura.system.sp.corpo.value;
+        const desfeito = m ? await game.system.api.combate.desfazer(m) : false;
+        return { modo: r?.modo, arremesso: r?.arremesso, ataque: r?.ataque, area: r?.cabecalho, formula: m?.rolls[0]?.formula, perfil: [arma.danoDaArma, arma.tabelaDaArma],
+          linhas, hp, sp, pente: arma.system.pente.value, estoque: municao.system.quantidade, desfeito, voltou: [alvo.system.hp.value, dentro.system.hp.value, armadura.system.sp.corpo.value], fila: window.__fila.length };
+      }`);
+      const linha = nome => info.linhas?.find(l => l.nome === nome), alvo = linha('Alvo'), dentro = linha('Dentro'), esquiva = linha('Esquiva');
+      const resumo = l => l && [l.resultado, l.defesa, l.recebido, l.ablado];
+      return conferirArremessos({ modo: [info.modo, 'explosivo'], arremesso: [info.arremesso, true], ataque: [info.ataque, 20], area: [info.area, 'contra DV 15 (20 m): explodiu na área de 10 × 10 m'],
+        formula: [info.formula, '6d6'], perfil: [info.perfil, ['6d6', 'DV Thrown Weapon']], linhas: [info.linhas.length, 3], fora: [Boolean(linha('Fora')), false],
+        alvo: [resumo(alvo), ['acertou', null, 15, 2]], dentro: [resumo(dentro), ['acertou', null, 18, 0]], esquiva: [resumo(esquiva), ['esquivou', 23, null, null]],
+        hp: [info.hp, [65, 62, 80, 80]], sp: [info.sp, 1], pente: [info.pente, 0], estoque: [info.estoque, 0], desfeito: [info.desfeito, true], voltou: [info.voltou, [80, 80, 3]], fila: [info.fila, 0] });
+    });
+
     await r.passo('cyberware que é arma (o C11, parte 1; o isWeapon do CORE): instalados, os Wolvers e a Popup Ranged Weapon ganham a arma deles na aba Combate, prontas, sem ocupar as mãos, fora do inventário e da ficha que volta para a wiki; os Wolvers atacam como arma branca pesada (DEX + Arma Branca, 3d6); com o EMP, não; a pistola recarrega; mudar a arma no cyberware muda a dela; tirado, desligado ou apagado o cyberware, a arma sai, e as balas do pente voltam', async () => {
       // Atiradora: DEX 7 + Armas Brancas 3. O golpe: d10 8 → 18 contra a esquiva do Capanga, DEX 5 + d10 2 = 7: acertou.
       // Dano 3d6: 4 + 3 + 2 = 9 (o Capanga não tem armadura).

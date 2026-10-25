@@ -8,6 +8,7 @@ import { aplicarMunicaoSemDano, incendiar, rolarInteligente } from '../municoes.
 import * as R from '../regras.mjs';
 import { techAtravessaVidro } from '../regras-veiculos.mjs';
 import { rolarDano } from '../rolagens.mjs';
+import { dvDoArremesso, ehArremesso, ignorarNoArremesso } from '../arremessar.mjs';
 import { escudoHumanoDe, usadoComoEscudo, danoNoEscudoHumano } from '../escudo-humano.mjs';
 import { STATUS_COBERTURA, STATUS_SUPRIMIDO, ROTULO, precisaRolar, centroDe, combateDe, conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular, distancia, esc, jogadorDe } from './apoio.mjs';
 import { cartaoDoResultado } from './cartao.mjs';
@@ -21,12 +22,14 @@ async function contexto(pedido, usuario) {
   const atacante = arma?.actor;
   if (!atacante || !usuario) return null;
   if (!usuario.isGM && !atacante.testUserPermission(usuario, 'OWNER')) return null;
+  if (pedido.arremesso && !ehArremesso(arma, 'arremesso')) return null;
+  pedido = { ...pedido, arremesso: Boolean(pedido.arremesso || ehArremesso(arma)) };
   const tokenAtq = pedido.token ? await fromUuid(pedido.token) : null;
   const alvos = (await Promise.all(pedido.alvos.map(uuid => fromUuid(uuid)))).filter(token => token?.actor);
   if (!conferirDestinos(alvos, pedido.destinos ?? {}, pedido)) return null;
   return {
     pedido, usuario, arma, atacante, tokenAtq, cena: tokenAtq?.parent ?? alvos[0]?.parent ?? canvas.scene, alvos,
-    modo: pedido.modo, local: pedido.local, descricao: R.descreverAtaque(pedido), nomeAtq: tokenAtq?.name ?? atacante.name,
+    modo: pedido.modo, local: pedido.local, descricao: pedido.arremesso ? 'Arremesso' : R.descreverAtaque(pedido), nomeAtq: tokenAtq?.name ?? atacante.name,
     perfil: arma.perfil2077,
     // devolver: o que o "Desfazer" põe de volta (a carga Tech que o ataque gastou).
     linhas: [], notas: notasDe2077(pedido, arma), rolagens: [], marcas: [], devolver: [...(pedido.carga ? [{ doc: arma.uuid, chave: 'cargaTech', valor: pedido.carga }] : []), ...(pedido.ferrolho ? [{ doc: arma.uuid, chave: 'ferrolhoPendente', valor: null }] : [])],
@@ -116,6 +119,7 @@ async function escudoDoToken(token) {
 // deles). Sem distância: null.
 function dvDoAlvo(ctx, alvo) {
   if (alvo.metros === null) return { dv: null, fora: false };
+  if (ctx.pedido.arremesso) { const dv = dvDoArremesso(alvo.metros); return { dv, fora: dv === null }; }
   for (const nome of R.tabelasCandidatas(ctx.arma.tabelaDaArma, ctx.modo, ctx.arma.system.tipo)) {
     if (TABELAS_DV[nome]) return R.dvPelaDistancia(TABELAS_DV[nome], alvo.metros);
   }
@@ -392,10 +396,11 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
     return;
   }
   const municao = ctx.arma.municaoCarregada;
+  const ignorarPct = ignorarNoArremesso(ctx.arma, ctx.pedido);
   const destino = destinoVeicular(ctx, linha.token);
   if (destino?.tipo === 'veiculo') {
     const recebido = await destino.item.receberDanoVeicular({ dano: dano.total,
-      ignorarPct: ctx.pedido?.carga ? Math.max(Number(ctx.arma.system.ignorarArmadura) || 0, R.CARGA_TECH.ignorarPct) : ctx.arma.system.ignorarArmadura,
+      ignorarPct: ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
       ignorarAbaixo: ctx.arma.system.ignorarAbaixo, ablacao: municao?.system.ablacao ?? 1 });
     if (recebido) linha.veicular = { tipo: 'veiculo', ...recebido };
     return;
@@ -418,7 +423,7 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
   const borracha = municao?.system.efeito === 'rubber';
   const deflexao = ator.system.consciencia.deflexao && primeiraNaRodada(ator, 'deflexao') ? ator.system.consciencia.deflexao : 0;
   const efeito = await ator.receberDano({
-    dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.pedido?.carga ? Math.max(Number(ctx.arma.system.ignorarArmadura) || 0, R.CARGA_TECH.ignorarPct) : ctx.arma.system.ignorarArmadura,
+    dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
     ignorarAbaixo: ctx.arma.system.ignorarAbaixo, ablacao: municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
   });
   // A deflexão só se gasta quando entra dano de verdade: o que a armadura ou o escudo seguraram inteiro não é "dano
@@ -541,7 +546,12 @@ async function individual(ctx) {
   const atingidas = new Set((await (doisAlvos ? redirecionado(ctx) : Promise.all(ctx.alvos.map(token => resolverAlvo(ctx, token))))).filter(Boolean));
   let pegas = ctx.linhas.filter(l => atingidas.has(l));
   // mestre.mjs:individual, no Fluxo: só a defesa; o dano fica com o botão Dano da ficha.
-  if (config('dano') === 'manual') { for (const linha of pegas) linha.notas.push(linha.interposicao ? 'Role o dano pelo botão Dano e marque a vítima interposta para aplicá-lo; o dano avulso não repete a reação.' : 'Role o dano pelo botão Dano da ficha.'); return; }
+  if (config('dano') === 'manual') {
+    for (const linha of pegas) linha.notas.push(ctx.pedido.arremesso
+      ? `Role o dano pelo botão Dano do arremesso deste cartão.${linha.interposicao ? ' Marque a vítima interposta para aplicá-lo, sem repetir a reação.' : ''}`
+      : linha.interposicao ? 'Role o dano pelo botão Dano e marque a vítima interposta para aplicá-lo; o dano avulso não repete a reação.' : 'Role o dano pelo botão Dano da ficha.');
+    return;
+  }
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
   pegas = await receptoresDoAtaque(ctx, pegas);
@@ -564,9 +574,10 @@ async function individual(ctx) {
 async function danoNaArea(ctx, pegas, formula = null) {
   // mestre.mjs:danoNaArea, no Fluxo: nenhum dano automático nos alvos da área.
   if (config('dano') === 'manual') {
+    const botao = ctx.pedido.arremesso ? 'Dano do arremesso deste cartão' : 'Dano da ficha';
     if (pegas.length) ctx.notas.push(pegas.some(l => l.interposicao)
-      ? 'Role o dano pelo botão Dano da ficha e aplique em quem ficou na área; se houve interposição, marque a vítima uma única vez em vez de quem a segurava.'
-      : 'Role o dano pelo botão Dano da ficha e aplique em quem ficou na área.');
+      ? `Role o dano pelo botão ${botao} e aplique em quem ficou na área; se houve interposição, marque a vítima uma única vez em vez de quem a segurava.`
+      : `Role o dano pelo botão ${botao} e aplique em quem ficou na área.`);
     return;
   }
   if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
