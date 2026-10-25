@@ -27,6 +27,7 @@ import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
+import { instalarComCirurgia, retirarComCirurgia } from './cirurgia.mjs';
 import { lesaoCritica } from './lesoes.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { alcanceDoJackIn, bonusDeRole, custoMensalDeMoradia, periciaPropria, DANO_DE_PROGRAMA, EMPILHAVEIS, formulaDeDano, HABILIDADES_DE_INTERFACE, nomeDoLado, passwallsDoAlvo, passwallsPassados, pontosDeRole, programaDeAtaque, ROLAGENS_DE_ROLE } from './regras.mjs';
@@ -818,10 +819,13 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return this.isEditable && id !== null && id !== undefined ? this.actor.escolherArmaduraMonitorada(local, id) : null;
   }
   static #consertarArmadura(evento, alvo) { return this.isEditable ? this.#item(alvo)?.consertar() : null; }
+  // "Instalar" e "Instalado": a janela da cirurgia (o C41; cirurgia.mjs). Shift: instala pela média, sem cirurgia, ou tira
+  // sem cirurgia, como antes.
   static #instalar(evento, alvo) {
     const item = this.#item(alvo);
     if (!item) return null;
-    return item.system.instalado ? this.actor.desinstalarCyberware(item) : this.actor.instalarCyberware(item, { rolar: !evento.shiftKey });
+    if (evento.shiftKey) return item.system.instalado ? this.actor.desinstalarCyberware(item) : this.actor.instalarCyberware(item, { rolar: false });
+    return item.system.instalado ? retirarComCirurgia(this.actor, item) : instalarComCirurgia(this.actor, item);
   }
   // "+ Opção" na fundação (a maquete "Cyberware Tab"): escolhe, entre as opções deste personagem que cabem nela, a que vai;
   // a que ainda não está instalada se instala nela (Shift: a perda pela média).
@@ -837,7 +841,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       ok: { label: 'Instalar', callback: (e, botao) => botao.form.elements.opcao.value }
     });
     const opcao = escolha && this.actor.items.get(escolha);
-    return opcao ? this.actor.instalarOpcao(opcao, fundacao, { rolar: !evento.shiftKey }) : null;
+    if (!opcao) return null;
+    // A opção ainda não instalada passa pela cirurgia (sem o Shift); a instalada só muda de fundação.
+    return opcao.system.instalado || evento.shiftKey ? this.actor.instalarOpcao(opcao, fundacao, { rolar: !evento.shiftKey }) : instalarComCirurgia(this.actor, opcao, { fundacao });
   }
   static #editarItem(evento, alvo) { return this.#item(alvo)?.sheet.render(true); }
   // O "+" de cada lista (o C32; o item-create do CORE, cpr-actor-sheet.js:1693-1702): um item em branco do tipo da lista,

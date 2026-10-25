@@ -3464,6 +3464,141 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('a cirurgia do cyberware (o C41, parte 4; a wiki, p. 223–226): "Instalar" abre a janela (onde, no mínimo o lugar da peça; quem opera, só os Medtechs e nunca o paciente; a perda); o ripperdoc cobra o lugar pelo extrato e recusa sem dinheiro; o Medtech rola TECH + Cirurgia contra a DV (empate falha: a peça fica inteira) e não cobra; o "+ OPÇÃO" passa pela mesma cirurgia; "Instalado" tira sem rolagem ou com a cirurgia (a DV do lugar onde foi instalada), e a cirurgia que falha destrói a peça; o Shift e a peça sem lugar instalam sem a janela', async () => {
+      // O Medtech: TECH 8 + Cirurgia 4 (2 pontos) = 12. Instalar na clínica (DV15): d10 3 = 15 falha, d10 4 = 16 passa, e o
+      // 1d3 dos Nasal Filters dá 2. Retirar o Neural Link instalado no hospital (DV17): d10 2 = 14, destruído; os Nasal
+      // Filters (clínica, DV15): d10 5 = 17, guardados.
+      await fixar(edge, [[3, 10], [4, 10], [2, 3], [2, 10], [5, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        // O paciente também é Medtech: mesmo assim, não opera em si mesmo.
+        const paciente = await Actor.implementation.create({ name: 'Teste Paciente', type: 'personagem', system: { atributos: { emp: { valor: 8 } }, humanidade: { value: 80 }, dinheiro: 1200, role: { nome: 'Medtech', rank: 1, habilidades: { Surgery: 1 } } } });
+        const medico = await Actor.implementation.create({ name: 'Teste Cirurgião', type: 'personagem', system: { atributos: { tech: { valor: 8 } }, role: { nome: 'Medtech', rank: 4, habilidades: { Surgery: 2 } } } });
+        const avisos = [];
+        const warn = ui.notifications.warn;
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        const criar = async id => (await paciente.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat[id])]))[0];
+        const link = await criar('core_cyberware:neural-link');
+        const keren = await criar('core_cyberware:kerenzikov');
+        const nasal = await criar('core_cyberware:nasal-filters');
+        const bio = await criar('core_cyberware:biomonitor');
+        const chip = await criar('core_cyberware:memory-chip');
+        const instalar = () => document.querySelector('.application.dialog.instalar-cyberware:not(.minimizing)');
+        const retirar = () => document.querySelector('.application.dialog.retirar-cyberware:not(.minimizing)');
+        const maisOpcao = () => document.querySelector('.application.dialog.instalar-opcao:not(.minimizing)');
+        const linha = item => paciente.sheet.element?.querySelector('.tab.cyberware li[data-item-id="' + item.id + '"]');
+        const botao = item => linha(item)?.querySelector('[data-action="instalar"]');
+        const ultimo = () => game.messages.contents.at(-1);
+        const cirurgia = () => ultimo().getFlag('${S}', 'cirurgia');
+        const texto = () => new DOMParser().parseFromString(ultimo().content, 'text/html').body.textContent.trim();
+        const opcoes = (janela, nome) => [...janela.querySelectorAll('select[name="' + nome + '"] option')].map(o => o.textContent.trim());
+        // Quem opera: além do ripperdoc, só atores com a Cirurgia, e nunca o paciente.
+        const soMedtechs = (janela, nome) => [...janela.querySelectorAll('select[name="' + nome + '"] option')].filter(o => o.value).every(o => o.value !== paciente.uuid && fromUuidSync(o.value)?.rolagemDeRole('cirurgia'));
+        const clicar = async (item, shiftKey = false) => { await __esperar(() => botao(item)); botao(item).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey })); };
+        // Responde a janela da instalação; espera ela sumir (a animação) antes de seguir.
+        const responderInstalacao = async ({ lugar, quem = '', perda = 'media', cobrar = true }) => {
+          await __esperar(() => instalar()?.querySelector('select[name="lugar"]'));
+          const j = instalar();
+          const lido = { lugares: opcoes(j, 'lugar'), quem: opcoes(j, 'quem'), soMedtechs: soMedtechs(j, 'quem'), perda: opcoes(j, 'perda'), cobrar: j.querySelector('[name="cobrar"]').checked };
+          j.querySelector('select[name="lugar"]').value = lugar;
+          j.querySelector('select[name="quem"]').value = quem;
+          j.querySelector('[name="cobrar"]').checked = cobrar;
+          if (j.querySelector('select[name="perda"]')) j.querySelector('select[name="perda"]').value = perda;
+          j.querySelector('button[data-action="ok"]').click();
+          await __esperar(() => !instalar());
+          return lido;
+        };
+        const responderRetirada = async como => {
+          await __esperar(() => retirar()?.querySelector('select[name="como"]'));
+          const lido = { como: opcoes(retirar(), 'como'), soMedtechs: soMedtechs(retirar(), 'como') };
+          retirar().querySelector('select[name="como"]').value = como;
+          retirar().querySelector('button[data-action="ok"]').click();
+          await __esperar(() => !retirar());
+          return lido;
+        };
+        try {
+          await paciente.sheet.render({ force: true });
+          paciente.sheet.changeTab('cyberware', 'primary');
+          // 1. O ripperdoc instala o Neural Link (de clínica) no hospital, pela média (7): 1.000eb pelo extrato.
+          let mensagens = game.messages.size;
+          await clicar(link);
+          const janela1 = await responderInstalacao({ lugar: 'hospital' });
+          await __esperar(() => link.system.instalado && game.messages.size > mensagens);
+          const ripper = { dinheiro: paciente.system.dinheiro, humanidade: paciente.system.humanidade.value, lugar: link.getFlag('${S}', 'cirurgia')?.lugar, motivo: paciente.system.extratos.dinheiro.at(-1)?.motivo, cartao: texto(), dados: cirurgia() };
+          // 2. O "+ OPÇÃO" do Neural Link com o Kerenzikov (sem Shift): a mesma janela da cirurgia; na clínica, sem cobrar.
+          await __esperar(() => linha(link)?.querySelector('[data-action="instalarOpcao"]'));
+          linha(link).querySelector('[data-action="instalarOpcao"]').click();
+          await __esperar(() => maisOpcao()?.querySelector('select[name="opcao"]'));
+          maisOpcao().querySelector('select[name="opcao"]').value = keren.id;
+          maisOpcao().querySelector('button[data-action="ok"]').click();
+          await __esperar(() => !maisOpcao());
+          await responderInstalacao({ lugar: 'clinic', cobrar: false });
+          await __esperar(() => keren.system.instalado && cirurgia()?.peca === keren.name);
+          const opcao = { em: keren.system.instaladoEm === link.id, lugar: keren.getFlag('${S}', 'cirurgia')?.lugar, dinheiro: paciente.system.dinheiro, humanidade: paciente.system.humanidade.value, cartao: texto() };
+          // 3. No hospital, os Nasal Filters custariam 1.000eb, e há 200: recusa, sem instalar nem cobrar.
+          await clicar(nasal);
+          await responderInstalacao({ lugar: 'hospital' });
+          await __esperar(() => avisos.length);
+          const semDinheiro = { aviso: avisos.at(-1), instalado: nasal.system.instalado, dinheiro: paciente.system.dinheiro };
+          // 4. O Medtech na clínica: empate com a DV (15) falha e a peça fica; depois 16 passa, sem cobrar, com a perda rolada (2).
+          mensagens = game.messages.size;
+          await clicar(nasal);
+          const janela4 = await responderInstalacao({ lugar: 'clinic', quem: medico.uuid, perda: 'rolar' });
+          await __esperar(() => game.messages.size >= mensagens + 2 && cirurgia());
+          const falhou = { resultado: cirurgia().resultado, total: cirurgia().total, instalado: nasal.system.instalado, existe: paciente.items.has(nasal.id), cartao: texto() };
+          await clicar(nasal);
+          await responderInstalacao({ lugar: 'clinic', quem: medico.uuid, perda: 'rolar' });
+          await __esperar(() => nasal.system.instalado && cirurgia()?.resultado === 'instalada');
+          const medtech = { total: cirurgia().total, perda: nasal.system.perdaHumanidade.sofrida, dinheiro: paciente.system.dinheiro, humanidade: paciente.system.humanidade.value, cartao: texto() };
+          // 5. A retirada: a cirurgia que falha destrói o Neural Link (DV17, do hospital); a que passa guarda os Nasal Filters.
+          await clicar(link);
+          const retirada1 = await responderRetirada(medico.uuid);
+          await __esperar(() => !paciente.items.has(link.id) && cirurgia()?.resultado === 'destruida');
+          const destruida = { apagada: !paciente.items.has(link.id), total: cirurgia().total, dv: cirurgia().dv, cartao: texto(), kerenSemFundacao: keren.system.instalado && keren.system.instaladoEm === '' };
+          await clicar(nasal);
+          await responderRetirada(medico.uuid);
+          await __esperar(() => !nasal.system.instalado && cirurgia()?.resultado === 'retirada');
+          const guardada = { total: cirurgia().total, dv: cirurgia().dv, existe: paciente.items.has(nasal.id), humanidade: paciente.system.humanidade.value };
+          // 6. Shift instala o Biomonitor sem a janela e sem cobrar; "Só tirar" o tira sem rolagem; o Memory Chip (sem lugar)
+          // instala sem a janela.
+          mensagens = game.messages.size;
+          await clicar(bio, true);
+          await __esperar(() => bio.system.instalado);
+          const shift = { janela: Boolean(instalar()), dinheiro: paciente.system.dinheiro, mensagens: game.messages.size - mensagens };
+          await clicar(bio);
+          await responderRetirada('');
+          await __esperar(() => !bio.system.instalado);
+          const soTirar = { instalado: bio.system.instalado, existe: paciente.items.has(bio.id), mensagens: game.messages.size - mensagens };
+          await clicar(chip);
+          await __esperar(() => chip.system.instalado);
+          const semLugar = { janela: Boolean(instalar()), lugar: chip.getFlag('${S}', 'cirurgia')?.lugar };
+          return { janela1, ripper, opcao, semDinheiro, janela4, falhou, medtech, retirada1, destruida, guardada, shift, soTirar, semLugar };
+        } finally {
+          ui.notifications.warn = warn;
+          for (const app of [...foundry.applications.instances.values()].filter(app => ['instalar-cyberware', 'retirar-cyberware', 'instalar-opcao'].some(classe => app.element?.classList.contains(classe)))) await app.close();
+          await paciente.sheet.close();
+          await paciente.delete();
+          await medico.delete();
+        }
+      })()`);
+      const { janela1, ripper, opcao, semDinheiro, janela4, falhou, medtech, retirada1, destruida, guardada, shift, soTirar, semLugar } = info;
+      const ok = janela1.lugares.join() === 'Clínica: DV15, 500eb,Hospital: DV17, 1000eb' && janela1.quem[0] === 'Ripperdoc (cobra o lugar)'
+        && janela1.quem.some(q => q.startsWith('Teste Cirurgião (Medtech')) && janela1.soMedtechs && janela1.perda.join() === 'Rolar (2d6),Pela média (7)' && janela1.cobrar
+        && ripper.dinheiro === 200 && ripper.humanidade === 73 && ripper.lugar === 'hospital' && /^Instalação de .+ no hospital$/.test(ripper.motivo)
+        && ripper.cartao.endsWith('no hospital, pelo ripperdoc: 1000eb pelo extrato. Perda de Humanidade: 7.') && ripper.dados.custo === 1000 && ripper.dados.medico === null
+        && opcao.em && opcao.lugar === 'clinic' && opcao.dinheiro === 200 && opcao.humanidade === 59 && opcao.cartao.endsWith('na clínica, pelo ripperdoc, sem cobrar. Perda de Humanidade: 14.')
+        && semDinheiro.aviso === 'Dinheiro insuficiente: tem 200eb, e a instalação no hospital custa 1000eb.' && !semDinheiro.instalado && semDinheiro.dinheiro === 200
+        && janela4.perda.join() === 'Rolar (1d3),Pela média (2)' && janela4.soMedtechs
+        && falhou.resultado === 'falhou' && falhou.total === 15 && !falhou.instalado && falhou.existe && falhou.cartao.endsWith('(Cirurgia 15 contra DV15): a peça continua inteira.')
+        && medtech.total === 16 && medtech.perda === 2 && medtech.dinheiro === 200 && medtech.humanidade === 57 && medtech.cartao.includes('por Teste Cirurgião (Cirurgia 16 contra DV15)')
+        && retirada1.como[0] === 'Só tirar (a peça fica guardada, sem rolagem)' && retirada1.como.includes('Cirurgia de Teste Cirurgião (DV17)') && retirada1.soMedtechs
+        && destruida.apagada && destruida.total === 14 && destruida.dv === 17 && destruida.cartao.endsWith('(Cirurgia 14 contra DV17): a peça foi destruída.') && destruida.kerenSemFundacao
+        && guardada.total === 17 && guardada.dv === 15 && guardada.existe && guardada.humanidade === 57
+        && !shift.janela && shift.dinheiro === 200 && shift.mensagens === 0 && !soTirar.instalado && soTirar.existe && soTirar.mensagens === 0
+        && !semLugar.janela && semLugar.lugar === '';
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('"Usar" a droga (wiki, p. 227–229; as maquetes): gasta a dose e liga o efeito primário (o Black Lace tira 2d6 de Humanidade); quando o efeito acaba, WILL + Resistir Tortura/Drogas + 1d10 contra a DV do secundário: passando, a Humanidade volta; falhando (o Boost), o vício fica', async () => {
       // Black Lace: 2d6 3 + 4 = 7 de Humanidade; o teste, WILL 6 + Resistir 4 + d10 8 = 18 > 17. Boost: d10 5 = 15, não supera 17.
       await fixar(edge, [[3, 6], [4, 6], [8, 10], [5, 10]]);

@@ -393,7 +393,16 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     Facedown, Sorte, recursos e extrato preservados; dono/UUID e ficha relidos após esperas, modo do chat respeitado.
     G1/G2 passam; G3, 491/491; G4 completo, 264/264; 50 mutações detectadas.
   - [~] parte 4, o hospital e a instalação de cyberware (sessão Junin, 2026-10-25)
-    (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`).
+    (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`). Decisões do usuário (2026-10-25): instalar como a
+    wiki (o lugar, no mínimo o da peça, e o custo pelo extrato) ou com um Medtech do grupo, que rola em vez de pagar; a
+    retirada com cirurgia destrói a peça se falhar; a conta do hospital numa janela do mestre; a estase completa do
+    Cryopump e do Cryotank. Um ciclo por parte:
+    - [x] a instalação e a retirada com a cirurgia (ciclo 167, sessão Junin, 2026-10-25): a janela do "Instalar"
+      (onde, quem opera e a perda) e a do "Instalado" (só tirar ou a cirurgia); o ripperdoc cobra o lugar (100, 500 ou
+      1.000eb), o Medtech rola TECH + Cirurgia contra DV13, 15 ou 17; a cirurgia que falha não instala e, na retirada,
+      destrói a peça. Shift e a peça sem lugar pulam a janela.
+    - [ ] a conta do hospital (a maior DV da visita, o leito, o Trauma Team);
+    - [ ] o Cryopump e o Cryotank (a estase, as cargas, a cobertura).
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
 - [ ] **C42. Dice So Nice:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,

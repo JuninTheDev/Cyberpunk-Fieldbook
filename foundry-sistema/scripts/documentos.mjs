@@ -610,7 +610,8 @@ export class AtorCPR extends Actor {
   // Humanidade pode ficar negativa, como no CORE (loseHumanityValue): é a ciberpsicose extrema da wiki (o C21).
   // A opção entra na fundação escolhida (instaladoEm), se ainda cabe, ou na primeira instalada em que cabe; sem nenhuma,
   // entra sem fundação, com o recado (a ficha marca; a fashionware e o cyberware interno e externo não pedem uma).
-  async instalarCyberware(item, { rolar = true } = {}) {
+  // lugar: onde foi a cirurgia (o C41; cirurgia.mjs), que a retirada usa para a DV; vazio, sem cirurgia.
+  async instalarCyberware(item, { rolar = true, lugar = '' } = {}) {
     if (item.system.instalado) return null;
     const fundacao = item.system.fundacional ? null : this.fundacaoPara(item);
     const { formula, media } = item.system.perdaHumanidade;
@@ -623,7 +624,7 @@ export class AtorCPR extends Actor {
     // A perda sai da Humanidade de antes da peça, como no CORE: instalada, a peça já baixa a máxima em 2, e a atual lida
     // depois já vem limitada à máxima nova (o C31; dados.mjs). Descontar dela tiraria os 2 a mais.
     const maxAntes = this.system.humanidade.max;
-    await item.update({ 'system.instalado': true, 'system.perdaHumanidade.sofrida': perda, 'system.instaladoEm': fundacao?.id ?? '' });
+    await item.update({ 'system.instalado': true, 'system.perdaHumanidade.sofrida': perda, 'system.instaladoEm': fundacao?.id ?? '', [`flags.${SISTEMA}.cirurgia`]: { lugar } });
     await this.update({ 'system.humanidade.value': Math.min(this._source.system.humanidade.value, maxAntes) - perda });
     // A peça única sem fundação do lado fica no membro natural (o C30): o recado diz onde.
     if (!fundacao && item.noMembroNatural) ui.notifications.info(`${item.name} ficou no membro natural (${nomeDoLado(item.ladoDoCyberware).toLowerCase()}).`);
@@ -650,10 +651,10 @@ export class AtorCPR extends Actor {
     return this.items.filter(item => item.type === 'cyberware' && !item.system.fundacional && item.system.instaladoEm !== fundacao.id && this.fundacoesPara(item).includes(fundacao));
   }
   // "+ Opção": a opção vai na fundação; a que ainda não está instalada se instala nela (com a perda de Humanidade).
-  async instalarOpcao(opcao, fundacao, { rolar = true } = {}) {
+  async instalarOpcao(opcao, fundacao, { rolar = true, lugar = '' } = {}) {
     if (!this.fundacoesPara(opcao).includes(fundacao)) return null;
     await opcao.update({ 'system.instaladoEm': fundacao.id });
-    return opcao.system.instalado ? true : this.instalarCyberware(opcao, { rolar });
+    return opcao.system.instalado ? true : this.instalarCyberware(opcao, { rolar, lugar });
   }
 
   // Tirar o cyberware não devolve a Humanidade perdida: o máximo volta a subir sozinho (a peça deixa de contar), e a

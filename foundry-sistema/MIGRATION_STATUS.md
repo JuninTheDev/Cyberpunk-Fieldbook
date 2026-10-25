@@ -8169,6 +8169,47 @@ e 3 do C34 (os ciclos 158 a 161 da sessão Codex) já na branch. Com ela, o C34 
   favorita escondida (M2), o situacional fora de uso no grupo errado (M3), o +2 (M4) e o CSS que esconde o favorito (M8);
   no G4, a aba sem o fora de uso (M5), a ficha que não lê as recolhidas (M6) e o efeito novo desligado (M7).
 - **Próximo:** o C37 (arremessar, com o Codex), da mesma rodada.
+### Ciclo 167 (2026-10-25): C41, parte 4, a instalação e a retirada do cyberware com a cirurgia (sessão Junin)
+
+- **Fontes:** wiki, `system-rules.js:564`, "Hospital, Trauma Team e instalação" (p. 223–226): instalar na loja (DV13,
+  100eb), na clínica (DV15, 500eb) ou no hospital (DV17, 1.000eb); retirar sem destruir é a mesma DV da instalação, em 4
+  horas, e falhar destrói a peça. A ficha da wiki (`personagem-jogo.js`, `instalacao`, no master): o lugar no mínimo o
+  da peça, o custo pelo extrato com a opção de não cobrar, e a recusa sem dinheiro. O CORE 0.92.4 não tem cirurgia nem
+  custo (`cpr-actor.js:448`, `installCyberware`, só a perda de Humanidade); o `installLocation` dele já vinha no
+  `system.local` do cyberware (mall, clinic, hospital; notApplicable nos chips e boosts).
+- **Decisões do usuário (2026-10-25):** instalar como a wiki ou com um Medtech do grupo, que rola TECH + Cirurgia contra
+  a DV do lugar em vez de pagar; a cirurgia que falha não instala e a peça fica inteira. A retirada pergunta: só tirar
+  (como antes) ou a cirurgia de um Medtech, que destrói a peça se falhar. A parte 4 vai em três ciclos: este, a conta do
+  hospital e o Cryopump e o Cryotank.
+- **Entrega:** `regras-cirurgia.mjs` (a regra pura: os lugares, `planoDaInstalacao`, `planoDaRetirada`,
+  `cirurgiaDeuCerto`) e `cirurgia.mjs` (as janelas `instalar-cyberware` e `retirar-cyberware`, a rolagem e o cartão com a
+  flag `cirurgia`). O "Instalar" e o "+ OPÇÃO" (a opção ainda não instalada) da aba Cyberware passam pela janela; o
+  "Instalado" abre a retirada. Quem opera: os tokens selecionados, o personagem do usuário e, para o mestre, os
+  personagens do mundo, só os que têm a Cirurgia e nunca o paciente. O `instalarCyberware` guarda o lugar
+  (`flags.cpr-fieldbook.cirurgia.lugar`; vazio sem cirurgia), e a retirada usa a DV dele (um lugar guardado abaixo do da
+  peça não vale). O teste do Medtech sai público, como o do tratamento (o C33).
+- **O que não muda:** o Shift pula a janela (instala pela média, sem cirurgia; tira sem cirurgia), e a peça sem lugar
+  instala direto, rolando a perda; o capanga (arrastar instala), a importação da wiki, o pedido da loja e a API
+  `instalarCyberware`/`desinstalarCyberware` seguem sem cirurgia. Os passos antigos do G4 que instalam pela API e o do
+  "+ OPÇÃO" com Shift ficaram iguais.
+- **Limites:** sem relógio, as 4 horas da retirada só aparecem no texto. Não há Desfazer da cirurgia (o dinheiro sai
+  pelo extrato, e o mestre tira a linha se quiser); a peça destruída sai da ficha. O jogador Medtech só opera em quem é
+  dele (como o tratamento); no paciente de outro jogador, quem faz é o mestre.
+- **Integração:** a sessão KouArt publicou os ciclos 165 (o C36) e 166 (o C34, parte 1) enquanto este rodava os portões; o
+  ciclo passou de 165 para 167. Três conflitos de acréscimo, com as duas versões: o passo do G4 (o do C36 perdeu o fim,
+  que o Git deixou só no meu; refeito), o MIGRATION_STATUS e a contagem do C33 em `mesa.test.mjs` (`estabilizar.mjs` e
+  `cirurgia.mjs`). Lição: a worktree só buscava o `master` (`remote.origin.fetch`), e o `git fetch` não trazia a
+  `sistema-v14`; busque com `git fetch origin +refs/heads/sistema-v14:refs/remotes/origin/sistema-v14`.
+- **Portões:** G1, 175 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 513/513 depois da integração (5 testes novos em
+  `tests/sistema/cirurgia.test.mjs`, que conferem as DVs e os custos com a tabela da wiki; o teste do C33 em
+  `mesa.test.mjs` passou a contar as duas rolagens da cirurgia). G4 completo antes da integração, 265/265 em 575 s no Foundry 14.369 (uma rodada antes deu 263/265: o "jogador ataca" com o `reading 'system'` e o "o que a mesa vê do ataque" com a janela de reação, os dois instáveis já vistos e fora da cirurgia; passaram na rodada seguinte, sem mudança), com o passo novo
+  (a janela, o ripperdoc no hospital, o "+ OPÇÃO", a recusa sem dinheiro, o empate do Medtech, a retirada que destrói e
+  a que guarda, o Shift, o só tirar e a peça sem lugar); nenhum aviso de compatibilidade nem erro do sistema. O G4 da árvore integrada vai num commit de registro.
+- **Mutações:** 27 caíram, todas restauradas pelo md5: 10 da regra pura (G3) e 17 no Foundry (G4 focado: a abertura, um
+  jogador e o passo novo, ~36 s). Duas sobreviveram na primeira rodada (a retirada que falha sem destruir e o "Só
+  tirar" que não tira): o passo esperava o estado certo, mas não o conferia no fim (a lição do ciclo 80 no
+  QUALITY_GATES: o `__esperar` não falha); o passo passou a conferir, e as duas caíram.
+- **Próximo:** a conta do hospital (parte 4, segundo ciclo).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
