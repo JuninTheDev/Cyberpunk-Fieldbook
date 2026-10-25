@@ -13,6 +13,7 @@ import * as combate from './combate.mjs';
 import { levarItem, pegarDoConteiner, registrarConteiner } from './conteiner.mjs';
 import * as drogas from './drogas.mjs';
 import * as estados from './estados.mjs';
+import * as estabilizacao from './estabilizar.mjs';
 import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import {
@@ -108,6 +109,9 @@ Hooks.once('init', () => {
   game.system.api = { agarrao, escudoHumano, reputacao, artesMarciais, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, perigos: perigos.API, veiculos: direcao.API, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
+  // Estabilizar e a cura natural (o C36): o dano novo tira a marca de estabilizado; a API para as macros e os testes.
+  estabilizacao.registrarEstabilizar();
+  game.system.api.estabilizacao = estabilizacao;
 });
 
 Hooks.once('ready', () => {

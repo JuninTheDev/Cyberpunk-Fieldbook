@@ -109,10 +109,10 @@ test('Os fluxos que chamam as rolagens da ficha pedem o modo deles: o combate, a
     }
   }
   // Os fluxos de hoje: o agarrão e o Neuroport (o "esconder o total do ataque"), as Artes Marciais, a resistência à munição,
-  // a droga, a terapia, o tratamento (dois), o Death Save do turno (o do mestre e o do jogador) e a manobra do veículo (o
-  // C40).
+  // a droga, a terapia, o tratamento (dois), o Death Save do turno (o do mestre e o do jogador), a manobra do veículo (o
+  // C40) e estabilizar (o C36).
   assert.deepEqual(vistas, {
-    'agarrao.mjs': 1, 'artes-marciais.mjs': 1, 'combate/socket.mjs': 1, 'direcao.mjs': 1, 'drogas.mjs': 1, 'municoes.mjs': 1, 'neuroport.mjs': 1,
+    'agarrao.mjs': 1, 'artes-marciais.mjs': 1, 'combate/socket.mjs': 1, 'direcao.mjs': 1, 'drogas.mjs': 1, 'estabilizar.mjs': 1, 'municoes.mjs': 1, 'neuroport.mjs': 1,
     'terapia.mjs': 1, 'tratamento.mjs': 2, 'turnos.mjs': 1
   });
   // O combate e a NET não usam o modo do chat.

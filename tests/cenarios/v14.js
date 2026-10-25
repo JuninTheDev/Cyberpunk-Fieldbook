@@ -3287,6 +3287,183 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('estabilizar e a cura natural (o C36; wiki, p. 222–223): TECH + Primeiros Socorros ou Paramédico + 1d10 supera a DV do ferimento (13 gravemente, 15 mortalmente), e o empate falha; o gravemente ferido fica estabilizado com o HP dele; o mortalmente ferido (o capanga de token solto) volta a 1 HP, inconsciente por 1 minuto, com o Death Save de base, e o Death Save do turno não roda; o dano novo tira a marca, e o Death Save volta; descansar 2 dias devolve o BODY por dia (× 2 com o Enhanced Antibodies) e 1 SP por dia no Skin Weave, até o máximo; sem estabilizar, o descanso recusa', async () => {
+      // O médico: TECH 7 + Paramédico 4 = 11 (com o 2, empata a DV13; com o 3, supera) e TECH 7 + Primeiros Socorros 3 = 10
+      // (com o 6, supera a DV15). O Death Save do capanga (BODY 6): o 3 e o 4 passam. Cada dado entra na fila logo antes.
+      await fixar(edge, []);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = (id, mudar) => { const dados = foundry.utils.deepClone(cat[id]); mudar(dados.system); return dados; };
+        const inicio = game.time.worldTime;
+        const medico = await Actor.implementation.create({ name: 'C36 Medtech', type: 'personagem', system: { atributos: { tech: { valor: 7 } }, pericias: { 'first-aid': { nivel: 3 }, paramedic: { nivel: 4 } } } });
+        // O gravemente ferido: BODY 4 e WILL 6, 15 de 35; o Enhanced Antibodies e o Skin Weave instalados, com o item de
+        // armadura dele (cabeça 6 de 7, corpo 4 de 7).
+        const grave = await Actor.implementation.create({ name: 'C36 Grave', type: 'personagem', system: { atributos: { body: { valor: 4 }, will: { valor: 6 } }, hp: { value: 15 } }, items: [
+          pegar('core_cyberware:enhanced-antibodies', s => { s.instalado = true; }), pegar('core_cyberware:skin-weave', s => { s.instalado = true; }),
+          pegar('core_armor:skin-weave', s => { s.equipada = true; s.sp.cabeca.value = 6; s.sp.corpo.value = 4; })] });
+        // O mortalmente ferido: o capanga de token solto, BODY 6 e WILL 6, −2 de 40.
+        const capanga = await Actor.implementation.create({ name: 'C36 Mortal', type: 'capanga', system: { atributos: { body: { valor: 6 }, will: { valor: 6 } }, hp: { value: -2 } } });
+        const [tokenMedico] = await canvas.scene.createEmbeddedDocuments('Token', [(await medico.getTokenDocument({ x: 300, y: 300 })).toObject()]);
+        const [tokenMortal] = await canvas.scene.createEmbeddedDocuments('Token', [(await capanga.getTokenDocument({ x: 400, y: 300 })).toObject()]);
+        const mortal = () => tokenMortal.actor;
+        const avisos = [];
+        ui.notifications.warn = m => avisos.push(String(m));
+        let combate = null;
+        const dialogo = classe => document.querySelector('.application.dialog.' + classe);
+        const botoes = ator => [...(ator.sheet.element?.querySelectorAll('.botoes-resumo.cura [data-action]') ?? [])].map(b => b.dataset.action).join();
+        const marca = ator => ator.sheet.element?.querySelector('.botoes-resumo.cura .estabilizado')?.textContent.trim() ?? '';
+        const clicar = (ator, acao) => ator.sheet.element.querySelector('.botoes-resumo.cura [data-action="' + acao + '"]').click();
+        const ultimo = chave => game.messages.contents.at(-1)?.getFlag('${S}', chave);
+        const cartao = () => (f => f && [f.resultado, f.pericia, f.total, f.dv].join())(ultimo('estabilizar'));
+        // O texto do último cartão: true quando é o esperado; senão, o próprio texto (o relatório mostra a diferença).
+        const texto = esperado => (t => t === esperado || t)(new DOMParser().parseFromString(game.messages.contents.at(-1).content, 'text/html').body.textContent.trim());
+        const marcado = ator => Boolean(ator.getFlag('${S}', 'estabilizado'));
+        const saves = () => game.messages.filter(m => m.getFlag('${S}', 'deathSave')).length;
+        // A janela de estabilizar: o médico e a perícia (0, Primeiros Socorros; 1, Paramédico).
+        const estabilizarPela = async (ator, pericia) => {
+          clicar(ator, 'estabilizar');
+          await __esperar(() => dialogo('estabilizar')?.querySelector('select[name="quem"]'));
+          const d = dialogo('estabilizar');
+          const opcoes = [...d.querySelectorAll('select option')].map(o => o.textContent).join();
+          d.querySelector('select[name="quem"]').value = medico.uuid;
+          d.querySelector('select[name="pericia"]').value = String(pericia);
+          d.querySelector('button[data-action="ok"]').click();
+          // A janela sai com a animação: o próximo clique só depois que ela some.
+          await __esperar(() => !dialogo('estabilizar'));
+          return opcoes;
+        };
+        const descansarPela = async (ator, dias) => {
+          clicar(ator, 'descansar');
+          await __esperar(() => dialogo('descansar')?.querySelector('input[name="dias"]'));
+          dialogo('descansar').querySelector('input[name="dias"]').value = String(dias);
+          dialogo('descansar').querySelector('button[data-action="ok"]').click();
+          await __esperar(() => !dialogo('descansar'));
+        };
+        try {
+          await __esperar(() => canvas.tokens.get(tokenMedico.id) && canvas.tokens.get(tokenMortal.id));
+          canvas.tokens.get(tokenMedico.id).control({ releaseOthers: true });
+          await grave.sheet.render({ force: true });
+          grave.sheet.changeTab('combate', 'primary');
+          await __esperar(() => botoes(grave) === 'estabilizar,descansar');
+          const lido = { antes: { ferimento: grave.system.ferimento.chave, botoes: botoes(grave), marca: marca(grave) } };
+          // Sem estabilizar, o descanso recusa (o aviso), sem a janela e sem cartão.
+          let mensagens = game.messages.size;
+          clicar(grave, 'descansar');
+          await __esperar(() => avisos.length, 30);
+          lido.recusa = { avisos: avisos.length, hp: grave.system.hp.value, janela: Boolean(dialogo('descansar')), cartoes: game.messages.size - mensagens };
+          // O empate falha (11 + 2 = 13 contra DV13); 11 + 3 = 14 supera.
+          window.__fila = [[2, 10]];
+          mensagens = game.messages.size;
+          lido.janela = await estabilizarPela(grave, 1);
+          await __esperar(() => game.messages.size > mensagens + 1 && ultimo('estabilizar'));
+          lido.empate = { cartao: cartao(), marca: marcado(grave), hp: grave.system.hp.value, texto: texto('C36 Medtech não conseguiu estabilizar C36 Grave (Paramédico 13 contra DV13).') };
+          window.__fila = [[3, 10]];
+          mensagens = game.messages.size;
+          await estabilizarPela(grave, 1);
+          await __esperar(() => game.messages.size > mensagens + 1 && ultimo('estabilizar') && botoes(grave) === 'descansar');
+          lido.passou = { cartao: cartao(), marca: marcado(grave), hp: grave.system.hp.value, inconsciente: grave.statuses.has('unconscious'), botoes: botoes(grave), naFicha: marca(grave),
+            texto: texto('C36 Medtech estabilizou C36 Grave (Paramédico 14 contra DV13): recupera HP pelo descanso.') };
+          // 2 dias: o BODY 4 × 2 (o Enhanced Antibodies) por dia, 15 → 31; o Skin Weave, cabeça 6 → 7 (o máximo) e corpo 4 → 6.
+          mensagens = game.messages.size;
+          await descansarPela(grave, 2);
+          await __esperar(() => game.messages.size > mensagens && ultimo('descanso'));
+          const pele = grave.items.find(i => i.type === 'armadura');
+          lido.descanso = { hp: grave.system.hp.value, sp: [pele.system.sp.cabeca.value, pele.system.sp.corpo.value].join(), ferimento: grave.system.ferimento.chave,
+            texto: texto('C36 Grave descansou 2 dias: HP 15 → 31 de 35 (8 por dia: o BODY 4 × 2, com o Enhanced Antibodies); Skin Weave: cabeça 6 → 7, corpo 4 → 6.') };
+          await grave.sheet.close();
+          // O capanga no combate (o médico com 20, ele com 10): na vez dele, mortalmente ferido, o Death Save roda (o 3 passa).
+          combate = await Combat.implementation.create({ scene: canvas.scene.id, active: true });
+          await combate.createEmbeddedDocuments('Combatant', [{ tokenId: tokenMedico.id, sceneId: canvas.scene.id, actorId: medico.id }]);
+          await combate.createEmbeddedDocuments('Combatant', [{ tokenId: tokenMortal.id, sceneId: canvas.scene.id, actorId: capanga.id }]);
+          for (const [token, valor] of [[tokenMedico, 20], [tokenMortal, 10]]) await combate.setInitiative(combate.combatants.find(c => c.tokenId === token.id).id, valor);
+          await combate.startCombat();
+          let antes = saves();
+          window.__fila = [[3, 10]];
+          await combate.nextTurn();
+          await __esperar(() => saves() > antes && mortal().system.deathSave.penalidade === 1, 50);
+          lido.turno = { vez: combate.combatant?.tokenId === tokenMortal.id, saves: saves() - antes, penalidade: mortal().system.deathSave.penalidade };
+          // Na vez do médico, pela ficha do capanga: Primeiros Socorros 10 + 6 = 16 supera a DV15.
+          await combate.nextTurn();
+          await mortal().sheet.render({ force: true });
+          await __esperar(() => botoes(mortal()) === 'estabilizar,descansar');
+          lido.mortal = { ferimento: mortal().system.ferimento.chave, botoes: botoes(mortal()) };
+          window.__fila = [[6, 10]];
+          mensagens = game.messages.size;
+          lido.janelaMortal = await estabilizarPela(mortal(), 0);
+          await __esperar(() => game.messages.size > mensagens + 1 && ultimo('estabilizar') && mortal().statuses.has('unconscious'));
+          const efeito = mortal().effects.find(e => e.getFlag('${S}', 'estabilizado'));
+          lido.estabilizou = { cartao: cartao(), hp: mortal().system.hp.value, ferimento: mortal().system.ferimento.chave, penalidade: mortal().system.deathSave.penalidade,
+            marca: marcado(mortal()), inconsciente: mortal().statuses.has('unconscious'), duracao: efeito ? efeito.duration.value + ' ' + efeito.duration.units : '',
+            texto: texto('C36 Medtech estabilizou C36 Mortal (Primeiros Socorros 16 contra DV15): volta a 1 HP e fica inconsciente por 1 minuto.') };
+          // Na vez dele, com 1 HP, o Death Save não roda: o 5 fica na fila.
+          antes = saves();
+          window.__fila = [[5, 10]];
+          await combate.nextTurn();
+          await new Promise(resolver => setTimeout(resolver, 800));
+          lido.semSave = { vez: combate.combatant?.tokenId === tokenMortal.id, saves: saves() - antes, penalidade: mortal().system.deathSave.penalidade, fila: window.__fila.length };
+          window.__fila = [];
+          // 2 dias, sem os anticorpos: o BODY 6 por dia, 1 → 13.
+          mensagens = game.messages.size;
+          await descansarPela(mortal(), 2);
+          await __esperar(() => game.messages.size > mensagens && ultimo('descanso'));
+          lido.descansoMortal = { hp: mortal().system.hp.value, texto: texto('C36 Mortal descansou 2 dias: HP 1 → 13 de 40 (6 por dia: o BODY 6).') };
+          // O dano novo (13 → 0) tira a marca; na vez dele, o Death Save volta (o 4 passa, e a penalidade sobe de novo).
+          await mortal().update({ 'system.hp.value': 0 });
+          await __esperar(() => botoes(mortal()) === 'estabilizar,descansar');
+          lido.dano = { marca: marcado(mortal()), botoes: botoes(mortal()) };
+          antes = saves();
+          window.__fila = [[4, 10]];
+          await combate.nextTurn();
+          await combate.nextTurn();
+          await __esperar(() => saves() > antes && mortal().system.deathSave.penalidade === 1, 50);
+          lido.voltou = { vez: combate.combatant?.tokenId === tokenMortal.id, saves: saves() - antes, penalidade: mortal().system.deathSave.penalidade };
+          // O minuto, pelo relógio do mundo e fora do combate: aos 59 segundos, ainda inconsciente; aos 60, acorda.
+          await combate.delete();
+          combate = null;
+          const fim = (efeito?.start?.time ?? game.time.worldTime) + 60;
+          await game.time.advance(fim - 1 - game.time.worldTime);
+          await new Promise(resolver => setTimeout(resolver, 300));
+          lido.minuto = { aos59: mortal().statuses.has('unconscious') };
+          await game.time.advance(1);
+          await __esperar(() => !mortal().statuses.has('unconscious'), 50);
+          lido.minuto.aos60 = mortal().statuses.has('unconscious');
+          lido.avisos = avisos.length;
+          return lido;
+        } finally {
+          delete ui.notifications.warn;
+          window.__fila = [];
+          // Uma janela que tenha sobrado (o passo falhou no meio) atrapalharia os passos seguintes.
+          for (const app of [...foundry.applications.instances.values()].filter(app => ['estabilizar', 'descansar'].some(classe => app.element?.classList.contains(classe)))) await app.close();
+          if (combate && game.combats.has(combate.id)) await combate.delete();
+          await grave.sheet.close();
+          await tokenMortal.actor?.sheet.close();
+          canvas.tokens.releaseAll();
+          await canvas.scene.deleteEmbeddedDocuments('Token', [tokenMedico.id, tokenMortal.id].filter(id => canvas.scene.tokens.has(id)));
+          await Actor.implementation.deleteDocuments([medico.id, grave.id, capanga.id]);
+          await game.time.advance(inicio - game.time.worldTime);
+        }
+      })()`);
+      const v = info;
+      const ok = v.antes?.ferimento === 'grave' && v.antes.botoes === 'estabilizar,descansar' && v.antes.marca === ''
+        && v.recusa?.avisos === 1 && v.recusa.hp === 15 && !v.recusa.janela && v.recusa.cartoes === 0
+        && v.janela === 'C36 Medtech,C36 Grave,Primeiros Socorros DV13,Paramédico DV13'
+        && v.empate?.cartao === 'falhou,paramedico,13,13' && !v.empate.marca && v.empate.hp === 15 && v.empate.texto === true
+        && v.passou?.cartao === 'estabilizado,paramedico,14,13' && v.passou.marca && v.passou.hp === 15 && !v.passou.inconsciente
+        && v.passou.botoes === 'descansar' && v.passou.naFicha === 'ESTABILIZADO' && v.passou.texto === true
+        && v.descanso?.hp === 31 && v.descanso.sp === '7,6' && v.descanso.ferimento === 'leve' && v.descanso.texto === true
+        && v.turno?.vez && v.turno.saves === 1 && v.turno.penalidade === 1
+        && v.mortal?.ferimento === 'mortal' && v.mortal.botoes === 'estabilizar,descansar'
+        && v.janelaMortal === 'C36 Medtech,C36 Mortal,Primeiros Socorros DV15,Paramédico DV15'
+        && v.estabilizou?.cartao === 'estabilizado,primeirosSocorros,16,15' && v.estabilizou.hp === 1 && v.estabilizou.ferimento === 'grave'
+        && v.estabilizou.penalidade === 0 && v.estabilizou.marca && v.estabilizou.inconsciente && v.estabilizou.duracao === '60 seconds' && v.estabilizou.texto === true
+        && v.semSave?.vez && v.semSave.saves === 0 && v.semSave.penalidade === 0 && v.semSave.fila === 1
+        && v.descansoMortal?.hp === 13 && v.descansoMortal.texto === true
+        && v.dano?.marca === false && v.dano.botoes === 'estabilizar,descansar'
+        && v.voltou?.vez && v.voltou.saves === 1 && v.voltou.penalidade === 1
+        && v.minuto?.aos59 === true && v.minuto.aos60 === false && v.avisos === 1;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('"Usar" a droga (wiki, p. 227–229; as maquetes): gasta a dose e liga o efeito primário (o Black Lace tira 2d6 de Humanidade); quando o efeito acaba, WILL + Resistir Tortura/Drogas + 1d10 contra a DV do secundário: passando, a Humanidade volta; falhando (o Boost), o vício fica', async () => {
       // Black Lace: 2d6 3 + 4 = 7 de Humanidade; o teste, WILL 6 + Resistir 4 + d10 8 = 18 > 17. Boost: d10 5 = 15, não supera 17.
       await fixar(edge, [[3, 6], [4, 6], [8, 10], [5, 10]]);

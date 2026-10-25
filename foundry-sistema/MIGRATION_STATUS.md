@@ -8064,6 +8064,53 @@ nenhuma mudança concorrente. Trabalho na worktree própria; o master da wiki e 
   preservação dos recursos conferidos. A decisão de magnitude veio do usuário antes da implementação final.
 - **Próximo:** hospital/instalação de cyberware e Cryopump/Cryotank; reservas das outras sessões preservadas.
 
+### Ciclo 165 (2026-10-25): o C36, estabilizar e a cura natural (sessão KouArt, com um worker)
+
+Commit anterior: `1c4be022` (o ciclo 164, da sessão Codex). O código e os testes saíram de um worker (`workers:artesao`),
+numa worktree própria a partir do `1c4be022`, revisados e integrados aqui pelo patch. A primeira tentativa (de
+2026-10-22) se perdeu com a limpeza da pasta de rascunho, antes de ser integrada; esta foi feita do zero, já com os
+ciclos 156 a 164.
+
+- **A fonte:** só a wiki (`system-rules.js:552`, "Estabilização e cura natural", p. 222–223; a coluna Estabilizar dos
+  estados de ferimento, `:208-212`; o Death Save de base, `:215`; "Quem cura o quê", `:553`; o catálogo,
+  `system-catalog.js:74`, `:88` e `:89`). O CORE 0.92.4 não tem estabilizar nem a cura natural.
+- **O que muda:**
+  - **`scripts/regras-estabilizar.mjs` (novo, sem Foundry):** a DV pelo ferimento (leve 10, grave 13, mortal 15); as
+    perícias (Primeiros Socorros e Paramédico, as do tratamento); `resultadoDeEstabilizar` (o empate falha; o mortal que
+    passa volta a 1 HP, fica inconsciente e o Death Save volta ao de base); `curaNatural` (BODY por dia, × 2 com os
+    anticorpos, até o máximo); `spDepoisDoDescanso`; os implantes (`ehAnticorpos`, `implanteDeSp`) e `curaNaFicha`;
+  - **`scripts/estabilizar.mjs` (novo):** `estabilizar(ator)` (uma vez por ator neste cliente; a janela escolhe quem
+    estabiliza, os tokens selecionados, o personagem de quem clica e o próprio ferido, e a perícia com a DV; relê o
+    estado antes e depois de rolar; a gravação da marca, do HP e do Death Save numa vez só, na fila do ator do C38,
+    `perigos.naVezDoAtor`; o inconsciente de 60 segundos no relógio do mundo; o cartão), `descansar(ator)` (os dias, o
+    HP e o SP dos implantes, o cartão; sem a marca, recusa) e o gancho `preUpdateActor` que tira a marca quando o HP cai;
+  - **a ficha:** a marca ESTABILIZADO e os botões Estabilizar e Descansar junto do estado, na aba Combate do personagem e
+    no painel do capanga; a API em `game.system.api.estabilizacao`.
+- **Dúvidas** (a wiki não define; ficou assim): estabilizar a si mesmo é permitido (como a correção rápida); qualquer HP
+  que cai tira a marca, também a edição à mão e o limite do C31, e o Desfazer não a devolve; o dano não acorda o
+  inconsciente (no combate, o efeito acaba pelas rodadas, a expiração do Foundry); o Death Save só volta ao de base no
+  mortal; o descanso pede a marca até para o SP, e a marca não sai quando o HP chega ao máximo; o SP sobe 1 por dia em
+  cada local, no item de armadura do implante; o descanso não avança o relógio do mundo; a Ação não é cobrada; o +1 do
+  Trauma Team MedScan (`system-blackchrome.js:52`) não entra; o Blood Pump de 2077 não conta como anticorpo (saiu da
+  wiki).
+- **Testes:**
+  - **G3:** `estabilizar.test.mjs` (novo, 7 testes: as DVs lidas da própria wiki contra o `estadoDeFerimento`, as
+    perícias, o empate e o mortal, o BODY e os anticorpos, o SP, os implantes no catálogo e na loja, os botões da
+    ficha); o `mesa.test.mjs` ganha o `estabilizar.mjs` na lista exata dos fluxos que chamam a perícia com o modo
+    público (o C33);
+  - **G4:** um passo novo, depois da correção rápida e do tratamento: o descanso recusado sem estabilizar; o empate 13
+    contra DV13 falha e 14 passa no gravemente ferido; 2 dias levam o HP a 31 e o SP do Skin Weave a 7 e 6; o capanga
+    mortalmente ferido de token solto rola o Death Save no combate, é estabilizado a 1 HP (penalidade 0, inconsciente
+    de 60 segundos) e não rola no turno seguinte; 2 dias o levam a 13; o dano até 0 tira a marca e o Death Save volta;
+    fora do combate, aos 59 s está inconsciente e aos 60 s, não.
+- **Portões:** G1, 223 arquivos sem erro; G2, nenhum erro; G3, 498/498; G4 completo, 265/265, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos: no G3, o empate que passa (M1), os
+  anticorpos que não dobram (M2) e a DV do mortal (M3); no G4, o dano que não tira a marca (M4), o mortal que não volta
+  a 1 HP (M5), o Death Save que não volta ao de base (M6), o inconsciente de 10 minutos (M7) e o SP dos implantes que
+  não volta (M8).
+- **Próximo:** o C34 parte 1 (a ficha) e o C37 (arremessar), da mesma rodada.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

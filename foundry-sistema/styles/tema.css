@@ -320,6 +320,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .lesoes .item-linha .nome { color: var(--cp-vermelho); }
 /* A lesão corrigida até o fim do dia (a correção rápida): a marca em ciano. */
 .cpr-fieldbook.ficha-personagem .lesoes .corrigida { flex: none; padding: 1px 8px; border: 1px solid var(--cp-ciano); color: var(--cp-ciano); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
+/* O estabilizado (o C36), junto do ferimento: a mesma marca em ciano. */
+.cpr-fieldbook.ficha-personagem .botoes-resumo.cura .estabilizado { align-self: center; padding: 1px 8px; border: 1px solid var(--cp-ciano); color: var(--cp-ciano); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
 
 /* ---------- Listas de itens (Combate, Equipamento, Cyberware, NET) ---------- */
 .cpr-fieldbook.ficha-personagem ol.itens { margin: 0; padding: 0; list-style: none; }

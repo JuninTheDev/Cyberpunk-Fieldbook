@@ -31,6 +31,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
         </b>
       </div>
       <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}</div>
+      {{#if capanga}}{{#if cura.mostrar}}<div class="botoes-resumo cura">{{#if cura.estabilizado}}<span class="estabilizado" data-tooltip="Recupera HP pelo descanso; o dano novo tira a marca">ESTABILIZADO</span>{{/if}}{{#if cura.estabilizar}}<button type="button" class="acao" data-action="estabilizar" data-tooltip="Uma Ação: TECH + Primeiros Socorros ou Paramédico + 1d10, superando a DV do ferimento (10, 13 ou 15)">ESTABILIZAR</button>{{/if}}{{#if cura.descansar}}<button type="button" class="acao" data-action="descansar" data-tooltip="Dias inteiros de descanso: o estabilizado recupera HP igual ao BODY por dia">DESCANSAR</button>{{/if}}</div>{{/if}}{{/if}}
       <div class="medida movimento"><span>AÇÃO DE MOVIMENTO</span> <b>{{movimento.metros}} m</b></div>
       {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="correr" data-tooltip="{{#if corrida.bloqueio}}{{corrida.bloqueio}}{{else}}Depois de usar o Movimento normal, gasta a Ação para mais um Movimento{{/if}}"{{#if corrida.bloqueio}} disabled{{/if}}>CORRER (1 AÇÃO)</button></div>{{/if}}
       {{#if corrida.bloqueio}}<p class="dica corrida">{{corrida.bloqueio}}</p>{{else}}<p class="dica corrida">+{{corrida.metros}} m · {{corrida.total}} m no turno.</p>{{/if}}
