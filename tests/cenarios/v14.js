@@ -15434,6 +15434,85 @@ module.exports = async ({ edge, servidores, r }) => {
         editouZero: [info.editouZero, true], nunca: [info.nunca, [18, false, 0, false, 0, false, 0]], borracha: [info.borracha, [18, true, 5, true, 5, false, 0]], semLesao: [info.semLesao, true] });
     });
 
+    // ---------- C44: a régua com Andar e Correr (o drag-ruler.js do CORE) ----------
+    // A régua montada à mão, com o movimento planejado como o do arrasto (o #updatePlannedMovement da Token: o caminho
+    // completo, com um ponto por quadrado, e o custo de cada trecho): sem o custo, o rótulo sairia "∞" (a lição do C26).
+    // A linha e a grade são lidas pelo _getSegmentStyle e pelo _getGridHighlightStyle de cada trecho e quadrado.
+    await r.passo('a régua com Andar e Correr (o C44, o drag-ruler.js do CORE): o personagem com MOVE 4, arrastado numa cena de 2 m por quadrado, tem a linha e os quadrados em verde até Andar (8 m), em laranja até Correr (16 m) e em vermelho além; o rótulo diz "Andar" ou "Correr" ao lado dos metros, antes da DV do C26 (6 m e 12 m), e só os metros a 20 m; caído, tudo vermelho e sem Andar; com a configuração desligada (ligada por padrão), a linha e o rótulo do Foundry', async () => {
+      const d = await edge.evaluate(`(async () => {
+        const S = '${S}';
+        const anterior = canvas.scene, ligada = game.settings.get(S, 'reguaAndarCorrer');
+        const hex = cor => Number(cor).toString(16).padStart(6, '0');
+        let cena, ator, ruler;
+        try {
+          cena = await Scene.implementation.create({ name: 'Régua de Andar e Correr', active: false, width: 2800, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate();
+          await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          ator = await Actor.implementation.create({ name: 'Corredor', type: 'personagem', system: { atributos: { move: { valor: 4 } } } });
+          const [tokDoc] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 200, y: 300 })).toObject()]);
+          await __esperar(() => tokDoc.object);
+          await new Promise(res => setTimeout(res, 300));
+          const tokObj = tokDoc.object;
+          await tokDoc.setFlag(S, 'cprDvTable', 'DV Pistol');
+          ruler = new CONFIG.Token.rulerClass(tokObj);
+          await ruler.draw();
+          const proto = Object.getPrototypeOf(ruler), linha = [], grade = {};
+          ruler._getSegmentStyle = function (w) {
+            const s = proto._getSegmentStyle.call(this, w);
+            if (s.width > 0) linha.push(Math.round(w.measurement.cost) + ':' + hex(s.color));
+            return s;
+          };
+          ruler._getGridHighlightStyle = function (w, o) {
+            const s = proto._getGridHighlightStyle.call(this, w, o), c = Math.round(w.measurement.cost), k = hex(s.color);
+            if ((s.alpha ?? 0.5) > 0) grade[k] = [Math.min(grade[k]?.[0] ?? c, c), Math.max(grade[k]?.[1] ?? c, c)];
+            return s;
+          };
+          const medir = async metros => {
+            linha.length = 0;
+            for (const k of Object.keys(grade)) delete grade[k];
+            const caminho = tokDoc.getCompleteMovementPath([
+              { x: tokDoc.x, y: tokDoc.y, action: 'walk', explicit: true },
+              { x: tokDoc.x + metros * 50, y: tokDoc.y, action: 'walk', explicit: true }
+            ]);
+            const medida = tokObj.measureMovementPath(caminho);
+            caminho.forEach((w, i) => { w.cost = i ? medida.waypoints[i].backward?.cost ?? 0 : 0; });
+            caminho[0].checkpoint = true;
+            ruler.refresh({ passedWaypoints: [], pendingWaypoints: [], plannedMovement: { [game.user.id]: { foundPath: caminho, unreachableWaypoints: [], history: [], hidden: false, searching: false } } });
+            const texto = () => document.querySelector('#token-ruler-' + tokDoc.id + ' .total-measurement')?.textContent?.replace(/\\s+/g, ' ').trim() ?? '';
+            await __esperar(() => texto().startsWith(metros + ' '));
+            return { rotulo: texto(), linha: [...linha], grade: { ...grade } };
+          };
+          const m6 = await medir(6), m12 = await medir(12), m20 = await medir(20);
+          // O estado redesenha o token (e a régua dele, que divide o rótulo com esta): espera antes de medir.
+          await ator.toggleStatusEffect('prone', { active: true });
+          await new Promise(res => setTimeout(res, 300));
+          const caido = await medir(6);
+          await ator.toggleStatusEffect('prone', { active: false });
+          await game.settings.set(S, 'reguaAndarCorrer', false);
+          await new Promise(res => setTimeout(res, 300));
+          const desligada = await medir(12);
+          return { padrao: ligada, m6, m12, m20, caido, desligada };
+        } finally {
+          ruler?.destroy();
+          await game.settings.set(S, 'reguaAndarCorrer', ligada);
+          if (anterior && game.scenes.has(anterior.id)) { await anterior.activate(); await __esperar(() => canvas.ready && canvas.scene?.id === anterior.id); }
+          await cena?.delete();
+          await ator?.delete();
+        }
+      })()`);
+      const grade = g => JSON.stringify(Object.entries(g ?? {}).sort());
+      const ok = d.padrao === true
+        && /^6 m · Andar · DV: \d+ Pistol$/.test(d.m6.rotulo) && JSON.stringify(d.m6.linha) === JSON.stringify(['6:00ff00']) && grade(d.m6.grade) === grade({ '00ff00': [0, 6] })
+        && /^12 m · Correr · DV: \d+ Pistol$/.test(d.m12.rotulo) && JSON.stringify(d.m12.linha) === JSON.stringify(['8:00ff00', '12:ff8000'])
+        && grade(d.m12.grade) === grade({ '00ff00': [0, 8], ff8000: [10, 12] })
+        && /^20 m · DV: \d+ Pistol$/.test(d.m20.rotulo) && JSON.stringify(d.m20.linha) === JSON.stringify(['8:00ff00', '16:ff8000', '20:ff0000'])
+        && grade(d.m20.grade) === grade({ '00ff00': [0, 8], ff8000: [10, 16], ff0000: [18, 20] })
+        && /^6 m · DV: \d+ Pistol$/.test(d.caido.rotulo) && JSON.stringify(d.caido.linha) === JSON.stringify(['6:ff0000']) && grade(d.caido.grade) === grade({ ff0000: [0, 6] })
+        && /^12 m · DV: \d+ Pistol$/.test(d.desligada.rotulo) && d.desligada.linha.length === 1 && d.desligada.linha[0] !== '12:ff8000'
+        && Object.keys(d.desligada.grade).length === 1 && !('ff8000' in d.desligada.grade);
+      return [ok, JSON.stringify(d)];
+    });
+
     // O C33: o modo do seletor do chat (o messageMode do Foundry 14) nos cartões das rolagens avulsas, como o ChatDataSetup do
     // CORE (cpr-chat.js:21-50). O Foundry aplica o modo ao criar a mensagem; quem não a recebe vê só que houve uma rolagem
     // (o isContentVisible e o "?" no total). No "às cegas", nem o jogador que rolou vê o resultado, só o mestre.

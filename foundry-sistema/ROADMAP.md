@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 173). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 174). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -419,7 +419,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     e o do Foundry; os upgrades com modificador negativo no ataque, no SDP e nos assentos (nunca abaixo de 0);
   - [ ] parte 3, as janelas: o navegador de itens e atores (a loja da wiki já é o carrinho) e o tema do sistema no resto
     do Foundry.
-- [~] **C44. A régua com Andar e Correr** (sessão KouArt, 2026-10-25) (o `drag-ruler.js` do CORE), junto da DV que ela já mostra.
+- [x] **C44. A régua com Andar e Correr:** feito no ciclo 173 (sessão KouArt, com um worker, 2026-10-25) (o `drag-ruler.js` do CORE), junto da DV que ela já mostra.
+
 **Pedido do usuário fora da comparação com o CORE** (2026-10-25):
 - [ ] **C45. Tokens dinâmicos:** a imagem do token muda pela direção em que ele está virado, pela arma equipada, pelo
   ferimento e por caído/inconsciente, com o giro automático do Foundry 14 (`core.tokenAutoRotate`) e a imagem em pé

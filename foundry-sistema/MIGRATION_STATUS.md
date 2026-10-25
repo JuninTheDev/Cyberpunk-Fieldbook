@@ -8404,6 +8404,51 @@ Junin publicou o 171 durante o G4 deste, e o número passou para o 172.
   os veículos e a checagem de avisos), o cartão com a ablação 1 (M6) e o campo da munição gravado em outro lugar (M8).
 - **Próximo:** o C44 (a régua com Andar e Correr) e o C35 (a cena da arquitetura), da mesma rodada.
 
+### Ciclo 173 (2026-10-25): o C44, a régua com Andar e Correr (sessão KouArt, com um worker)
+
+Commit anterior: `d8941fdf` (o ciclo 172, o C43 parte 1). O código e os testes saíram de um worker (`workers:artesao`),
+numa worktree própria a partir do `7ad7e05b`, revisados e integrados aqui pelo patch. Na integração, a configuração nova
+e o passo do G4 caíram nos mesmos lugares da configuração do marcador de turno (o ciclo 171) e dos passos do C43 parte 1
+(o ciclo 172): os dois lados ficaram.
+
+- **As fontes:** o CORE 0.92.4 (`modules/hooks/external/drag-ruler.js:13-30`, as faixas "walk" e "run" com as cores
+  0x00ff00 e 0xff8000; `modules/actor/cpr-actor.js:349-351`, walk = MOVE × 2 e run = MOVE × 4), a wiki
+  (`system-rules.js:499`, "anda até MOVE × 2 m"; `:501`, correr; `:514`, o movimento e o caído; `:535`, o agarrado;
+  `:538`, o motorista) e as contas que o sistema já tem (`regras-estados.mjs`, `estados.mjs`: `movimentoDe` e
+  `corridaDe`, o C41 parte 1). No Foundry 14, a `TokenRuler` (`client/canvas/placeables/tokens/ruler.mjs`: o
+  `_shouldRenderWaypoint`, o rótulo, o `_getSegmentStyle` e o `_getGridHighlightStyle`) e o custo do movimento
+  (`placeables/token.mjs:5767`; o histórico do turno, `documents/token.mjs:3178` e `documents/combat.mjs:1137`).
+- **O que muda:**
+  - **`scripts/regras-regua.mjs` (novo, sem Foundry):** as cores (as do CORE e o vermelho de longe demais), os rótulos,
+    `faixasDaRegua` (pelo `movimentoPorEstado` e pelo `corridaPorEstado`, sem outra conta do MOVE) e `faixaDoGasto` (o
+    limite dentro da faixa, arredondado como o rótulo);
+  - **`scripts/regua-movimento.mjs` (novo):** `registrarReguaMovimento` embrulha a `TokenRuler`, como o `regua-dv.mjs`:
+    a cor da linha e dos quadrados pela faixa do gasto até cada ponto, o ponto da divisa desenhado (a linha muda de cor
+    ali) e "Andar" ou "Correr" no rótulo; só o personagem e o capanga, com a configuração ligada;
+  - **a configuração** "Andar e Correr na régua do token" (deste navegador, ligada), registrada antes da DV do C26, para
+    o rótulo ficar "12 m · Correr · DV: 15 Pistol".
+- **As diferenças e as dúvidas:** não precisa do módulo Drag Ruler; as cores são fixas (no Drag Ruler o usuário podia
+  mudar); o vermelho não vem do CORE nem do Foundry 14 (que não tem faixas de velocidade; o "unreachable" dele é o caminho
+  bloqueado); não há os `bonuses.walk` e `bonuses.run` do CORE (os efeitos que mudam o MOVE entram pelo MOVE preparado);
+  o caído e o agarrado não têm faixa nenhuma (o CORE não olhava estado); a conta é pelo custo do Foundry (escalar e
+  saltar já custam o dobro, como `:514`; nadar não); o motorista fica com Andar (a wiki `:538` diz que ele não usa mais
+  Ações de Movimento, mas o `movimentoDe` não sabe de veículo: mudar isso é fora deste item); além de Correr, o rótulo só
+  mostra os metros; a configuração é do navegador (podia ser do mundo, se o mestre deve decidir por todos).
+- **Testes:**
+  - **G3:** `regua-movimento.test.mjs` (novo, 6 testes: as cores lidas do `drag-ruler.js`; o walk e o run do trecho do
+    `cpr-actor.js` contra as faixas para MOVE 1 a 10; os textos da wiki; os estados; a faixa nos limites; a configuração;
+    os embrulhos sobre uma `TokenRuler` falsa);
+  - **G4:** um passo novo, depois das conveniências do C26: a régua montada com o movimento planejado como o do arrasto
+    (o caminho completo e o custo de cada trecho, para o rótulo não sair "∞"), o personagem com MOVE 4 numa cena de 2 m
+    por quadrado a 6, 12 e 20 m (a cor de cada trecho e quadrado e o rótulo), o caído e a configuração desligada.
+- **Portões:** G1, 248 arquivos sem erro; G2, nenhum erro; G3, 570/570; G4 completo, 277/277, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos: no G3, a cor de Correr (M1), o limite de
+  Andar de fora (M2), Correr pela própria conta (M3), a linha que não muda na divisa (M4), a configuração ao contrário
+  (M5), o rótulo sem a faixa (M7) e a grade sem a cor (M8); no G4, a régua registrada depois da DV (M6, que só o G4 pega)
+  e a M4 também.
+- **Próximo:** o C35 (a cena da arquitetura), da mesma rodada.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

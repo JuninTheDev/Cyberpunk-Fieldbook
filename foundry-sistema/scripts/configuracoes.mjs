@@ -94,6 +94,11 @@ export function registrarConfiguracoes() {
     type: String, default: 'padrao', choices: Object.fromEntries(Object.entries(MARCADORES_DE_TURNO).map(([id, { rotulo }]) => [id, rotulo])),
     onChange: valor => { aplicarMarcadorDeTurno(valor); if (canvas?.ready) canvas.draw(); }
   });
+  // A régua com Andar e Correr (o C44; o drag-ruler.js do CORE, com o módulo Drag Ruler): deste navegador, ligada.
+  registrar('reguaAndarCorrer', {
+    name: 'Andar e Correr na régua do token', hint: 'Neste navegador, ao arrastar o personagem ou o capanga, o caminho sai em verde até Andar (MOVE × 2 m, a Ação de Movimento), em laranja até Correr (MOVE × 4 m no turno) e em vermelho além disso, com "Andar" ou "Correr" ao lado dos metros. Caído ou agarrado, não anda; quem dirige não corre.',
+    scope: 'client', type: Boolean, default: true
+  });
   // A versão dos dados do mundo (migracao.mjs), escondida, como o "dataModelVersion" do CORE. 0: de antes da migração.
   game.settings.register(SISTEMA, 'versaoDosDados', { scope: 'world', config: false, type: Number, default: 0 });
   // Deste navegador, como o "invertRollCtrlFunction" do CORE.

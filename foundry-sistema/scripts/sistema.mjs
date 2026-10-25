@@ -43,6 +43,7 @@ import * as perigos from './perigos.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
+import { registrarReguaMovimento } from './regua-movimento.mjs';
 import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolagens.mjs';
 import * as terapia from './terapia.mjs';
 import * as hospital from './hospital.mjs';
@@ -108,6 +109,8 @@ Hooks.once('init', () => {
   registrarMesa();
   // O cyberware e o acessório que são arma (o C11): instalados, a arma ligada a eles; tirados ou apagados, ela sai.
   registrarArmasDoCyberware();
+  // A régua com Andar e Correr (o C44), antes da DV: o rótulo fica "12 m · Correr · DV: 15 Pistol".
+  registrarReguaMovimento();
   reguaDv.registrarReguaDv();
   // Os perigos do ambiente (o C38): os estados novos, o /perigo, o botão do HUD do token e os botões dos cartões.
   perigos.registrarPerigos();
