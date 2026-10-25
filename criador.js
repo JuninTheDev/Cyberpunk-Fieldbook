@@ -1288,7 +1288,11 @@
     const lit = {};
     let installed = 0;
     const panel = '<div class="cy-ficha" data-cy-aberta="" hidden></div>';
-    const nameButton = (piece, k) => `<li><button type="button" class="cy-nome" data-cy-item="${k}">${esc(piece.nome)}${piece.qtd > 1 ? ` ×${piece.qtd}` : ''}${piece.local || piece.localPlanejado ? ` <small class="cy-location">${esc(CW.nome(piece.local || piece.localPlanejado))}${!piece.local ? ' (planejado)' : ''}</small>` : ''}${piece.tamanho ? '' : ' <small>sem slot</small>'}</button></li>`;
+    const nameInner = (piece, k) => `<button type="button" class="cy-nome" data-cy-item="${k}">${esc(piece.nome)}${piece.qtd > 1 ? ` ×${piece.qtd}` : ''}${piece.local || piece.localPlanejado ? ` <small class="cy-location">${esc(CW.nome(piece.local || piece.localPlanejado))}${!piece.local ? ' (planejado)' : ''}</small>` : ''}${piece.tamanho ? '' : ' <small>sem slot</small>'}</button>`;
+    const nameButton = (piece, k) => `<li>${nameInner(piece, k)}</li>`;
+    // O chip do implante: a sigla (o slot que ocupa; sem slot, só a marca) colada ao nome. Os dois abrem a mesma ficha.
+    const chip = (piece, k, sigla, over) => `<li class="cy-chip${over ? ' cy-excesso' : ''}">${sigla}${nameInner(piece, k)}</li>`;
+    const SHOP_TITLE = 'Abre a Loja da Campanha só com o que serve neste slot';
     // showSlots: a base mostra os slots dela só quando o grupo tem mais de uma (senão a conta do grupo já diz).
     const unitHtml = (group, unit, showSlots) => {
       if (unit.falta) {
@@ -1297,43 +1301,43 @@
         const accepts = Boolean(unit.local) && Boolean(CW.BASES_NATURAIS[group.tipo]);
         const pieces = unit.itens || [];
         const where = `${group.nome} · ${CW.nome(unit.local)} · ${CW.membro(group.tipo)}`;
-        const names = [];
-        const cells = pieces.map((piece, index) => {
+        const chips = pieces.map((piece, index) => {
           const k = card(piece, where);
+          const over = Boolean(index || piece.qtd > 1);
           installed += piece.qtd;
-          names.push(nameButton(piece, k));
-          return `<button type="button" class="cy-slot cy-cheio${index || piece.qtd > 1 ? ' cy-excesso' : ''}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, peça única ${inNaturalLimb(group.tipo)}">${esc(cyberAbbr(piece.nome))}</button>`;
+          return chip(piece, k, `<button type="button" class="cy-cheio${over ? ' cy-excesso' : ''}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, peça única ${inNaturalLimb(group.tipo)}">${esc(cyberAbbr(piece.nome))}</button>`, over);
         });
-        if (accepts && !pieces.length) cells.push(`<button type="button" class="cy-slot cy-livre" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-natural="1" data-cy-local="${unit.local}" data-cy-nome="${esc(`Peça única · ${CW.nome(unit.local)}`)}" aria-label="Peça única ${inNaturalLimb(group.tipo)} (${esc(CW.nome(unit.local).toLowerCase())}): ver na loja">+</button>`);
-        cells.push(`<button type="button" class="cy-slot cy-livre cy-base" data-cy-loja="${group.tipo}" data-cy-base="${base}" data-cy-local="${unit.local || ''}" data-cy-nome="${esc(unit.local ? `${group.base} · ${CW.nome(unit.local)}` : base ? `Base: ${group.base}` : group.nome)}" aria-label="Comprar ${esc(group.base)}${unit.local ? ` para ${esc(CW.nome(unit.local))}` : ''}">+ ${esc(group.base)}</button>`);
+        const cells = [];
+        if (accepts && !pieces.length) cells.push(`<button type="button" class="cy-slot cy-livre" title="${SHOP_TITLE}" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-natural="1" data-cy-local="${unit.local}" data-cy-nome="${esc(`Peça única · ${CW.nome(unit.local)}`)}" aria-label="Peça única ${inNaturalLimb(group.tipo)} (${esc(CW.nome(unit.local).toLowerCase())}): ver na loja">+</button>`);
+        cells.push(`<button type="button" class="cy-slot cy-livre cy-base" title="Abre a Loja da Campanha com as bases de ${esc(group.base)}" data-cy-loja="${group.tipo}" data-cy-base="${base}" data-cy-local="${unit.local || ''}" data-cy-nome="${esc(unit.local ? `${group.base} · ${CW.nome(unit.local)}` : base ? `Base: ${group.base}` : group.nome)}" aria-label="Comprar ${esc(group.base)}${unit.local ? ` para ${esc(CW.nome(unit.local))}` : ''}">+ ${esc(group.base)}</button>`);
         return `<div class="cy-unit cy-natural" data-cy-holder data-cy-local="${unit.local || ''}"><div class="cy-unit-head">${unit.local ? `<span class="cy-location">${esc(CW.nome(unit.local))}</span>` : ''}<span>${esc(unit.nome)}</span>${accepts ? ' <small>peça única</small>' : ''}</div>
-          <div class="cy-slots">${cells.join('')}</div>${names.length ? `<ul class="cy-nomes">${names.join('')}</ul>` : ''}${panel}</div>`;
+          ${chips.length ? `<ul class="cy-chips">${chips.join('')}</ul>` : ''}<div class="cy-slots">${cells.join('')}</div>${panel}</div>`;
       }
       const where = `${group.nome} · ${unit.corpo ? 'no corpo' : `${unit.local ? CW.nome(unit.local) : group.par ? 'Local não definido' : unit.nome} · ${unit.nome}`}`;
+      const chips = [];
       const cells = [];
-      const names = [];
       let used = 0;
       for (const piece of unit.itens) {
         const k = card(piece, where);
+        const size = (piece.tamanho || 0) * piece.qtd;
+        const over = size > 0 && used + size > unit.slots;
         installed += piece.qtd;
-        names.push(nameButton(piece, k));
-        for (let copy = 0; copy < piece.qtd && piece.tamanho; copy++) {
-          const over = used + piece.tamanho > unit.slots;
-          cells.push(`<button type="button" class="cy-slot cy-cheio${over ? ' cy-excesso' : ''}" style="--t:${piece.tamanho}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, ${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}">${esc(cyberAbbr(piece.nome))}</button>`);
-          used += piece.tamanho;
-        }
+        chips.push(chip(piece, k, piece.tamanho
+          ? `<button type="button" class="cy-cheio${over ? ' cy-excesso' : ''}" style="--t:${piece.tamanho}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, ${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}">${esc(cyberAbbr(piece.nome))}</button>`
+          : `<span class="cy-sigla" aria-hidden="true">${esc(cyberAbbr(piece.nome))}</span>`, over));
+        used += size;
       }
       const label = unit.corpo ? group.nome : `Opções de ${group.nome}`;
-      for (let free = Math.max(0, unit.slots - used); free > 0; free--) cells.push(`<button type="button" class="cy-slot cy-livre" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-local="${unit.local || ''}" data-cy-em="${esc(unit.base ? parentRef(unit.base) : '')}" data-cy-nome="${esc(unit.local ? `${label} · ${CW.nome(unit.local)}` : label)}" aria-label="Slot livre ${unit.local ? `no ${esc(CW.nome(unit.local).toLowerCase())}` : unit.corpo ? `de ${esc(group.nome)}` : `em ${esc(unit.nome)}`}: ver na loja o que cabe">+</button>`);
+      for (let free = Math.max(0, unit.slots - used); free > 0; free--) cells.push(`<button type="button" class="cy-slot cy-livre" title="${SHOP_TITLE}" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-local="${unit.local || ''}" data-cy-em="${esc(unit.base ? parentRef(unit.base) : '')}" data-cy-nome="${esc(unit.local ? `${label} · ${CW.nome(unit.local)}` : label)}" aria-label="Slot livre ${unit.local ? `no ${esc(CW.nome(unit.local).toLowerCase())}` : unit.corpo ? `de ${esc(group.nome)}` : `em ${esc(unit.nome)}`}: ver na loja o que cabe">+</button>`);
       let head = '';
       if (!unit.corpo) {
         installed += 1;
         head = `<div class="cy-unit-head">${group.par ? `<span class="cy-location">${esc(CW.nome(unit.local))}</span>` : ''}<button type="button" class="cy-unit-name" data-cy-item="${card(unit.base, `${where} · base com ${unit.slots} slots`)}">${esc(unit.nome)}</button>${showSlots ? ` <small>${used}/${unit.slots}</small>` : ''}</div>`;
       }
       unit.usados = used;
-      return `<div class="cy-unit${group.par && !unit.local ? ' cy-unassigned' : ''}" data-cy-holder data-cy-local="${unit.local || ''}" data-cy-uid="${esc(unit.base ? parentRef(unit.base) : '')}">${head}<div class="cy-slots">${cells.join('')}</div>
-        ${used > unit.slots ? `<p class="cc-warn cy-cheia">Mais do que cabe: ${used} de ${unit.slots} slots.</p>` : ''}
-        ${names.length ? `<ul class="cy-nomes">${names.join('')}</ul>` : ''}${panel}</div>`;
+      return `<div class="cy-unit${group.par && !unit.local ? ' cy-unassigned' : ''}" data-cy-holder data-cy-local="${unit.local || ''}" data-cy-uid="${esc(unit.base ? parentRef(unit.base) : '')}">${head}
+        ${chips.length ? `<ul class="cy-chips">${chips.join('')}</ul>` : ''}${cells.length ? `<div class="cy-slots${unit.corpo ? ' cy-slots-grade' : ''}">${cells.join('')}</div>` : ''}
+        ${used > unit.slots ? `<p class="cc-warn cy-cheia">Mais do que cabe: ${used} de ${unit.slots} slots.</p>` : ''}${panel}</div>`;
     };
     const groupHtml = group => {
       let units = group.corpo
@@ -1356,7 +1360,8 @@
         group.partes.forEach(id => { lit[id] = real > 0; });
         if (!group.corpo && !units.length) units.push({ falta: true, nome: group.vazio });
       }
-      const html = units.map(unit => unitHtml(group, unit, !group.corpo && real > 1)).join('');
+      // Olhos, braços e pernas: o lado esquerdo e o direito lado a lado.
+      const html = `${group.par ? '<div class="cy-pair">' : ''}${units.map(unit => unitHtml(group, unit, !group.corpo && real > 1)).join('')}${group.par ? '</div>' : ''}`;
       const counted = units.filter(unit => !unit.falta);
       const count = counted.length ? `${counted.reduce((sum, unit) => sum + unit.usados, 0)}/${counted.reduce((sum, unit) => sum + unit.slots, 0)}` : '—';
       return `<section class="cy-group" data-cy-grupo="${group.id}" data-cy-alvo="${group.ancora}" data-cy-lado="${group.lado}" aria-label="${esc(group.nome)}">
@@ -1380,18 +1385,20 @@
     const hum = fromTable ? model.humanidade : humanity(doc, model.stats);
     const pct = hum.max ? Math.max(0, Math.min(100, Math.round(hum.atual / hum.max * 100))) : 0;
     const psychosis = cyberpsychosis(fromTable ? { max: hum.max, perda: hum.max - hum.atual, atual: hum.atual, emp: Math.floor(hum.atual / 10) } : hum);
+    // A barra fica amarela com a Humanidade até 30 e vermelha, pulsando, até 10 (a ficha ainda sem EMP não conta).
+    const humState = !hum.max ? '' : hum.atual <= 10 ? ' critico' : hum.atual <= 30 ? ' alerta' : '';
     const source = mesa
       ? `Na mesa: o que o Foundry mandou${model.quando ? ` em ${when(model.quando)}` : ''}. O mestre instala e tira pela ficha do Foundry.`
       : wikiTable ? `Na mesa da wiki${model.jogo.quando ? ` (mudou em ${when(model.jogo.quando)})` : ''}: a criação e o que a loja entregou. O mestre instala pela mesa, que cobra e rola a Humanidade.`
       : 'Da criação: é assim que vai para o Foundry. A base de cada opção muda na Montagem, no passo 5 do criador.';
     return `<div class="section cc-box cy-screen" data-toc="Cyberware">
       <div class="cy-top"><h3>Cyberware</h3>
-        <div class="cy-hum"><small>Humanidade</small><b>${hum.atual}<span>/${hum.max}</span></b><div class="cy-bar" aria-hidden="true"><span style="width:${pct}%"></span></div></div>
+        <div class="cy-hum${humState}"><small>Humanidade</small><b>${hum.atual}<span>/${hum.max}</span></b><div class="cy-bar" aria-hidden="true"><span style="width:${pct}%"></span></div></div>
         <div class="cy-num"><small>EMP</small><b>${esc(String(model.empMostrada ?? '—'))}</b></div>
         <div class="cy-num"><small>Implantes</small><b>${installed}</b></div>
-        <div class="cy-num"><small>Dinheiro</small><b>${eb(model.dinheiro)}</b></div></div>
+        <div class="cy-num cy-eb"><small>Dinheiro</small><b>${eb(model.dinheiro)}</b></div></div>
       ${psychosis ? `<p class="cc-warn cy-aviso">${esc(psychosis)}</p>` : ''}
-      <p class="cy-fonte note-status">${source} Os lados são os do personagem.</p>
+      <p class="cy-fonte${mesa || wikiTable ? ' cy-sync' : ''} note-status">${source} Os lados são os do personagem.</p>
       <div class="cy-summary" aria-label="Resumo dos implantes"><span class="cy-summary-item"><b>${installed}</b> instalados</span><span class="cy-summary-item"><b>${parts.esperando.reduce((sum, item) => sum + item.qtd, 0)}</b> aguardando instalação</span><span class="cy-summary-item"><b>${parts.bases.filter(base => CW.locais(base.tipo).length && !base.local).length}</b> bases sem local definido</span></div>
       <div class="cy-legend"><span class="cy-legend-item"><i class="cy-legend-free" aria-hidden="true"></i>Slot livre</span><span class="cy-legend-item"><i class="cy-legend-filled" aria-hidden="true"></i>Ocupado</span><span class="cy-legend-item"><i class="cy-legend-unassigned" aria-hidden="true"></i>Local não definido</span></div>
       <div class="cy-stage">
@@ -1401,7 +1408,7 @@
         <div class="cy-col cy-col-dir">${right}</div>
       </div>
       ${extras ? `<div class="cy-extra">${extras}</div>` : ''}
-      <p class="cy-dica note-status">Toque num slot ou num nome para ver o implante. O + abre a loja só com o que serve ali.</p>
+      <p class="cy-dica note-status">Toque num implante para ver a ficha dele. O + abre a Loja da Campanha só com o que serve ali.</p>
       ${fichas.map((html, k) => `<template data-cy-ficha="${k}">${html}</template>`).join('')}
     </div>`;
   }
