@@ -8449,6 +8449,59 @@ e o passo do G4 caíram nos mesmos lugares da configuração do marcador de turn
   e a M4 também.
 - **Próximo:** o C35 (a cena da arquitetura), da mesma rodada.
 
+### Ciclo 174 (2026-10-25): o C35, a cena da arquitetura (sessão KouArt, com um worker)
+
+Commit anterior: `e8030d1d` (o ciclo 173, o C44). O código e os testes saíram de um worker (`workers:artesao`), numa
+worktree própria a partir do `7ad7e05b`, revisados e integrados aqui pelo patch, sem conflito.
+
+- **As fontes:** o CORE 0.92.4, `modules/item/types/cpr-netarch.js` (as medidas, `:19-30`: a grade de 110 px, a ligação
+  de 1, o andar de 3 × 3 e a margem de 2; a posição do andar, `:151-164`; a seta antes de cada andar, `:181-201`; o
+  cotovelo do primeiro andar de cada ramo, `:203-338`; achar a cena pelo nome e apagar os Tiles, `:98-121` e `:387-393`;
+  copiar o modelo, `:353-366`; mostrar a cena ao mestre, `:340`), o botão (`cpr-item-sheet.js:330-350`, só o mestre; o
+  `cpr-netarch.hbs`) e o modelo da cena nos compêndios (`scene.netarch.template.yaml`: a grade de 110 e 8 "bit", 3840 ×
+  2160, fora da navegação, sem margem). No sistema, as cores dos tipos (`tema.css`) e a ordem de quem manda no andar
+  (`netrun/janela.mjs:52-55`).
+- **As imagens:** o `CREDITS.md` do CORE (`fvtt-cyberpunk-red-core-dev/CREDITS.md:27`) diz que as imagens dos andares e a
+  cena são do SolutionMaps (Patreon), sem dizer a licença: nada delas foi copiado. O andar é um ícone do Foundry
+  (`icons/svg/*`, CC-BY 3.0, citado pelo caminho, como o sistema já faz) tingido na cor do tipo, com um rótulo.
+- **O que muda:**
+  - **`scripts/arquitetura.mjs`:** `CENA` (as medidas do CORE), `QUEM_MANDA` (o inimigo, a senha, o nó de controle e o
+    arquivo, nessa ordem, como a cor do andar na janela da NET) e `desenhoDaCena(arq)` (sem Foundry: cada andar com a
+    posição, o tamanho e o tipo; cada ligação com os pontos da linha; o tamanho da cena);
+  - **`scripts/ficha-arquitetura.mjs`:** `gerarCena(item)` (só o mestre; a trava do clique duplo; um Tile por andar, um
+    Drawing com o rótulo e uma linha por ligação; a cena achada pela flag da arquitetura e atualizada, tirando só o que
+    a geração pôs; criada fora da navegação e sem ativar; no fim, o mestre a vê) e o botão "Gerar a cena" no mapa (um
+    link com o papel de botão, porque a ficha só de leitura do compêndio desliga os botões do formulário).
+- **As diferenças em relação ao CORE:** um Tile por andar, não por linha; o ícone tingido e o rótulo no lugar das imagens
+  do SolutionMaps; uma linha por ligação, que passa pelo centro das setas de 110 px do CORE; os ramos fora do caso
+  simples (um buraco no ramo, um pai fora da linha de cima, um ramo que começa no andar 1) seguem o pai do mapa da ficha
+  (o CORE deixa uma seta solta ou desenha o cotovelo fora da cena, e ordena os andares como texto); a cena é achada pela
+  arquitetura, não pelo nome (o CORE apagaria os Tiles de qualquer cena com o mesmo nome); a cena não é ativada (o modelo
+  do CORE vem ativo) e cresce até o andar 18 e o ramo H (o modelo fixo do CORE corta no andar 8 e no ramo D); o fundo é a
+  cor do tema; o botão é só do mestre (no CORE aparece para todos e dá erro). Ficou de fora o "Customize Scene
+  generation" (medidas próprias, cena existente, a versão animada).
+- **Dúvidas para a mesa:** a grade de 8 "bit" é a do modelo do CORE, e a régua do C44 e o alcance de um ponto de acesso
+  nessa cena mostram números sem sentido (os 2 m do sistema seriam a alternativa); a visão dos tokens fica ligada, como
+  no CORE (o jogador sem token na cena não vê nada; para mostrar o mapa à mesa, talvez desligar); um andar gerado que vire
+  ponto de acesso sai ao gerar de novo (o ponto deve ficar num Tile próprio do mestre); os ícones do demônio e do
+  netrunner foram escolhidos aqui.
+- **Testes:**
+  - **G3:** `cena-arquitetura.test.mjs` (novo, 6 testes: as medidas lidas no código do CORE; a Clínica de ripperdoc do
+    compêndio com os 8 andares nos lugares do CORE e as 8 ligações; o centro de cada uma das 12 setas do CORE numa linha,
+    e nenhuma linha fora delas; quem manda no andar, os ramos com buraco, o ramo que começa no andar 1 e a cena do andar
+    18 e do ramo H; o botão só para o mestre);
+  - **G4:** um passo novo, depois do "arquitetura pelas tabelas": a ficha trancada da Clínica com o clique duplo (uma
+    cena só), os 8 Tiles, os 8 rótulos e as 8 linhas com os pontos do CORE, a cena (o tamanho, a grade, sem margem, não
+    ativa, fora da navegação, vista pelo mestre), um Tile do mestre que fica ao gerar de novo, a arquitetura sem andares
+    e o jogador sem o botão.
+- **Portões:** G1, 249 arquivos sem erro; G2, nenhum erro; G3, 576/576; G4 completo, 278/278, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos: no G3, o cotovelo errado (M1), a cena que não
+  cresce (M2), quem manda ao contrário (M3) e o botão para todos (M8); no G4, a segunda cena (M4), o Tile do mestre
+  apagado (M5), sem a trava do clique duplo (M6) e o desenho do vazio em todo andar (M7).
+- **Próximo:** na Fase 7, o C42 (Dice So Nice: esperando a decisão do usuário) e o C43 parte 3 (o navegador de itens e
+  atores; o tema no resto do Foundry). O C45 (tokens dinâmicos) está com a sessão Junin.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

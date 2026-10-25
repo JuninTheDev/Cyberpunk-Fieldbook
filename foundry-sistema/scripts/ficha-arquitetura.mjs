@@ -5,7 +5,9 @@
 // pelos das tabelas do livro (arquitetura.gerarAndares), na dificuldade escolhida. O mapa é também o editor visual (o
 // editor.mjs do NET Architect da mesa): quem edita arrasta um andar para outra célula (em cima de outro andar, os dois
 // trocam) e cria um andar pelo "+" de uma célula vazia; a tabela das linhas faz o papel do painel do editor da mesa.
-import { ANDAR_MAX, COM_DV, criarAndar, DIFICULDADES, ENTRADA, gerarAndares, lerArquitetura, moverAndar, novaLinha, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
+// "Gerar a cena" (só o mestre, também no compêndio trancado) monta a cena da arquitetura, como o CORE (gerarCena).
+import { ANDAR_MAX, COM_DV, criarAndar, desenhoDaCena, DIFICULDADES, ENTRADA, gerarAndares, lerArquitetura, moverAndar, novaLinha, RAMOS, TIPOS_DE_ANDAR } from './arquitetura.mjs';
+import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { caminho, SISTEMA } from './config.mjs';
 import { BLACK_ICE, DEMONIOS, TABELAS_DA_NET } from './gerado.mjs';
 
@@ -23,6 +25,86 @@ function rotuloDoConteudo(conteudo, atores) {
   return `${TIPOS_DE_ANDAR[conteudo.tipo]}${conteudo.dv ? ` DV ${conteudo.dv}` : ''}${nome}`;
 }
 
+// Os netrunners inimigos: os personagens e os capangas do mundo.
+const atoresDoMundo = () => Object.fromEntries(game.actors.filter(ator => ['personagem', 'capanga'].includes(ator.type)).map(ator => [ator.uuid, ator.name]));
+
+// ---------------- A cena da arquitetura (o _generateNetarchScene do CORE, cpr-netarch.js:64-345) ----------------
+// Na cena, o uuid da arquitetura; nos Tiles e Drawings que a geração põe, { no, parte } (o andar, o rótulo, a ligação).
+export const FLAG_CENA = 'cenaDaArquitetura';
+// O desenho de cada tipo de andar: um ícone do Foundry na cor do tipo na janela da NET (tema.css: a senha amarela, o
+// arquivo roxo, o nó de controle verde, o inimigo vermelho, o andar vazio ciano). As imagens de andar do CORE
+// (tiles/netarch) são do SolutionMaps, sem licença no CREDITS.md do CORE, e não vieram.
+const DESENHO_DO_TIPO = {
+  senha: ['icons/svg/padlock.svg', '#fcee09'], arquivo: ['icons/svg/book.svg', '#b98cff'], controle: ['icons/svg/clockwork.svg', '#2bff9a'],
+  ice: ['icons/svg/skull.svg', '#ff2a4a'], demonio: ['icons/svg/terror.svg', '#ff2a4a'], netrunner: ['icons/svg/cowled.svg', '#ff2a4a'],
+  vazio: ['icons/svg/circle.svg', '#02d7f2']
+};
+const gerando = new Set();
+
+// O botão do mestre (o CORE recusa quem não é): uma cena com um Tile por andar (o desenho do tipo que manda nele),
+// um Drawing com o nome do andar e os conteúdos em cima dele e uma linha por ligação, na disposição do CORE
+// (arquitetura.desenhoDaCena). A grade do modelo do CORE (110 px, 8 "bit"), sem margem, fora da navegação e sem ativar.
+// Gerar de novo reaproveita a cena (o CORE acha a do mesmo nome e apaga todos os Tiles dela): aqui ela é achada pela flag,
+// e só sai o que a geração pôs, para o ponto de acesso que o mestre puser nela ficar. No fim, o mestre vê a cena.
+export async function gerarCena(item) {
+  if (!game.user.isGM) return ui.notifications.warn('Só o mestre gera a cena da arquitetura.');
+  const arq = lerArquitetura({ nome: item.name, ...item._source.system });
+  const desenho = desenhoDaCena(arq);
+  if (!desenho.andares.length) return ui.notifications.warn(`${item.name}: a arquitetura não tem andares.`);
+  // O clique duplo não cria duas cenas.
+  if (gerando.has(item.uuid)) return null;
+  gerando.add(item.uuid);
+  try {
+    const atores = atoresDoMundo();
+    const marca = (no, parte) => ({ [SISTEMA]: { [FLAG_CENA]: { no, parte } } });
+    const tiles = [];
+    const desenhos = [];
+    for (const andar of desenho.andares) {
+      const no = arq.nos[andar.id];
+      const [imagem, cor] = DESENHO_DO_TIPO[andar.tipo];
+      const nome = `Andar ${no.id.toUpperCase()}`;
+      tiles.push({ name: nome, x: andar.x, y: andar.y, width: andar.largura, height: andar.altura, texture: { src: imagem, tint: cor }, flags: marca(no.id, 'andar') });
+      desenhos.push({
+        x: andar.x, y: andar.y, shape: { type: 'r', width: andar.largura, height: andar.altura },
+        fillType: CONST.DRAWING_FILL_TYPES.SOLID, fillColor: '#0b0b10', fillAlpha: 0.6, strokeWidth: 4, strokeColor: cor, strokeAlpha: 1,
+        text: [nome.toUpperCase(), ...no.conteudos.map(conteudo => rotuloDoConteudo(conteudo, atores))].join('\n'), fontSize: 28, textColor: '#e8e6d9',
+        flags: marca(no.id, 'rotulo')
+      });
+    }
+    // A linha: um Drawing aberto, com os pontos a partir do canto de cima à esquerda.
+    for (const { para, pontos } of desenho.ligacoes) {
+      const x = Math.min(...pontos.map(ponto => ponto[0]));
+      const y = Math.min(...pontos.map(ponto => ponto[1]));
+      desenhos.push({
+        x, y, shape: { type: 'p', width: Math.max(...pontos.map(ponto => ponto[0])) - x, height: Math.max(...pontos.map(ponto => ponto[1])) - y, points: pontos.flatMap(([px, py]) => [px - x, py - y]) },
+        fillType: CONST.DRAWING_FILL_TYPES.NONE, strokeWidth: 6, strokeColor: '#02d7f2', strokeAlpha: 1, flags: marca(para, 'ligacao')
+      });
+    }
+    let cena = game.scenes.find(outra => outra.getFlag(SISTEMA, FLAG_CENA) === item.uuid);
+    if (cena) {
+      await cena.update({ width: desenho.largura, height: desenho.altura });
+      for (const tipo of ['Tile', 'Drawing']) {
+        const ids = cena.getEmbeddedCollection(tipo).filter(doc => doc.getFlag(SISTEMA, FLAG_CENA)).map(doc => doc.id);
+        if (ids.length) await cena.deleteEmbeddedDocuments(tipo, ids);
+      }
+    } else {
+      cena = await Scene.implementation.create({
+        name: item.name, active: false, navigation: false, width: desenho.largura, height: desenho.altura, padding: 0, initial: { x: null, y: null, scale: 0.5 },
+        grid: { type: CONST.GRID_TYPES.SQUARE, size: desenho.grade, distance: 8, units: 'bit' },
+        levels: [{ name: item.name, background: { color: '#0b0b10' } }], flags: { [SISTEMA]: { [FLAG_CENA]: item.uuid } }
+      });
+      if (!cena) return null;
+    }
+    await cena.createEmbeddedDocuments('Tile', tiles);
+    await cena.createEmbeddedDocuments('Drawing', desenhos);
+    await cena.view();
+    ui.notifications.info(`${cena.name}: a cena da arquitetura está pronta (${tiles.length} andares).`);
+    return cena;
+  } finally {
+    gerando.delete(item.uuid);
+  }
+}
+
 export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
   static DEFAULT_OPTIONS = {
     // O tema escuro da ficha do item (styles/tema.css).
@@ -30,7 +112,10 @@ export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
     position: { width: 900, height: 760 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { novaLinha: FichaArquitetura.#novaLinha, tirarLinha: FichaArquitetura.#tirarLinha, gerar: FichaArquitetura.#gerar, criarAndar: FichaArquitetura.#criarAndar }
+    actions: {
+      novaLinha: FichaArquitetura.#novaLinha, tirarLinha: FichaArquitetura.#tirarLinha, gerar: FichaArquitetura.#gerar, criarAndar: FichaArquitetura.#criarAndar,
+      gerarCena: FichaArquitetura.#gerarCena
+    }
   };
 
   static PARTS = {
@@ -42,8 +127,7 @@ export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
     const item = this.item;
     const fonte = item._source.system;
     const arq = lerArquitetura({ nome: item.name, ...fonte });
-    // Os netrunners inimigos: os personagens e os capangas do mundo.
-    const atores = Object.fromEntries(game.actors.filter(ator => ['personagem', 'capanga'].includes(ator.type)).map(ator => [ator.uuid, ator.name]));
+    const atores = atoresDoMundo();
     // O mapa: uma linha por andar (do 1 ao mais fundo), uma coluna por ramo. Na célula, os conteúdos e, quando o nó não
     // sai do andar de cima no mesmo ramo, de onde ele sai. Quem edita vê uma linha e uma coluna a mais, com o "+" em cada
     // célula vazia.
@@ -60,7 +144,7 @@ export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
       })
     }));
     return Object.assign(contexto, {
-      item, fonte, editavel,
+      item, fonte, editavel, gm: game.user.isGM,
       linhas: fonte.andares.map((linha, indice) => ({
         ...linha, indice, temDv: COM_DV.includes(linha.tipo), ehIce: linha.tipo === 'ice', ehDemonio: linha.tipo === 'demonio', ehNetrunner: linha.tipo === 'netrunner'
       })),
@@ -70,9 +154,11 @@ export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
     });
   }
 
-  // Arrastar os andares no mapa (o editor visual): o andar vai para a célula onde cai, vazia ou não.
+  // Arrastar os andares no mapa (o editor visual): o andar vai para a célula onde cai, vazia ou não. O "Gerar a cena" é um
+  // link com papel de botão (a ficha só para ver desliga os botões do formulário), com o Enter e o espaço do teclado.
   _onRender(contexto, opcoes) {
     super._onRender(contexto, opcoes);
+    prepararAcessibilidade(this.element);
     if (!this.isEditable) return;
     for (const no of this.element.querySelectorAll('.mapa-net .no[draggable]')) {
       no.addEventListener('dragstart', evento => {
@@ -115,6 +201,9 @@ export class FichaArquitetura extends HandlebarsApplicationMixin(ItemSheetV2) {
     if (!DIFICULDADES[dificuldade]) return null;
     const { andares } = await gerarAndares({ dificuldade, tabelas: TABELAS_DA_NET, rolar: async formula => (await new Roll(formula).evaluate()).total });
     return this.item.update({ 'system.andares': andares });
+  }
+  static #gerarCena() {
+    return gerarCena(this.item);
   }
   static #criarAndar(evento, alvo) {
     return this.item.update({ 'system.andares': criarAndar(this.item._source.system.andares, alvo.dataset.posicao) });

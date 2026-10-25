@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 174). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 175). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -360,7 +360,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     monitorada por local, árvore dos instalados no diretório e imagem padrão por tipo. O track só muda a barra;
     o dano conserva o maior SP vestido do C18. Busca e permissões nativas são preservadas; ícones locais conservam
     imagens explícitas. G1 e G2 passam; G3, 419/419; G4 completo, 245/245; 29 mutações caem.
-- [~] **C35. Gerar a cena da arquitetura** (sessão KouArt, 2026-10-25) com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de
+- [x] **C35. Gerar a cena da arquitetura:** feito no ciclo 174 (sessão KouArt, com um worker, 2026-10-25) com os Tiles, como o CORE (`cpr-netarch.js:64-400`). Hoje o ponto de
   acesso é um Tile numa cena que já existe.
 
 **As regras da wiki com número que o sistema ainda não aplica** (fonte: `system-rules.js`):

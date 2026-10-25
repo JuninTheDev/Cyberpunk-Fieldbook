@@ -11280,6 +11280,118 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('a cena da arquitetura (o _generateNetarchScene do CORE, cpr-netarch.js:64-345): "Gerar a cena" na ficha trancada da Clínica de ripperdoc do compêndio (o clique duplo gera uma vez) cria a cena com os 8 andares em Tiles (o ícone e a cor do tipo), os 8 rótulos e as 8 ligações nos lugares do CORE (o ramo B sai do 2A pelo cotovelo), fora da navegação e sem ativar, e o mestre a vê; gerar de novo atualiza a mesma cena, sem duplicar, e o Tile que o mestre pôs nela fica; a arquitetura sem andares avisa e não cria cena; o jogador não tem o botão', async () => {
+      const NOME = 'Clínica de ripperdoc (ramificada)';
+      const VAZIA = 'Teste Cena Vazia';
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = window.__esperar;
+          const S = '${S}';
+          window.__c35 = { vista: canvas.scene?.id, cenas: game.scenes.map(c => c.id) };
+          // Os recados do passo: o aviso da arquitetura vazia e o "pronta" de cada geração.
+          const avisos = [];
+          const prontas = [];
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          ui.notifications.info = texto => { if (/a cena da arquitetura está pronta/.test(texto)) prontas.push(String(texto)); return null; };
+          const pack = game.packs.get(S + '.arquiteturas');
+          const doPack = await pack.getDocument((await pack.getIndex()).find(e => e.name === '${NOME}')._id);
+          await doPack.sheet.render({ force: true });
+          const f = () => doPack.sheet.element;
+          await esperar(() => f()?.querySelector('[data-action="gerarCena"]'));
+          const link = f().querySelector('[data-action="gerarCena"]');
+          const botao = { editavel: doPack.sheet.isEditable, tag: link.tagName, desligado: link.matches(':disabled, [aria-disabled="true"]') };
+          const marca = d => d.getFlag(S, 'cenaDaArquitetura');
+          const daArq = () => game.scenes.filter(c => marca(c) === doPack.uuid);
+          // O que a cena tem: cada andar (o lugar, o tamanho, o ícone e a cor), cada rótulo e cada ligação (os pontos na cena).
+          const ler = cena => {
+            const tiles = cena.tiles.filter(marca);
+            const desenhos = cena.drawings.filter(marca);
+            const pontos = d => { const p = d.shape.points; const lista = []; for (let i = 0; i < p.length; i += 2) lista.push((d.x + p[i]) + ',' + (d.y + p[i + 1])); return lista.join(' '); };
+            return {
+              cena: [cena.name, cena.width, cena.height, cena.grid.size, cena.padding, cena.active, cena.navigation].join(' '),
+              andares: tiles.map(t => marca(t).no + ' ' + t.x + ',' + t.y + ' ' + t.width + 'x' + t.height + ' ' + t.texture.src.split('/').pop() + ' ' + t.texture.tint.css).sort(),
+              rotulos: desenhos.filter(d => marca(d).parte === 'rotulo').map(d => d.text.replace(/\\n/g, ' / ')).sort(),
+              ligacoes: desenhos.filter(d => marca(d).parte === 'ligacao').map(d => marca(d).no + ' ' + pontos(d)).sort(),
+              ids: tiles.map(t => t.id), doMestre: cena.tiles.filter(t => !marca(t)).length
+            };
+          };
+          // 1. Gerar (o clique duplo): uma cena só, e o mestre a vê.
+          link.click();
+          link.click();
+          await esperar(() => daArq()[0]?.tiles.size === 8 && daArq()[0].drawings.size === 16 && canvas.ready && canvas.scene?.id === daArq()[0].id, 200);
+          await new Promise(r => setTimeout(r, 300));
+          const cena = daArq()[0];
+          if (!cena) return { botao, primeira: { cenas: 0, prontas: prontas.length, avisos } };
+          const primeira = { ...ler(cena), cenas: daArq().length, vista: canvas.scene?.id === cena.id, prontas: prontas.length };
+          // 2. O mestre põe um Tile dele na cena (o do ponto de acesso, por exemplo) e gera de novo: a mesma cena, sem duplicar.
+          await cena.createEmbeddedDocuments('Tile', [{ x: 0, y: 0, width: 110, height: 110, texture: { src: 'icons/svg/hazard.svg' } }]);
+          f().querySelector('[data-action="gerarCena"]').click();
+          await esperar(() => prontas.length === 2 && cena.tiles.size === 9 && cena.drawings.size === 16);
+          const segunda = { ...ler(cena), cenas: daArq().length, novos: !primeira.ids.some(id => cena.tiles.has(id)), prontas: prontas.length };
+          await doPack.sheet.close();
+          // 3. Sem andares: o aviso, e nenhuma cena. O jogador (dono) abre a mesma ficha depois.
+          const vazia = await Item.implementation.create({ name: '${VAZIA}', type: 'arquitetura', system: { andares: [] }, ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          await vazia.sheet.render({ force: true });
+          await esperar(() => vazia.sheet.element?.querySelector('[data-action="gerarCena"]'));
+          vazia.sheet.element.querySelector('[data-action="gerarCena"]').click();
+          await esperar(() => avisos.length === 1);
+          const semAndares = { avisos: [...avisos], cenas: game.scenes.filter(c => marca(c) === vazia.uuid).length };
+          await vazia.sheet.close();
+          return { botao, primeira: { ...primeira, ids: primeira.ids.length }, segunda: { ...segunda, ids: segunda.ids.length }, semAndares };
+        })()`);
+        // A cena gerada fica à vista até o fim do passo, para a captura.
+        await edge.sleep(400);
+        await edge.shot('cena-arquitetura');
+        const doJogador = jogador ? await jogador.evaluate(`(async () => {
+          for (let i = 0; i < 60 && !game.items.getName('${VAZIA}'); i++) await new Promise(r => setTimeout(r, 100));
+          const item = game.items.getName('${VAZIA}');
+          if (!item) return 'sem a arquitetura';
+          await item.sheet.render({ force: true });
+          for (let i = 0; i < 60 && !item.sheet.element?.querySelector('.mapa-net'); i++) await new Promise(r => setTimeout(r, 100));
+          const botoes = item.sheet.element?.querySelectorAll('[data-action="gerarCena"]').length;
+          await item.sheet.close();
+          return botoes;
+        })()`) : 'sem o navegador do jogador';
+        // Os lugares do CORE (cpr-netarch.js:151-201 e o cotovelo do ramo B, :203-274; tests/sistema/cena-arquitetura.test.mjs).
+        const esperado = {
+          cena: `${NOME} 3840 2160 110 0 false false`,
+          andares: ['1a 220,220 330x330 padlock.svg #fcee09', '2a 660,220 330x330 skull.svg #ff2a4a', '3a 1100,220 330x330 book.svg #b98cff', '3b 1100,660 330x330 clockwork.svg #2bff9a',
+            '4a 1540,220 330x330 skull.svg #ff2a4a', '4b 1540,660 330x330 padlock.svg #fcee09', '5a 1980,220 330x330 book.svg #b98cff', '5b 1980,660 330x330 clockwork.svg #2bff9a'],
+          rotulos: ['ANDAR 1A / Senha DV 8', 'ANDAR 2A / Wisp', 'ANDAR 3A / Arquivo DV 8', 'ANDAR 3B / Nó de controle DV 8', 'ANDAR 4A / Killer', 'ANDAR 4B / Senha DV 10',
+            'ANDAR 5A / Arquivo DV 10', 'ANDAR 5B / Nó de controle DV 10'],
+          ligacoes: ['1a 110,385 220,385', '2a 550,385 660,385', '3a 990,385 1100,385', '3b 825,550 825,825 1100,825', '4a 1430,385 1540,385', '4b 1430,825 1540,825',
+            '5a 1870,385 1980,385', '5b 1870,825 1980,825']
+        };
+        // O que confere sai como "ok"; o que não confere, com o que veio (o relatório do G4 corta a linha comprida).
+        const resumo = lido => Object.fromEntries(Object.keys(esperado).map(chave => [chave, String(lido[chave]) === String(esperado[chave]) ? 'ok' : lido[chave]]));
+        // A geração que não criou a cena volta sem a segunda parte: o passo falha mostrando o que veio.
+        const { botao: b, primeira: p, segunda: s = {}, semAndares: v = { avisos: [] } } = info;
+        const r1 = resumo(p);
+        const r2 = resumo(s);
+        const ok = b.editavel === false && b.tag === 'A' && !b.desligado
+          && Object.values(r1).every(valor => valor === 'ok') && p.cenas === 1 && p.vista && p.prontas === 1 && p.ids === 8 && p.doMestre === 0
+          && Object.values(r2).every(valor => valor === 'ok') && s.cenas === 1 && s.novos && s.prontas === 2 && s.ids === 8 && s.doMestre === 1
+          && v.avisos.join() === `${VAZIA}: a arquitetura não tem andares.` && v.cenas === 0
+          && (!jogador || doJogador === 0);
+        return [ok, JSON.stringify({ botao: b, primeira: { ...r1, cenas: p.cenas, vista: p.vista, prontas: p.prontas, ids: p.ids, doMestre: p.doMestre },
+          segunda: { ...r2, cenas: s.cenas, novos: s.novos, prontas: s.prontas, ids: s.ids, doMestre: s.doMestre }, semAndares: v, doJogador })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          const S = '${S}';
+          delete ui.notifications.warn;
+          delete ui.notifications.info;
+          for (const app of [...foundry.applications.instances.values()]) if (['${NOME}', '${VAZIA}'].includes(app.document?.name)) await app.close();
+          const antes = window.__c35 ?? {};
+          if (antes.vista && game.scenes.has(antes.vista) && canvas.scene?.id !== antes.vista) { await game.scenes.get(antes.vista).view(); await window.__esperar(() => canvas.ready && canvas.scene?.id === antes.vista); }
+          for (const cena of game.scenes.filter(c => c.getFlag(S, 'cenaDaArquitetura') && !(antes.cenas ?? []).includes(c.id))) await cena.delete();
+          for (const i of game.items.filter(i => i.name === '${VAZIA}')) await i.delete();
+          delete window.__c35;
+          return true;
+        })()`);
+        if (jogador) await jogador.evaluate(`(async () => { for (const app of [...foundry.applications.instances.values()]) if (app.document?.name === '${VAZIA}') await app.close(); return true; })()`);
+      }
+    });
+
     await r.passo('ponto de acesso à NET (o NET Architect da mesa; wiki: "a até 6 m de um ponto de acesso ... 8 m com o upgrade de alcance" e "sair do alcance conectado = desconexão insegura"): o botão no HUD do Tile abre a configuração, que lista as arquiteturas do mundo e do compêndio e põe a imagem de terminal no Tile sem imagem; o marcador aparece para o jogador (o oculto, só para o mestre); a 7 m o jogador não conecta, nem pedindo direto ao mestre; com o Range Upgrade no deck, conecta: o token ganha a flag, o status e o anel, e a janela da NET mostra o andar 1 como "?" e o registro; saindo do alcance, cai (desconexão insegura) e a janela fecha; o "Desconectar" da janela; só o mestre reinicia; o token apagado e o Tile apagado tiram o netrunner da NET', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner NET';

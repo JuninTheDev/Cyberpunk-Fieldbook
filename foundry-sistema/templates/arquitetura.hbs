@@ -1,5 +1,5 @@
-{{!-- A ficha da arquitetura da NET (ficha-arquitetura.mjs): o DV, os andares (um conteúdo por linha), o mapa e a
-descrição. --}}
+{{!-- A ficha da arquitetura da NET (ficha-arquitetura.mjs): o DV, os andares (um conteúdo por linha), o mapa, o "Gerar a
+cena" do mestre e a descrição. --}}
 <div class="item-ficha arquitetura-ficha">
   <header class="cabecalho">
     <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img">
@@ -59,6 +59,7 @@ descrição. --}}
     {{/each}}
     {{/each}}
   </div>
+  {{#if gm}}<div class="acoes-arquitetura"><a class="acao" data-action="gerarCena" role="button" tabindex="0" data-tooltip="Uma cena com um Tile por andar e as ligações, como o CORE; gerar de novo atualiza a mesma cena">Gerar a cena</a></div>{{/if}}
 
   <h3>Descrição</h3>
   {{#if editavel}}

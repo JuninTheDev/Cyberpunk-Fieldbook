@@ -843,7 +843,7 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-arquitetura .acao {
   padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em;
 }
-.cpr-fieldbook.ficha-arquitetura .acao:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.ficha-arquitetura .acao:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; text-shadow: none; }
 .cpr-fieldbook.ficha-arquitetura .mapa-net {
   display: grid; grid-template-columns: 2.5rem repeat(var(--colunas, 1), minmax(0, 1fr)); gap: 6px; align-items: stretch;
   font-family: var(--cp-dados); font-size: 11px;

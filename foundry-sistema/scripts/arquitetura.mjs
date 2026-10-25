@@ -164,3 +164,42 @@ export function criarAndar(andares, posicao) {
   if (!lugar || andares.some(linha => naPosicao(linha, lugar))) return andares;
   return [...andares, { ...novaLinha(andares), ...lugar }];
 }
+
+// ---------------- A cena da arquitetura (o _generateNetarchScene do CORE, cpr-netarch.js:64-345) ----------------
+// As medidas do CORE (as opções de cpr-netarch.js:19-30), em quadrados de 110 px: o andar ocupa 3 × 3, a ligação 1, e o
+// primeiro andar começa 2 quadrados para dentro. O número do andar anda para a direita e o ramo, para baixo (:151-164). O
+// tamanho mínimo é o do modelo de cena do CORE ("Netarch Template", 3840 × 2160).
+export const CENA = { grade: 110, andar: 3, ligacao: 1, margem: 2, largura: 3840, altura: 2160 };
+// O tipo que dá o desenho do andar com mais de um conteúdo: o que manda nele, como a cor do andar na janela da NET
+// (netrun/janela.mjs, tipoDoAndar): o inimigo, a senha, o nó de controle, o arquivo; sem nenhum, o andar vazio.
+const QUEM_MANDA = ['ice', 'demonio', 'netrunner', 'senha', 'controle', 'arquivo'];
+
+// Onde vai cada andar e cada ligação, em pixels da cena. Um nó por andar (o CORE põe um Tile por linha; aqui as linhas do
+// mesmo andar e ramo dividem o nó, como no mapa da ficha). A ligação é a linha do pai ao nó (lerArquitetura), pelo centro
+// das setas do CORE: do ponto de acesso e do andar à esquerda no mesmo ramo, a seta antes do andar (:181-201); de outro
+// ramo, o cotovelo do primeiro andar de um ramo (:203-338), que desce do meio do andar pai até a altura do meio do nó e
+// segue até ele. A cena cresce para caber a arquitetura inteira (o modelo do CORE corta depois do andar 8 e do ramo D).
+export function desenhoDaCena(arq) {
+  const { grade, andar: lado, ligacao, margem } = CENA;
+  const tamanho = grade * lado;
+  const passo = grade * (lado + ligacao);
+  const andares = Object.values(arq.nos).map(no => ({
+    id: no.id, x: grade * margem + passo * (no.andar - 1), y: grade * margem + passo * RAMOS.indexOf(no.ramo), largura: tamanho, altura: tamanho,
+    tipo: QUEM_MANDA.find(tipo => no.conteudos.some(conteudo => conteudo.tipo === tipo)) ?? 'vazio'
+  }));
+  const porId = Object.fromEntries(andares.map(andar => [andar.id, andar]));
+  const ligacoes = andares.map(andar => {
+    const pai = porId[arq.nos[andar.id].pai];
+    const meio = andar.y + tamanho / 2;
+    let pontos;
+    if (!pai) pontos = [[andar.x - grade * ligacao, meio], [andar.x, meio]];
+    else if (pai.y === andar.y) pontos = [[pai.x + tamanho, meio], [andar.x, meio]];
+    else pontos = [[pai.x + tamanho / 2, pai.y + tamanho], [pai.x + tamanho / 2, meio], [andar.x, meio]];
+    return { de: pai ? pai.id : ENTRADA, para: andar.id, pontos };
+  });
+  return {
+    grade, andares, ligacoes,
+    largura: Math.max(CENA.largura, ...andares.map(andar => andar.x + tamanho + grade * margem)),
+    altura: Math.max(CENA.altura, ...andares.map(andar => andar.y + tamanho + grade * margem))
+  };
+}
