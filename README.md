@@ -326,6 +326,9 @@ Notas:
   - **Regras e Sistema** são a área Sistema da barra lateral; as outras, a área Campanhas. A barra lateral continua com a lista inteira da área. As abas Campanhas e Sistema da barra lateral só aparecem na gaveta do celular e no menu clássico.
   - **Sem espaço:** a campanha some da barra (o botão da conta também a mostra), depois a marca, e as abas ficam com o nome curto.
   - **No celular,** as abas viram a barra de baixo: as quatro primeiras e **Mais**, que abre a gaveta com o resto.
+  - **Coluna da direita** (telas de 1500 px ou mais): "Nesta página" em lista (a seção em que você está fica acesa) e, na visão dos jogadores, a próxima sessão e os relógios. Os chips de "Nesta página" voltam quando a tela é menor.
+  - **Início do jogador:** o cartão do personagem em uso como a tela de personagem do jogo (retrato, Roles, HP em barra de segmentos, eddies e IP, com Ficha, Loja e Trocar); a próxima sessão e as **Não lidas** lado a lado (o que o mestre publicou desde a sua última visita, como mensagens que levam à página; sem nada novo, as últimas notícias); embaixo, o resumo, os relógios e a última sessão.
+  - **Ficha:** as abas viram as abas do menu, os STATs ganham o canto cortado e o HP vira uma barra de segmentos. A ficha em si não muda.
   - **Menu clássico:** no menu da conta, em Aparência. Volta à barra lateral com as abas Campanhas e Sistema, como antes. Acompanha a conta.
 - **Barra lateral:**
   - **Duas áreas:** as abas **Campanhas** e **Sistema** (na wiki dos jogadores, **Campanha** e **Regras**). Campanhas tem os grupos da campanha (o primeiro com o nome dela); Sistema, os das regras (Na mesa, Regras, Netrunning, Catálogos, Black Chrome e Fontes). Abrir uma página da outra área troca a aba.

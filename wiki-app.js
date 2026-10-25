@@ -570,6 +570,8 @@
       const host = tabHost(id);
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
       // A linha em ciano (o eyebrow) em cima do título, como nos exemplos de 2026.
+      // A coluna da direita troca junto (o índice volta quando a página monta o dela).
+      side.innerHTML = '';
       content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
       tocClicked = -1;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
@@ -740,12 +742,28 @@
     function buildToc() {
       content.querySelector('.page-toc')?.remove();
       const units = pageUnits(content);
-      if (units.length < 4) return;
-      const toc = document.createElement('nav');
-      toc.className = 'page-toc';
-      toc.setAttribute('aria-label', 'Nesta página');
-      toc.innerHTML = `<span class="page-toc-label">Nesta página</span>${units.map((unit, index) => `<button type="button" data-toc-index="${index}">${escapeHtml(unitTitle(unit))}</button>`).join('')}`;
-      content.querySelector('.lede').after(toc);
+      if (units.length >= 4) {
+        const toc = document.createElement('nav');
+        toc.className = 'page-toc';
+        toc.setAttribute('aria-label', 'Nesta página');
+        toc.innerHTML = `<span class="page-toc-label">Nesta página</span>${units.map((unit, index) => `<button type="button" data-toc-index="${index}">${escapeHtml(unitTitle(unit))}</button>`).join('')}`;
+        content.querySelector('.lede').after(toc);
+      }
+      drawSide();
+    }
+
+    // ---------------- Coluna da direita (a casca NetWire, nas telas largas) ----------------
+    // "Nesta página" em lista, com os mesmos data-toc-index dos chips (o clique e a rolagem valem para os dois; os chips
+    // continuam no lugar e o CSS os esconde quando a coluna aparece), e o quadro de contexto de cada wiki
+    // (config.sidePanel(página) devolve o HTML, ou '' para nada). Coluna vazia não ocupa espaço.
+    const side = document.createElement('aside');
+    side.className = 'nw-side';
+    side.setAttribute('aria-label', 'Contexto da página');
+    document.querySelector('main')?.append(side);
+    function drawSide() {
+      const chips = [...content.querySelectorAll('.page-toc [data-toc-index]')];
+      const toc = chips.length ? `<nav class="nw-pad nw-side-toc" aria-label="Índice da página"><p class="nw-pad-title">Nesta página</p>${chips.map(chip => `<button type="button" class="nw-toc-link" data-toc-index="${chip.dataset.tocIndex}">${escapeHtml(chip.textContent)}</button>`).join('')}</nav>` : '';
+      side.innerHTML = `${toc}${config.sidePanel ? config.sidePanel(currentPage) || '' : ''}`;
     }
 
     // Rolagem suave própria: a do navegador (behavior: 'smooth') às vezes é ignorada logo depois de trocar de página.
@@ -923,7 +941,8 @@
         tocFrame = 0;
         const toc = content.querySelector('.page-toc');
         if (!toc) return;
-        const limit = toc.getBoundingClientRect().bottom + 24;
+        // Com a coluna da direita, os chips ficam escondidos (sem altura): a seção atual é a que passou da barra de cima.
+        const limit = Math.max(toc.getBoundingClientRect().bottom, document.querySelector('.topbar').getBoundingClientRect().bottom) + 24;
         let current = -1;
         const units = pageUnits(content);
         units.forEach((unit, index) => { if (unit.getBoundingClientRect().top <= limit) current = index; });
@@ -934,6 +953,7 @@
           if (active && !chip.classList.contains('active')) toc.scrollTo({ left: chip.offsetLeft - toc.clientWidth / 3, behavior: 'smooth' });
           chip.classList.toggle('active', active);
         });
+        side.querySelectorAll('[data-toc-index]').forEach(link => link.classList.toggle('active', Number(link.dataset.tocIndex) === current));
       });
     }, { passive: true });
 

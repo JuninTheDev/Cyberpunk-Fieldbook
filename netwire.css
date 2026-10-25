@@ -349,6 +349,76 @@
 }
 @media print { .top-tabs { display: none !important; } }
 
+/* ================= 4. A coluna da direita (casca NetWire, telas de 1500 px ou mais) ================= */
+/* "Nesta página" em lista e o quadro de contexto (config.sidePanel). Os chips de cima somem quando a lista aparece. */
+.nw-side { display: none; }
+@media (min-width: 1500px) {
+  :root:not([data-casca="classica"]) body:not(.map-immersive) main:has(> .nw-side:not(:empty)) {
+    display: grid; grid-template-columns: minmax(0, 1fr) 280px; column-gap: 8px; align-items: start; padding-right: 24px;
+  }
+  /* A margem automática do .content, dentro da grade, encolheria a página até o tamanho do que tem dentro. */
+  :root:not([data-casca="classica"]) body:not(.map-immersive) main:has(> .nw-side:not(:empty)) > .content { width: 100%; min-width: 0; }
+  :root:not([data-casca="classica"]) body:not(.map-immersive) .nw-side:not(:empty) {
+    position: sticky; top: calc(var(--topbar-h, 73px) + 24px); display: flex; flex-direction: column; gap: 12px;
+    max-height: calc(100vh - var(--topbar-h, 73px) - 48px); margin-top: 24px; overflow-y: auto; scrollbar-width: thin;
+  }
+  :root:not([data-casca="classica"]) body:not(.map-immersive) main:has(.nw-side-toc) .page-toc { display: none; }
+}
+.nw-side .nw-pad p { margin: 0 0 4px; color: var(--tx); }
+.nw-side .nw-pad .note-status { color: var(--mu); font-size: 13px; }
+.nw-toc-link { display: block; width: 100%; padding: 5px 8px; border: 0; border-left: 2px solid transparent; background: none; color: var(--nw-tab); cursor: pointer; font: 500 14px/1.3 var(--nw-font); text-align: left; }
+.nw-toc-link:hover { color: var(--nw-tab-hover); }
+.nw-toc-link.active { border-left-color: var(--nw-tab-active); color: var(--nw-tab-active); }
+.pv-side-clock { display: flex; justify-content: space-between; gap: 8px; margin: 8px 0 4px !important; }
+.pv-side-clock b { color: var(--nw-tertiary); font: 400 14px var(--nw-font-label); }
+
+/* ================= 5. O Início do jogador: o menu de personagem do jogo ================= */
+:root:not([data-casca="classica"]) .pv-me-card { align-items: stretch; gap: 18px; padding: 18px 18px 22px; }
+:root:not([data-casca="classica"]) .pv-me-card .cc-initials,
+:root:not([data-casca="classica"]) .pv-me-portrait { flex: 0 0 120px; width: 120px; height: 120px; font-size: 40px; object-fit: cover; }
+:root:not([data-casca="classica"]) .pv-me-text h3 { font-size: 26px; letter-spacing: .03em; text-transform: uppercase; }
+:root:not([data-casca="classica"]) .pv-me-actions { flex-direction: column; justify-content: center; }
+:root:not([data-casca="classica"]) .pv-me-actions .action { width: 100%; min-width: 120px; }
+.pv-me-stats { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 18px; margin-top: 12px; }
+.pv-me-vital { display: grid; grid-template-columns: auto minmax(120px, 220px) auto; align-items: center; gap: 4px 10px; }
+.pv-me-vital small, .pv-me-num small { color: var(--mu); font: 400 11px var(--lbl); letter-spacing: .1em; text-transform: uppercase; }
+.pv-me-vital .nw-bar i.on { background: var(--nw-active); outline-color: var(--nw-active); }
+.pv-me-vital:has(.pv-me-hurt) .nw-bar i.on { background: var(--r); outline-color: var(--r); }
+.pv-me-vital b, .pv-me-num b { color: var(--tx); font: 400 15px var(--lbl); }
+.pv-me-vital b.pv-me-hurt { color: var(--r); }
+.pv-me-num { display: flex; flex-direction: column; gap: 2px; }
+.pv-me-num b { color: var(--nw-tertiary); font: 700 18px var(--ui); }
+:root[data-tema="2077"] .pv-me-vital:has(.pv-me-hurt) .nw-bar i.on { background: #e8615a; outline-color: #e8615a; }
+:root[data-tema="2077"] .pv-me-vital b.pv-me-hurt { color: #e8615a; }
+/* A próxima sessão e as mensagens lado a lado (uma embaixo da outra em telas estreitas). */
+.pv-home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-top: 16px; align-items: start; }
+.pv-home-grid > .section { margin-top: 0; }
+.pv-inbox .nw-msg { padding-bottom: 10px; }
+.pv-inbox-item { display: flex; flex-direction: column; gap: 4px; width: 100%; cursor: pointer; font: 500 15px/1.4 var(--ui); text-align: left; }
+.pv-inbox-item b { font-weight: 700; }
+.pv-inbox-item span { color: var(--tx); opacity: .85; }
+.pv-inbox-item:hover, .pv-inbox-item:focus-visible { border-color: var(--nw-secondary); outline: none; }
+@media (max-width: 640px) {
+  :root:not([data-casca="classica"]) .pv-me-card .cc-initials,
+  :root:not([data-casca="classica"]) .pv-me-portrait { flex-basis: 72px; width: 72px; height: 72px; font-size: 26px; }
+  :root:not([data-casca="classica"]) .pv-me-actions { flex: 1 1 100%; flex-direction: row; }
+  :root:not([data-casca="classica"]) .pv-me-actions .action { flex: 1 1 0; width: auto; min-width: 0; }
+  .pv-me-vital { grid-template-columns: auto minmax(0, 1fr) auto; flex: 1 1 100%; }
+}
+
+/* ================= 6. A Ficha no estilo do menu ================= */
+/* As abas da ficha viram as abas do menu (sem caixa, a aberta acesa, a linha embaixo); os STATs, células com o canto
+   cortado; o HP, a barra segmentada. A marcação da ficha (criador.js) não muda. */
+:root:not([data-casca="classica"]) .cc-sheet-tabs { gap: clamp(10px, 1.6vw, 26px); padding-bottom: 2px; border-bottom: 1px solid var(--nw-primary); box-shadow: 0 1px 0 0 transparent, 0 4px 6px -6px var(--nw-primary); }
+:root:not([data-casca="classica"]) .cc-sheet-tab { min-height: 40px; padding: 0 2px; border: 0 !important; background: none !important; color: var(--nw-tab) !important; font: 600 14px/1 var(--nw-font); letter-spacing: .07em; text-transform: uppercase; }
+:root:not([data-casca="classica"]) .cc-sheet-tab:hover { color: var(--nw-tab-hover) !important; }
+:root:not([data-casca="classica"]) .cc-sheet-tab.active { color: var(--nw-tab-active) !important; box-shadow: inset 0 -2px 0 var(--nw-tab-mark); text-shadow: var(--nw-glow-text); }
+:root:not([data-casca="classica"]) .cc-sheet .cc-stat { position: relative; padding: 6px 0 10px; border: 1px solid var(--nw-border); border-bottom-width: 1px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%); }
+:root:not([data-casca="classica"]) .cc-sheet .cc-stat b { font-size: 28px; }
+/* A barra do HP em segmentos: a máscara corta a barra e o preenchimento juntos. */
+:root:not([data-casca="classica"]) .cc-hpbar { height: 12px; border: 0; -webkit-mask: repeating-linear-gradient(90deg, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%); mask: repeating-linear-gradient(90deg, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%); }
+:root:not([data-casca="classica"]) .cc-sheet .cc-identity > .cc-portrait { border: 2px solid var(--nw-border-strong); }
+
 /* Os quadradinhos do tema no menu da conta. */
 .account-swatch-fieldbook { background: #f8ef02; }
 .account-swatch-2077 { background: #e8615a; }

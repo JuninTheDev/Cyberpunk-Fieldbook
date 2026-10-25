@@ -140,6 +140,8 @@
         ],
         mapData: () => window.playerMapData,
         pageSetup: { pvHome: content => window.playerView && window.playerView.setupHome(content) },
+        // A coluna da direita (casca NetWire, telas largas): a próxima sessão e os relógios.
+        sidePanel: page => (window.playerView && window.playerView.side ? window.playerView.side(page) : ''),
         topMeta: campaign => `${campaign.real === false ? 'Night City 2077' : campaign.name} / visão dos jogadores`.toUpperCase(),
         // Mesa do Foundry e "Entrar como mestre", na barra lateral.
         statusUrl: 'api/estado'
@@ -160,6 +162,8 @@
       // As próximas sessões da agenda (para o botão do calendário) e o nome da campanha.
       let agendaNow = [];
       let agendaName = '';
+      // O quadro da coluna da direita (a próxima sessão e os relógios), montado junto com as páginas.
+      let sideNow = { next: '', clocks: '' };
 
       // ---------------- Novidades ----------------
       // O que o mestre publicou desde a última vez que este aparelho abriu cada página: selo no menu e "novo" no item.
@@ -198,11 +202,18 @@
         const account = window.playerAccount;
         if (!account || account.papel() !== 'jogador') { holder.innerHTML = ''; return; }
         const doc = account.selectedDoc();
-        const hp = doc && doc.mesa && doc.mesa.hp ? ` · HP ${doc.mesa.hp.atual}/${doc.mesa.hp.max} na mesa` : '';
+        // Os números do resumo (api/personagens): o HP (o da mesa, quando houver), o IP e o dinheiro.
+        const n = (doc && doc.numeros) || {};
+        const hp = n.hp && n.hp.max ? n.hp : null;
         // Sem retrato, as iniciais em amarelo, como nos cartões de Personagens.
         const initials = name => (String(name || '').match(/\p{L}+/gu) || ['?']).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+        // O HP em 10 segmentos, como a barra da tela de personagem do jogo.
+        const segments = hp ? Math.max(0, Math.min(10, Math.round(hp.atual / hp.max * 10))) : 0;
+        const bar = hp ? `<div class="pv-me-vital"><small>HP${n.naMesa ? ' na mesa' : ''}</small><span class="nw-bar" aria-hidden="true">${Array.from({ length: 10 }, (_, index) => `<i${index < segments ? ' class="on"' : ''}></i>`).join('')}</span><b class="${hp.atual < hp.max ? 'pv-me-hurt' : ''}">${hp.atual}/${hp.max}</b></div>` : '';
+        const number = (label, value) => (value === null || value === undefined ? '' : `<div class="pv-me-num"><small>${label}</small><b>${escapeHtml(String(value))}</b></div>`);
+        const eddies = Number.isFinite(Number(n.eb)) && n.eb !== null && n.eb !== undefined ? `${Number(n.eb).toLocaleString('pt-BR')} eb` : null;
         holder.innerHTML = doc
-          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : `<span class="cc-initials" aria-hidden="true">${escapeHtml(initials(doc.nome))}</span>`}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.rolesLabel(doc))}${escapeHtml(hp)}</p></div><div class="pv-me-actions"><button class="action solid" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action ghost" type="button" data-pv-switch>Trocar</button></div></div>`
+          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : `<span class="cc-initials" aria-hidden="true">${escapeHtml(initials(doc.nome))}</span>`}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.rolesLabel(doc))}</p>${bar || eddies || n.ip !== undefined ? `<div class="pv-me-stats">${bar}${number('Eddies', eddies)}${number('IP', n.ip)}</div>` : ''}</div><div class="pv-me-actions"><button class="action solid" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action ghost" type="button" data-pv-switch>Trocar</button></div></div>`
           : '<div class="pv-me-card pv-me-empty"><div class="pv-me-text"><span class="tag">Seu personagem</span><h3>Nenhum ainda</h3><p>Crie o seu personagem para esta campanha. O mestre leva para o Foundry quando estiver pronto.</p></div><div class="pv-me-actions"><button class="action" type="button" data-pv-new>Criar personagem</button></div></div>';
       }
       document.addEventListener('wiki:personagem', () => renderMe());
@@ -245,12 +256,27 @@
           categories: { lugar: { label: 'Lugar que o grupo conhece', color: '#00ffd2' }, ...(newPlaces.length ? { novo: { label: 'Novo desde a sua última visita', color: '#ff3158' } } : {}) },
           markers: places.map((place, index) => ({ id: place.id || `lugar-${index}`, code: String(index + 1), title: `${place.nome || 'Lugar'}${fresh('pvMap', place) ? ' (novo)' : ''}`, district: place.distrito || '', x: Number(place.x) || 0, y: Number(place.y) || 0, category: fresh('pvMap', place) ? 'novo' : 'lugar', detail: place.texto || '' }))
         };
+        // Mensagens no Início: o que é novo desde a última visita (notícias, Night City, sessões, pessoas, lugares), como
+        // as mensagens do NetWire; sem nada novo, as três últimas notícias.
+        const SOURCES = [['pvNews', news, 'Notícias e handouts'], ['pvNightCity', city, 'N54 News'], ['pvSessions', sessions, 'Sessões'], ['pvPeople', people, 'Pessoas'], ['pvMap', places, 'Mapa']];
+        const unread = SOURCES.flatMap(([page, items, label]) => items.filter(item => fresh(page, item)).map(item => ({ page, item, label })));
+        const shown = unread.length ? unread.slice(0, 4) : [...news.slice(0, 2).map(item => ({ page: 'pvNews', item, label: 'Notícias e handouts' })), ...city.slice(0, 1).map(item => ({ page: 'pvNightCity', item, label: 'N54 News' }))];
+        const excerpt = text => { const plain = String(text || '').replace(/[#*_>`[\]|]/g, '').replace(/\s+/g, ' ').trim(); return plain.length > 140 ? `${plain.slice(0, 139)}…` : plain; };
+        const inboxHtml = shown.length ? `<div class="section pv-inbox" data-toc="${unread.length ? 'Não lidas' : 'Últimas mensagens'}"><h3>${unread.length ? 'Não lidas' : 'Últimas mensagens'}${unread.length ? `<span class="ref">${unread.length}</span>` : ''}</h3>${shown.map(({ page, item, label }) => `<div class="nw-msg"><button type="button" class="nw-msg-body pv-inbox-item" data-page="${page}"><b>${escapeHtml(item.titulo || item.nome || 'Sem título')}</b>${excerpt(item.texto) ? `<span>${escapeHtml(excerpt(item.texto))}</span>` : ''}</button><div class="nw-msg-foot"><b>${escapeHtml(label)}</b>${item.data ? ` · ${escapeHtml(item.data)}` : ''}</div></div>`).join('')}<p><button class="action" type="button" data-page="pvNews">Abrir as mensagens</button></p></div>` : '';
+        const clocksHtml = clocks.length ? `<div class="section" data-toc="Relógios"><h3>Relógios</h3>${clocks.map(clock => `<p class="pv-clock-name"><b>${escapeHtml(clock.nome)}</b> ${clock.valor}/${clock.passos.length}${clock.valor && clock.passos[clock.valor - 1] ? ` · agora: ${escapeHtml(clock.passos[clock.valor - 1])}` : ''}</p><div class="clock clock-readonly">${clock.passos.map((step, index) => `<span class="clock-segment" aria-pressed="${index < clock.valor}"><span>${index + 1}</span>${escapeHtml(step)}</span>`).join('')}</div>`).join('')}</div>` : '';
+        // O quadro da coluna da direita (telas largas), nas outras páginas: a próxima sessão e os relógios, em pequeno.
+        sideNow = {
+          next: next ? `<div class="nw-pad pv-side-next"><p class="nw-pad-title">Próxima sessão</p><p><b>${escapeHtml(when.data)}</b>, ${escapeHtml(when.horario)}</p><p class="note-status">${escapeHtml(when.relativo)}${next.titulo ? ` · ${escapeHtml(next.titulo)}` : ''}</p></div>` : '',
+          clocks: clocks.length ? `<div class="nw-pad pv-side-clocks"><p class="nw-pad-title">Relógios</p>${clocks.map(clock => `<p class="pv-side-clock"><span>${escapeHtml(clock.nome)}</span><b>${clock.valor}/${clock.passos.length}</b></p><span class="nw-bar" aria-hidden="true">${clock.passos.map((_, index) => `<i${index < clock.valor ? ' class="on"' : ''}></i>`).join('')}</span>`).join('')}</div>` : ''
+        };
         const newsHtml = (items, page) => items.map(item => `<div class="section" data-toc="${escapeHtml(item.titulo || 'Notícia')}"><h3>${escapeHtml(item.titulo || 'Notícia')}${tag(page, item)}</h3>${item.data ? `<p class="pv-news-date">${escapeHtml(item.data)}</p>` : ''}<div class="md-doc">${renderMarkdown(item.texto || '')}</div></div>`).join('');
         return {
           pvHome: {
             eyebrow: `${escapeHtml(name)}${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
             lede: 'Resumo da campanha até agora, publicado pelo mestre. Esta página se atualiza sozinha.',
-            html: `<div id="pv-me"></div>${nextHtml}<div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${clocks.length ? `<div class="section" data-toc="Relógios"><h3>Relógios</h3>${clocks.map(clock => `<p class="pv-clock-name"><b>${escapeHtml(clock.nome)}</b> ${clock.valor}/${clock.passos.length}${clock.valor && clock.passos[clock.valor - 1] ? ` · agora: ${escapeHtml(clock.passos[clock.valor - 1])}` : ''}</p><div class="clock clock-readonly">${clock.passos.map((step, index) => `<span class="clock-segment" aria-pressed="${index < clock.valor}"><span>${index + 1}</span>${escapeHtml(step)}</span>`).join('')}</div>`).join('')}</div>` : ''}${lastSession ? `<div class="section" data-toc="Última sessão"><h3>Última sessão${tag('pvSessions', lastSession)}</h3><p><b>${escapeHtml(sessionTitle(lastSession, sessions.length - 1))}</b>${lastSession.data ? ` · ${escapeHtml(lastSession.data)}` : ''}</p><button class="action" type="button" data-page="pvSessions" data-section="${escapeHtml(sectionSlug(sessionTitle(lastSession, sessions.length - 1)))}">Ler o resumo</button></div>` : ''}${news.length ? `<div class="section" data-toc="Últimas notícias"><h3>Últimas notícias</h3><ul>${news.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNews">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}${city.length ? `<div class="section" data-toc="Night City"><h3>Night City</h3><ul>${city.slice(0, 3).map(item => `<li><button class="action" type="button" data-page="pvNightCity">${escapeHtml(item.titulo || 'Notícia')}</button></li>`).join('')}</ul></div>` : ''}`
+            // O menu de personagem do jogo: o cartão, a próxima sessão e as mensagens em cima; o resumo, os relógios e a
+            // última sessão embaixo.
+            html: `<div id="pv-me"></div><div class="pv-home-grid">${nextHtml}${inboxHtml}</div><div class="section" data-toc="Resumo"><h3>Resumo</h3><div class="md-doc">${renderMarkdown(data.resumo || 'Nada publicado ainda.')}</div></div>${clocksHtml}${lastSession ? `<div class="section" data-toc="Última sessão"><h3>Última sessão${tag('pvSessions', lastSession)}</h3><p><b>${escapeHtml(sessionTitle(lastSession, sessions.length - 1))}</b>${lastSession.data ? ` · ${escapeHtml(lastSession.data)}` : ''}</p><button class="action" type="button" data-page="pvSessions" data-section="${escapeHtml(sectionSlug(sessionTitle(lastSession, sessions.length - 1)))}">Ler o resumo</button></div>` : ''}`
           },
           pvSessions: {
             eyebrow: `${escapeHtml(name)} / sessões`, title: 'Sessões',
@@ -297,6 +323,8 @@
       }
       // Entrar pela página inicial: o menu passa a ter as campanhas do jogador.
       window.playerView = {
+        // No Início, a próxima sessão e os relógios já estão na página: a coluna fica só com o índice.
+        side: page => (page === 'pvHome' ? '' : `${sideNow.next}${sideNow.clocks}`),
         setupHome(content) {
           renderMe(content);
           const form = content.querySelector('[data-pv-login]');
@@ -355,6 +383,7 @@
       document.addEventListener('wiki:campanha', () => {
         lastUpdate = null;
         currentIds = {};
+        sideNow = { next: '', clocks: '' };
         window.wikiApp.setBadges(Object.fromEntries(Object.keys(NEWS_PAGES).map(page => [page, 0])));
         window.playerMapData = null;
         updatePages({ pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') });
