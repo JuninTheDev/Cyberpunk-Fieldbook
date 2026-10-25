@@ -51,6 +51,7 @@
   <script src="popup.js"></script>
   <script src="criador.js"></script>
   <script src="conta.js"></script>
+  <script src="nightcity-map.js"></script>
   <script>
     // Visão dos jogadores: o conteúdo de campanha vem da API (api/visao), publicado pelo mestre, e só das campanhas em
     // que este jogador joga (api/eu diz quais). Sem código, só as regras.
@@ -120,7 +121,7 @@
         pageContent: { pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City'), pvGuia: playerGuide },
         mapPages: ['pvMap'],
         mapData: () => window.playerMapData,
-        pageSetup: { pvMap: () => window.wikiApp.setupMap(), pvHome: content => window.playerView && window.playerView.setupHome(content) },
+        pageSetup: { pvHome: content => window.playerView && window.playerView.setupHome(content) },
         topMeta: campaign => `${campaign.real === false ? 'Night City 2077' : campaign.name} / visão dos jogadores`.toUpperCase(),
         // Mesa do Foundry e "Entrar como mestre", na barra lateral.
         statusUrl: 'api/estado'
@@ -196,11 +197,7 @@
         if (session) window.wikiApp.downloadSession(session, agendaName);
       });
 
-      const mapHtml = hasPlaces => `${hasPlaces ? '' : '<div class="callout">Nenhum lugar marcado ainda. Eles aparecem aqui conforme o grupo descobre.</div>'}
-        <div class="map-toolbar"><div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div></div>
-        <div class="map-filter-list" id="map-filters" hidden></div>
-        <div class="campaign-map-layout"><div class="campaign-map-main"><div class="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa de Night City com os lugares que o grupo conhece"><image id="nightcity-map-image" href="nightcity-map-base.webp" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div><div class="map-legend" id="map-legend"></div></div>
-        <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><h3>Escolha um ponto</h3></div><div class="map-marker-list" id="map-marker-list"></div></section></div>`;
+      const mapHtml = hasPlaces => window.nightCityMap.renderPage(window.playerMapData, { empty: !hasPlaces });
 
       function buildPages(data, seen) {
         const fresh = (page, item) => Boolean(seen) && !(seen[page] || []).includes(itemKey(item));

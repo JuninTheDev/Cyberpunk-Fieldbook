@@ -4,19 +4,21 @@
 // Guarda os arquivos públicos (os mesmos que qualquer jogador baixa) e, da API, só o que é deste aparelho: quem
 // entrou (api/eu) e o que o mestre publicou nas campanhas dele (api/visao). Entrar ou sair apaga essas duas.
 // A wiki do mestre e o resto da API passam direto.
-const CACHE = 'fieldbook-jogadores-v14';
+const CACHE = 'fieldbook-jogadores-v15';
 const PUBLICOS = [
-  '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
+  '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js', '/nightcity-map.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
   '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
   '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'
 ];
 const PRIVADOS = ['/api/eu', '/api/visao'];
 const TROCA_DE_QUEM = ['/api/entrar', '/api/sair', '/api/sair-de-todos', '/api/mestre/entrar', '/api/mestre/sair'];
-// O mapa (2,7 MB) e as fontes entram quando forem abertos, não na instalação.
+// O mapa, seus tiles visíveis e as fontes entram quando forem abertos, não na instalação.
 const MAPA = '/nightcity-map-base.webp';
+const TILES = /^\/assets\/nightcity-map\/tiles\/[3-7]\/(?:0|[1-9]\d*)\/(?:0|[1-9]\d*)\.webp$/;
+const LIMITE_TILES = 256;
 const FONTES = '/cyberpunk-css-main/cyberpunk-css-main/fonts/';
-const estatico = url => url.origin === self.location.origin && (url.pathname === MAPA || url.pathname.startsWith(FONTES));
+const estatico = url => url.origin === self.location.origin && (url.pathname === MAPA || TILES.test(url.pathname) || url.pathname.startsWith(FONTES));
 const guardavel = url => url.origin === self.location.origin
   && (PUBLICOS.includes(url.pathname) || PRIVADOS.includes(url.pathname) || estatico(url));
 // A visão de cada campanha é guardada separada (?campanha=).
@@ -31,6 +33,16 @@ self.addEventListener('activate', event => {
 });
 
 const comPrazo = (request, ms = 4000) => Promise.race([fetch(request), new Promise((_, reject) => setTimeout(() => reject(new Error('rede lenta')), ms))]);
+// Não baixa os 16 mil tiles de uma vez nem enche o celular ao explorar a cidade. Só a camada pública é limitada;
+// regras e a visão da campanha continuam guardadas. Falta de espaço nunca impede mostrar a resposta da rede.
+const guardarEstatico = async (cache, url, response) => {
+  try {
+    await cache.put(url.pathname, response.clone());
+    if (!TILES.test(url.pathname)) return;
+    const tiles = (await cache.keys()).filter(key => TILES.test(new URL(key.url).pathname));
+    await Promise.all(tiles.slice(0, Math.max(0, tiles.length - LIMITE_TILES)).map(key => cache.delete(key)));
+  } catch { /* cache cheio ou indisponível: o mapa continua vindo da rede */ }
+};
 
 self.addEventListener('fetch', event => {
   const request = event.request;
@@ -48,7 +60,7 @@ self.addEventListener('fetch', event => {
   // baixar o mapa (e, sem cópia guardada, ficava sem nenhum).
   if (estatico(url)) {
     event.respondWith(caches.open(CACHE).then(cache => cache.match(url.pathname).then(cached => {
-      const fresh = fetch(request).then(response => { if (response.ok) cache.put(url.pathname, response.clone()); return response; });
+      const fresh = fetch(request).then(async response => { if (response.ok) await guardarEstatico(cache, url, response); return response; });
       if (!cached) return fresh;
       event.waitUntil(fresh.catch(() => null));
       return cached;

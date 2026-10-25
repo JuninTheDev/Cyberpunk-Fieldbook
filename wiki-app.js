@@ -188,6 +188,12 @@
     let campaignMapCategory = 'all';
     let campaignMapAct = 'all';
     let campaignMapView = { x: 0, y: 0, width: 5600, height: 5320 };
+    let campaignMapBounds = { ...campaignMapView };
+    let campaignMapTiles = null;
+    let campaignMapCleanup = null;
+    let campaignMapUI = null;
+    let campaignMapSelected = null;
+    let campaignMapQuery = '';
 
     // ---------------- Campanha ativa ----------------
     // Cada campanha tem as suas páginas (config.campaigns[].groups). A página inicial é config.homePage se a campanha
@@ -320,6 +326,13 @@
     const backdrop = document.createElement('div');
     backdrop.className = 'nav-backdrop';
     document.body.append(backdrop);
+    const mapMenuClose = document.createElement('button');
+    mapMenuClose.type = 'button';
+    mapMenuClose.className = 'map-menu-close';
+    mapMenuClose.textContent = '× Fechar menu';
+    document.querySelector('aside').prepend(mapMenuClose);
+    let drawerInvoker = null;
+    let mapDrawerAttributes = null;
     function labelMenuButton() {
       const label = narrow.matches ? (document.body.classList.contains('sidebar-open') ? 'Fechar o menu' : 'Abrir o menu') : compact() ? 'Mostrar a barra lateral inteira ( [ )' : 'Deixar a barra lateral compacta ( [ )';
       menuButton.setAttribute('aria-label', label);
@@ -333,14 +346,43 @@
       labelMenuButton();
     }
     function setDrawer(open) {
+      const aside = document.querySelector('aside');
+      if (open && document.body.classList.contains('map-immersive')) {
+        if (!mapDrawerAttributes) {
+          drawerInvoker = document.activeElement;
+          mapDrawerAttributes = Object.fromEntries(['role', 'aria-modal', 'aria-label'].map(name => [name, aside.getAttribute(name)]));
+        }
+        aside.setAttribute('role', 'dialog'); aside.setAttribute('aria-modal', 'true'); aside.setAttribute('aria-label', 'Navegação da wiki');
+        document.querySelector('main').inert = true;
+      }
       document.body.classList.toggle('sidebar-open', open);
+      document.querySelector('[data-map-action="menu"]')?.setAttribute('aria-expanded', String(open));
       labelMenuButton();
       if (open) (navigation.querySelector('.nav-item.active') || navigation.querySelector('.nav-item'))?.focus({ preventScroll: true });
+      else if (mapDrawerAttributes) {
+        document.querySelector('main').inert = false;
+        Object.entries(mapDrawerAttributes).forEach(([name, value]) => value === null ? aside.removeAttribute(name) : aside.setAttribute(name, value));
+        mapDrawerAttributes = null;
+        if (drawerInvoker?.isConnected) drawerInvoker.focus({ preventScroll: true });
+        drawerInvoker = null;
+      }
     }
-    const toggleSidebar = () => (narrow.matches ? setDrawer(!document.body.classList.contains('sidebar-open')) : setCompact(!compact()));
+    const toggleSidebar = () => (narrow.matches || document.body.classList.contains('map-immersive') ? setDrawer(!document.body.classList.contains('sidebar-open')) : setCompact(!compact()));
     menuButton.addEventListener('click', toggleSidebar);
+    mapMenuClose.addEventListener('click', () => setDrawer(false));
     backdrop.addEventListener('click', () => setDrawer(false));
-    narrow.addEventListener('change', () => { document.body.classList.remove('sidebar-open'); buildNavigation(); labelMenuButton(); });
+    narrow.addEventListener('change', () => { setDrawer(false); buildNavigation(); labelMenuButton(); });
+    document.addEventListener('keydown', event => {
+      if (!mapDrawerAttributes) return;
+      if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); setDrawer(false); return; }
+      if (event.key !== 'Tab') return;
+      const items = [...document.querySelector('aside').querySelectorAll('button, a[href], input, select, [tabindex="0"]')]
+        .filter(item => !item.disabled && item.getClientRects().length);
+      const index = items.indexOf(document.activeElement);
+      if (!items.length) return;
+      if (event.shiftKey && index <= 0) { event.preventDefault(); items.at(-1).focus(); }
+      else if (!event.shiftKey && (index < 0 || index === items.length - 1)) { event.preventDefault(); items[0].focus(); }
+    }, true);
     if (storage.get('barra-compacta') === '1') document.body.classList.add('sidebar-compact');
     // Abreviação das abas para a barra compacta (CAM, SIS, REG).
     document.querySelectorAll('.workspace-tab').forEach(tab => { tab.dataset.short = tab.textContent.trim().slice(0, 3).toUpperCase(); });
@@ -412,6 +454,7 @@
       if (alias) return openPage(alias.id, target || (alias.section ? { section: alias.section } : undefined), historyMode);
       const page = pageContent[id];
       if (!page) return;
+      stopCampaignMap();
       const targetWorkspace = pageWorkspace[id];
       if (targetWorkspace && targetWorkspace !== currentWorkspace) setWorkspace(targetWorkspace);
       // Página que só existe em outra campanha (um resultado de busca do mestre): troca para ela.
@@ -434,7 +477,8 @@
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
       if (document.body.classList.contains('sidebar-open')) setDrawer(false);
       document.dispatchEvent(new CustomEvent('wiki:pagina', { detail: { id, target } }));
-      const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id];
+      const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id]
+        || (mapPages.includes(id) ? setupCampaignMap : null);
       if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml, target });
       // Páginas com lógica própria (filtros, tabelas) trazem setup(content) no arquivo de dados.
       if (typeof page.setup === 'function') page.setup(content, { openPage, storage, escapeHtml, target, rollTable, rollDice, showRoll, linkGlossary });
@@ -1079,135 +1123,330 @@
       };
     }
 
+    function stopCampaignMap() {
+      if (document.body.classList.contains('sidebar-open') && document.body.classList.contains('map-immersive')) setDrawer(false);
+      if (campaignMapCleanup) { campaignMapCleanup(); campaignMapCleanup = null; }
+      campaignMapUI = null;
+      document.body.classList.remove('map-immersive');
+    }
+
+    function campaignMapLimits() {
+      const svg = document.getElementById('nightcity-map');
+      const aspect = svg?.clientWidth && svg?.clientHeight ? svg.clientWidth / svg.clientHeight : 1;
+      const maxWidth = Math.min(campaignMapBounds.width, campaignMapBounds.height * aspect);
+      const minWidth = Math.min(maxWidth, svg?.dataset.source === 'improved' ? maxWidth / 64 : 750);
+      return { aspect, maxWidth, minWidth };
+    }
+
     function setCampaignMapView(view) {
       const svg = document.getElementById('nightcity-map');
       if (!svg) return;
-      campaignMapView = view;
-      svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.width} ${view.height}`);
+      const bounds = campaignMapBounds;
+      const { aspect, maxWidth, minWidth } = campaignMapLimits();
+      const width = Math.max(minWidth, Math.min(maxWidth, view.width));
+      const height = width / aspect;
+      const centerX = view.x + view.width / 2;
+      const centerY = view.y + (view.height || height) / 2;
+      campaignMapView = {
+        x: Math.max(bounds.x, Math.min(bounds.x + bounds.width - width, centerX - width / 2)),
+        y: Math.max(bounds.y, Math.min(bounds.y + bounds.height - height, centerY - height / 2)), width, height
+      };
+      svg.setAttribute('viewBox', `${campaignMapView.x} ${campaignMapView.y} ${width} ${height}`);
+      const screenScale = svg.clientWidth / width;
+      if (screenScale > 0) svg.querySelectorAll('.map-pin-symbol').forEach(symbol => symbol.setAttribute('transform', `scale(${1 / screenScale})`));
+      campaignMapTiles?.update(campaignMapView);
     }
 
-    function focusCampaignMapMarker(marker, zoomIn = true) {
-      const width = zoomIn ? Math.min(campaignMapView.width, 2400) : campaignMapView.width;
-      const height = width * (mapData().height / mapData().width);
-      setCampaignMapView({
-        x: Math.max(0, Math.min(mapData().width - width, marker.x - width / 2)),
-        y: Math.max(0, Math.min(mapData().height - height, marker.y - height / 2)),
-        width,
-        height
-      });
+    function resetCampaignMap() {
+      const { maxWidth, aspect } = campaignMapLimits();
+      setCampaignMapView({ x: campaignMapBounds.x + (campaignMapBounds.width - maxWidth) / 2,
+        y: campaignMapBounds.y + (campaignMapBounds.height - maxWidth / aspect) / 2, width: maxWidth, height: maxWidth / aspect });
     }
 
-    function showCampaignMapMarker(markerId, focus = true) {
-      const marker = mapData().markers.find(item => item.id === markerId);
-      if (!marker) return;
+    function focusCampaignMapMarker(marker) {
+      const svg = document.getElementById('nightcity-map');
+      if (!svg?.clientWidth || !campaignMapUI) return;
+      const rect = svg.getBoundingClientRect();
+      const free = campaignMapUI.freeArea();
+      const scale = rect.width / campaignMapView.width;
+      const x = rect.left + (marker.x - campaignMapView.x) * scale;
+      const y = rect.top + (marker.y - campaignMapView.y) * scale;
+      const targetX = Math.max(free.left, Math.min(free.right, x));
+      const targetY = Math.max(free.top, Math.min(free.bottom, y));
+      if (Math.abs(x - targetX) > 0.5 || Math.abs(y - targetY) > 0.5) {
+        setCampaignMapView({ ...campaignMapView, x: campaignMapView.x + (x - targetX) / scale,
+          y: campaignMapView.y + (y - targetY) / scale });
+      }
+      // No limite da cartografia, o pan pode não conseguir tirar um ponto de trás
+      // da lista. Recolher Locais preserva o zoom e mantém a ficha selecionada.
+      campaignMapUI.revealFromList(marker);
+    }
+
+    function showCampaignMapMarker(markerId, focus = true, trigger) {
+      const marker = mapData()?.markers.find(item => item.id === markerId);
+      if (!marker || document.querySelector(`.map-pin[data-map-marker="${CSS.escape(markerId)}"]`)?.classList.contains('filtered-out')) return;
+      campaignMapSelected = markerId;
       document.querySelectorAll('.map-pin, .map-marker-card').forEach(item => item.classList.toggle('selected', item.dataset.mapMarker === markerId));
       const category = mapData().categories[marker.category];
-      // Na visão dos jogadores, o ponto traz só um texto público (detail); na do mestre, os campos completos.
-      if (marker.detail !== undefined) { document.getElementById('map-marker-detail').innerHTML = `<p class="eyebrow">${category.label}</p><h3>${escapeHtml(marker.title)}</h3><p class="map-district">${escapeHtml(marker.district || '')}</p>${renderMarkdown(marker.detail || '')}`; if (focus) focusCampaignMapMarker(marker); return; }
-      document.getElementById('map-marker-detail').innerHTML = `<p class="eyebrow">${category.label}</p><h3>${marker.title}</h3><p class="map-district">${marker.district}</p><p><span class="map-act">${marker.act}</span></p><p>${marker.summary}</p><p><b>Gancho:</b> ${marker.hook}</p><p><b>Encontro:</b> ${marker.encounter}</p><p><b>Pista:</b> ${marker.clue}</p>${marker.note ? `<div class="callout"><b>Nota de continuidade:</b> ${marker.note}</div>` : ''}`;
+      const header = `<p class="eyebrow">${escapeHtml(category?.label || '')}</p><h3 id="map-place-title">${escapeHtml(marker.title)}</h3>${marker.district ? `<p class="map-district">${escapeHtml(marker.district)}</p>` : ''}${marker.act ? `<p><span class="map-act">${escapeHtml(marker.act)}</span></p>` : ''}`;
+      // O jogador só recebe o texto publicado; campos privados nunca são copiados para essa visão.
+      const sections = marker.detail !== undefined ? renderMarkdown(marker.detail || '')
+        : `${marker.summary ? `<div class="map-place-summary">${renderMarkdown(marker.summary)}</div>` : ''}<div class="map-place-sections">${[
+          ['Gancho', marker.hook], ['Encontro', marker.encounter], ['Pistas', marker.clue], ['Notas', marker.note]
+        ].filter(([, value]) => value).map(([label, value]) => `<details><summary>${label}</summary><div>${renderMarkdown(value)}</div></details>`).join('')}</div>`;
+      document.getElementById('map-marker-detail').innerHTML = header + sections;
+      campaignMapUI?.open('detail', trigger || document.querySelector(`.map-pin[data-map-marker="${CSS.escape(markerId)}"]`));
       if (focus) focusCampaignMapMarker(marker);
     }
 
     function applyCampaignMapFilters() {
-      let firstVisible = null;
+      const query = foldForSearch(campaignMapQuery.trim());
+      let count = 0;
       mapData().markers.forEach(marker => {
-        const actMatches = campaignMapAct === 'all' || (marker.act || '').includes(campaignMapAct);
-        const visible = (campaignMapCategory === 'all' || marker.category === campaignMapCategory) && actMatches;
-        document.querySelector(`.map-pin[data-map-marker="${marker.id}"]`)?.classList.toggle('filtered-out', !visible);
-        document.querySelector(`.map-marker-card[data-map-marker="${marker.id}"]`)?.classList.toggle('hidden', !visible);
-        if (visible && !firstVisible) firstVisible = marker;
+        const actMatches = campaignMapAct === 'all' || (marker.act || '') === campaignMapAct;
+        const visible = (campaignMapCategory === 'all' || marker.category === campaignMapCategory) && actMatches
+          && (!query || foldForSearch(`${marker.title} ${marker.district || ''}`).includes(query));
+        const id = CSS.escape(marker.id);
+        document.querySelector(`.map-pin[data-map-marker="${id}"]`)?.classList.toggle('filtered-out', !visible);
+        document.querySelector(`.map-marker-card[data-map-marker="${id}"]`)?.classList.toggle('hidden', !visible);
+        if (visible) count++;
+        else if (campaignMapSelected === marker.id) campaignMapUI?.close('detail', false);
       });
-      const selected = mapData().markers.find(marker => document.querySelector(`.map-pin[data-map-marker="${marker.id}"]`)?.classList.contains('selected'));
-      if (selected && !document.querySelector(`.map-marker-card[data-map-marker="${selected.id}"]`)?.classList.contains('hidden')) return;
-      if (firstVisible) showCampaignMapMarker(firstVisible.id, false);
-      else document.getElementById('map-marker-detail').innerHTML = '<h3>Nenhum ponto neste filtro</h3><p>Altere o ato ou o tipo de local para ver outras operações.</p>';
+      document.getElementById('map-empty').hidden = count > 0;
     }
 
-    // #campaignMap/<id do ponto> abre o mapa já no ponto (os lugares da base da campanha têm o link).
     function setupCampaignMap(content, { target } = {}) {
       const data = mapData();
-      if (!data) return;
       const svg = document.getElementById('nightcity-map');
+      if (!data || !svg) return;
+      stopCampaignMap();
+      document.body.classList.add('map-immersive');
+      const stage = svg.closest('.map-stage');
       const pinLayer = document.getElementById('nightcity-map-pins');
-      const markerList = document.getElementById('map-marker-list');
       const image = document.getElementById('nightcity-map-image');
-      const escapeText = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]);
-      campaignMapCategory = 'all';
-      campaignMapAct = 'all';
-      campaignMapView = { x: 0, y: 0, width: data.width, height: data.height };
-      image.setAttribute('href', data.images.base);
+      const abort = new AbortController();
+      const mobile = window.matchMedia('(max-width: 1024px)');
+      const panels = Object.fromEntries(['locals', 'layers', 'detail'].map(name => [name, document.getElementById(`map-${name}-panel`)]));
+      const state = { locals: false, layers: false, detail: false };
+      const triggers = {};
+      const stack = [];
+      let expanded = false;
+      let cancelGesture = () => {};
+      let destroyed = false;
+      campaignMapCategory = 'all'; campaignMapAct = 'all'; campaignMapQuery = ''; campaignMapSelected = null;
+      const clearSelection = () => {
+        campaignMapSelected = null;
+        stage.querySelectorAll('.selected').forEach(item => item.classList.remove('selected'));
+      };
+      function syncPanels() {
+        panels.locals.hidden = !state.locals;
+        panels.layers.hidden = !state.layers;
+        panels.detail.hidden = !state.detail || state.layers;
+        panels.detail.classList.toggle('is-expanded', expanded);
+        stage.querySelectorAll('[data-map-toggle]').forEach(button => button.setAttribute('aria-expanded', String(state[button.dataset.mapToggle])));
+        const expand = panels.detail.querySelector('[data-map-expand]');
+        expand.textContent = expanded ? 'Recolher' : 'Expandir';
+        expand.setAttribute('aria-expanded', String(expanded));
+        const sheet = mobile.matches ? Object.values(panels).find(panel => !panel.hidden) : null;
+        stage.classList.toggle('has-sheet', Boolean(sheet));
+        stage.style.setProperty('--map-sheet-height', `${sheet ? sheet.getBoundingClientRect().height : 0}px`);
+      }
+      function close(name, restore = true) {
+        const fallback = triggers[name];
+        state[name] = false;
+        const index = stack.indexOf(name); if (index >= 0) stack.splice(index, 1);
+        if (name === 'detail') { clearSelection(); expanded = false; }
+        syncPanels();
+        if (restore) {
+          const trigger = fallback?.isConnected && fallback.getClientRects().length ? fallback : stage.querySelector(`[data-map-toggle="${name}"]`) || svg;
+          trigger.focus({ preventScroll: true });
+        }
+      }
+      function open(name, trigger) {
+        if (mobile.matches) Object.keys(state).forEach(key => { if (key !== name) state[key] = false; });
+        if (name === 'detail') { state.layers = false; expanded = false; }
+        state[name] = true;
+        triggers[name] = trigger || document.activeElement;
+        const index = stack.indexOf(name); if (index >= 0) stack.splice(index, 1);
+        stack.push(name);
+        syncPanels();
+        const first = name === 'locals' ? document.getElementById('map-place-search') : name === 'layers' ? document.getElementById('map-source') : panels.detail.querySelector('[data-map-close]');
+        first?.focus({ preventScroll: true });
+      }
+      campaignMapUI = {
+        open, close,
+        revealFromList(marker) {
+          if (panels.locals.hidden) return;
+          const point = svg.createSVGPoint(); point.x = marker.x; point.y = marker.y;
+          const p = point.matrixTransform(svg.getScreenCTM()), r = panels.locals.getBoundingClientRect();
+          if (p.x >= r.left - 16 && p.x <= r.right + 16 && p.y >= r.top - 16 && p.y <= r.bottom + 16) close('locals', false);
+        },
+        freeArea() {
+          const r = svg.getBoundingClientRect();
+          const free = { left: r.left + 30, right: r.right - 30, top: r.top + 84, bottom: r.bottom - 42 };
+          for (const [name, panel] of Object.entries(panels)) {
+            if (panel.hidden) continue;
+            const p = panel.getBoundingClientRect();
+            if (mobile.matches) free.bottom = Math.min(free.bottom, p.top - 28);
+            else if (name === 'locals') free.left = Math.max(free.left, p.right + 28);
+            else free.right = Math.min(free.right, p.left - 28);
+          }
+          free.right = Math.max(free.left, free.right); free.bottom = Math.max(free.top, free.bottom);
+          return free;
+        }
+      };
+      stage.addEventListener('click', event => {
+        const toggle = event.target.closest('[data-map-toggle]');
+        const shut = event.target.closest('[data-map-close]');
+        if (toggle) { const name = toggle.dataset.mapToggle; if (state[name]) close(name); else open(name, toggle); }
+        if (shut) close(shut.dataset.mapClose);
+        if (event.target.closest('[data-map-expand]')) { expanded = !expanded; syncPanels(); }
+      }, { signal: abort.signal });
+      document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || document.body.classList.contains('sidebar-open') || !document.body.classList.contains('map-immersive')) return;
+        const name = [...stack].reverse().find(key => !panels[key].hidden);
+        if (name) { event.preventDefault(); event.stopImmediatePropagation(); close(name); }
+      }, { capture: true, signal: abort.signal });
+      const onMobile = () => {
+        cancelGesture();
+        if (mobile.matches) {
+          const latest = [...stack].reverse().find(name => state[name]);
+          Object.keys(state).forEach(name => { state[name] = name === latest; });
+        }
+        syncPanels();
+      };
+      mobile.addEventListener('change', onMobile);
+      campaignMapTiles = window.nightCityMap?.createLayer(svg, { onError: () => {
+        if (destroyed) return;
+        const status = document.getElementById('map-status');
+        status.classList.add('is-error');
+        status.textContent = 'Esta região não carregou. Em Camadas, escolha o Mapa base ou tente novamente com conexão.';
+      } }) || null;
       const mapSource = document.getElementById('map-source');
-      const actFilter = document.getElementById('map-act-filter');
-      if (mapSource) mapSource.value = 'base';
+      const chooseSource = (source, initial = false) => {
+        cancelGesture();
+        if (source === 'improved' && !campaignMapTiles) source = 'base';
+        if (source !== 'improved' && !data.images[source]) source = campaignMapTiles ? 'improved' : 'base';
+        const previous = campaignMapView;
+        const wasFull = initial || Math.abs(previous.width - campaignMapLimits().maxWidth) < 1;
+        campaignMapBounds = source === 'improved' ? { ...window.nightCityMap.bounds } : { x: 0, y: 0, width: data.width, height: data.height };
+        svg.dataset.source = source; mapSource.value = source;
+        campaignMapTiles?.setEnabled(source === 'improved');
+        image.style.display = source === 'improved' ? 'none' : '';
+        if (source !== 'improved') image.setAttribute('href', data.images[source]);
+        document.getElementById('map-status').classList.remove('is-error');
+        document.getElementById('map-status').textContent = 'Arraste para explorar. Use + e −, a roda do mouse ou dois dedos para ampliar.';
+        if (wasFull) resetCampaignMap();
+        else setCampaignMapView(previous);
+      };
+      campaignMapBounds = { x: 0, y: 0, width: data.width, height: data.height };
+      chooseSource(localGet('night-city-map-source') || 'improved', true);
       pinLayer.innerHTML = data.markers.map(marker => {
         const category = data.categories[marker.category];
-        return `<g class="map-pin" data-map-marker="${marker.id}" tabindex="0" role="button" aria-label="${escapeText(marker.title)}, ${escapeText(marker.district)}" transform="translate(${marker.x} ${marker.y})"><title>${escapeText(marker.title)} — ${escapeText(marker.district)}</title><circle class="pin-core" cx="0" cy="0" r="62" fill="${category.color}"></circle><text class="pin-code" x="0" y="2">${escapeText(marker.code)}</text><text class="pin-label" x="82" y="14">${escapeText(marker.title)}</text></g>`;
+        return `<g class="map-pin" data-map-marker="${escapeHtml(marker.id)}" tabindex="0" role="button" aria-label="${escapeHtml(marker.title)}, ${escapeHtml(marker.district || '')}" transform="translate(${marker.x} ${marker.y})"><title>${escapeHtml(marker.title)}</title><g class="map-pin-symbol"><circle class="pin-core" cx="0" cy="0" r="13" fill="${category.color}"></circle><text class="pin-code" x="0" y="1">${escapeHtml(marker.code)}</text><text class="pin-label" x="19" y="4">${escapeHtml(marker.title)}</text></g></g>`;
       }).join('');
-      markerList.innerHTML = data.markers.map(marker => `<button type="button" class="map-marker-card" data-map-marker="${marker.id}"><span class="map-marker-dot" style="background:${data.categories[marker.category].color}"></span><span><strong>${escapeText(marker.title)}</strong><small>${escapeText(marker.district)}${marker.act ? ` / ${escapeText(marker.act)}` : ''}</small></span></button>`).join('');
-      document.getElementById('map-legend').innerHTML = Object.entries(data.categories).map(([id, category]) => `<span class="map-legend-item"><i class="map-legend-swatch" style="background:${category.color}"></i>${escapeText(category.label)}</span>`).join('');
-      document.getElementById('map-filters').innerHTML = `<button type="button" class="map-filter" data-map-category="all" aria-pressed="true">Todos</button>${Object.entries(data.categories).map(([id, category]) => `<button type="button" class="map-filter" data-map-category="${id}" aria-pressed="false">${escapeText(category.label)}</button>`).join('')}`;
-      if (actFilter) actFilter.value = 'all';
-      setCampaignMapView(campaignMapView);
-
-      if (mapSource) mapSource.onchange = event => image.setAttribute('href', data.images[event.target.value]);
+      document.getElementById('map-marker-list').innerHTML = data.markers.map(marker => `<button type="button" class="map-marker-card" data-map-marker="${escapeHtml(marker.id)}"><span class="map-marker-dot" style="background:${data.categories[marker.category].color}"></span><span><strong>${escapeHtml(marker.title)}</strong><small>${escapeHtml(marker.district || '')}${marker.act ? ` / ${escapeHtml(marker.act)}` : ''}</small></span></button>`).join('');
+      document.getElementById('map-legend').innerHTML = Object.values(data.categories).map(category => `<span class="map-legend-item"><i class="map-legend-swatch" style="background:${category.color}"></i>${escapeHtml(category.label)}</span>`).join('');
+      document.getElementById('map-filters').innerHTML = `<button type="button" class="map-filter" data-map-category="all" aria-pressed="true">Todos</button>${Object.entries(data.categories).map(([id, category]) => `<button type="button" class="map-filter" data-map-category="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(category.label)}</button>`).join('')}`;
+      mapSource.onchange = event => { chooseSource(event.target.value); localSet('night-city-map-source', svg.dataset.source); };
+      const actFilter = document.getElementById('map-act-filter');
       if (actFilter) actFilter.onchange = event => { campaignMapAct = event.target.value; applyCampaignMapFilters(); };
+      document.getElementById('map-place-search').oninput = event => { campaignMapQuery = event.target.value; applyCampaignMapFilters(); };
       document.getElementById('map-filters').onclick = event => {
         const button = event.target.closest('[data-map-category]');
         if (!button) return;
         campaignMapCategory = button.dataset.mapCategory;
-        document.querySelectorAll('.map-filter').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        stage.querySelectorAll('.map-filter').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
         applyCampaignMapFilters();
       };
       document.getElementById('map-marker-list').onclick = event => {
         const button = event.target.closest('[data-map-marker]');
-        if (button) showCampaignMapMarker(button.dataset.mapMarker);
+        if (button) showCampaignMapMarker(button.dataset.mapMarker, true, button);
       };
-      pinLayer.onclick = event => {
-        const pin = event.target.closest('[data-map-marker]');
-        if (pin) showCampaignMapMarker(pin.dataset.mapMarker);
-      };
+      pinLayer.onclick = event => { const pin = event.target.closest('[data-map-marker]'); if (pin) showCampaignMapMarker(pin.dataset.mapMarker, true, pin); };
       pinLayer.onkeydown = event => {
         const pin = event.target.closest('[data-map-marker]');
-        if (pin && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); showCampaignMapMarker(pin.dataset.mapMarker); }
+        if (pin && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); showCampaignMapMarker(pin.dataset.mapMarker, true, pin); }
       };
-      document.querySelectorAll('[data-map-action]').forEach(button => button.onclick = () => {
-        if (button.dataset.mapAction === 'reset') return setCampaignMapView({ x: 0, y: 0, width: data.width, height: data.height });
-        const factor = button.dataset.mapAction === 'zoom-in' ? 0.72 : 1 / 0.72;
-        const width = Math.max(750, Math.min(data.width, campaignMapView.width * factor));
-        const height = width * (data.height / data.width);
-        const centerX = campaignMapView.x + campaignMapView.width / 2;
-        const centerY = campaignMapView.y + campaignMapView.height / 2;
-        setCampaignMapView({ x: Math.max(0, Math.min(data.width - width, centerX - width / 2)), y: Math.max(0, Math.min(data.height - height, centerY - height / 2)), width, height });
+      const zoom = (factor, point) => {
+        cancelGesture();
+        const view = campaignMapView, limits = campaignMapLimits();
+        const width = Math.max(limits.minWidth, Math.min(limits.maxWidth, view.width * factor));
+        const height = width / limits.aspect;
+        const anchor = point || { x: view.x + view.width / 2, y: view.y + view.height / 2 };
+        setCampaignMapView({ x: anchor.x - (anchor.x - view.x) * width / view.width,
+          y: anchor.y - (anchor.y - view.y) * height / view.height, width, height });
+      };
+      stage.querySelectorAll('[data-map-action]').forEach(button => button.onclick = () => {
+        if (button.dataset.mapAction === 'menu') return toggleSidebar();
+        if (button.dataset.mapAction === 'reset') { cancelGesture(); resetCampaignMap(); return; }
+        zoom(button.dataset.mapAction === 'zoom-in' ? 0.72 : 1 / 0.72);
       });
-
-      let dragStart = null;
-      svg.onpointerdown = event => {
-        if (event.target.closest('.map-pin')) return;
-        dragStart = { x: event.clientX, y: event.clientY, view: { ...campaignMapView } };
+      const mapPoint = (x, y) => { const point = svg.createSVGPoint(); point.x = x; point.y = y; return point.matrixTransform(svg.getScreenCTM().inverse()); };
+      const pointers = new Map();
+      let gesture = null;
+      cancelGesture = () => {
+        const ids = [...pointers.keys()]; pointers.clear(); gesture = null; svg.classList.remove('is-dragging');
+        ids.forEach(id => { if (svg.hasPointerCapture(id)) svg.releasePointerCapture(id); });
+      };
+      const beginGesture = () => {
+        const points = [...pointers.values()];
+        if (!points.length) { gesture = null; svg.classList.remove('is-dragging'); return; }
+        const center = points.length > 1 ? { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 } : points[0];
+        gesture = { center, anchor: mapPoint(center.x, center.y), view: { ...campaignMapView }, scale: svg.clientWidth / campaignMapView.width,
+          distance: points.length > 1 ? Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) : 0 };
         svg.classList.add('is-dragging');
-        svg.setPointerCapture(event.pointerId);
+      };
+      svg.onpointerdown = event => {
+        if ((event.pointerType === 'mouse' && event.button !== 0) || event.target.closest('.map-pin')) return;
+        event.preventDefault(); pointers.set(event.pointerId, { x: event.clientX, y: event.clientY }); svg.setPointerCapture(event.pointerId); beginGesture();
       };
       svg.onpointermove = event => {
-        if (!dragStart) return;
-        const rect = svg.getBoundingClientRect();
-        const dx = (event.clientX - dragStart.x) * dragStart.view.width / rect.width;
-        const dy = (event.clientY - dragStart.y) * dragStart.view.height / rect.height;
-        setCampaignMapView({ ...dragStart.view, x: Math.max(0, Math.min(data.width - dragStart.view.width, dragStart.view.x - dx)), y: Math.max(0, Math.min(data.height - dragStart.view.height, dragStart.view.y - dy)) });
+        if (!pointers.has(event.pointerId) || !gesture) return;
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        const points = [...pointers.values()];
+        const center = points.length > 1 ? { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 } : points[0];
+        const factor = points.length > 1 && gesture.distance > 0 ? gesture.distance / Math.max(1, Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y)) : 1;
+        const limits = campaignMapLimits();
+        const width = Math.max(limits.minWidth, Math.min(limits.maxWidth, gesture.view.width * factor));
+        const height = width / limits.aspect, scale = width / gesture.view.width;
+        setCampaignMapView({ x: gesture.anchor.x - (gesture.anchor.x - gesture.view.x) * scale - (center.x - gesture.center.x) / gesture.scale * scale,
+          y: gesture.anchor.y - (gesture.anchor.y - gesture.view.y) * scale - (center.y - gesture.center.y) / gesture.scale * scale, width, height });
       };
-      const endDrag = () => { dragStart = null; svg.classList.remove('is-dragging'); };
-      svg.onpointerup = endDrag;
-      svg.onpointercancel = endDrag;
-      svg.onwheel = event => {
-        event.preventDefault();
-        const factor = event.deltaY < 0 ? 0.84 : 1 / 0.84;
-        const width = Math.max(750, Math.min(data.width, campaignMapView.width * factor));
-        const height = width * (data.height / data.width);
-        const centerX = campaignMapView.x + campaignMapView.width / 2;
-        const centerY = campaignMapView.y + campaignMapView.height / 2;
-        setCampaignMapView({ x: Math.max(0, Math.min(data.width - width, centerX - width / 2)), y: Math.max(0, Math.min(data.height - height, centerY - height / 2)), width, height });
+      const endDrag = event => { pointers.delete(event.pointerId); beginGesture(); };
+      svg.onpointerup = endDrag; svg.onpointercancel = endDrag; svg.onlostpointercapture = endDrag;
+      svg.onwheel = event => { event.preventDefault(); zoom(event.deltaY < 0 ? 0.84 : 1 / 0.84, mapPoint(event.clientX, event.clientY)); };
+      svg.onkeydown = event => {
+        if (event.target !== svg) return;
+        if (['+', '=', '-', 'Home', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) event.preventDefault();
+        if (event.key === '+' || event.key === '=') zoom(0.72);
+        else if (event.key === '-') zoom(1 / 0.72);
+        else if (event.key === 'Home') { cancelGesture(); resetCampaignMap(); }
+        else if (event.key.startsWith('Arrow')) { cancelGesture(); setCampaignMapView({ ...campaignMapView,
+          x: campaignMapView.x + ({ ArrowLeft: -1, ArrowRight: 1 }[event.key] || 0) * campaignMapView.width * 0.15,
+          y: campaignMapView.y + ({ ArrowUp: -1, ArrowDown: 1 }[event.key] || 0) * campaignMapView.height * 0.15 }); }
       };
-      applyCampaignMapFilters();
-      if (target && target.section && data.markers.some(marker => marker.id === target.section)) showCampaignMapMarker(target.section);
+      let lastWidth = svg.clientWidth, lastHeight = svg.clientHeight;
+      const resize = window.ResizeObserver ? new ResizeObserver(() => {
+        if (destroyed || !svg.isConnected || !svg.clientWidth || !svg.clientHeight) return;
+        if (svg.clientWidth !== lastWidth || svg.clientHeight !== lastHeight) {
+          cancelGesture();
+          const cx = campaignMapView.x + campaignMapView.width / 2, cy = campaignMapView.y + campaignMapView.height / 2;
+          const width = campaignMapView.width / Math.max(1, lastWidth) * svg.clientWidth, height = width * svg.clientHeight / svg.clientWidth;
+          lastWidth = svg.clientWidth; lastHeight = svg.clientHeight;
+          setCampaignMapView({ x: cx - width / 2, y: cy - height / 2, width, height });
+        } else setCampaignMapView(campaignMapView);
+        syncPanels();
+        const marker = data.markers.find(item => item.id === campaignMapSelected);
+        if (marker && !panels.detail.hidden) focusCampaignMapMarker(marker);
+      }) : null;
+      resize?.observe(svg); Object.values(panels).forEach(panel => resize?.observe(panel));
+      campaignMapCleanup = () => {
+        destroyed = true; cancelGesture(); abort.abort(); mobile.removeEventListener('change', onMobile); resize?.disconnect();
+        campaignMapTiles?.destroy(); campaignMapTiles = null;
+      };
+      syncPanels(); setCampaignMapView(campaignMapView); applyCampaignMapFilters();
+      if (target?.section && data.markers.some(marker => marker.id === target.section)) showCampaignMapMarker(target.section);
     }
 
     // Normaliza caractere por caractere para manter as posições do texto original no trecho exibido.
@@ -1308,6 +1547,7 @@
     function searchPages(query) {
       const terms = queryTerms(query);
       if (!terms.length) { reopenCurrent(); return; }
+      stopCampaignMap();
       if (query !== lastQuery) { searchLimit = 60; lastQuery = query; }
       searchIndex = searchIndex || buildSearchIndex();
       const phrase = foldForSearch(query.trim()).replace(/\s+/g, ' ');
@@ -1405,12 +1645,16 @@
       const typing = event.target.closest && event.target.closest('input, textarea, select, [contenteditable]');
       if ((event.key === '/' && !typing) || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k')) {
         event.preventDefault();
+        if (document.body.classList.contains('map-immersive')) {
+          stopCampaignMap();
+          content.innerHTML = '<p class="eyebrow">Busca na wiki</p><h2>Buscar</h2><p class="lede">Digite um nome ou assunto. Esc retorna ao mapa.</p>';
+        }
         search.focus();
         search.select();
       }
       // [ : barra lateral compacta (ou a gaveta, no celular). Esc fecha a gaveta.
       if (event.key === '[' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); toggleSidebar(); }
-      if (event.key === 'Escape' && document.body.classList.contains('sidebar-open')) { setDrawer(false); menuButton.focus(); }
+      if (event.key === 'Escape' && document.body.classList.contains('sidebar-open')) { setDrawer(false); if (!document.body.classList.contains('map-immersive')) menuButton.focus(); }
     });
     search.addEventListener('keydown', event => {
       if (event.key === 'Escape') { reopenCurrent(); search.blur(); }

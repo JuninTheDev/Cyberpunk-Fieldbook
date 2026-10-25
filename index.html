@@ -53,6 +53,7 @@
   <script src="conta.js"></script>
   <script src="mestre-npcs.js"></script>
   <script src="campaign-map.js"></script>
+  <script src="nightcity-map.js"></script>
   <script src="campanha-base.js"></script>
   <script src="jogadores-painel.js"></script>
   <script src="campanhas-painel.js"></script>
@@ -148,20 +149,7 @@
       campaignMap: {
         eyebrow: 'Protocolo Morana / mapa do mestre', title: 'Night City: quadro de operações',
         lede: 'Mapa de planejamento com locais da campanha, ganchos, encontros e atividades secundárias. Selecione um marcador para ver como usá-lo; os prédios exatos ficam em aberto para adaptação à mesa.',
-        html: `<div class="map-toolbar">
-          <label class="map-control">Versão do mapa<select id="map-source"><option value="base">Mapa base</option><option value="reference">Mapa com referências originais</option></select></label>
-          <label class="map-control">Ato / sessão<select id="map-act-filter"><option value="all">Toda a campanha</option><option value="Sessão 01">Sessão 01</option></select></label>
-          <div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div>
-        </div>
-        <div class="map-filter-list" id="map-filters" aria-label="Filtrar marcadores"></div>
-        <div class="campaign-map-layout">
-          <div class="campaign-map-main">
-            <div class="campaign-map-canvas" id="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa interativo de Night City com locais da campanha Protocolo Morana"><image id="nightcity-map-image" href="nightcity-map-base.webp" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div>
-            <div class="map-legend" id="map-legend"></div>
-            <p class="map-caveat">Pinos de planejamento, não coordenadas canônicas de prédios. O mapa com referências originais mantém as marcações que já vieram no arquivo; os pontos da campanha são uma camada separada.</p>
-          </div>
-          <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><p class="eyebrow">Operações planejadas</p><h3>Escolha um ponto do mapa</h3><p>Os pinos separam cenas da Sessão 01, infraestrutura de Morana e ganchos opcionais.</p></div><div class="map-marker-list" id="map-marker-list"></div></section>
-        </div>`
+        html: window.nightCityMap.renderPage(window.campaignMapData)
       },
       sources: {
         eyebrow: 'Biblioteca local / PDFs disponíveis', title: 'Livros de referência',

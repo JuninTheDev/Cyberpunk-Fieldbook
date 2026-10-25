@@ -49,7 +49,7 @@ const contentTypes = {
 // Os arquivos de regras não têm notas de campanha; elas ficam no index.html. O que o mestre publica em cada campanha
 // não é arquivo: vem pela API (/api/visao), só para quem joga nela.
 const playerFiles = new Set([
-  '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js',
+  '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js', '/nightcity-map.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
   '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
   '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
@@ -57,6 +57,8 @@ const playerFiles = new Set([
   '/manifest.webmanifest', '/sw.js', '/icones/icone.svg', '/icones/icone-192.png', '/icones/icone-512.png'
 ]);
 const playerFolders = ['/cyberpunk-css-main/cyberpunk-css-main/fonts/'];
+// Só os tiles WebP do mapa público: não libera scripts, arquivos de campanha ou a pasta de origem inteira.
+const publicMapTile = /^\/assets\/nightcity-map\/tiles\/[3-7]\/(?:0|[1-9]\d*)\/(?:0|[1-9]\d*)\.webp$/;
 
 const isLoopback = address => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address);
 const cookieKey = request => ((request.headers.cookie || '').match(/(?:^|;\s*)gm=([^;]+)/) || [])[1] || '';
@@ -332,7 +334,7 @@ http.createServer((request, response) => {
   if (!filePath.startsWith(`${root}${path.sep}`)) return send(response, 403, 'Forbidden');
   // Confere a lista dos jogadores no caminho já resolvido: no Windows, "fonts/..\..\index.html" escaparia da pasta.
   const servedPath = `/${path.relative(root, filePath).split(path.sep).join('/')}`;
-  const playerFile = playerFiles.has(servedPath) || playerFolders.some(folder => servedPath.startsWith(folder));
+  const playerFile = playerFiles.has(servedPath) || playerFolders.some(folder => servedPath.startsWith(folder)) || publicMapTile.test(servedPath);
   if (!gameMaster && !playerFile) {
     return send(response, 403, 'Área do mestre. A visão dos jogadores fica em /jogadores.html');
   }
