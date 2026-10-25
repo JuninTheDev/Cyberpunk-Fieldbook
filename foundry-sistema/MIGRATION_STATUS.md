@@ -8204,7 +8204,7 @@ e 3 do C34 (os ciclos 158 a 161 da sessão Codex) já na branch. Com ela, o C34 
   `tests/sistema/cirurgia.test.mjs`, que conferem as DVs e os custos com a tabela da wiki; o teste do C33 em
   `mesa.test.mjs` passou a contar as duas rolagens da cirurgia). G4 completo antes da integração, 265/265 em 575 s no Foundry 14.369 (uma rodada antes deu 263/265: o "jogador ataca" com o `reading 'system'` e o "o que a mesa vê do ataque" com a janela de reação, os dois instáveis já vistos e fora da cirurgia; passaram na rodada seguinte, sem mudança), com o passo novo
   (a janela, o ripperdoc no hospital, o "+ OPÇÃO", a recusa sem dinheiro, o empate do Medtech, a retirada que destrói e
-  a que guarda, o Shift, o só tirar e a peça sem lugar); nenhum aviso de compatibilidade nem erro do sistema. O G4 da árvore integrada vai num commit de registro.
+  a que guarda, o Shift, o só tirar e a peça sem lugar); nenhum aviso de compatibilidade nem erro do sistema. O G4 completo da árvore integrada (632a27f1): 267/267 em 572 s, sem aviso nem erro do sistema.
 - **Mutações:** 27 caíram, todas restauradas pelo md5: 10 da regra pura (G3) e 17 no Foundry (G4 focado: a abertura, um
   jogador e o passo novo, ~36 s). Duas sobreviveram na primeira rodada (a retirada que falha sem destruir e o "Só
   tirar" que não tira): o passo esperava o estado certo, mas não o conferia no fim (a lição do ciclo 80 no
