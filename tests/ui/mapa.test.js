@@ -20,7 +20,10 @@ const paineis = `['locals', 'layers', 'detail'].filter(n => { const e = document
   return e && !e.hidden && e.getClientRects().length && getComputedStyle(e).display !== 'none'; })`;
 
 test('mapa imersivo mantém navegação e coordenadas, funciona no celular e protege a visão do jogador', { timeout: 180000 }, async t => {
-  await comNavegadorIsolado(t, async ({ base, comando, avaliar, ate, captura, esperar }) => {
+  await comNavegadorIsolado(t, async ({ base, comando, avaliar, ate, captura: capturar, esperar }) => {
+    // O mapa já ocupa a viewport. Capturar além dela pode redimensionar temporariamente
+    // a janela no Chromium e disparar o ResizeObserver da câmera durante o próprio teste.
+    const captura = (nome, seletor) => capturar(nome, seletor, { captureBeyondViewport: false });
     const avaliarOriginal = avaliar;
     avaliar = async expressao => {
       try { return await avaliarOriginal(expressao); }

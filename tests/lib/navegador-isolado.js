@@ -66,9 +66,9 @@ async function comNavegadorIsolado(t, verificar) {
       }
       throw new Error(`A página não chegou ao estado esperado: ${expression}`);
     };
-    const captura = async (nome, seletor) => {
+    const captura = async (nome, seletor, { captureBeyondViewport = true } = {}) => {
       const clip = await avaliar(`(() => { const r=document.querySelector(${JSON.stringify(seletor)}).getBoundingClientRect();return {x:r.x+scrollX,y:r.y+scrollY,width:r.width,height:r.height,scale:1}; })()`);
-      const png = await comando('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip });
+      const png = await comando('Page.captureScreenshot', { format: 'png', captureBeyondViewport, clip });
       const saida = path.resolve(__dirname, '../.saida');
       fs.mkdirSync(saida, { recursive: true });
       const arquivo = path.join(saida, `${nome}.png`);
