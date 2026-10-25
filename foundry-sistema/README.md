@@ -298,6 +298,26 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **a trava:** o jogador que tenta mover o token do contêiner sem "Mover o contêiner" ganha o aviso, e o token fica;
   - **o ator novo** nasce loja, com o token solto e neutro e todos os jogadores donos: como no CORE, a ficha só funciona
     assim (quem pega muda o contêiner). O que o jogador não pode usar não aparece.
+- **Tokens dinâmicos** (o C45, parte 1, ciclo 176; pedido do usuário): a imagem do token muda pela direção em que ele está
+  virado e pelo estado do ator. A arte é em vista de cima 3/4, em 8 direções, e não gira (o token fica em pé); a direção é
+  o giro que o Foundry 14 dá sozinho ao token no movimento (a configuração do núcleo "Girar o token automaticamente").
+  - **A janela** (o botão "Token dinâmico" no HUD do token, para o dono, ou `game.system.api.tokenDinamico.abrir(ator)`):
+    ligar, a pasta e "Ler a pasta", que preenche a grade pelos nomes padronizados (`nome_parado_045.webp`,
+    `nome_mirando_270.png`, `nome_caminhando_180.webp`; `nome_ferido-leve.webp`, `nome_ferido-grave`, `nome_caido`,
+    `nome_incapacitado`, `nome_morto`; só o mestre, ou quem pode procurar arquivos, lê a pasta), a grade (Parado,
+    Caminhando e Mirando nas 8 direções e as poses sem direção; clique escolhe, botão direito tira) e a calibração: onde
+    fica o 0° da folha e se ela conta no sentido do Foundry (0° virado para baixo, 90° para a esquerda, 180° para cima,
+    270° para a direita) ou no contrário.
+  - **A pose:** morto, Morto; mortalmente ferido, inconsciente ou em estase, Incapacitado; caído, Caído; com uma arma
+    equipada, Mirando na direção; parado e ferido (leve ou grave), a pose de ferido; senão, Parado na direção. Faltou a
+    imagem, a mais geral (a direção mais perto; Mirando no Parado; Ferido grave no leve; Caído e Morto no Incapacitado);
+    sem nenhuma, a imagem de antes.
+  - **Quem vê:** a imagem vai para o token, e todos veem a mesma. O movimento troca no mesmo update (sem gravação a mais);
+    o que muda no ator (o HP, a arma, os estados) troca pelo mestre ativo (sem mestre, por quem mudou). O capanga de token
+    solto herda o conjunto do ator. Desligado, o token volta à imagem e ao giro de antes. O retrato da wiki, com o
+    conjunto ligado, vira a imagem de antes (a base).
+  - **Ainda não:** o Caminhando durante o movimento, as transições e a pré-carga (a parte 2) e o cortador da folha (a
+    parte 3). Num movimento com vários pontos, vale a direção do último trecho.
 - **Painel Tático** (o módulo painel-tatico da mesa, dentro do sistema; o C25, ciclo 125): a barra na base da tela com o
   token controlado (ou, sem nenhum, o personagem do jogador):
   - **o retrato grande** do personagem, um PNG para cada estado de ferimento (Sem ferimentos, Levemente, Gravemente,

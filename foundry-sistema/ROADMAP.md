@@ -430,7 +430,9 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   Caminhando só durante o movimento, na tela de cada um; as imagens por uma pasta com nomes padronizados e uma janela no
   ator, e um cortador de folha (com fundo transparente). Fora por agora: Correndo, Salto, Agachado e Levantando. Um ciclo
   por parte:
-  - [~] parte 1, o conjunto de imagens, a escolha da imagem e a gravação no token (sessão Junin, 2026-10-25);
+  - [x] parte 1, o conjunto de imagens, a escolha da imagem e a gravação no token (ciclo 176, sessão Junin, 2026-10-25):
+    a janela no HUD do token (a pasta pelos nomes padronizados, a grade e a calibração), a pose pelo estado com os recuos,
+    a imagem no mesmo update do movimento e pelo mestre quando o ator muda; o capanga de token solto herda;
   - [ ] parte 2, o Caminhando durante o movimento, as transições e a pré-carga;
   - [ ] parte 3, o cortador da folha.
 - [ ] **C46. Veículos como atores** (pedido do usuário, 2026-10-25: o veículo com token próprio, como a mesa da wiki do

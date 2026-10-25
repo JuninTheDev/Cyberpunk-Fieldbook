@@ -8558,6 +8558,44 @@ integrados aqui pelo patch.
   sem a ablação (M2), o token ligado e pequeno (M3), o SP sem dono (M4), o veículo no rastreador (M5), o +5 no SDP (M6),
   o Desfazer sem o ator (M7), o dano manual sem o veículo (M8) e a ficha numa parte só (M9).
 - **Próximo:** o C46, parte 2 (a ligação com o item do personagem e a migração dos veículos que já existem).
+### Ciclo 176 (2026-10-25): C45, parte 1, os tokens dinâmicos: o conjunto, a escolha da imagem e a gravação no token (sessão Junin)
+
+- **Pedido do usuário (2026-10-25), fora da comparação com o CORE:** a imagem do token muda pela direção, pela arma
+  equipada, pelo ferimento e por caído/inconsciente. Decisões dele, pela folha de exemplo (8 direções em vista de cima 3/4,
+  com as linhas Parado, Caminhando e Mirando e as poses Ferido leve, Ferido grave, Incapacitado e Morto): armado ou não;
+  parado e ferido, a pose de ferido; andando ou mirando, as 8 direções; mortal, inconsciente e estase, Incapacitado; o
+  Caminhando só durante o movimento; a pasta com nomes padronizados e a janela; um cortador de folha. Fora por agora:
+  Correndo, Salto, Agachado e Levantando.
+- **O Foundry 14 (estudado no código, 14.369):** o giro automático no movimento é do núcleo (`core.tokenAutoRotate`, padrão
+  ligado; `TokenDocument#_preUpdateMovement` grava o `rotation` no arrasto e no teclado); o `_preUpdate` roda antes do hook
+  `preUpdateToken` (`client/data/client-backend.mjs:238-239`), então o hook já vê o giro novo; o `lockRotation` deixa a
+  imagem em pé (`mesh.angle = 0`); trocar o `texture.src` anima com o filtro de transição (fade, glitch, hologram...). Os
+  módulos Swapper (direção) e Visage (estado) escrevem a mesma textura e não conhecem o sistema: o mecanismo é próprio.
+- **Entrega:** `regras-token-dinamico.mjs` (a regra pura: as 29 chaves, `poseDoToken`, `direcaoDaArte` com a calibração,
+  `imagemDoToken` com os recuos, `chaveDoArquivo` e `imagensDaPasta` para os nomes, `conjuntoValido`) e
+  `token-dinamico.mjs` (o estado do ator, a imagem para o token, o `preUpdateToken` que põe a imagem no mesmo update do
+  giro, o `preCreateToken`, os ganchos do ator, dos itens e dos efeitos que agendam a gravação pelo mestre ativo, a janela
+  `token-dinamico` e o botão no HUD do token). O conjunto fica em `flags.cpr-fieldbook.tokenDinamico` (sempre completo),
+  com a imagem de antes (`base`) e o giro de antes (`travaAntes`) guardados da primeira vez. O `wiki-retrato.mjs`, com o
+  conjunto ligado, troca a base (import dinâmico, para o teste do G3 continuar sem Foundry).
+- **Leitura minha:** caído sem a pose Caído usa a Incapacitado; Morto sem imagem também; o último recurso é o Parado, e
+  sem nada, a base. A direção que falta usa a mais perto, e no empate a do sentido horário.
+- **Limites:** parado e ferido, o token fica na pose de ferido também logo depois de andar (a direção andando é da parte 2,
+  na tela de cada um). Num movimento com vários pontos, vale a direção do último trecho (o Foundry grava um giro só). Ler a
+  pasta pede a permissão de procurar arquivos (o mestre). A troca do retrato da wiki com o conjunto ligado não tem passo
+  no G4.
+- **Integração:** a KouArt publicou os ciclos 173 (o C44), 174 (o C35) e 175 (o C46, parte 1, o veículo como ator) no
+  meio; o ciclo passou de 173 para 176, com um conflito de acréscimo no MIGRATION_STATUS (as duas versões).
+- **Portões:** G1, 205 arquivos com sintaxe válida depois da integração; G2, ESLint 10.12.0 sem erros; G3, 607/607 (5 testes
+  novos em `tests/sistema/token-dinamico.test.mjs`); G4 completo antes da integração, 278/278 em 586 s (o da árvore
+  integrada vai num commit de registro) no Foundry 14.369, sem aviso nem erro do sistema, com o passo novo: a pasta com imagens de teste (enviadas
+  pelo `FilePicker.upload`), "Ler a pasta" (10 das 29), ligar, o token novo em pé, o movimento em quatro direções (a
+  diagonal sem imagem cai no 0), a arma (Mirando a 270), o ferimento (leve, e o grave no leve), parado e ferido depois de
+  andar, caído e estase (Incapacitado), morto, a calibração no sentido contrário, o capanga de token solto e desligar.
+- **Mutações:** 25 caíram, restauradas pelo md5: 12 da regra pura (G3) e 13 no Foundry (G4 focado). Duas sobreviveram na primeira rodada: o desempate da direção (o empate do teste caía igual sem ele; entrou um empate em que a ordem da lista e o sentido horário discordam) e o preCreateToken (o protótipo já tinha a imagem; o token passou a nascer com a arma já equipada depois de salvar).
+- **No G4 completo, o Foundry 14 gravou e não preparou:** ao desligar, o token ficou com o `_source.texture.src` certo (a base) e o `texture.src` preparado com a imagem de antes, sem efeito, override ou erro (o `reset()` à mão acertava). Só aparecia no G4 completo, e quatro rodadas instrumentadas mostraram isso. O `gravarNoToken` confere depois de gravar: se o campo preparado não bate com o gravado, `reset()` e redesenha o token na tela. O passo também relê o token e a cena pelo `game.scenes` (as instâncias trocam no G4 completo).
+- **No caminho:** o `getDependentTokens` sem `concreteOnly` traz as cópias de prévia do token, e o update delas falha ("You
+  must provide an _id..."): os tokens do ator são só os concretos.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

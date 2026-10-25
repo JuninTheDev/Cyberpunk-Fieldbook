@@ -57,8 +57,13 @@ export async function aplicarRetrato(ator, doc, enderecoWiki) {
     img = fonte;
   }
   try {
-    await ator.update({ img, 'prototypeToken.texture.src': img });
-    for (const token of ator.getDependentTokens?.({ linked: true, concreteOnly: true }) || []) await token.update({ 'texture.src': img });
+    // Com o token dinâmico ligado (o C45), o retrato vira a base do conjunto, e o token fica com a imagem dele.
+    const { trocarBase } = await import('./token-dinamico.mjs');
+    if (await trocarBase(ator, img)) await ator.update({ img });
+    else {
+      await ator.update({ img, 'prototypeToken.texture.src': img });
+      for (const token of ator.getDependentTokens?.({ linked: true, concreteOnly: true }) || []) await token.update({ 'texture.src': img });
+    }
   } catch (erro) {
     return { aplicado: '', notas: [`Retrato: o Foundry recusou a imagem (${erro.message}).`] };
   }

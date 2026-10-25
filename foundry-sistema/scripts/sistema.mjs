@@ -49,6 +49,7 @@ import { executarComandoRed, registrarCritico, rolarDano, testar } from './rolag
 import * as terapia from './terapia.mjs';
 import * as hospital from './hospital.mjs';
 import * as cryo from './cryo.mjs';
+import * as tokenDinamico from './token-dinamico.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
@@ -123,6 +124,9 @@ Hooks.once('init', () => {
   // Estabilizar e a cura natural (o C36): o dano novo tira a marca de estabilizado; a API para as macros e os testes.
   estabilizacao.registrarEstabilizar();
   game.system.api.estabilizacao = estabilizacao;
+  // Os tokens dinâmicos (o C45): a imagem do token pela direção e pelo estado, o botão do HUD e a janela do conjunto.
+  tokenDinamico.registrarTokenDinamico();
+  game.system.api.tokenDinamico = tokenDinamico.API;
 });
 
 Hooks.once('ready', () => {

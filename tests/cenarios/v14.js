@@ -18197,6 +18197,135 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('tokens dinâmicos (o C45, parte 1): a janela lê a pasta pelos nomes padronizados e liga o conjunto (o token em pé, com a imagem do estado); o movimento gira o token (o giro automático do Foundry) e troca a imagem no mesmo update, com a direção mais perto quando falta; a arma equipada (Mirando), o ferimento (Ferido leve; o grave cai no leve), caído (cai no Incapacitado) e morto trocam a imagem pelo mestre; a calibração inverte o sentido; o capanga de token solto herda; desligado, volta a imagem e o giro de antes', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const FP = foundry.applications.apps.FilePicker.implementation;
+        const pasta = 'teste-c45';
+        try { await FP.createDirectory('data', pasta); } catch { /* já existe */ }
+        // As imagens de teste: um quadrado de uma cor por arquivo, com o nome padronizado (faltam de propósito o Parado a 45, 135,
+        // 225 e 315, o Mirando a 45, 135, 180, 225 e 315, o Ferido grave e o Caído, e todo o Caminhando).
+        const nomes = ['ricky_parado_000.svg', 'ricky_parado_090.svg', 'ricky_parado_180.svg', 'ricky_parado_270.svg', 'ricky_mirando_000.svg', 'ricky_mirando_090.svg',
+          'ricky_mirando_270.svg', 'ricky_ferido-leve.svg', 'ricky_incapacitado.svg', 'ricky_morto.svg', 'leia-me.svg'];
+        for (const [i, nome] of nomes.entries()) {
+          const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="hsl(' + (i * 33) + ',80%,50%)"/></svg>';
+          await FP.upload('data', pasta, new File([svg], nome, { type: 'image/svg+xml' }), {}, { notify: false });
+        }
+        const img = nome => pasta + '/ricky_' + nome + '.svg';
+        const ator = await Actor.implementation.create({ name: 'Teste Dinâmico', type: 'personagem', ownership: { default: 0 }, prototypeToken: { texture: { src: 'icons/svg/mystery-man.svg' } } });
+        const [arma] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone((await game.system.api.wiki.carregarCatalogo())['core_weapons:medium-pistol'])]);
+        await arma.update({ 'system.equipada': false });
+        const anterior = canvas.scene;
+        const cena = await Scene.implementation.create({ name: 'C45 Tokens', active: false, width: 1600, height: 1200, grid: { size: 100, distance: 2, units: 'm' } });
+        await cena.activate();
+        await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        // A imagem de antes (o sistema troca a padrão pela dele): a base que volta ao desligar.
+        const lido = { baseAntes: ator.prototypeToken.texture.src };
+        let capanga = null;
+        const janela = () => document.querySelector('.application.token-dinamico');
+        try {
+          // 1. A janela: a pasta, "Ler a pasta" (10 das 29; o leia-me fica fora), ligar e salvar.
+          await game.system.api.tokenDinamico.abrir(ator);
+          await __esperar(() => janela()?.querySelector('[name="pasta"]'));
+          janela().querySelector('[name="pasta"]').value = pasta;
+          janela().querySelector('[data-action="lerPasta"]').click();
+          await __esperar(() => janela().querySelector('input[name="imagens.morto"]')?.value);
+          lido.lidas = [...janela().querySelectorAll('input[name^="imagens."]')].filter(i => i.value).length;
+          lido.miniatura = janela().querySelector('.celula[data-chave="parado-90"] img')?.getAttribute('src');
+          janela().querySelector('[name="ativo"]').checked = true;
+          janela().querySelector('button[type="submit"]').click();
+          await __esperar(() => !janela() && ator.getFlag('${S}', 'tokenDinamico')?.ativo);
+          lido.salvo = { base: ator.getFlag('${S}', 'tokenDinamico').base, trava: ator.prototypeToken.lockRotation, prototipo: ator.prototypeToken.texture.src };
+          // 2. O token na cena, com a arma já equipada depois de salvar: nasce em pé e com o Mirando a 0° (o protótipo ainda
+          // tem o Parado); guardada a arma, o Parado.
+          await arma.update({ 'system.equipada': true });
+          const [criado] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 500, y: 500 })).toObject()]);
+          // O documento do token, sempre relido do mundo: no G4 completo, a cena (e com ela o token) troca de instância no meio
+          // do passo.
+          const doc = () => game.scenes.get(cena.id)?.tokens.get(criado.id) ?? criado;
+          const token = new Proxy({}, { get: (alvo, chave) => { const atual = doc(); const valor = atual[chave]; return typeof valor === 'function' ? valor.bind(atual) : valor; } });
+          await __esperar(() => canvas.tokens.get(token.id));
+          lido.criado = { src: token.texture.src, trava: token.lockRotation };
+          await arma.update({ 'system.equipada': false });
+          await __esperar(() => token.texture.src === img('parado_000'));
+          // 3. O movimento: para a esquerda (90), a direita (270), para cima (180) e na diagonal para baixo e a direita (315,
+          // sem imagem: o empate entre 270 e 0 vai para o 0).
+          const mover = async (dx, dy) => { await token.move([{ x: token.x + dx, y: token.y + dy }], { autoRotate: true, constrainOptions: { ignoreWalls: true, ignoreCost: true } }); await __esperar(() => !canvas.tokens.get(token.id)?.animationContexts?.size, 50); return [token.rotation, token.texture.src]; };
+          lido.movimento = [await mover(-100, 0), await mover(200, 0), await mover(0, -100), await mover(100, 100)];
+          // 4. A arma equipada, virado para a direita (270): Mirando a 270.
+          await mover(100, 0);
+          await arma.update({ 'system.equipada': true });
+          await __esperar(() => token.texture.src === img('mirando_270'));
+          lido.armado = token.texture.src;
+          await arma.update({ 'system.equipada': false });
+          await __esperar(() => token.texture.src === img('parado_270'));
+          // 5. O ferimento: levemente (Ferido leve) e gravemente (sem imagem: o leve).
+          const max = ator.system.hp.max;
+          await ator.update({ 'system.hp.value': max - 1 });
+          await __esperar(() => token.texture.src === img('ferido-leve'));
+          lido.leve = token.texture.src;
+          await ator.update({ 'system.hp.value': Math.floor(max / 2) - 1 });
+          await new Promise(r => setTimeout(r, 300));
+          lido.grave = token.texture.src;
+          // Parado e ferido, depois de andar, fica a pose de ferido (o giro muda para 90; a direção andando é da parte 2, na tela).
+          lido.feridoAndando = await mover(-100, 0);
+          // 6. Caído (sem imagem: o Incapacitado) e morto.
+          await ator.update({ 'system.hp.value': max });
+          await ator.toggleStatusEffect('prone', { active: true });
+          await __esperar(() => token.texture.src === img('incapacitado'));
+          lido.caido = token.texture.src;
+          await ator.toggleStatusEffect('prone', { active: false });
+          await __esperar(() => token.texture.src === img('parado_090'));
+          // Na estase (o efeito do C41), Incapacitado.
+          const [estase] = await ator.createEmbeddedDocuments('ActiveEffect', [{ name: 'Em estase (Cryopump)', img: 'icons/svg/frozen.svg', flags: { '${S}': { estase: { tipo: 'cryopump', hp: 15, max: 15, dispositivo: '', medico: '' } } } }]);
+          await __esperar(() => token.texture.src === img('incapacitado'));
+          lido.estase = token.texture.src;
+          await estase.delete();
+          await __esperar(() => token.texture.src === img('parado_090'));
+          await ator.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: true, overlay: true });
+          await __esperar(() => token.texture.src === img('morto'));
+          lido.morto = token.texture.src;
+          await ator.toggleStatusEffect(CONFIG.specialStatusEffects.DEFEATED, { active: false });
+          await __esperar(() => token.texture.src === img('parado_090'));
+          // 7. A calibração no sentido contrário: o giro 90 do Foundry é o 270 da folha.
+          await game.system.api.tokenDinamico.salvarConjunto(ator, { ...ator.getFlag('${S}', 'tokenDinamico'), angulos: { inicio: 0, sentido: 'antihorario' } });
+          await __esperar(() => token.texture.src === img('parado_270'));
+          lido.calibrado = { rotacao: token.rotation, src: token.texture.src };
+          // 8. O capanga de token solto herda o conjunto do ator; o HP do token solto troca a imagem dele.
+          capanga = await Actor.implementation.create({ name: 'Teste Dinâmico Capanga', type: 'capanga', ownership: { default: 0 }, prototypeToken: { actorLink: false } });
+          await game.system.api.tokenDinamico.salvarConjunto(capanga, { ...ator.getFlag('${S}', 'tokenDinamico'), angulos: { inicio: 0, sentido: 'horario' } });
+          const [solto] = await cena.createEmbeddedDocuments('Token', [(await capanga.getTokenDocument({ x: 900, y: 500 })).toObject()]);
+          lido.solto = { src: solto.texture.src, trava: solto.lockRotation, ligado: solto.actorLink };
+          await solto.actor.update({ 'system.hp.value': solto.actor.system.hp.max - 1 });
+          await __esperar(() => solto.texture.src === img('ferido-leve'));
+          lido.soltoFerido = { src: solto.texture.src, base: capanga.system.hp.value === capanga.system.hp.max };
+          // 9. Desligado: a imagem e o giro de antes.
+          await game.system.api.tokenDinamico.salvarConjunto(ator, { ...ator.getFlag('${S}', 'tokenDinamico'), ativo: false });
+          lido.desligado = { src: token.texture.src, trava: token.lockRotation, prototipo: ator.prototypeToken.texture.src, travaPrototipo: ator.prototypeToken.lockRotation };
+          lido.desligadoMove = await mover(100, 0);
+          return lido;
+        } finally {
+          for (const app of [...foundry.applications.instances.values()].filter(app => app.element?.classList.contains('token-dinamico'))) await app.close();
+          if (anterior && game.scenes.has(anterior.id)) await anterior.activate();
+          await cena.delete();
+          await Actor.implementation.deleteDocuments([ator.id, capanga?.id].filter(Boolean));
+        }
+      })()`);
+      const v = info;
+      const img = nome => `teste-c45/ricky_${nome}.svg`;
+      const ok = v.lidas === 10 && v.miniatura === img('parado_090')
+        && v.baseAntes && v.salvo.base === v.baseAntes && v.salvo.trava === true && v.salvo.prototipo === img('parado_000')
+        && v.criado.src === img('mirando_000') && v.criado.trava === true
+        && JSON.stringify(v.movimento) === JSON.stringify([[90, img('parado_090')], [270, img('parado_270')], [180, img('parado_180')], [315, img('parado_000')]])
+        && v.armado === img('mirando_270') && v.leve === img('ferido-leve') && v.grave === img('ferido-leve')
+        && JSON.stringify(v.feridoAndando) === JSON.stringify([90, img('ferido-leve')])
+        && v.caido === img('incapacitado') && v.estase === img('incapacitado') && v.morto === img('morto')
+        && v.calibrado.rotacao === 90 && v.calibrado.src === img('parado_270')
+        && v.solto.src === img('parado_000') && v.solto.trava === true && v.solto.ligado === false && v.soltoFerido.src === img('ferido-leve') && v.soltoFerido.base
+        && v.desligado.src === v.baseAntes && v.desligado.trava === false && v.desligado.prototipo === v.baseAntes && v.desligado.travaPrototipo === false
+        && v.desligadoMove[1] === v.baseAntes;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];
