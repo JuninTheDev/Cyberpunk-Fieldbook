@@ -432,3 +432,48 @@
   :root[data-tema="2077"] :is(.section:not(.cy-screen), .tile, .pv-me-card, .cc-card-grid .cc-card, .person, .entry, .index-item) { clip-path: none; }
   :root[data-tema="2077"] :is(.section:not(.cy-screen), .tile, .pv-me-card, .cc-card-grid .cc-card, .person, .entry, .index-item)::after { display: none; }
 }
+
+/* ================= 7. As Mensagens (jogador) e a Caixa do NetWire (mestre) ================= */
+/* O layout do exemplo: a lista de canais e conversas à esquerda, a conversa (ou a caixa) ao lado. */
+.nw-app { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.nw-list { position: sticky; top: calc(var(--topbar-h, 73px) + 16px); display: flex; flex-direction: column; gap: 12px; }
+.nw-group { display: flex; flex-direction: column; gap: 2px; }
+.nw-group-title { margin: 0 0 6px; padding: .5rem .75rem; border: 1px solid var(--nw-border); border-radius: 3px; background: var(--nw-surface); color: var(--nw-secondary); font: 600 15px/1.2 var(--nw-font); letter-spacing: .05em; text-transform: uppercase; }
+.nw-list .nw-channel { width: 100%; margin-left: 0; background: none; cursor: pointer; text-align: left; }
+.nw-hash { margin-right: .35em; opacity: .8; }
+.nw-feed { display: flex; flex-direction: column; min-width: 0; }
+.nw-feed .nw-title { font-size: 1.4rem; }
+.nw-contact { margin: 4px 0 0; color: var(--mu); font-size: 14px; }
+.nw-feed-body { max-height: calc(100vh - var(--topbar-h, 73px) - 330px); min-height: 220px; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+.nw-feed-body .md-doc p { margin: 4px 0 0; color: inherit; }
+.nw-msg.nw-player .nw-msg-body, .nw-msg.nw-player .nw-msg-foot { border-color: var(--nw-secondary); color: var(--nw-secondary); }
+.nw-reply { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 16px; margin-top: 12px; }
+.nw-reply-field { flex: 1 1 280px; min-width: 0; }
+.nw-reply .nw-btn--xl { margin-bottom: 0; }
+.nw-reply-status { flex: 1 1 100%; min-height: 1.2em; margin: 6px 0 0; }
+.nw-field textarea { min-height: 72px; }
+/* A Caixa: cartões das mensagens, o formulário e as conversas esperando. */
+.nw-section-title { margin: 20px 0 8px; color: var(--nw-secondary); font: 600 1.1rem var(--nw-font); letter-spacing: .05em; text-transform: uppercase; }
+.nw-card, .nw-composer, .nw-waiting { margin-bottom: 12px; }
+.nw-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 8px; color: var(--tx); }
+.nw-card-tag { color: var(--nw-secondary); font: 400 14px var(--nw-font-label); letter-spacing: .04em; }
+.nw-card-state { margin-left: auto; color: var(--mu); font: 400 14px var(--nw-font-label); }
+.nw-card-note { margin: -4px 0 8px; color: var(--mu); font: 400 14px var(--nw-font-label); }
+.nw-card .nw-msg { padding-bottom: 8px; }
+.nw-composer label { display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--mu); font: 400 13px var(--lbl); letter-spacing: .06em; text-transform: uppercase; }
+.nw-composer :is(input:not([type=checkbox]), select, textarea) { min-height: 40px; padding: 8px 10px; border: 1px solid var(--nw-border); background: var(--nw-well); color: var(--tx); font: 500 15px var(--ui); letter-spacing: 0; text-transform: none; }
+.nw-composer :is(input, select, textarea):focus { border-color: var(--nw-primary); outline: none; }
+.nw-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; margin-bottom: 10px; }
+.nw-wide { margin-bottom: 10px; }
+.nw-composer fieldset { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 10px; border: 1px solid var(--nw-border); }
+.nw-composer legend { padding: 0 4px; color: var(--mu); font: 400 13px var(--lbl); letter-spacing: .06em; text-transform: uppercase; }
+.nw-composer .nw-check, .nw-check { flex-direction: row; align-items: center; gap: 6px; margin-bottom: 10px; color: var(--tx); font: 500 15px var(--ui); letter-spacing: 0; text-transform: none; }
+.nw-composer .nw-toolbar { flex-wrap: wrap; }
+@media (max-width: 820px) {
+  .nw-app { grid-template-columns: minmax(0, 1fr); }
+  .nw-list { position: static; flex-direction: row; overflow-x: auto; gap: 8px; scrollbar-width: none; }
+  .nw-group { flex-direction: row; align-items: center; gap: 4px; }
+  .nw-group-title { margin: 0; white-space: nowrap; }
+  .nw-list .nw-channel { width: auto; white-space: nowrap; }
+  .nw-feed-body { max-height: none; min-height: 0; }
+}

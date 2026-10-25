@@ -129,6 +129,8 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. As últimas camadas do `wiki.css` são o visual de 2026. A parte 1 é o padrão da Loja: fundo quase preto, amarelo, ciano e vermelho, Oxanium no texto e Share Tech Mono nos rótulos (as duas do Google Fonts, licença OFL, em `cyberpunk-css-main/cyberpunk-css-main/fonts/`). A parte 2 segue os exemplos do Resumo, de Personagens, da Ficha e do Escudo: a barra de cima de ponta a ponta, a barra lateral em caixa normal (com as abas Campanhas e Sistema), os títulos em caixa normal e os botões vazados para o que só navega. |
 | `netwire.css` | O NetWire, o redesenho da wiki como o menu do jogo Cyberpunk 2077. Vem depois do `wiki.css`. Tem o kit (`.nw-*`: painel de canto cortado, botões, etiqueta, selo, canal, mensagem, faixa de título), que lê variáveis e serve aos dois temas, e o tema **2077** (`<html data-tema="2077">`), que troca os tokens do `wiki.css` pela paleta vermelha e reveste a barra de cima, a lateral, os quadros e os botões. Parte do "Cyberpunk 2077 HTML" de Marc Woodyard, fork do redesenho de Hussard (CodePen, licença MIT). Rajdhani e VT323 (Google Fonts, licença OFL) ficam na pasta de fontes. |
+| `api-netwire.js` | O servidor das mensagens dentro do jogo (carregado pelo `api-personagens.js`, que diz quem é quem). Por campanha, em `campanhas/<id>/netwire.json` (entra no backup): os canais (conversa direta de um NPC com jogadores escolhidos, ou canal da cidade) e as mensagens (rascunho, agendada ou entregue, com a nota do mestre e a origem). O jogador recebe só os canais dele e o que já foi entregue, sem nota; a agendada aparece sozinha quando chega a hora. Os canais #handouts e #n54-news vêm prontos das Notícias e handouts e das Notícias de Night City. |
+| `netwire.js` | No navegador: a página **Mensagens** dos jogadores (`#pvMensagens/<canal>`) e a **Caixa do NetWire** do mestre (`#caixa`). Também o selo de não lidas (na conta: o que cada jogador já leu em cada canal). |
 | `campaign-map.js` | Pinos do mapa de operações. Os lugares da base apontam para eles (`#campaignMap/<ponto>` abre o mapa já no ponto). |
 | `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
@@ -306,6 +308,18 @@ Notas:
 - **Códigos:** a tabela mostra o **último acesso** e quantos aparelhos cada jogador tem. **Desconectar** tira o jogador de todos os aparelhos (ele volta com o mesmo código); **Novo código** troca o código (o antigo para de valer, e os personagens ficam).
 - **Sessões de login:** entrar com o código cria uma sessão; o cookie guarda só um identificador aleatório dela, não o código. No servidor online o cookie só vai por https. Uma sessão sem uso por seis meses acaba (o aparelho esquecido não fica entrando).
 - **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros jogadores da mesma campanha, só nome, apelido, Role e retrato. De outra campanha, nada. Sem código, nenhum personagem. O mestre vê e edita todos.
+
+## Mensagens (NetWire)
+
+As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que escrevem, canais da cidade, e os jogadores respondem.
+
+- **Para os jogadores (aba Mensagens):** à esquerda, os **Feeds** (os canais da cidade, mais #handouts e #n54-news) e o **Direto** (as conversas com os contatos); ao lado, a conversa. Quando o canal aceita resposta, o campo **Mensagem** fica embaixo (Ctrl+Enter envia), assinado com o personagem em uso. O que chegou desde a última leitura ganha um selo no menu e na aba do topo, e a conversa com novidade abre primeiro.
+- **Para o mestre (Mesa → Caixa do NetWire, ou a aba Mensagens):**
+  - **Rascunhos** e **Agendadas:** escreva a mensagem (canal, quem fala, texto, uma nota só sua) e escolha **Entregar agora**, **Agendar** (com data e hora) ou **Salvar rascunho**. Nada chega aos jogadores sem você entregar.
+  - **Esperando você:** as conversas em que um jogador respondeu por último; **Responder como** abre a conversa.
+  - **Canais:** crie a conversa de um NPC (marque quem recebe; sem ninguém marcado, todos da campanha) ou um canal da cidade, e diga se os jogadores podem responder. Excluir o canal leva as mensagens junto.
+- **Limites:** o jogador manda até 12 mensagens a cada 10 minutos, de até 1.000 caracteres. Cada campanha guarda as últimas 2.000 mensagens.
+- **Ainda não:** a IA que rascunha as mensagens (a próxima fase).
 
 ## Conta e navegação
 

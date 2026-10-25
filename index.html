@@ -66,6 +66,7 @@
   <script src="campanha-base.js"></script>
   <script src="jogadores-painel.js"></script>
   <script src="campanhas-painel.js"></script>
+  <script src="netwire.js"></script>
   <script>
     // Visão do mestre: campanha, documentos e segredos. Nada daqui chega à visão dos jogadores.
     const sources = {
@@ -99,6 +100,7 @@
         ]},
         { group: 'Mesa', pages: [
           { id: 'notes', label: 'Estado da campanha', icon: 'N' },
+          { id: 'caixa', label: 'Caixa do NetWire', icon: 'NW' },
           { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' },
           { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' },
           { id: 'campanhas', label: 'Campanhas', icon: 'CP' }
@@ -235,6 +237,12 @@
     // O nome do arquivo .md → a página do documento inteiro (para os links dos textos da base).
     const docPage = name => Object.keys(markdownDocs).find(id => markdownDocs[id].file.endsWith(`/${name}`) && !markdownDocs[id].vista) || '';
 
+    // A Caixa do NetWire: o esqueleto que o netwire.js preenche.
+    const netwireInbox = {
+      eyebrow: 'NetWire / caixa do mestre', title: 'Caixa do NetWire',
+      lede: 'As mensagens dentro do jogo: rascunhos, agendadas, as conversas esperando a sua resposta e os canais. Nada chega aos jogadores sem você entregar.',
+      html: '<div data-nw-gm></div>'
+    };
     function startWiki(list) {
       const manager = window.campaignManager;
       const built = manager.build(list, { morana, markdownDocs });
@@ -245,20 +253,22 @@
       window.wikiConfig = {
         campaigns: built.campaigns,
         markdownDocs: { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs },
-        pageContent: { ...pageContent, notes: notesPage(), ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
+        pageContent: { ...pageContent, notes: notesPage(), caixa: netwireInbox, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
         clocks: base.relogiosDaWiki(),
         // Páginas que viraram parte de outra: o endereço antigo continua abrindo.
         aliases: { docQuemEQuem: { id: 'people', section: 'quem-e-quem' }, campaign: { id: 'docDiario' }, session1: { id: 'sessao01Notas' }, docSessao01: { id: 'sessao01Notas' } },
         gmNotes,
-        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, sources: setupSources, ...built.pageSetup, ...extras.pageSetup },
+        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), caixa: content => window.netwire && window.netwire.setupGm(content), home: setupHomeDesk, sources: setupSources, ...built.pageSetup, ...extras.pageSetup },
         homePage: 'home',
+        // A Caixa do NetWire (netwire.js): as mensagens dentro do jogo, para revisar, agendar e responder.
+        netwire: 'mestre',
         // As abas do topo (a casca NetWire), pelos nomes dos grupos: valem para o Protocolo Morana e para as campanhas
         // criadas na página Campanhas (campanhas-painel.js). Mensagens, por enquanto, é a Visão dos jogadores.
         topTabs: [
           { id: 'inicio', label: 'Início', inicio: true },
           { id: 'campanha', label: 'Campanha', grupos: ['Campanha ativa', 'Campanha', 'Documentos', 'Outros documentos', 'Night City (todas as campanhas)'] },
           { id: 'sessoes', label: 'Sessões', grupos: ['Sessões'] },
-          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['playerView'] },
+          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['caixa', 'playerView'] },
           { id: 'mesa', label: 'Mesa', grupos: ['Mesa'] },
           { id: 'personagens', label: 'Personagens', curto: 'PCs', grupos: ['Personagens dos jogadores'] },
           { id: 'sistema', label: 'Sistema', area: 'system', pagina: 'screen' }

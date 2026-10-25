@@ -61,6 +61,7 @@
   <script src="criador.js"></script>
   <script src="conta.js"></script>
   <script src="nightcity-map.js"></script>
+  <script src="netwire.js"></script>
   <script>
     // Visão dos jogadores: o conteúdo de campanha vem da API (api/visao), publicado pelo mestre, e só das campanhas em
     // que este jogador joga (api/eu diz quais). Sem código, só as regras.
@@ -101,8 +102,14 @@
           <li><b>Fixar:</b> o botão ☆ ao lado do título de qualquer página a põe no topo da barra lateral (Combate, a Ficha...).</li>
         </ul></div>`
     };
+    const messagesPage = {
+      eyebrow: 'Night City / NetWire', title: 'Mensagens', manterAlvo: true,
+      lede: 'Os canais da cidade e as conversas com os seus contatos. Quando o canal aceita, você responde, e o mestre responde como o contato.',
+      html: '<div data-nw-player></div>'
+    };
     const playerGroups = [{ group: 'O que o grupo sabe', pages: [
       { id: 'pvHome', label: 'Resumo', icon: '00' },
+      { id: 'pvMensagens', label: 'Mensagens', icon: 'MSG' },
       { id: 'pvSessions', label: 'Sessões', icon: 'S' },
       { id: 'pvPeople', label: 'Pessoas', icon: 'P' },
       { id: 'pvMap', label: 'Mapa', icon: 'MAP' },
@@ -124,22 +131,24 @@
       window.playerIdentity = me;
       window.wikiConfig = {
         storagePrefix: 'night-city-jogadores',
+        // As Mensagens do NetWire (netwire.js): canais da cidade e conversas com os NPCs.
+        netwire: 'jogador',
         homePage: 'pvHome',
         // Sem campanha (sem código, ou sem servidor): uma de mentira, só para o menu (real: false).
         campaigns: list ? list.map(item => ({ id: item.id, name: item.nome, color: item.cor, groups: playerGroups })) : [{ id: 'grupo', name: 'Night City, 2077', real: false, groups: playerGroups }],
-        pageContent: { pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City'), pvGuia: playerGuide },
+        pageContent: { pvMensagens: messagesPage, pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City'), pvGuia: playerGuide },
         mapPages: ['pvMap'],
         // As abas do topo (a casca NetWire): o menu do jogo. Mensagens, por enquanto, são as notícias e os handouts.
         topTabs: [
           { id: 'inicio', label: 'Início', inicio: true, paginas: ['pvGuia'] },
           { id: 'personagem', label: 'Personagem', curto: 'Ficha', paginas: ['ficha', 'personagens', 'loja', 'criador'] },
-          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['pvNews', 'pvNightCity'] },
+          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['pvMensagens', 'pvNews', 'pvNightCity'] },
           { id: 'campanha', label: 'Campanha', paginas: ['pvSessions', 'pvPeople'] },
           { id: 'mapa', label: 'Mapa', paginas: ['pvMap'] },
           { id: 'regras', label: 'Regras', area: 'system', pagina: 'combat' }
         ],
         mapData: () => window.playerMapData,
-        pageSetup: { pvHome: content => window.playerView && window.playerView.setupHome(content) },
+        pageSetup: { pvHome: content => window.playerView && window.playerView.setupHome(content), pvMensagens: (content, helpers) => window.netwire && window.netwire.setupPlayer(content, helpers) },
         // A coluna da direita (casca NetWire, telas largas): a próxima sessão e os relógios.
         sidePanel: page => (window.playerView && window.playerView.side ? window.playerView.side(page) : ''),
         topMeta: campaign => `${campaign.real === false ? 'Night City 2077' : campaign.name} / visão dos jogadores`.toUpperCase(),
@@ -262,7 +271,7 @@
         const unread = SOURCES.flatMap(([page, items, label]) => items.filter(item => fresh(page, item)).map(item => ({ page, item, label })));
         const shown = unread.length ? unread.slice(0, 4) : [...news.slice(0, 2).map(item => ({ page: 'pvNews', item, label: 'Notícias e handouts' })), ...city.slice(0, 1).map(item => ({ page: 'pvNightCity', item, label: 'N54 News' }))];
         const excerpt = text => { const plain = String(text || '').replace(/[#*_>`[\]|]/g, '').replace(/\s+/g, ' ').trim(); return plain.length > 140 ? `${plain.slice(0, 139)}…` : plain; };
-        const inboxHtml = shown.length ? `<div class="section pv-inbox" data-toc="${unread.length ? 'Não lidas' : 'Últimas mensagens'}"><h3>${unread.length ? 'Não lidas' : 'Últimas mensagens'}${unread.length ? `<span class="ref">${unread.length}</span>` : ''}</h3>${shown.map(({ page, item, label }) => `<div class="nw-msg"><button type="button" class="nw-msg-body pv-inbox-item" data-page="${page}"><b>${escapeHtml(item.titulo || item.nome || 'Sem título')}</b>${excerpt(item.texto) ? `<span>${escapeHtml(excerpt(item.texto))}</span>` : ''}</button><div class="nw-msg-foot"><b>${escapeHtml(label)}</b>${item.data ? ` · ${escapeHtml(item.data)}` : ''}</div></div>`).join('')}<p><button class="action" type="button" data-page="pvNews">Abrir as mensagens</button></p></div>` : '';
+        const inboxHtml = shown.length ? `<div class="section pv-inbox" data-toc="${unread.length ? 'Não lidas' : 'Últimas mensagens'}"><h3>${unread.length ? 'Não lidas' : 'Últimas mensagens'}${unread.length ? `<span class="ref">${unread.length}</span>` : ''}</h3>${shown.map(({ page, item, label }) => `<div class="nw-msg"><button type="button" class="nw-msg-body pv-inbox-item" data-page="${page}"><b>${escapeHtml(item.titulo || item.nome || 'Sem título')}</b>${excerpt(item.texto) ? `<span>${escapeHtml(excerpt(item.texto))}</span>` : ''}</button><div class="nw-msg-foot"><b>${escapeHtml(label)}</b>${item.data ? ` · ${escapeHtml(item.data)}` : ''}</div></div>`).join('')}<p><button class="action" type="button" data-page="pvMensagens">Abrir as mensagens</button></p></div>` : '';
         const clocksHtml = clocks.length ? `<div class="section" data-toc="Relógios"><h3>Relógios</h3>${clocks.map(clock => `<p class="pv-clock-name"><b>${escapeHtml(clock.nome)}</b> ${clock.valor}/${clock.passos.length}${clock.valor && clock.passos[clock.valor - 1] ? ` · agora: ${escapeHtml(clock.passos[clock.valor - 1])}` : ''}</p><div class="clock clock-readonly">${clock.passos.map((step, index) => `<span class="clock-segment" aria-pressed="${index < clock.valor}"><span>${index + 1}</span>${escapeHtml(step)}</span>`).join('')}</div>`).join('')}</div>` : '';
         // O quadro da coluna da direita (telas largas), nas outras páginas: a próxima sessão e os relógios, em pequeno.
         sideNow = {

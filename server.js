@@ -49,7 +49,7 @@ const contentTypes = {
 // Os arquivos de regras não têm notas de campanha; elas ficam no index.html. O que o mestre publica em cada campanha
 // não é arquivo: vem pela API (/api/visao), só para quem joga nela.
 const playerFiles = new Set([
-  '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/wiki-app.js', '/nightcity-map.js',
+  '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/netwire.js', '/wiki-app.js', '/nightcity-map.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
   '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
   '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
