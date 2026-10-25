@@ -354,6 +354,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     const game = characterGame.valores(doc);
     return {
       hp: characterGame.hp(doc),
+      // A Humanidade de agora e a máxima (a da mesa, quando houver; senão a da criação ou EMP × 10), para o cartão do
+      // Início. null: a ficha ainda não tem EMP.
+      humanidade: (() => { try { return characterGame.ficha(doc).humanidade || null; } catch { return null; } })(),
       ip: game.ip,
       eb: game.dinheiro,
       rank: (roleSummary(doc).find(role => role.id === doc.role) || {}).rank || (created.role && created.role.rank) || null,

@@ -89,9 +89,12 @@
   // na conta (prefs "tema"), igual no celular e no computador; o script do <head> já aplica a cópia do aparelho antes de
   // desenhar, para não piscar o outro tema.
   const THEMES = { fieldbook: { nome: 'Fieldbook', cor: '#0b0d0f' }, 2077: { nome: '2077', cor: '#191a1e' } };
+  // O tema de quem ainda não escolheu (config.temaPadrao): os jogadores começam no 2077; o mestre, no Fieldbook. Só a
+  // escolha diferente do padrão fica gravada (o script do <head> de cada página sabe o padrão dela).
+  const defaultTheme = THEMES[config.temaPadrao] ? config.temaPadrao : 'fieldbook';
   const theme = {
     list: () => Object.entries(THEMES).map(([id, item]) => ({ id, nome: item.nome })),
-    get: () => (THEMES[prefs.get('tema')] ? prefs.get('tema') : 'fieldbook'),
+    get: () => (THEMES[prefs.get('tema')] ? prefs.get('tema') : defaultTheme),
     apply() {
       const id = theme.get();
       if (id === 'fieldbook') delete document.documentElement.dataset.tema;
@@ -100,7 +103,7 @@
     },
     set(id) {
       if (!THEMES[id]) return;
-      prefs.set('tema', id === 'fieldbook' ? null : id);
+      prefs.set('tema', id === defaultTheme ? null : id);
       theme.apply();
       document.dispatchEvent(new CustomEvent('wiki:tema', { detail: { id } }));
     }
@@ -354,7 +357,12 @@
     function setBadges(map) {
       Object.entries(map).forEach(([id, count]) => { if (count > 0) badges[id] = count; else delete badges[id]; });
       buildNavigation();
+      // O total também vai no título da aba do navegador ("(3) Night City Fieldbook"): quem deixa a wiki aberta numa
+      // aba vê que chegou novidade sem olhar para ela.
+      const total = Object.values(badges).reduce((sum, count) => sum + count, 0);
+      document.title = total ? `(${total}) ${baseTitle}` : baseTitle;
     }
+    const baseTitle = document.title;
 
     // ---------------- Abas do topo (a casca NetWire) ----------------
     // O menu principal, como o menu do jogo: cada aba reúne páginas (pela lista e pelos nomes dos grupos da campanha) e

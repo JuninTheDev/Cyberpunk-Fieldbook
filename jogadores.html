@@ -12,7 +12,8 @@
     // O tema e a casca escolhidos no menu da conta (wikiApp.prefs "tema" e "casca"), antes de desenhar: sem piscar.
     try {
       const dono = localStorage.getItem('night-city-dono') || 'aparelho';
-      if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') === '2077') document.documentElement.dataset.tema = '2077';
+      // Aqui o padrão é o 2077: só a escolha "fieldbook" (gravada) fica no amarelo.
+      if ((JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') || '2077') === '2077') document.documentElement.dataset.tema = '2077';
       if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-casca`) || 'null') === 'classica') document.documentElement.dataset.casca = 'classica';
     } catch { /* sem armazenamento: fica o Fieldbook */ }
   </script>
@@ -131,6 +132,8 @@
       window.playerIdentity = me;
       window.wikiConfig = {
         storagePrefix: 'night-city-jogadores',
+        // Quem ainda não escolheu o tema começa no menu do jogo (o 2077); o Fieldbook continua no menu da conta.
+        temaPadrao: '2077',
         // As Mensagens do NetWire (netwire.js): canais da cidade e conversas com os NPCs.
         netwire: 'jogador',
         homePage: 'pvHome',
@@ -219,10 +222,14 @@
         // O HP em 10 segmentos, como a barra da tela de personagem do jogo.
         const segments = hp ? Math.max(0, Math.min(10, Math.round(hp.atual / hp.max * 10))) : 0;
         const bar = hp ? `<div class="pv-me-vital"><small>HP${n.naMesa ? ' na mesa' : ''}</small><span class="nw-bar" aria-hidden="true">${Array.from({ length: 10 }, (_, index) => `<i${index < segments ? ' class="on"' : ''}></i>`).join('')}</span><b class="${hp.atual < hp.max ? 'pv-me-hurt' : ''}">${hp.atual}/${hp.max}</b></div>` : '';
+        // A Humanidade em 10 segmentos, em ciano (o cromo come a barra).
+        const hum = n.humanidade && n.humanidade.max > 0 ? n.humanidade : null;
+        const humSegments = hum ? Math.max(0, Math.min(10, Math.round(hum.atual / hum.max * 10))) : 0;
+        const humBar = hum ? `<div class="pv-me-vital pv-me-hum"><small>Humanidade</small><span class="nw-bar nw-bar--cyan" aria-hidden="true">${Array.from({ length: 10 }, (_, index) => `<i${index < humSegments ? ' class="on"' : ''}></i>`).join('')}</span><b>${hum.atual}/${hum.max}</b></div>` : '';
         const number = (label, value) => (value === null || value === undefined ? '' : `<div class="pv-me-num"><small>${label}</small><b>${escapeHtml(String(value))}</b></div>`);
         const eddies = Number.isFinite(Number(n.eb)) && n.eb !== null && n.eb !== undefined ? `${Number(n.eb).toLocaleString('pt-BR')} eb` : null;
         holder.innerHTML = doc
-          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : `<span class="cc-initials" aria-hidden="true">${escapeHtml(initials(doc.nome))}</span>`}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.rolesLabel(doc))}</p>${bar || eddies || n.ip !== undefined ? `<div class="pv-me-stats">${bar}${number('Eddies', eddies)}${number('IP', n.ip)}</div>` : ''}</div><div class="pv-me-actions"><button class="action solid" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action ghost" type="button" data-pv-switch>Trocar</button></div></div>`
+          ? `<div class="pv-me-card">${doc.retrato ? `<img class="pv-me-portrait" src="${escapeHtml(doc.retrato)}" alt="" referrerpolicy="no-referrer">` : `<span class="cc-initials" aria-hidden="true">${escapeHtml(initials(doc.nome))}</span>`}<div class="pv-me-text"><span class="tag">Seu personagem</span><h3>${escapeHtml(doc.nome || 'Sem nome')}${doc.apelido ? ` <small>"${escapeHtml(doc.apelido)}"</small>` : ''}</h3><p>${escapeHtml(account.rolesLabel(doc))}</p>${bar || humBar || eddies || n.ip !== undefined ? `<div class="pv-me-stats">${bar}${humBar}${number('Eddies', eddies)}${number('IP', n.ip)}</div>` : ''}</div><div class="pv-me-actions"><button class="action solid" type="button" data-page="ficha">Ficha</button><button class="action" type="button" data-page="loja">Loja</button><button class="action ghost" type="button" data-pv-switch>Trocar</button></div></div>`
           : '<div class="pv-me-card pv-me-empty"><div class="pv-me-text"><span class="tag">Seu personagem</span><h3>Nenhum ainda</h3><p>Crie o seu personagem para esta campanha. O mestre leva para o Foundry quando estiver pronto.</p></div><div class="pv-me-actions"><button class="action" type="button" data-pv-new>Criar personagem</button></div></div>';
       }
       document.addEventListener('wiki:personagem', () => renderMe());

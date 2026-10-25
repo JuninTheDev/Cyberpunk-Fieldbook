@@ -384,6 +384,8 @@
 .pv-me-vital small, .pv-me-num small { color: var(--mu); font: 400 11px var(--lbl); letter-spacing: .1em; text-transform: uppercase; }
 .pv-me-vital .nw-bar i.on { background: var(--nw-active); outline-color: var(--nw-active); }
 .pv-me-vital:has(.pv-me-hurt) .nw-bar i.on { background: var(--r); outline-color: var(--r); }
+/* A Humanidade em ciano (a regra de cima pinta o HP de verde). */
+.pv-me-hum .nw-bar i.on { background: var(--nw-secondary); outline-color: var(--nw-secondary); }
 .pv-me-vital b, .pv-me-num b { color: var(--tx); font: 400 15px var(--lbl); }
 .pv-me-vital b.pv-me-hurt { color: var(--r); }
 .pv-me-num { display: flex; flex-direction: column; gap: 2px; }

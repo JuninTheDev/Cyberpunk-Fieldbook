@@ -340,7 +340,7 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
   - **O personagem em uso** é um por campanha, lembrado no aparelho. A **Ficha** e a **Loja** do menu lateral abrem nele, o **Resumo** mostra o cartão "Seu personagem" e a lista de Personagens marca "Em uso" (o botão **Usar** troca).
   - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas, Agenda das mesas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
   - **Sair de todos os aparelhos** (no menu do jogador): a conta sai do celular, do computador, de tudo. Para voltar, o código de novo. Bom para celular perdido ou computador emprestado.
-  - **Aparência** (no menu de todos, até sem código): o tema **Fieldbook** (o amarelo de sempre) ou **2077** (o vermelho do menu do jogo Cyberpunk 2077, com Rajdhani e VT323). A escolha acompanha a conta e já vale ao abrir a página, sem piscar o outro tema.
+  - **Aparência** (no menu de todos, até sem código): o tema **Fieldbook** (o amarelo de sempre) ou **2077** (o vermelho do menu do jogo Cyberpunk 2077, com Rajdhani e VT323). A escolha acompanha a conta e já vale ao abrir a página, sem piscar o outro tema. Quem ainda não escolheu começa no **2077** na wiki dos jogadores e no **Fieldbook** na do mestre.
 - **O que acompanha a conta:** o tema, as páginas fixadas, os grupos recolhidos, a barra compacta, as páginas recentes, o personagem em uso e o que já foi visto (selos de novidade e de pedidos) ficam no servidor, na conta do jogador (ou na do mestre). Entrar no celular mostra tudo como estava no computador. Sem código, fica só no aparelho, como antes.
 - **Páginas com abas (wiki do mestre):** cada assunto da campanha é uma entrada só na barra lateral, com abas no topo da página. **A campanha:** Diário e Base. **Elenco:** Pessoas e facções e Fichas. **Night City:** Mapa, Lugares e peças e Guia de 2077. **Cada sessão:** O que aconteceu (as notas, com o modelo do diário), Handouts (os da sessão, com os botões de entregar) e NPCs (as fichas que você escolhe num seletor com todas as fichas da wiki). As fichas e as notas ficam na mesa do servidor, por campanha. Os endereços de antes (`#campaign`, `#session1`) continuam valendo, e a busca acha o texto de todas as abas.
 - **Barra de cima:** de ponta a ponta, com a marca, as abas do menu, a busca (tecla **/**), a campanha e o botão da conta.
@@ -353,7 +353,7 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
   - **Sem espaço:** a campanha some da barra (o botão da conta também a mostra), depois a marca, e as abas ficam com o nome curto.
   - **No celular,** as abas viram a barra de baixo: as quatro primeiras e **Mais**, que abre a gaveta com o resto.
   - **Coluna da direita** (telas de 1500 px ou mais): "Nesta página" em lista (a seção em que você está fica acesa) e, na visão dos jogadores, a próxima sessão e os relógios. Os chips de "Nesta página" voltam quando a tela é menor.
-  - **Início do jogador:** o cartão do personagem em uso como a tela de personagem do jogo (retrato, Roles, HP em barra de segmentos, eddies e IP, com Ficha, Loja e Trocar); a próxima sessão e as **Não lidas** lado a lado (o que o mestre publicou desde a sua última visita, como mensagens que levam à página; sem nada novo, as últimas notícias); embaixo, o resumo, os relógios e a última sessão.
+  - **Início do jogador:** o cartão do personagem em uso como a tela de personagem do jogo (retrato, Roles, HP e Humanidade em barras de segmentos, eddies e IP, com Ficha, Loja e Trocar); a próxima sessão e as **Não lidas** lado a lado (o que o mestre publicou desde a sua última visita, como mensagens que levam à página; sem nada novo, as últimas notícias); embaixo, o resumo, os relógios e a última sessão.
   - **Ficha:** as abas viram as abas do menu, os STATs ganham o canto cortado e o HP vira uma barra de segmentos. A ficha em si não muda.
   - **Menu clássico:** no menu da conta, em Aparência. Volta à barra lateral com as abas Campanhas e Sistema, como antes. Acompanha a conta.
 - **Barra lateral:**
@@ -363,7 +363,7 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
   - **Barra compacta:** o botão ☰ (ou a tecla **[**) deixa só os ícones; parar o mouse num ícone mostra o nome. O aparelho lembra.
   - **No celular,** a barra lateral é uma gaveta: o ☰ abre, escolher uma página fecha. O conteúdo começa logo abaixo da barra de cima.
   - **Mesa:** o quadro no pé da barra, sempre à vista, diz se a mesa está aberta (e de qual campanha) e quantos estão conectados, com **Entrar na mesa**; para o mestre, também a saúde do servidor.
-- **Novidades (visão dos jogadores):** sessões, pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. No mapa, os lugares novos aparecem em outra cor, com "(novo)" e a legenda explicando. Abrir a página tira o selo.
+- **Novidades (visão dos jogadores):** sessões, pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. No mapa, os lugares novos aparecem em outra cor, com "(novo)" e a legenda explicando. Abrir a página tira o selo. O total dos selos (novidades e mensagens; para o mestre, as conversas esperando resposta) também vai no título da aba do navegador, como "(3) Night City Fieldbook".
 - **Voltar ao topo:** nas páginas longas, um botão no canto de baixo.
 
 ## Consulta durante a sessão
@@ -428,6 +428,8 @@ Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 877
 
 Rode essa suíte uma sessão por vez: as portas de teste e depuração do Edge e a pasta do Foundry de teste
 são compartilhadas entre worktrees. O `tests/validar.js` pode rodar em paralelo.
+
+**Teste do NetWire** (`node tests/rodar.js netwire`): as Mensagens e a Caixa de ponta a ponta. O jogador recebe o recado (selo no menu, na aba e no título), abre, responde assinado pelo personagem, vê a mensagem chegar na hora e as Não lidas do Início; as teclas e a paleta; o mestre vê Esperando você, exclui a mensagem do jogador e pede rascunhos à IA nos dois provedores, com uma API falsa nesta máquina (nada sai, nada é cobrado).
 
 **Teste dos documentos** (`node tests/rodar.js documentos`): confere os `.md` da campanha. Acusa termos fora do padrão da wiki ("Seriamente Ferido", "Canal", "Cybertech", "Enganação"), palavras comuns sem acento, nomes de perícia que não existem, arquivos citados que não existem, documentos fora da wiki e links para fichas que não existem.
 
