@@ -199,7 +199,10 @@
       <p class="nw-card-head"><span class="nw-card-tag">${tag}</span><b>${esc(item.autor.nome)}</b><span class="nw-badge">${mine ? 'Jogador' : item.origem === 'ia' ? 'IA' : 'Mestre'}</span><span class="nw-card-state">${state}</span></p>
       <div class="nw-msg${mine ? ' nw-player' : ''}"><div class="nw-msg-body">${lines(item.texto)}</div></div>
       ${item.nota ? `<p class="nw-card-note">nota: ${esc(item.nota)}</p>` : ''}
-      ${mine ? '' : `<div class="nw-toolbar">${item.estado !== 'entregue' && !item.entregue ? '<button type="button" class="nw-btn nw-btn--primary" data-nw-deliver>Entregar agora</button>' : ''}<button type="button" class="nw-btn" data-nw-edit>Editar</button><button type="button" class="nw-btn" data-nw-delete>Excluir</button></div>`}
+      ${mine
+    // A mensagem do jogador não se edita (é dele), mas o mestre pode tirá-la do NetWire.
+    ? '<div class="nw-toolbar"><button type="button" class="nw-btn" data-nw-delete data-nw-delete-player>Excluir</button></div>'
+    : `<div class="nw-toolbar">${item.estado !== 'entregue' && !item.entregue ? '<button type="button" class="nw-btn nw-btn--primary" data-nw-deliver>Entregar agora</button>' : ''}<button type="button" class="nw-btn" data-nw-edit>Editar</button><button type="button" class="nw-btn" data-nw-delete>Excluir</button></div>`}
     </article>`;
   }
   function composerHtml(preset = {}) {
@@ -294,7 +297,7 @@
       main = waiting.length ? waiting.map(id => {
         const channel = channelById(id);
         const last = own.filter(item => item.canal === id && item.entregue).slice(-3);
-        return `<section class="nw-pad nw-waiting"><p class="nw-pad-title">${channelLabel(channel)}</p>${last.map(messageHtml).join('')}<div class="nw-toolbar"><button type="button" class="nw-btn nw-btn--primary" data-nw-view="canal:${esc(id)}">Responder como ${esc(channel.contato.nome || channel.nome)}</button>${data.ia && data.ia.ligada ? `<button type="button" class="nw-btn" data-nw-ai-quick="${esc(id)}">Rascunhar resposta com IA</button>` : ''}</div></section>`;
+        return `<section class="nw-pad nw-waiting"><p class="nw-pad-title">${channelLabel(channel)}</p>${last.map(item => (item.origem === 'jogador' ? cardHtml(item) : messageHtml(item))).join('')}<div class="nw-toolbar"><button type="button" class="nw-btn nw-btn--primary" data-nw-view="canal:${esc(id)}">Responder como ${esc(channel.contato.nome || channel.nome)}</button>${data.ia && data.ia.ligada ? `<button type="button" class="nw-btn" data-nw-ai-quick="${esc(id)}">Rascunhar resposta com IA</button>` : ''}</div></section>`;
       }).join('') : '<p class="nw-system">— Nenhuma conversa esperando você —</p>';
     } else if (gm.view === 'novo-canal') {
       main = channelFormHtml(null);
@@ -372,7 +375,11 @@
     const quick = event.target.closest('[data-nw-ai-quick]');
     if (quick) { await askAi({ canal: quick.dataset.nwAiQuick, tipo: 'resposta', quantidade: 2 }, null, quick); return; }
     if (event.target.closest('[data-nw-delete]') && id) {
-      if (!(await window.wikiPopup.confirm({ title: 'Excluir a mensagem', html: '<p>A mensagem sai do NetWire (os jogadores deixam de ver, se já tinha sido entregue).</p>', ok: 'Excluir', danger: true }))) return;
+      const fromPlayer = Boolean(event.target.closest('[data-nw-delete-player]'));
+      const warning = fromPlayer
+        ? '<p>A mensagem do jogador sai do NetWire: ninguém mais vê, nem quem escreveu.</p>'
+        : '<p>A mensagem sai do NetWire (os jogadores deixam de ver, se já tinha sido entregue).</p>';
+      if (!(await window.wikiPopup.confirm({ title: fromPlayer ? 'Excluir a mensagem do jogador' : 'Excluir a mensagem', html: warning, ok: 'Excluir', danger: true }))) return;
       await api(url(`/mensagens/${encodeURIComponent(id)}`), { method: 'DELETE' });
       await load(); renderGm();
       return;

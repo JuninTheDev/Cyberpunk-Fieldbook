@@ -128,3 +128,17 @@ test('NetWire: apagar o canal leva as mensagens dele junto', async t => {
   const doMestre = await servidor.pedir('/api/netwire?campanha=morana', { cookie: mestre });
   assert.ok(!doMestre.json.mensagens.some(item => item.canal === wakako.id));
 });
+
+test('NetWire: o mestre exclui a mensagem do jogador; some para todos e a conversa deixa de esperar o mestre', async t => {
+  const { servidor, mestre, ana, wakako } = await preparar(t);
+  const enviada = await servidor.pedir('/api/netwire/mensagens', { method: 'POST', cookie: ana.cookie, body: { canal: wakako.id, texto: 'MENSAGEM-DO-JOGADOR' } });
+  assert.equal(enviada.status, 200, enviada.text);
+  assert.deepEqual((await servidor.pedir('/api/netwire?campanha=morana', { cookie: mestre })).json.aguardando, [wakako.id]);
+  // O jogador não exclui (nem a dele); o mestre exclui.
+  assert.equal((await servidor.pedir(`/api/netwire/mensagens/${enviada.json.mensagem.id}`, { method: 'DELETE', cookie: ana.cookie })).status, 403);
+  assert.equal((await servidor.pedir(`/api/netwire/mensagens/${enviada.json.mensagem.id}?campanha=morana`, { method: 'DELETE', cookie: mestre })).status, 200);
+  assert.ok(!(await servidor.pedir('/api/netwire', { cookie: ana.cookie })).text.includes('MENSAGEM-DO-JOGADOR'));
+  const doMestre = await servidor.pedir('/api/netwire?campanha=morana', { cookie: mestre });
+  assert.ok(!doMestre.text.includes('MENSAGEM-DO-JOGADOR'));
+  assert.deepEqual(doMestre.json.aguardando, []);
+});

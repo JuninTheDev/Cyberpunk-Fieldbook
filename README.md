@@ -318,6 +318,7 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
 - **Para o mestre (Mesa → Caixa do NetWire, ou a aba Mensagens):**
   - **Rascunhos** e **Agendadas:** escreva a mensagem (canal, quem fala, texto, uma nota só sua) e escolha **Entregar agora**, **Agendar** (com data e hora) ou **Salvar rascunho**. Nada chega aos jogadores sem você entregar.
   - **Esperando você:** as conversas em que um jogador respondeu por último; **Responder como** abre a conversa.
+  - **Excluir a mensagem de um jogador:** o botão **Excluir** aparece nas mensagens dos jogadores (em Esperando você e na conversa). A mensagem sai para todos, inclusive para quem escreveu; editar não dá, porque o texto é do jogador.
   - **Canais:** crie a conversa de um NPC (marque quem recebe; sem ninguém marcado, todos da campanha) ou um canal da cidade, e diga se os jogadores podem responder. Excluir o canal leva as mensagens junto.
 - **Na hora:** a página fica ouvindo o servidor (`/api/netwire/eventos`, SSE): a mensagem entregue aparece em menos de um segundo, sem recarregar, e a agendada aparece sozinha quando chega a hora (em até 20 s). Sem a conexão, a página confere de tempos em tempos, como antes. As conversas com novidade também aparecem nas **Não lidas** do Início.
 - **Limites:** o jogador manda até 12 mensagens a cada 10 minutos, de até 1.000 caracteres. Cada campanha guarda as últimas 2.000 mensagens.
