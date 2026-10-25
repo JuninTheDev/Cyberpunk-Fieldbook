@@ -15,6 +15,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { createDrafter } = require('./api-netwire-ia');
 
 const MAX_CHANNELS = 60;
 const MAX_MESSAGES = 2000;
@@ -33,13 +34,23 @@ const text = (value, max) => String(value ?? '').replace(/\r\n?/g, '\n').trim().
 const isIso = value => typeof value === 'string' && !Number.isNaN(Date.parse(value));
 const fail = (status, erro) => ({ status, data: { erro } });
 
-function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn }) {
+// ia: { chave, modelo, limite, fetch } (do server.js); docsDir: os documentos do mestre (para o contexto da IA).
+function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, docsDir = '' }) {
   const fileOf = id => path.join(dataDir, 'campanhas', id, 'netwire.json');
+  const drafter = createDrafter({ ia, docsDir, campaigns });
+  const dailyLimit = Math.max(1, Number(ia.limite) || 30);
   function read(id) {
     try {
       const data = JSON.parse(fs.readFileSync(fileOf(id), 'utf8'));
-      return { canais: Array.isArray(data.canais) ? data.canais : [], mensagens: Array.isArray(data.mensagens) ? data.mensagens : [], atualizado: data.atualizado || null };
-    } catch { return { canais: [], mensagens: [], atualizado: null }; }
+      return { canais: Array.isArray(data.canais) ? data.canais : [], mensagens: Array.isArray(data.mensagens) ? data.mensagens : [], ia: data.ia && typeof data.ia === 'object' ? data.ia : {}, atualizado: data.atualizado || null };
+    } catch { return { canais: [], mensagens: [], ia: {}, atualizado: null }; }
+  }
+  // O uso da IA de hoje (dia no fuso do servidor) e os últimos pedidos, com o custo estimado de cada um.
+  const today = () => new Date().toLocaleDateString('sv-SE');
+  const usageToday = data => (data.ia && data.ia.dia === today() ? { pedidos: data.ia.pedidos || 0, custo: data.ia.custo || 0 } : { pedidos: 0, custo: 0 });
+  function recordUsage(data, uso) {
+    const now = usageToday(data);
+    data.ia = { dia: today(), pedidos: now.pedidos + 1, custo: Math.round((now.custo + (uso ? uso.custo : 0)) * 1e6) / 1e6, registro: [...((data.ia && data.ia.registro) || []), ...(uso ? [{ quando: new Date().toISOString(), ...uso }] : [])].slice(-50) };
   }
   // Toda mudança passa pela fila do arquivo: relê, muda e grava sem esperar nada no meio.
   // change(dados) muda; { status, data } desiste; o que devolver vai na resposta.
@@ -102,6 +113,8 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn }) {
       canais: [VIRTUAL.handouts, VIRTUAL.n54, ...data.canais],
       mensagens: [...virtualMessages(id), ...data.mensagens.map(message => ({ ...message, entregue: delivered(message, at) }))],
       aguardando: waiting,
+      // A IA na Caixa: ligada (há chave), os modelos, o padrão e o uso de hoje.
+      ia: { ligada: drafter.enabled, modelos: drafter.models(), padrao: drafter.defaultModel, limite: dailyLimit, hoje: usageToday(data), ultimos: ((data.ia && data.ia.registro) || []).slice(-5) },
       atualizado: updated(id)
     };
   }
@@ -155,6 +168,7 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn }) {
     const gm = identity.papel === 'mestre';
     const parts = pathname.split('/').slice(3); // ['', 'api', 'netwire', ...]
     const body = method === 'POST' || method === 'PUT' ? await readJson(request, 64 * 1024) : {};
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return json(response, 400, { erro: 'Envie um objeto JSON.' });
     const id = chosenCampaign(identity, query.get('campanha') || body.campanha);
     if (!id) return json(response, 404, { erro: 'Campanha não encontrada.' });
     const reply = result => json(response, result.status, result.data);
@@ -221,6 +235,38 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn }) {
         }));
       }
       return json(response, 405, { erro: 'Método não permitido.' });
+    }
+
+    // A IA rascunha (só o mestre): o que volta vira rascunho na Caixa, com a nota da IA e o custo; nada é entregue.
+    if (parts[0] === 'rascunhar') {
+      if (!gm) return json(response, 403, { erro: 'Só o mestre.' });
+      if (method !== 'POST') return json(response, 405, { erro: 'Use POST.' });
+      if (!drafter.enabled) return json(response, 503, { erro: 'A IA está desligada: falta a ANTHROPIC_API_KEY no servidor.' });
+      const before = read(id);
+      const channel = before.canais.find(item => item.id === body.canal);
+      if (!channel) return json(response, 404, { erro: 'Canal não encontrado.' });
+      if (usageToday(before).pedidos >= dailyLimit) return json(response, 429, { erro: `Chegou ao limite de ${dailyLimit} pedidos de hoje à IA nesta campanha.` });
+      const at = now();
+      const messages = before.mensagens.filter(item => item.canal === channel.id && delivered(item, at));
+      let result;
+      try {
+        result = await drafter.draft({ campaign: id, channel, messages, request: body });
+      } catch (error) {
+        // Mesmo um pedido que falhou pode ter custado (a recusa, a resposta cortada): conta no uso de hoje.
+        if (error.uso) await update(id, data => { recordUsage(data, error.uso); return {}; });
+        return json(response, error.status || 500, { erro: error.message });
+      }
+      const price = result.uso.custo < 0.01 ? 'menos de US$ 0,01' : `US$ ${result.uso.custo.toFixed(2).replace('.', ',')}`;
+      return reply(await update(id, data => {
+        if (!data.canais.some(item => item.id === channel.id)) return fail(404, 'Canal não encontrado.');
+        recordUsage(data, result.uso);
+        const created = result.rascunhos.map(item => ({
+          id: newId(), canal: channel.id, autor: { tipo: 'npc', nome: item.autor || channel.contato.nome || channel.nome }, texto: item.texto.slice(0, MAX_TEXT_GM),
+          quando: null, criada: now(), estado: 'rascunho', origem: 'ia', nota: text(`${item.nota ? `${item.nota} · ` : ''}IA: ${result.uso.modelo}, ${price}`, 500)
+        }));
+        data.mensagens.push(...created);
+        return { mensagens: created, uso: result.uso, hoje: usageToday(data) };
+      }));
     }
 
     if (parts[0] === 'canais') {

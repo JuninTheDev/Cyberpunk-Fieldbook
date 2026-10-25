@@ -191,6 +191,49 @@
       <p class="note-status" data-nw-status role="status"></p>
     </form>`;
   }
+  // ---------------- A IA na Caixa ----------------
+  // O pedido à IA (api/netwire/rascunhar): o que volta vira rascunho, com a nota da IA e o custo; nada é entregue.
+  const dollars = value => (value < 0.01 ? 'menos de US$ 0,01' : `US$ ${value.toFixed(2).replace('.', ',')}`);
+  function aiUsageHtml() {
+    const ia = data.ia || {};
+    const today = ia.hoje || { pedidos: 0, custo: 0 };
+    return `<p class="note-status nw-ai-usage">Hoje: ${today.pedidos} de ${ia.limite || 30} pedidos · ${dollars(today.custo || 0)}</p>`;
+  }
+  function aiPanelHtml(channelId) {
+    const ia = data.ia || {};
+    if (!ia.ligada) return '<p class="note-status nw-ai-off">A IA está desligada. Para ligar, ponha a ANTHROPIC_API_KEY no /etc/fieldbook.env do servidor (veja o README).</p>';
+    const channels = data.canais.filter(channel => !VIRTUAL(channel.id));
+    if (!channels.length) return '';
+    const options = channels.map(channel => `<option value="${esc(channel.id)}"${channel.id === channelId ? ' selected' : ''}>${channel.tipo === 'direto' ? `Direto: ${esc(channel.contato.nome || channel.nome)}` : `# ${esc(channel.nome)}`}</option>`).join('');
+    const models = (ia.modelos || []).map(model => `<option value="${esc(model.id)}"${model.id === ia.padrao ? ' selected' : ''}>${esc(model.nome)}</option>`).join('');
+    return `<form class="nw-pad nw-composer nw-ai" data-nw-ai>
+      <p class="nw-pad-title">Rascunhar com IA</p>
+      <div class="nw-row"><label>Canal<select data-nw-ai-field="canal">${options}</select></label><label>O quê<select data-nw-ai-field="tipo"><option value="resposta">Responder à conversa</option><option value="nova">Mensagem nova</option></select></label></div>
+      <label class="nw-wide">O que você quer (opcional)<textarea data-nw-ai-field="instrucao" rows="2" maxlength="2000" placeholder="Ex.: Wakako marca o encontro no Lizzie's, mas não diz quem paga."></textarea></label>
+      <div class="nw-row"><label>Opções<select data-nw-ai-field="quantidade"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select></label><label>Modelo<select data-nw-ai-field="modelo">${models}</select></label></div>
+      <fieldset class="nw-wide"><legend>Contexto (o que os jogadores já sabem vai sempre)</legend><label class="nw-check"><input type="checkbox" data-nw-ai-ctx="base" checked> Base da campanha</label><label class="nw-check"><input type="checkbox" data-nw-ai-ctx="estado" checked> Estado da campanha</label><label class="nw-check"><input type="checkbox" data-nw-ai-ctx="diario" checked> Diário</label></fieldset>
+      <div class="nw-toolbar"><button type="submit" class="nw-btn nw-btn--primary">Rascunhar</button></div>
+      <p class="note-status" data-nw-status role="status"></p>${aiUsageHtml()}
+    </form>`;
+  }
+  async function askAi(body, status, button) {
+    if (button) button.disabled = true;
+    if (status) status.textContent = 'A IA está escrevendo…';
+    const answer = await api(url('/rascunhar'), { method: 'POST', body: { campanha: campaignId(), ...body } });
+    if (button) button.disabled = false;
+    if (answer.status !== 200) {
+      if (status) status.textContent = answer.data.erro || 'A IA não respondeu.';
+      else toast(answer.data.erro || 'A IA não respondeu.', 'bad');
+      await load();
+      return;
+    }
+    const count = (answer.data.mensagens || []).length;
+    toast(`${count} rascunho${count === 1 ? '' : 's'} da IA (${dollars(answer.data.uso.custo)}). Confira e entregue em Rascunhos.`, 'ok');
+    gm.view = 'rascunhos';
+    await load();
+    renderGm();
+  }
+
   function channelFormHtml(channel) {
     const base = channel || { tipo: 'direto', contato: {}, para: [], aceitaResposta: true };
     const players = gm.players.map(account => `<label class="nw-check"><input type="checkbox" data-nw-para value="${esc(account.id)}"${(base.para || []).includes(account.id) ? ' checked' : ''}> ${esc(account.nome)}</label>`).join('') || '<span class="note-status">Nenhum jogador nesta campanha ainda.</span>';
@@ -221,12 +264,12 @@
     let main = '';
     if (gm.view === 'rascunhos' || gm.view === 'agendadas') {
       const list = gm.view === 'rascunhos' ? drafts : scheduled;
-      main = `${composerHtml()}<h3 class="nw-section-title">${gm.view === 'rascunhos' ? 'Rascunhos' : 'Agendadas'}</h3>${list.length ? list.slice().reverse().map(cardHtml).join('') : `<p class="nw-system">— Nenhuma ${gm.view === 'rascunhos' ? 'mensagem em rascunho' : 'mensagem agendada'} —</p>`}`;
+      main = `${gm.view === 'rascunhos' ? aiPanelHtml() : ''}${composerHtml()}<h3 class="nw-section-title">${gm.view === 'rascunhos' ? 'Rascunhos' : 'Agendadas'}</h3>${list.length ? list.slice().reverse().map(cardHtml).join('') : `<p class="nw-system">— Nenhuma ${gm.view === 'rascunhos' ? 'mensagem em rascunho' : 'mensagem agendada'} —</p>`}`;
     } else if (gm.view === 'esperando') {
       main = waiting.length ? waiting.map(id => {
         const channel = channelById(id);
         const last = own.filter(item => item.canal === id && item.entregue).slice(-3);
-        return `<section class="nw-pad nw-waiting"><p class="nw-pad-title">${channelLabel(channel)}</p>${last.map(messageHtml).join('')}<div class="nw-toolbar"><button type="button" class="nw-btn nw-btn--primary" data-nw-view="canal:${esc(id)}">Responder como ${esc(channel.contato.nome || channel.nome)}</button></div></section>`;
+        return `<section class="nw-pad nw-waiting"><p class="nw-pad-title">${channelLabel(channel)}</p>${last.map(messageHtml).join('')}<div class="nw-toolbar"><button type="button" class="nw-btn nw-btn--primary" data-nw-view="canal:${esc(id)}">Responder como ${esc(channel.contato.nome || channel.nome)}</button>${data.ia && data.ia.ligada ? `<button type="button" class="nw-btn" data-nw-ai-quick="${esc(id)}">Rascunhar resposta com IA</button>` : ''}</div></section>`;
       }).join('') : '<p class="nw-system">— Nenhuma conversa esperando você —</p>';
     } else if (gm.view === 'novo-canal') {
       main = channelFormHtml(null);
@@ -236,7 +279,7 @@
       const thread = own.filter(item => item.canal === channel.id);
       main = `<header class="nw-topbar"><div><span class="nw-overline">NetWire_Seed: ${esc(channel.id)}</span><h3 class="nw-title">${channelLabel(channel)}</h3>${channel.contato.descricao ? `<p class="nw-contact">${esc(channel.contato.descricao)}</p>` : ''}</div></header>
         <div class="nw-thread">${thread.length ? thread.map(cardHtml).join('') : '<p class="nw-system">— Nenhuma mensagem ainda —</p>'}</div>
-        ${composerHtml({ canal: channel.id, title: `Mensagem em ${channel.tipo === 'direto' ? esc(channel.contato.nome || channel.nome) : `#${esc(channel.nome)}`}` })}${channelFormHtml(channel)}`;
+        ${composerHtml({ canal: channel.id, title: `Mensagem em ${channel.tipo === 'direto' ? esc(channel.contato.nome || channel.nome) : `#${esc(channel.nome)}`}` })}${aiPanelHtml(channel.id)}${channelFormHtml(channel)}`;
     }
     root.innerHTML = `<div class="nw-app nw-gm">${nav}<section class="nw-feed nw-gm-main">${main}</section></div>`;
   }
@@ -301,6 +344,8 @@
     }
     if (event.target.closest('[data-nw-edit]') && id) { gm.editing = id; renderGm(); gm.root.querySelector('[data-nw-compose]')?.scrollIntoView({ block: 'nearest' }); return; }
     if (event.target.closest('[data-nw-cancel]')) { gm.editing = null; renderGm(); return; }
+    const quick = event.target.closest('[data-nw-ai-quick]');
+    if (quick) { await askAi({ canal: quick.dataset.nwAiQuick, tipo: 'resposta', quantidade: 2 }, null, quick); return; }
     if (event.target.closest('[data-nw-delete]') && id) {
       if (!(await window.wikiPopup.confirm({ title: 'Excluir a mensagem', html: '<p>A mensagem sai do NetWire (os jogadores deixam de ver, se já tinha sido entregue).</p>', ok: 'Excluir', danger: true }))) return;
       await api(url(`/mensagens/${encodeURIComponent(id)}`), { method: 'DELETE' });
@@ -318,7 +363,14 @@
   document.addEventListener('submit', event => {
     if (event.target.matches('[data-nw-reply]')) { event.preventDefault(); sendPlayer(event.target); return; }
     if (event.target.matches('[data-nw-compose]')) { event.preventDefault(); saveMessage(event.target, (event.submitter && event.submitter.dataset.nwAs) || 'rascunho'); return; }
-    if (event.target.matches('[data-nw-channel-form]')) { event.preventDefault(); saveChannel(event.target); }
+    if (event.target.matches('[data-nw-channel-form]')) { event.preventDefault(); saveChannel(event.target); return; }
+    if (event.target.matches('[data-nw-ai]')) {
+      event.preventDefault();
+      const form = event.target;
+      const field = name => form.querySelector(`[data-nw-ai-field="${name}"]`).value;
+      const context = Object.fromEntries([...form.querySelectorAll('[data-nw-ai-ctx]')].map(box => [box.dataset.nwAiCtx, box.checked]));
+      askAi({ canal: field('canal'), tipo: field('tipo'), instrucao: field('instrucao'), quantidade: Number(field('quantidade')), modelo: field('modelo'), contexto: context }, form.querySelector('[data-nw-status]'), form.querySelector('button[type="submit"]'));
+    }
   });
   // Ctrl+Enter envia a resposta.
   document.addEventListener('keydown', event => {

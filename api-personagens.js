@@ -23,7 +23,7 @@ const creationRules = require('./system-criacao');
 const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
-module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false }) {
+module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false, ia = {} }) {
   const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic });
   const { sessions, preferences } = createAccountStores({ dataDir, writeJsonAtomic });
   // Documentos do mestre: os .md de documentos/<id da campanha>/ no projeto (vêm pelo git, como o resto da wiki).
@@ -196,7 +196,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // Personagem de antes das campanhas: do Protocolo Morana.
   const campaignOf = doc => doc.campanha || campaigns.first;
   // NetWire (api-netwire.js): as mensagens dentro do jogo, pela mesma fila por arquivo.
-  const netwire = createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn });
+  // A IA que rascunha (ia: a chave, o modelo e o limite, do server.js) lê os documentos do mestre como contexto.
+  const netwire = createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia, docsDir });
   // O nome com que o jogador assina a resposta: o do personagem dele nesta campanha (o apelido, se tiver).
   const characterName = (identity, id, campaign) => {
     const doc = validId(id) ? readCharacter(id) : null;

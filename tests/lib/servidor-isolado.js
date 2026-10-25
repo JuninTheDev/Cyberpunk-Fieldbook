@@ -7,7 +7,9 @@ const path = require('node:path');
 const { Readable, Writable } = require('node:stream');
 const vm = require('node:vm');
 
-function criarServidorIsolado(t) {
+// opcoes: { env } soma variáveis ao ambiente do servidor; { fetch } troca a rede bloqueada por uma resposta falsa
+// (a IA do NetWire, nos testes).
+function criarServidorIsolado(t, { env: extra = {}, fetch: falso } = {}) {
   const raiz = path.resolve(__dirname, '../..');
   const dados = fs.mkdtempSync(path.join(os.tmpdir(), 'fieldbook-api-isolada-'));
   t.after(() => {
@@ -22,7 +24,7 @@ function criarServidorIsolado(t) {
   let atender;
   const env = {
     HOST: '127.0.0.1', PORT: '0', MODO: 'hospedado', GM_KEY: senha,
-    DADOS: dados, SYSTEMD_DIR: path.join(dados, 'systemd-inexistente')
+    DADOS: dados, SYSTEMD_DIR: path.join(dados, 'systemd-inexistente'), ...extra
   };
   const requireIsolado = nome => {
     if (nome === 'http') return { createServer(fn) { atender = fn; return { listen() {} }; } };
@@ -32,7 +34,7 @@ function criarServidorIsolado(t) {
   };
   const iniciar = vm.runInNewContext(wrap(fs.readFileSync(arquivo, 'utf8')), {
     Buffer, URL, console, setTimeout, clearTimeout, process: { env, pid: process.pid },
-    fetch() { throw new Error('Este teste não permite acesso à rede.'); }
+    fetch: falso || (() => { throw new Error('Este teste não permite acesso à rede.'); })
   }, { filename: arquivo });
   iniciar({}, requireIsolado, { exports: {} }, arquivo, raiz);
   if (!atender) throw new Error('O servidor não registrou o atendimento das requisições.');
