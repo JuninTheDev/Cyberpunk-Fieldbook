@@ -382,7 +382,7 @@ async function receptoresDoAtaque(ctx, pegas, area = false) {
 // Tech ignora metade do SP (regras.CARGA_TECH). lesaoDoCritico: false no dano aplicado pelo cartão, em que a lesão do crítico sai pelo botão "Rolar a lesão".
 export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true } = {}) {
   if (!await conferirEscudoDaLinha(ctx, linha)) return;
-  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
+  if (ctx.arma && !conferirArmaVeicular(ctx.arma, ctx.modo)) return;
   if (!conferirDestinos([linha.token], ctx.pedido.destinos?.[linha.token.uuid] ? { [linha.token.uuid]: ctx.pedido.destinos[linha.token.uuid] } : {}, ctx)) return;
   const ator = linha.token.actor;
   if (linha.humano?.morto) {
@@ -395,13 +395,13 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
     }
     return;
   }
-  const municao = ctx.arma.municaoCarregada;
-  const ignorarPct = ignorarNoArremesso(ctx.arma, ctx.pedido);
+  const municao = ctx.arma?.municaoCarregada;
+  const ignorarPct = ctx.arma ? ignorarNoArremesso(ctx.arma, ctx.pedido) : 0;
   const destino = destinoVeicular(ctx, linha.token);
   if (destino?.tipo === 'veiculo') {
     const recebido = await destino.item.receberDanoVeicular({ dano: dano.total,
       ignorarPct: ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
-      ignorarAbaixo: ctx.arma.system.ignorarAbaixo, ablacao: municao?.system.ablacao ?? 1 });
+      ignorarAbaixo: ctx.arma?.system.ignorarAbaixo, ablacao: dano.ablacao ?? municao?.system.ablacao ?? 1 });
     if (recebido) linha.veicular = { tipo: 'veiculo', ...recebido };
     return;
   }
@@ -424,7 +424,7 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
   const deflexao = ator.system.consciencia.deflexao && primeiraNaRodada(ator, 'deflexao') ? ator.system.consciencia.deflexao : 0;
   const efeito = await ator.receberDano({
     dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
-    ignorarAbaixo: ctx.arma.system.ignorarAbaixo, ablacao: municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
+    ignorarAbaixo: ctx.arma?.system.ignorarAbaixo, ablacao: dano.ablacao ?? municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
   });
   // A deflexão só se gasta quando entra dano de verdade: o que a armadura ou o escudo seguraram inteiro não é "dano
   // sofrido".
@@ -474,7 +474,7 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
   // Reflex Tuner (2077): atingido, +1 para se esquivar pelo resto da rodada. A marca vai para o cartão, e o "Desfazer"
   // a tira.
   if (ator.temReflexTuner) await marcarRodada(ctx, ator, 'atingido');
-  await incendiar(ctx, linha);
+  if (ctx.arma) await incendiar(ctx, linha);
 }
 
 // ---------------- Modos ----------------

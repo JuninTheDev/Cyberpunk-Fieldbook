@@ -15282,6 +15282,158 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(d)];
     });
 
+    // C43.1: a wiki (system-rules.js:487) mantém a rolagem extra única do d10; os marcadores e os campos novos vêm da
+    // 0.93 (CHANGELOG.md:30-34; datamodels/item/mixins/attackable-schema.js:29-53, no CORE de desenvolvimento).
+    const comFormulasC43 = async (teste, prepararAlvo = false) => {
+      await edge.evaluate(`(() => { window.__c43Dados = CONFIG.Dice.randomUniform; return true; })()`);
+      try {
+        await fixar(edge, []);
+        return await edge.evaluate(`(async () => {
+          const S = '${S}', esperar = __esperar;
+          const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id,
+            alvos: [...game.user.targets].map(t => t.id), mensagens: game.messages.map(m => m.id), modo: game.settings.get('core', 'messageMode'),
+            config: Object.fromEntries(['ativo', 'dano', 'defesaDosNpcs', 'exigeRef8', 'lesaoCritica', 'animacoes', 'resultado', 'rolarDireto'].map(k => [k, game.settings.get(S, k)])) };
+          const atores = [], criar = async dados => { const a = await Actor.implementation.create(dados); atores.push(a); return a; };
+          const dados = fila => { window.__fila = fila; };
+          const cartao = async m => { await esperar(() => document.querySelector('[data-message-id="' + m?.id + '"]')); return document.querySelector('[data-message-id="' + m?.id + '"]'); };
+          const mensagemNova = async executar => {
+            const ids = new Set(game.messages.map(m => m.id));
+            await executar();
+            await esperar(() => game.messages.some(m => !ids.has(m.id)));
+            return game.messages.find(m => !ids.has(m.id));
+          };
+          let cena, alvo, armadura, token;
+          try {
+            await game.settings.set('core', 'messageMode', 'public');
+            for (const [k, v] of Object.entries({ ativo: true, dano: 'automatico', defesaDosNpcs: 'automatica', exigeRef8: true, lesaoCritica: 'ficha', animacoes: 'nao', resultado: 'publico', rolarDireto: true })) await game.settings.set(S, k, v);
+            if (${prepararAlvo}) {
+              alvo = await criar({ name: 'C43 Alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { body: { valor: 20 }, will: { valor: 8 }, ref: { valor: 0 } } },
+                items: [{ name: 'C43 Proteção', type: 'armadura', system: { equipada: true, sp: { corpo: { value: 3, max: 3 }, cabeca: { value: 0, max: 0 } } } }] });
+              armadura = alvo.items.getName('C43 Proteção');
+              cena = await Scene.implementation.create({ name: 'C43 Fórmulas', width: 1600, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
+              await cena.activate();
+              await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+              [token] = await cena.createEmbeddedDocuments('Token', [(await alvo.getTokenDocument({ x: 500, y: 400, actorLink: true })).toObject()]);
+              await esperar(() => token.object);
+              canvas.tokens.setTargets([token.id]);
+            }
+            return await (${teste})({ S, criar, alvo, armadura, token, cena, dados, cartao, mensagemNova, esperar });
+          } finally {
+            for (const ator of atores) { for (const item of ator.items) await item.sheet?.close(); await ator.sheet?.close(); }
+            if (cena) { await esperar(() => !canvas.loading); if (cena.isView) await cena.unview(); await cena.delete(); }
+            for (const ator of atores) await ator.delete();
+            for (const m of game.messages.filter(m => !antes.mensagens.includes(m.id))) await m.delete();
+            for (const [k, v] of Object.entries(antes.config)) await game.settings.set(S, k, v);
+            await game.settings.set('core', 'messageMode', antes.modo);
+            if (cena) {
+              if (game.scenes.has(antes.ativa)) { await game.scenes.get(antes.ativa).activate(); await esperar(() => !canvas.loading); }
+              if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
+              else if (canvas.scene) await canvas.scene.unview();
+              canvas.tokens.setTargets(antes.alvos);
+            }
+            window.__fila = [];
+          }
+        })()`);
+      } finally {
+        await edge.evaluate(`(() => { if (window.__c43Dados) CONFIG.Dice.randomUniform = window.__c43Dados; delete window.__c43Dados; window.__fila = []; return true; })()`);
+      }
+    };
+    // O relatório do G4 corta a linha: preserve os primeiros campos divergentes, sem HTML inteiro do cartão.
+    const conferirFormulasC43 = campos => {
+      const falhas = Object.entries(campos).filter(([, [lido, esperado]]) => JSON.stringify(lido) !== JSON.stringify(esperado));
+      return [!falhas.length, JSON.stringify({ falhas: falhas.length, primeiras: falhas.slice(0, 2).map(([campo, [lido]]) => [campo, lido ?? null]) })];
+    };
+
+    await r.passo('fórmulas (C43.1): /r 1d10red explode no 10 e implode no 1 uma vez; crit continua aceito nas macros antigas', async () => {
+      const info = await comFormulasC43(`async ({ dados, mensagemNova }) => {
+        const rolar = async (formula, fila) => {
+          dados(fila);
+          const m = await mensagemNova(() => ui.chat.processMessage('/r ' + formula)), roll = m?.rolls[0];
+          return { total: roll?.total, resultados: roll?.dice[0]?.results.map(r => r.count ?? r.result), fila: window.__fila.length };
+        };
+        return { alto: await rolar('1d10red', [[10, 10], [10, 10]]), baixo: await rolar('1d10red', [[1, 10], [1, 10]]),
+          comum: await rolar('1d10red', [[4, 10]]), antigo: await rolar('1d10crit', [[10, 10], [4, 10]]) };
+      }`);
+      return conferirFormulasC43({ alto: [info.alto, { total: 20, resultados: [10, 10], fila: 0 }], baixo: [info.baixo, { total: 0, resultados: [1, -1], fila: 0 }],
+        comum: [info.comum, { total: 4, resultados: [4], fila: 0 }], antigo: [info.antigo, { total: 14, resultados: [10, 4], fila: 0 }] });
+    });
+
+    await r.passo('fórmulas (C43.1): /r 2d6dmgab2cd10 cria o cartão do dano; dois 6 dão bônus 10, ablação 2, Aplicar dano no alvo marcado e Rolar a lesão', async () => {
+      // Wiki, system-rules.js:463: o bônus crítico entra direto no HP, separado da armadura e do total dos dados.
+      const info = await comFormulasC43(`async ({ S, alvo, armadura, dados, cartao, mensagemNova, esperar }) => {
+        dados([[6, 6], [6, 6]]);
+        const m = await mensagemNova(() => ui.chat.processMessage('/r 2d6dmgab2cd10'));
+        await esperar(() => m?.getFlag(S, 'danoDeFormula'));
+        const flag = m?.getFlag(S, 'danoDeFormula'), el = await cartao(m);
+        const botoes = [...el?.querySelectorAll('[data-cprf-acao]') ?? []].map(b => b.dataset.cprfAcao).join();
+        const bonusNoTexto = m?.content.includes('+10');
+        const resultado = await mensagemNova(() => el?.querySelector('[data-cprf-acao="aplicarDano"]')?.click());
+        await esperar(() => resultado?.getFlag(S, 'ataque'));
+        const l = resultado?.getFlag(S, 'ataque')?.linhas[0];
+        const aplicado = [alvo.system.hp.value, armadura.system.sp.corpo.value, l?.dano?.recebido, l?.dano?.ablado, alvo.items.filter(i => i.type === 'lesao').length];
+        const aplicadoEl = await cartao(resultado);
+        aplicadoEl?.querySelector('[data-cprf-acao="desfazer"]')?.click();
+        await esperar(() => resultado?.getFlag(S, 'desfeito'));
+        const voltou = [alvo.system.hp.value, armadura.system.sp.corpo.value, Boolean(resultado?.getFlag(S, 'desfeito'))];
+        dados([[4, 6], [4, 6]]);
+        el?.querySelector('[data-cprf-acao="rolarLesao"]')?.click();
+        await esperar(() => (m?.getFlag(S, 'lesoesRoladas') ?? []).length === 1);
+        return { total: m?.rolls[0]?.total, critico: flag?.critico, bonus: flag?.bonus, ablacao: flag?.ablacao, botoes, bonusNoTexto, aplicado, voltou,
+          lesoes: alvo.items.filter(i => i.type === 'lesao').map(i => i.name), rolados: (m?.getFlag(S, 'lesoesRoladas') ?? []).length, fila: window.__fila.length };
+      }`, true);
+      return conferirFormulasC43({ dados: [[info.total, info.critico, info.bonus, info.ablacao], [12, true, 10, 2]],
+        botoes: [info.botoes, 'aplicarDano,rolarLesao'], bonusNoTexto: [info.bonusNoTexto, true], aplicado: [info.aplicado, [61, 1, 19, 2, 0]],
+        voltou: [info.voltou, [80, 3, true]], lesoes: [info.lesoes, ['Perna quebrada']], rolados: [info.rolados, 1], fila: [info.fila, 0] });
+    });
+
+    await r.passo('fórmulas (C43.1): a ficha da arma configura crítico em três seis e o bônus; a munição pode substituir os dois valores ou impedir o crítico; dano avulso e ataque usam o mesmo perfil', async () => {
+      const info = await comFormulasC43(`async ({ S, criar, alvo, armadura, token, cena, dados, cartao, esperar }) => {
+        const atirador = await criar({ name: 'C43 Atiradora', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, pericias: { handgun: { nivel: 8 } } },
+          items: [{ name: 'C43 Pistola', type: 'arma', system: { tipo: 'heavyPistol', pericia: 'handgun', dano: '3d6', equipada: true, tabelaDV: 'DV Pistol', municoes: ['heavyPistol'], pente: { value: 8, max: 8 } } },
+            { name: 'C43 Balas', type: 'municao', system: { tipo: 'heavyPistol', efeito: 'basic', quantidade: 20 } }] });
+        const arma = atirador.items.getName('C43 Pistola'), municao = atirador.items.getName('C43 Balas');
+        await arma.update({ 'system.carregada': municao.id });
+        await cena.createEmbeddedDocuments('Token', [(await atirador.getTokenDocument({ x: 300, y: 400, actorLink: true })).toObject()]);
+        const padrao = [arma.system.critico.seis, arma.system.critico.bonus, municao.system.critico.substitui, municao.system.critico.seis, municao.system.critico.bonus];
+        const editar = async (item, nome, valor) => {
+          await item.sheet.render({ force: true });
+          await esperar(() => item.sheet.element?.querySelector('[name="' + nome + '"]'));
+          const input = item.sheet.element?.querySelector('[name="' + nome + '"]');
+          if (!input) return false;
+          if (foundry.utils.getProperty(item, nome) === valor) return true;
+          if (input.type === 'checkbox') input.checked = valor; else input.value = valor === null ? '' : String(valor);
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          await esperar(() => foundry.utils.getProperty(item, nome) === valor);
+          return foundry.utils.getProperty(item, nome) === valor;
+        };
+        const editouArma = [await editar(arma, 'system.critico.seis', 3), await editar(arma, 'system.critico.bonus', 9)];
+        const avulso = async fila => {
+          dados(fila);
+          const r = await arma.rolarDano({ perguntar: false }), flag = r?.mensagem?.getFlag(S, 'danoDeArma'), el = await cartao(r?.mensagem);
+          return [r?.total, r?.critico, r?.bonus, flag?.critico, flag?.bonus, Boolean(el?.querySelector('[data-cprf-acao="rolarLesao"]')), window.__fila.length];
+        };
+        const dois = await avulso([[6, 6], [6, 6], [2, 6]]), tres = await avulso([[6, 6], [6, 6], [6, 6]]);
+        const editouVazio = await editar(arma, 'system.critico.bonus', null), bonusPadrao = await avulso([[6, 6], [6, 6], [6, 6]]);
+        const semSubstituir = await avulso([[6, 6], [6, 6], [2, 6]]);
+        const editouMunicao = [await editar(municao, 'system.critico.substitui', true), await editar(municao, 'system.critico.seis', 2), await editar(municao, 'system.critico.bonus', 7)];
+        const substituiu = await avulso([[6, 6], [6, 6], [2, 6]]);
+        dados([[9, 10], [6, 6], [6, 6], [2, 6], [4, 6], [4, 6]]);
+        const ataque = await arma.atacar({ alvo: token }), linha = ataque?.linhas[0];
+        const aplicado = [linha?.resultado, linha?.dano?.critico, linha?.dano?.bonus, linha?.dano?.recebido, alvo.system.hp.value, armadura.system.sp.corpo.value,
+          alvo.items.filter(i => i.type === 'lesao').map(i => i.name).join(), arma.system.pente.value, window.__fila.length];
+        const editouZero = await editar(municao, 'system.critico.seis', 0), nunca = await avulso([[6, 6], [6, 6], [6, 6]]);
+        await municao.update({ 'system.efeito': 'rubber', 'system.critico.substitui': false });
+        const borracha = await avulso([[6, 6], [6, 6], [6, 6]]), semLesao = game.messages.contents.at(-1)?.getFlag(S, 'danoDeArma')?.semLesao;
+        return { padrao, editouArma, dois, tres, editouVazio, bonusPadrao, editouMunicao, semSubstituir, substituiu, aplicado, editouZero, nunca, borracha, semLesao };
+      }`, true);
+      return conferirFormulasC43({ padrao: [info.padrao, [2, null, false, 2, 5]], editouArma: [info.editouArma, [true, true]],
+        dois: [info.dois, [14, false, 0, false, 0, false, 0]], tres: [info.tres, [18, true, 9, true, 9, true, 0]],
+        editouVazio: [info.editouVazio, true], bonusPadrao: [info.bonusPadrao, [18, true, 5, true, 5, true, 0]],
+        editouMunicao: [info.editouMunicao, [true, true, true]], semSubstituir: [info.semSubstituir, [14, false, 0, false, 0, false, 0]],
+        substituiu: [info.substituiu, [14, true, 7, true, 7, true, 0]], aplicado: [info.aplicado, ['acertou', true, 7, 18, 62, 2, 'Perna quebrada', 7, 0]],
+        editouZero: [info.editouZero, true], nunca: [info.nunca, [18, false, 0, false, 0, false, 0]], borracha: [info.borracha, [18, true, 5, true, 5, false, 0]], semLesao: [info.semLesao, true] });
+    });
+
     // O C33: o modo do seletor do chat (o messageMode do Foundry 14) nos cartões das rolagens avulsas, como o ChatDataSetup do
     // CORE (cpr-chat.js:21-50). O Foundry aplica o modo ao criar a mensagem; quem não a recebe vê só que houve uma rolagem
     // (o isContentVisible e o "?" no total). No "às cegas", nem o jogador que rolou vê o resultado, só o mestre.

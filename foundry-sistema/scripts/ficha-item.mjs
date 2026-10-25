@@ -4,7 +4,7 @@ import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA,
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { PERICIAS } from './gerado.mjs';
-import { ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
+import { bonusDoCritico, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
@@ -155,6 +155,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       pericias: comAtual({ ...Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), ...(tipo === 'arma' ? opcoesDeArtesMarciais(item.actor) : {}) }, tipo === 'arma' && fonte.pericia),
       // Briga e Artes Marciais (o C10): o "Dano pelo BODY" e o dano que ele dá agora.
       desarmada: tipo === 'arma' && ehDesarmada(fonte.tipo), danoDoBody: tipo === 'arma' && item.actor ? item.danoDaArma : '',
+      bonusCriticoPadrao: tipo === 'arma' ? bonusDoCritico(item.perfil2077) : 5,
       qualidades: comAtual(QUALIDADES, (tipo === 'arma' || tipo === 'cyberdeck') && fonte.qualidade),
       falhasDaArma: comAtual(Object.fromEntries(Object.entries(FALHAS_DA_ARMA).map(([id, efeito]) => [id, efeito.rotulo])), tipo === 'arma' && fonte.falhaCritica),
       tiposCyberware: comAtual(TIPOS_CYBERWARE, tipo === 'cyberware' && fonte.tipo),

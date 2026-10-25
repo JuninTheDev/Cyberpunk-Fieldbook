@@ -252,6 +252,12 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
       tipo: texto(),
       pericia: texto('handgun'),
       dano: texto('2d6'),
+      // CORE 0.93, attackable-schema.js:29-57: zero seis impede o crítico; bônus zero só tira o dano extra.
+      // O bônus vazio conserva o do perfil existente (5 do RED, 10 da Power), sem migrar armas antigas.
+      critico: new fields.SchemaField({
+        seis: inteiro(2, { min: 0 }),
+        bonus: new fields.NumberField({ required: true, nullable: true, integer: true, initial: null, min: 0 })
+      }),
       cdt: inteiro(1, { min: 0 }),
       pente: recurso(0, 0),
       municoes: new fields.ArrayField(new fields.StringField()),
@@ -312,6 +318,12 @@ export class DadosMunicao extends foundry.abstract.TypeDataModel {
       efeito: texto('basic'),
       quantidade: inteiro(0, { min: 0 }),
       ablacao: inteiro(1, { min: 0 }),
+      // CORE 0.93, ammo-datamodel.js:60-86: só a munição que pede substitui o crítico da arma.
+      critico: new fields.SchemaField({
+        substitui: new fields.BooleanField({ initial: false }),
+        seis: inteiro(2, { min: 0 }),
+        bonus: inteiro(5, { min: 0 })
+      }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()
     };

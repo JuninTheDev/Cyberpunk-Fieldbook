@@ -8352,6 +8352,58 @@ abaixo).
 - **Mutações:** 10 caíram, restauradas pelo md5: 3 da regra pura (G3) e 7 no Foundry (G4 focado), entre elas a volta ao comportamento de antes da 0.93 (o ataque só com o modificador positivo).
 - **Próximo:** o C43, parte 3 (o navegador de itens e atores; o tema no resto do Foundry), ou o C42.
 
+### Ciclo 172 (2026-10-25): o C43, parte 1, as fórmulas: o `red`, o `dmg` e o crítico por arma e munição (sessão KouArt, com o Codex)
+
+Commit anterior: `10fad5ce` (o ciclo 171, o C43 parte 2, da sessão Junin). O código e os testes saíram do Codex (`codex
+exec`, numa worktree própria a partir do `7ad7e05b`), revisados e integrados aqui pelo patch. Era o ciclo 171; a sessão
+Junin publicou o 171 durante o G4 deste, e o número passou para o 172.
+
+- **As fontes:** a 0.93 do CORE, que a mesa não usava (`fvtt-cyberpunk-red-core-dev/src/modules/`:
+  `rolls/cpr-die-extended.js:255-294`, o `red`, e `:303-377`, a gramática do `dmg`, `ab` e `cd`;
+  `hooks/chat/add-damage-application.js:19-44`, a ablação 1 e o bônus 5 do marcador;
+  `datamodels/item/mixins/attackable-schema.js:29-53` e `datamodels/item/ammo-datamodel.js:60-85`, os campos e a
+  quantidade zero; `item/mixins/cpr-attackable.js:280-296`, a munição que substitui a configuração inteira;
+  `rolls/sanitize-damage-formula.js:27-55`, os marcadores tirados da fórmula). A regra continua a da wiki: o crítico do
+  d10 (`system-rules.js:457` e `:487`), dois ou mais 6 dão +5 (`:463` e `:549`; a Power de 2077, +10,
+  `system-2077.js:156`), a borracha sem lesão nem ablação (`system-catalog.js:197`). A API do Foundry 14:
+  `client/documents/chat-message.mjs:518-561` (o `_preCreate` que pode esperar) e `client/dice/terms/term.mjs:183-185`.
+- **O que muda:**
+  - **`scripts/regras-formulas.mjs` (novo, sem Foundry):** o `red`, o `dmg` com `ab` e `cd`, o crítico configurável (a
+    quantidade de 6 e o bônus), a precedência da munição e os marcadores tirados da fórmula da arma;
+  - **`scripts/dado-red.mjs` (novo):** o dado do sistema (`CONFIG.Dice.terms.d` passa a ser o `DadoRED`, uma classe filha
+    do `Die`, também registrada em `termTypes` para a reconstrução do chat e das macros), com os modificadores `red`,
+    `crit` (o mesmo), `dmg`, `ab` e `cd`; o dado extra do `red` não explode, não é rerrolado e acompanha o original no
+    keep e no drop;
+  - **o chat:** a classe das mensagens (`CONFIG.ChatMessage.documentClass`) ganha o `_preCreate` que transforma a
+    rolagem com `dmg` no cartão de dano do sistema (o mesmo do dano à parte: "Aplicar dano", "Rolar a lesão", o
+    Desfazer); o `/red` de dano passa pelo mesmo cartão, com o título, a descrição, o total e a ablação de antes;
+  - **a arma e a munição:** `system.critico` na arma (`seis`, padrão 2; `bonus`, vazio = o padrão do perfil) e na
+    munição (`substitui`, `seis`, `bonus`), os campos na ficha do item e o cartão do dano com a regra efetiva do crítico.
+    Sem passo de migração: os padrões do `DataModel` servem aos itens antigos.
+- **As dúvidas e as diferenças:**
+  - **a borracha:** o campo novo não absorve o veto da lesão da borracha (a 0.93 migrou a borracha para "nunca crítico",
+    `seis: 0`); aqui o passo antigo do G4 espera o crítico com +5 e nenhuma lesão, então a borracha continua com o
+    crítico e o +5 e sem a lesão, como antes. A relação entre esse +5 e a borracha fica para a mesa;
+  - o bônus vazio da arma é o padrão do perfil (+5 do RED, +10 da Power); na 0.93 o campo começa em 5;
+  - o `/red` e o `crit` continuam (a 0.93 tirou o `/red`); os marcadores saem da fórmula da arma ao rolar, sem regravar
+    o campo de dano; o `dmg` avulso conta o máximo do dado (no d6, o 6), como a 0.93.
+- **Testes:**
+  - **G3:** `formulas.test.mjs` (14 testes, com métodos reais do CORE), `critico-itens.test.mjs` (2, os campos e os
+    padrões) e `rolagens-formulas.test.mjs` (9, a integração dos campos, da rolagem e da criação da mensagem); o Codex
+    conferiu também 11 casos com o código real do `Die` do Foundry 14, inclusive a serialização;
+  - **G4:** três passos novos, depois das conveniências do C26: `/r 1d10red` (10 + 10 = 20 e 1 − 1 = 0, sem cadeia) e o
+    `crit`; `/r 2d6dmgab2cd10` com dois 6 (12, bônus 10, ablação 2, os dois botões, o "Aplicar dano" no alvo marcado, o
+    HP e o SP, o Desfazer e a lesão); a arma com crítico em três 6 e bônus 9 pela ficha, o campo vazio de volta ao padrão,
+    a munição que troca para dois 6 e bônus 7, o ataque de verdade, a quantidade 0 e a borracha.
+- **Portões:** G1, 243 arquivos sem erro; G2, nenhum erro; G3, 562/562; G4 completo, 275/275, com a checagem dos dois
+  navegadores sem avisos ou erros de JS (o dado e a mensagem novos passaram por todos os passos antigos). Depois de juntar o ciclo 171 (o C43 parte 2,
+  da sessão Junin), na árvore juntada: G1, 245 arquivos; G2, nenhum erro; G3, 564/564; G4, 276/276.
+- **Mutações:** as oito do Codex caíram, uma por vez, e os arquivos voltaram exatos: no G3, o `red` que subtrai no 10
+  (M1), o `cd` ignorado (M2), a quantidade 0 com crítico (M3), a munição que substitui ao contrário (M4) e o bônus da arma
+  que nasce 5 (M7); no G4, o 1 do `red` que soma (M5: caem também o teste de perícia, a falha crítica da arma, o `/red`,
+  os veículos e a checagem de avisos), o cartão com a ablação 1 (M6) e o campo da munição gravado em outro lugar (M8).
+- **Próximo:** o C44 (a régua com Andar e Correr) e o C35 (a cena da arquitetura), da mesma rodada.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

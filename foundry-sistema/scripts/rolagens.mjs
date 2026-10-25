@@ -1,30 +1,32 @@
 // Rolagens: o crítico do d10, os testes (atributo + perícia + 1d10), o /red no chat e o dano, com os cartões do chat.
 import { caminho, SISTEMA } from './config.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
+import { registrarDadoRed } from './dado-red.mjs';
 import { perguntarModificador } from './janela-rolagem.mjs';
 import { modoDaMesa } from './mesa.mjs';
-import { bonusDoCritico, danoCritico, expressaoDoDano, lerComandoRed, sorteParaGastar } from './regras.mjs';
+import { expressaoDoDano, lerComandoRed, MUNICAO_SEM_DANO, sorteParaGastar } from './regras.mjs';
+import { danoCriticoConfigurado, resolverCriticoDaArma, retirarMarcadoresDano } from './regras-formulas.mjs';
 
 const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(caminho(`templates/chat/${arquivo}`), dados);
 
 // O crítico do d10 do RED (p. 130): um 10 natural soma mais um d10; um 1 natural tira um d10. Uma vez só, sem cadeia.
-// Fica no Die do core como o modificador "crit" (1d10crit): a rolagem continua um Roll nativo (o chat, o Dice So Nice
-// e o histórico entendem) e o total desconta o dado do 1 pelo `count` negativo, como o core faz no "sf".
+// O red do CORE 0.93 e o crit antigo são o mesmo modificador; o count negativo conserva o total nativo.
 export function registrarCritico() {
-  foundry.dice.terms.Die.MODIFIERS.crit = async function critico() {
-    const primeiro = this.results.find(resultado => resultado.active);
-    if (!primeiro) return;
-    if (primeiro.result === this.faces) {
-      primeiro.exploded = true;
-      await this.roll();
-    } else if (primeiro.result === 1) {
-      const indice = this.results.length;
-      await this.roll();
-      const extra = this.results[indice];
-      extra.count = -extra.result;
-      extra.failure = true;
+  registrarDadoRed();
+  // Um Roll.toMessage de macro e o /r do chat passam pela mesma criação nativa. O _preCreate pode aguardar
+  // o template (Foundry 14, client/documents/chat-message.mjs:518–561); o hook preCreate é síncrono.
+  class MensagemRED extends ChatMessage.implementation {
+    async _preCreate(dados, opcoes, usuario) {
+      if (await super._preCreate(dados, opcoes, usuario) === false) return false;
+      if (this.getFlag(SISTEMA, 'danoDeArma') || this.getFlag(SISTEMA, 'danoDeFormula')) return;
+      const roll = this.rolls.find(r => r.dice.some(d => d.options.danoFieldbook));
+      const dano = roll?.dice.find(d => d.options.danoFieldbook)?.options.danoFieldbook;
+      if (!dano) return;
+      const content = await cartaoDeDano(roll, { rotulo: 'Dano', ...dano, paraAplicar: true });
+      this.updateSource({ content, [`flags.${SISTEMA}.danoDeFormula`]: { total: roll.total, bonus: dano.bonus, critico: dano.critico, ablacao: dano.ablacao, formula: roll.formula } });
     }
-  };
+  }
+  CONFIG.ChatMessage.documentClass = MensagemRED;
   Hooks.on('chatMessage', (_, mensagem) => {
     if (!lerComandoRed(mensagem)) return true;
     executarComandoRed(mensagem);
@@ -73,16 +75,25 @@ export async function executarComandoRed(mensagem, ator = null) {
   const comando = lerComandoRed(mensagem);
   if (!comando) return null;
   if (comando.tipo === 'teste') return testar(ator, { rotulo: 'Rolagem', partes: comando.partes, sabor: comando.descricao, sorte: 0, dado: comando.dados, modo: modoDaMesa() });
-  const roll = await new Roll([comando.dados, ...comando.partes.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ')).evaluate();
-  const critico = comando.tipo === 'dano' && danoCritico(roll.dice.flatMap(dado => dado.results.filter(r => r.active).map(r => r.result)));
+  const roll = await new Roll([`${comando.dados}${comando.tipo === 'dano' ? `dmgab${comando.ablacao}` : ''}`, ...comando.partes.map(parte => `${parte.valor < 0 ? '-' : '+'} ${Math.abs(parte.valor)}`)].join(' ')).evaluate();
+  const dano = roll.dice.find(dado => dado.options.danoFieldbook)?.options.danoFieldbook;
+  const critico = dano?.critico ?? false;
   const titulo = [comando.tipo === 'dano' ? 'Dano' : 'Rolagem', comando.descricao].filter(Boolean).join(': ');
   const content = comando.tipo === 'dano'
-    ? await renderizar('dano.hbs', { rotulo: `${titulo} (ablação ${comando.ablacao})`, total: roll.total, critico, botoes: [], dados: dadosDoCartao(roll, { seis: critico }) })
+    ? await cartaoDeDano(roll, { rotulo: `${titulo} (ablação ${comando.ablacao})`, ...dano, comparacao: '=', paraAplicar: true })
     : await renderizar('teste.hbs', { rotulo: 'Rolagem', sabor: comando.descricao, dado: comando.dados, partes: comando.partes, total: roll.total, critico: null, dados: dadosDoCartao(roll, { critico: false }) });
   return ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls: [roll],
-    flags: { [SISTEMA]: { red: { tipo: comando.tipo, dados: comando.dados, total: roll.total, critico, ablacao: comando.ablacao, descricao: comando.descricao } } }
+    flags: { [SISTEMA]: { red: { tipo: comando.tipo, dados: comando.dados, total: roll.total, critico, ablacao: comando.ablacao, descricao: comando.descricao },
+      ...(dano ? { danoDeFormula: { total: roll.total, bonus: dano.bonus, critico, ablacao: dano.ablacao, formula: roll.formula } } : {}) } }
   }, { messageMode: modoDaMesa() });
+}
+
+// O mesmo cartão no dano da ficha, no /red e nas fórmulas dmg (CORE 0.93, hooks/chat/add-damage-application.js:23–44).
+async function cartaoDeDano(roll, { rotulo, critico, bonus = 0, quantidade = 2, comparacao = '=', limiar = 6, paraAplicar = false, multiplicador = 1, semLesao = false }) {
+  const botoes = paraAplicar ? [{ acao: 'aplicarDano', rotulo: 'Aplicar dano' }, ...(critico && !semLesao ? [{ acao: 'rolarLesao', rotulo: 'Rolar a lesão' }] : [])] : [];
+  const regraDoCritico = quantidade === 2 && comparacao === '=' && limiar === 6 ? 'dois ou mais 6' : `${quantidade} ou mais dados ${comparacao} ${limiar}`;
+  return renderizar('dano.hbs', { rotulo, total: roll.total, critico, bonus, regraDoCritico, semLesao, botoes, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
 }
 
 // O dano de uma arma (p. 187): a fórmula da arma (ou outra: 2d6 do autofogo, 3d6 do cartucho), vezes o multiplicador do
@@ -92,7 +103,7 @@ export async function executarComandoRed(mensagem, ator = null) {
 // os botões do mestre no cartão (combate.aplicarDanoDoCartao e rolarLesaoDoCartao); o do fluxo do ataque, não.
 export async function rolarDano(arma, { falar = false, modo, formula = null, multiplicador = 1, perguntar = false, aoAbrir = null, paraAplicar = false, arremesso = false, modoDoArremesso = null } = {}) {
   // A Briga e as Artes Marciais rolam o dano pelo BODY do dono (o C10; ItemCPR.danoDaArma).
-  const base = formula || (arma.danoDaArma ?? arma.system.dano) || '0';
+  const base = retirarMarcadoresDano(formula || (arma.danoDaArma ?? arma.system.dano) || '0');
   let modificador = 0;
   if (perguntar) {
     const linhas = [`${arma.name}: ${base}${multiplicador > 1 ? ` × ${multiplicador} (autofogo)` : ''}`];
@@ -103,12 +114,16 @@ export async function rolarDano(arma, { falar = false, modo, formula = null, mul
   const expressao = expressaoDoDano(base, { multiplicador, modificador });
   const roll = await new Roll(expressao).evaluate();
   const resultados = roll.dice.flatMap(dado => dado.results.filter(r => r.active).map(r => r.result));
-  const critico = danoCritico(resultados);
-  const resultado = { roll, total: roll.total, critico, bonus: critico ? bonusDoCritico(arma.perfil2077) : 0, resultados, formula: expressao };
+  const regra = resolverCriticoDaArma(arma.system, arma.municaoCarregada?.system, arma.perfil2077);
+  // Wiki, system-catalog.js:197: borracha não causa lesão. O C14 já a impede por efeito da munição;
+  // não converta isso em seis:0, que mudaria o bônus antigo (tests/cenarios/v14.js, passo da borracha).
+  const efeito = arma.municaoCarregada?.system.efeito;
+  const semLesao = efeito === 'rubber' || Boolean(MUNICAO_SEM_DANO[efeito]);
+  const { critico, bonus } = danoCriticoConfigurado(resultados, regra);
+  const resultado = { roll, total: roll.total, critico, bonus, resultados, formula: expressao };
   if (falar) {
-    const botoes = paraAplicar ? [{ acao: 'aplicarDano', rotulo: 'Aplicar dano' }, ...(critico ? [{ acao: 'rolarLesao', rotulo: 'Rolar a lesão' }] : [])] : [];
-    const content = await renderizar('dano.hbs', { rotulo: `Dano: ${arma.name}${arremesso ? ' (arremesso)' : ''}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, total: roll.total, critico, botoes, dados: dadosDoCartao(roll, { seis: critico, multiplicador }) });
-    const flags = paraAplicar ? { [SISTEMA]: { danoDeArma: { arma: arma.uuid, total: roll.total, bonus: resultado.bonus, critico, formula: expressao, ...(arremesso ? { arremesso: true, modoDoArremesso } : {}) } } } : {};
+    const content = await cartaoDeDano(roll, { rotulo: `Dano: ${arma.name}${arremesso ? ' (arremesso)' : ''}${multiplicador > 1 ? ` (×${multiplicador})` : ''}`, ...regra, bonus, critico, paraAplicar, multiplicador, semLesao });
+    const flags = paraAplicar ? { [SISTEMA]: { danoDeArma: { arma: arma.uuid, total: roll.total, bonus: resultado.bonus, critico, formula: expressao, ...(semLesao ? { semLesao: true } : {}), ...(arremesso ? { arremesso: true, modoDoArremesso } : {}) } } } : {};
     resultado.mensagem = await ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: arma.actor }), content, rolls: [roll], flags }, { messageMode: modo });
   }
   return resultado;

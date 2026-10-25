@@ -23,6 +23,9 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{#if eh.arma}}
       <label class="celula"><span>Perícia</span><select name="system.pericia">{{selectOptions pericias selected=fonte.pericia}}</select></label>
       <label class="celula"><span>Dano</span><input type="text" name="system.dano" value="{{fonte.dano}}"></label>
+      <label class="celula"><span>Crítico em quantos seis</span><input type="number" name="system.critico.seis" value="{{fonte.critico.seis}}" min="0" step="1" data-tooltip="0: nunca causa crítico"></label>
+      <label class="celula"><span>Bônus do crítico</span><input type="number" name="system.critico.bonus" value="{{fonte.critico.bonus}}" placeholder="{{bonusCriticoPadrao}}" min="0" step="1"></label>
+      <p class="nota">Crítico: 0 seis nunca causa; bônus vazio usa +{{bonusCriticoPadrao}} do perfil, e 0 não acrescenta dano.</p>
       {{#if desarmada}}<label class="caixa" data-tooltip="A tabela do BODY de quem bate (com cyberbraço, a Briga dá pelo menos 2d6)"><input type="checkbox" name="system.danoPeloBody" {{checked fonte.danoPeloBody}}> Dano pelo BODY</label>{{#if (and fonte.danoPeloBody danoDoBody)}}<p class="nota dano-do-body">Pelo BODY do dono: {{danoDoBody}}.</p>{{/if}}{{/if}}
       <label class="celula"><span>CDT</span><input type="number" name="system.cdt" value="{{fonte.cdt}}"></label>
       <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.bonusAtaque" value="{{fonte.bonusAtaque}}"></label>
@@ -51,6 +54,11 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Tipo</span><input type="text" name="system.tipo" value="{{fonte.tipo}}"></label>
       <label class="celula"><span>Quantidade</span><input type="number" name="system.quantidade" value="{{fonte.quantidade}}"></label>
       <label class="celula"><span>Ablação</span><input type="number" name="system.ablacao" value="{{fonte.ablacao}}"></label>
+      <label class="caixa"><input type="checkbox" name="system.critico.substitui" {{checked fonte.critico.substitui}}> Mudar o crítico da arma</label>
+      {{#if fonte.critico.substitui}}
+      <label class="celula"><span>Crítico em quantos seis</span><input type="number" name="system.critico.seis" value="{{fonte.critico.seis}}" min="0" step="1" data-tooltip="0: nunca causa crítico"></label>
+      <label class="celula"><span>Bônus do crítico</span><input type="number" name="system.critico.bonus" value="{{fonte.critico.bonus}}" min="0" step="1"></label>
+      {{/if}}
       {{/if}}
       {{#if eh.lesao}}
       <label class="celula"><span>Local</span><select name="system.local">{{selectOptions locaisLesao selected=fonte.local}}</select></label>

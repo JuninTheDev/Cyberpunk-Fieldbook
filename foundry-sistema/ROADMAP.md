@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 169). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 173). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -413,7 +413,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [ ] **C42. Dice So Nice:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
   `dice-so-nice-preset.js`).
 - [ ] **C43. Da 0.93**, um ciclo por parte (o CHANGELOG da 0.93 e o código em `fvtt-cyberpunk-red-core-dev/`):
-  - [~] parte 1, as fórmulas (sessão KouArt, com o Codex, 2026-10-25): os modificadores `red` e `dmg` nas fórmulas
+  - [x] parte 1, as fórmulas: feito no ciclo 172 (sessão KouArt, com o Codex, 2026-10-25): os modificadores `red` e `dmg` nas fórmulas
     (`/r 1d10red`, `2d6dmgab2cd10`) e o crítico configurável por arma e munição;
   - [x] parte 2, a mesa (ciclo 171, sessão Junin, 2026-10-25): o "Marcador de turno" do mundo, com os quatro do CORE 0.93
     e o do Foundry; os upgrades com modificador negativo no ataque, no SDP e nos assentos (nunca abaixo de 0);
