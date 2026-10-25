@@ -49,7 +49,7 @@ const contentTypes = {
 // Os arquivos de regras não têm notas de campanha; elas ficam no index.html. O que o mestre publica em cada campanha
 // não é arquivo: vem pela API (/api/visao), só para quem joga nela.
 const playerFiles = new Set([
-  '/jogadores.html', '/mestre.html', '/wiki.css', '/wiki-app.js', '/nightcity-map.js',
+  '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/netwire.js', '/wiki-app.js', '/nightcity-map.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
   '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
   '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
@@ -261,7 +261,9 @@ async function writeJsonAtomic(file, data) {
 // Personagens dos jogadores, códigos de acesso, campanhas (com o Publicar de cada uma) e o importador do Foundry
 // (api-personagens.js e api-campanhas.js).
 const { ROUTES: characterApiRoutes } = require('./api-personagens');
-const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js'), secureCookies: hosted });
+// A IA do NetWire (api-netwire-ia.js), que rascunha mensagens na Caixa do mestre: sem ANTHROPIC_API_KEY, desligada.
+const netwireIa = { chave: process.env.ANTHROPIC_API_KEY || '', url: process.env.ANTHROPIC_BASE_URL || '', modelo: process.env.NETWIRE_MODELO || '', limite: Number(process.env.NETWIRE_IA_LIMITE) || 30, fetch: (...args) => fetch(...args) };
+const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js'), secureCookies: hosted, ia: netwireIa });
 
 // A mesa na barra lateral, para cada um. Mundo ligado a uma campanha (o "mundo do Foundry" dela): quem joga nela vê
 // a mesa aberta e o nome da campanha; quem não joga vê o Foundry sem mundo aberto (não fica sabendo de outra mesa).

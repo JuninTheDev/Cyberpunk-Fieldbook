@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { createCampaigns } = require('./api-campanhas');
 const { createAccountStores } = require('./api-contas');
+const { createNetwire } = require('./api-netwire');
 const characterRoles = require('./personagem-roles');
 const characterCyberware = require('./personagem-cyberware');
 const characterGame = require('./personagem-jogo');
@@ -22,7 +23,7 @@ const creationRules = require('./system-criacao');
 const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
-module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false }) {
+module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false, ia = {} }) {
   const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic });
   const { sessions, preferences } = createAccountStores({ dataDir, writeJsonAtomic });
   // Documentos do mestre: os .md de documentos/<id da campanha>/ no projeto (vêm pelo git, como o resto da wiki).
@@ -194,6 +195,14 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const ownerName = (accounts, id) => (accounts.find(account => account.id === id) || {}).nome || '';
   // Personagem de antes das campanhas: do Protocolo Morana.
   const campaignOf = doc => doc.campanha || campaigns.first;
+  // NetWire (api-netwire.js): as mensagens dentro do jogo, pela mesma fila por arquivo.
+  // A IA que rascunha (ia: a chave, o modelo e o limite, do server.js) lê os documentos do mestre como contexto.
+  const netwire = createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia, docsDir });
+  // O nome com que o jogador assina a resposta: o do personagem dele nesta campanha (o apelido, se tiver).
+  const characterName = (identity, id, campaign) => {
+    const doc = validId(id) ? readCharacter(id) : null;
+    return doc && identity.conta && doc.dono === identity.conta.id && campaignOf(doc) === campaign ? String(doc.apelido || doc.nome || '').slice(0, 60) || null : null;
+  };
   // Retrato: o arquivo enviado (servido por esta API) ou um link https colado pelo jogador.
   const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
   // O que os outros jogadores da campanha veem: nome, apelido, Role e retrato. O resto só o dono e o mestre.
@@ -634,7 +643,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       // As próximas sessões marcadas na agenda: marcar ou mudar uma também conta como novidade.
       const agenda = campaigns.upcoming(id);
       const scheduled = campaigns.agendaUpdated(id);
-      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, relogios: clocks, agenda, atualizado: [view.atualizado, news.atualizado, table, scheduled].filter(Boolean).sort().pop() || null });
+      // As mensagens do NetWire (uma nova, ou uma agendada que chegou) também contam como novidade.
+      const messages = netwire.updated(id);
+      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, relogios: clocks, agenda, mensagens: messages, atualizado: [view.atualizado, news.atualizado, table, scheduled, messages].filter(Boolean).sort().pop() || null });
     }
     // Agenda das mesas: só o mestre marca, muda e desmarca (os jogadores veem as da campanha deles em /api/visao).
     if (pathname === '/api/agenda' || pathname.startsWith('/api/agenda/')) {
@@ -655,6 +666,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       return json(response, 405, { erro: 'Use PUT ou DELETE.' });
     }
     // Notícias de Night City: o mural que todas as campanhas veem. Só o mestre lê o rascunho e publica.
+    // NetWire: canais e mensagens dentro do jogo (api-netwire.js).
+    if (pathname === '/api/netwire' || pathname.startsWith('/api/netwire/')) return netwire.route({ request, response, pathname, method, identity, query, json, readJson, chosenCampaign, characterName, who });
+
     if (pathname === '/api/night-city') {
       if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre.' });
       if (method === 'GET') { const { mestre, atualizado } = campaigns.readNews(); return json(response, 200, { noticias: mestre, atualizado }); }
@@ -1119,5 +1133,5 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   };
   return handle;
 };
-const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city|agenda)(\/|$)/;
+const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city|agenda|netwire)(\/|$)/;
 module.exports.ROUTES = ROUTES;

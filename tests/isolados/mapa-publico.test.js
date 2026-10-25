@@ -141,14 +141,14 @@ function serviceWorker() {
 }
 
 test('mapa offline: instalação guarda só renderer leve, nunca baixa os tiles; atualização remove cache antigo', async () => {
-  const e = serviceWorker(); e.stores.set('fieldbook-jogadores-v15', {});
+  const e = serviceWorker(); e.stores.set('fieldbook-jogadores-v16', {});
   await e.evento('install'); await e.evento('activate');
   assert.ok(e.precache.includes('/nightcity-map.js'));
   assert.equal(e.precache.some(url => url.startsWith('/assets/nightcity-map/tiles/')), false);
   assert.equal(e.precache.includes('/index.html'), false); assert.equal(e.precache.includes('/campaign-map.js'), false);
   assert.equal(e.fetches.length, 0); assert.equal(e.skipWaiting, 1); assert.equal(e.claim, 1);
-  assert.equal(e.stores.has('fieldbook-jogadores-v15'), false); assert.equal(e.stores.size, 1);
-  assert.ok(e.stores.has('fieldbook-jogadores-v16'));
+  assert.equal(e.stores.has('fieldbook-jogadores-v16'), false); assert.equal(e.stores.size, 1);
+  assert.ok(e.stores.has('fieldbook-jogadores-v17'));
 });
 
 test('mapa offline: tile versionado é cache-first, funciona sem rede e não inventa regiões ainda não visitadas', async () => {

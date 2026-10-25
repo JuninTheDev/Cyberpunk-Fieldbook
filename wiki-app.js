@@ -84,6 +84,45 @@
     get: key => { const synced = SYNCED.includes(key) ? prefs.rawGet(key) : undefined; return synced !== undefined ? synced : localGet(`${storagePrefix}-${key}`); },
     set: (key, value) => { localSet(`${storagePrefix}-${key}`, value); if (SYNCED.includes(key)) prefs.rawSet(key, value); }
   };
+  // ---------------- Tema ----------------
+  // Fieldbook (o amarelo de sempre) ou 2077 (o vermelho do menu do jogo, netwire.css), escolhido no menu da conta. Fica
+  // na conta (prefs "tema"), igual no celular e no computador; o script do <head> já aplica a cópia do aparelho antes de
+  // desenhar, para não piscar o outro tema.
+  const THEMES = { fieldbook: { nome: 'Fieldbook', cor: '#0b0d0f' }, 2077: { nome: '2077', cor: '#191a1e' } };
+  const theme = {
+    list: () => Object.entries(THEMES).map(([id, item]) => ({ id, nome: item.nome })),
+    get: () => (THEMES[prefs.get('tema')] ? prefs.get('tema') : 'fieldbook'),
+    apply() {
+      const id = theme.get();
+      if (id === 'fieldbook') delete document.documentElement.dataset.tema;
+      else document.documentElement.dataset.tema = id;
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEMES[id].cor);
+    },
+    set(id) {
+      if (!THEMES[id]) return;
+      prefs.set('tema', id === 'fieldbook' ? null : id);
+      theme.apply();
+      document.dispatchEvent(new CustomEvent('wiki:tema', { detail: { id } }));
+    }
+  };
+  // A casca: NetWire (as abas do topo e, no celular, a barra de baixo) ou a clássica (a barra lateral com as abas
+  // Campanhas e Sistema, como antes). Também na conta (prefs "casca"); o script do <head> aplica a cópia do aparelho.
+  const shell = {
+    get: () => (prefs.get('casca') === 'classica' ? 'classica' : 'netwire'),
+    apply() {
+      if (shell.get() === 'classica') document.documentElement.dataset.casca = 'classica';
+      else delete document.documentElement.dataset.casca;
+    },
+    set(id) {
+      prefs.set('casca', id === 'classica' ? 'classica' : null);
+      shell.apply();
+      document.dispatchEvent(new CustomEvent('wiki:casca', { detail: { id: shell.get() } }));
+    }
+  };
+  theme.apply();
+  shell.apply();
+  document.addEventListener('wiki:preferencias', () => { theme.apply(); shell.apply(); });
+
   const mapPages = ['campaignMap', ...(config.mapPages || [])];
   const mapData = () => (config.mapData ? config.mapData() : window.campaignMapData);
 
@@ -308,12 +347,77 @@
       document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
       document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(currentPage)));
+      drawTopTabs();
     }
     // Selos de novidade: { idDaPágina: quantidade } (0 tira o selo). A visão dos jogadores marca o que o mestre
     // publicou desde a última vez que o jogador abriu a página.
     function setBadges(map) {
       Object.entries(map).forEach(([id, count]) => { if (count > 0) badges[id] = count; else delete badges[id]; });
       buildNavigation();
+    }
+
+    // ---------------- Abas do topo (a casca NetWire) ----------------
+    // O menu principal, como o menu do jogo: cada aba reúne páginas (pela lista e pelos nomes dos grupos da campanha) e
+    // abre a última que a pessoa viu nela. A barra lateral continua com tudo, nas duas áreas (Campanhas e Sistema): a aba
+    // com area 'system' é a área Sistema. No celular, a barra de baixo, com as 4 primeiras e Mais (a gaveta).
+    // config.topTabs: [{ id, label, curto?, inicio? (a página inicial da campanha), paginas?, grupos?, area?, pagina? }].
+    // Aba sem nenhuma página nesta campanha (Sessões, numa campanha sem sessões) some.
+    const topTabs = config.topTabs || [];
+    const lastOfTab = {};
+    let topNav = null;
+    function ownPages(tab) {
+      if (tab.area === 'system') return systemSections.flatMap(group => group.pages.map(page => page.id)).filter(id => pageContent[id]);
+      const campaign = activeCampaign();
+      const fromGroups = campaign ? campaign.groups.filter(group => (tab.grupos || []).includes(group.group)).flatMap(group => group.pages.flatMap(withTabs)) : [];
+      return [...new Set([...(tab.inicio ? [homePage()] : []), ...(tab.paginas || []), ...fromGroups])].filter(id => pageContent[id]);
+    }
+    // Uma página fica só na primeira aba que a tem (o Resumo do mestre está no grupo da campanha, mas é do Início).
+    function tabPages(tab) {
+      const taken = new Set();
+      for (const item of topTabs) {
+        const pages = ownPages(item).filter(id => !taken.has(id));
+        if (item === tab) return pages;
+        pages.forEach(id => taken.add(id));
+      }
+      return [];
+    }
+    // A aba da página aberta: a primeira que a tem; página de regra (ou só da área Sistema) fica na aba da área.
+    function activeTopTab() {
+      const ids = [currentPage, navIdOf(currentPage)];
+      return topTabs.find(tab => tab.area !== 'system' && tabPages(tab).some(id => ids.includes(id)))
+        || (currentWorkspace === 'system' || pageWorkspace[currentPage] === 'system' ? topTabs.find(tab => tab.area === 'system') : null)
+        || null;
+    }
+    let lastTopTab = null;
+    function drawTopTabs() {
+      if (!topNav) return;
+      const current = activeTopTab();
+      // Trocou de aba: a aba nova "pisca" uma vez (o glitch do menu do jogo; netwire.css).
+      const changed = lastTopTab !== null && current && current.id !== lastTopTab;
+      lastTopTab = current ? current.id : lastTopTab;
+      topNav.innerHTML = `${topTabs.filter(tab => tabPages(tab).length).map(tab => {
+        const news = tabPages(tab).reduce((sum, id) => sum + (badges[id] || 0), 0);
+        return `<button type="button" class="top-tab${tab === current && changed ? ' nw-glitch' : ''}" data-top-tab="${escapeHtml(tab.id)}"${tab === current ? ' aria-current="page"' : ''}><span class="top-tab-long">${escapeHtml(tab.label)}</span><span class="top-tab-short" aria-hidden="true">${escapeHtml(tab.curto || tab.label)}</span>${news ? `<span class="top-tab-badge" aria-label="${news} novidade(s)">${news}</span>` : ''}</button>`;
+      }).join('')}<button type="button" class="top-tab top-tab-more" data-top-more aria-label="Mais: o menu inteiro"><span class="top-tab-short">Mais</span></button>`;
+    }
+    if (topTabs.length) {
+      topNav = document.createElement('nav');
+      topNav.className = 'top-tabs';
+      topNav.setAttribute('aria-label', 'Menu principal');
+      const brand = document.querySelector('.topbar .brand');
+      if (brand) brand.after(topNav); else document.querySelector('.topbar')?.append(topNav);
+      topNav.addEventListener('click', event => {
+        if (event.target.closest('[data-top-more]')) { setDrawer(!document.body.classList.contains('sidebar-open')); return; }
+        const button = event.target.closest('[data-top-tab]');
+        const tab = button && topTabs.find(item => item.id === button.dataset.topTab);
+        if (!tab) return;
+        const pages = tabPages(tab);
+        const target = [lastOfTab[tab.id], tab.pagina, ...pages].find(id => id && pages.includes(id));
+        if (tab.area === 'system') setWorkspace('system');
+        if (target) openPage(target);
+      });
+      // A última página vista em cada aba: voltar a ela pelo menu é voltar para onde estava.
+      document.addEventListener('wiki:pagina', event => { const tab = activeTopTab(); if (tab) lastOfTab[tab.id] = event.detail.id; });
     }
 
     // O botão ☰ (criado aqui, nas duas wikis) e o fundo escuro da gaveta do celular.
@@ -470,9 +574,14 @@
       const host = tabHost(id);
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
       // A linha em ciano (o eyebrow) em cima do título, como nos exemplos de 2026.
+      // A coluna da direita troca junto (o índice volta quando a página monta o dela).
+      side.innerHTML = '';
       content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
       tocClicked = -1;
+      // A página nova entra com um esmaecer curto (netwire.css; só a opacidade: as medidas da página não mudam).
+      if (historyMode !== 'none') { content.classList.remove('nw-entra'); void content.offsetWidth; content.classList.add('nw-entra'); }
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
+      drawTopTabs();
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
       if (document.body.classList.contains('sidebar-open')) setDrawer(false);
@@ -639,12 +748,28 @@
     function buildToc() {
       content.querySelector('.page-toc')?.remove();
       const units = pageUnits(content);
-      if (units.length < 4) return;
-      const toc = document.createElement('nav');
-      toc.className = 'page-toc';
-      toc.setAttribute('aria-label', 'Nesta página');
-      toc.innerHTML = `<span class="page-toc-label">Nesta página</span>${units.map((unit, index) => `<button type="button" data-toc-index="${index}">${escapeHtml(unitTitle(unit))}</button>`).join('')}`;
-      content.querySelector('.lede').after(toc);
+      if (units.length >= 4) {
+        const toc = document.createElement('nav');
+        toc.className = 'page-toc';
+        toc.setAttribute('aria-label', 'Nesta página');
+        toc.innerHTML = `<span class="page-toc-label">Nesta página</span>${units.map((unit, index) => `<button type="button" data-toc-index="${index}">${escapeHtml(unitTitle(unit))}</button>`).join('')}`;
+        content.querySelector('.lede').after(toc);
+      }
+      drawSide();
+    }
+
+    // ---------------- Coluna da direita (a casca NetWire, nas telas largas) ----------------
+    // "Nesta página" em lista, com os mesmos data-toc-index dos chips (o clique e a rolagem valem para os dois; os chips
+    // continuam no lugar e o CSS os esconde quando a coluna aparece), e o quadro de contexto de cada wiki
+    // (config.sidePanel(página) devolve o HTML, ou '' para nada). Coluna vazia não ocupa espaço.
+    const side = document.createElement('aside');
+    side.className = 'nw-side';
+    side.setAttribute('aria-label', 'Contexto da página');
+    document.querySelector('main')?.append(side);
+    function drawSide() {
+      const chips = [...content.querySelectorAll('.page-toc [data-toc-index]')];
+      const toc = chips.length ? `<nav class="nw-pad nw-side-toc" aria-label="Índice da página"><p class="nw-pad-title">Nesta página</p>${chips.map(chip => `<button type="button" class="nw-toc-link" data-toc-index="${chip.dataset.tocIndex}">${escapeHtml(chip.textContent)}</button>`).join('')}</nav>` : '';
+      side.innerHTML = `${toc}${config.sidePanel ? config.sidePanel(currentPage) || '' : ''}`;
     }
 
     // Rolagem suave própria: a do navegador (behavior: 'smooth') às vezes é ignorada logo depois de trocar de página.
@@ -822,7 +947,8 @@
         tocFrame = 0;
         const toc = content.querySelector('.page-toc');
         if (!toc) return;
-        const limit = toc.getBoundingClientRect().bottom + 24;
+        // Com a coluna da direita, os chips ficam escondidos (sem altura): a seção atual é a que passou da barra de cima.
+        const limit = Math.max(toc.getBoundingClientRect().bottom, document.querySelector('.topbar').getBoundingClientRect().bottom) + 24;
         let current = -1;
         const units = pageUnits(content);
         units.forEach((unit, index) => { if (unit.getBoundingClientRect().top <= limit) current = index; });
@@ -833,6 +959,7 @@
           if (active && !chip.classList.contains('active')) toc.scrollTo({ left: chip.offsetLeft - toc.clientWidth / 3, behavior: 'smooth' });
           chip.classList.toggle('active', active);
         });
+        side.querySelectorAll('[data-toc-index]').forEach(link => link.classList.toggle('active', Number(link.dataset.tocIndex) === current));
       });
     }, { passive: true });
 
@@ -1643,7 +1770,16 @@
     });
     document.addEventListener('keydown', event => {
       const typing = event.target.closest && event.target.closest('input, textarea, select, [contenteditable]');
-      if ((event.key === '/' && !typing) || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k')) {
+      // Ctrl+K: a paleta de comandos (que também busca). No mapa em tela cheia, como antes: suspende o mapa e vai para a
+      // busca (Esc volta ao mapa). 1–7, fora de um campo: as abas do topo.
+      const ctrlK = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && !event.altKey;
+      if (ctrlK && !document.body.classList.contains('map-immersive')) { event.preventDefault(); openPalette(); return; }
+      if (/^[1-9]$/.test(event.key) && !typing && !event.ctrlKey && !event.metaKey && !event.altKey && !palette.open) {
+        const tab = topNav && [...topNav.querySelectorAll('[data-top-tab]')][Number(event.key) - 1];
+        if (tab) { event.preventDefault(); tab.click(); }
+        return;
+      }
+      if ((event.key === '/' && !typing) || ctrlK) {
         event.preventDefault();
         if (document.body.classList.contains('map-immersive')) {
           stopCampaignMap();
@@ -1656,6 +1792,73 @@
       if (event.key === '[' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); toggleSidebar(); }
       if (event.key === 'Escape' && document.body.classList.contains('sidebar-open')) { setDrawer(false); if (!document.body.classList.contains('map-immersive')) menuButton.focus(); }
     });
+    // ---------------- Paleta de comandos (Ctrl+K) ----------------
+    // Ir a qualquer página da campanha ou das regras, trocar de aba, de tema ou de menu. O que não achar vira busca na
+    // wiki (a última linha). Enter abre, as setas escolhem, Esc fecha.
+    const palette = document.createElement('dialog');
+    palette.className = 'nw-palette';
+    palette.setAttribute('aria-label', 'Comandos e páginas');
+    palette.innerHTML = '<input type="search" class="nw-palette-input" placeholder="Ir para… (página, aba, tema)" aria-label="Comando ou página" autocomplete="off" aria-controls="nw-palette-list"><ul class="nw-palette-list" id="nw-palette-list" role="listbox" aria-label="Resultados"></ul><p class="nw-palette-hint">Enter abre · ↑↓ escolhem · Esc fecha · 1–7 trocam a aba do topo · / vai direto para a busca</p>';
+    document.body.append(palette);
+    const paletteInput = palette.querySelector('input');
+    const paletteList = palette.querySelector('ul');
+    let paletteItems = [];
+    let paletteIndex = 0;
+    const plain = text => String(text).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    function paletteCommands() {
+      const list = topTabs.filter(tab => tabPages(tab).length).map((tab, index) => ({ label: `Aba ${tab.label}`, hint: `tecla ${index + 1}`, run: () => topNav.querySelector(`[data-top-tab="${tab.id}"]`)?.click() }));
+      const seen = new Set();
+      const add = (id, where) => {
+        if (seen.has(id) || !pageContent[id] || id === 'criador') return;
+        seen.add(id);
+        list.push({ label: plain(navEntry(id).label), hint: plain(where), run: () => openPage(id) });
+      };
+      (activeCampaign() ? activeCampaign().groups : []).forEach(group => group.pages.forEach(page => { add(page.id, group.group); (page.tabs || []).forEach(tab => add(tab.id, page.label)); }));
+      systemSections.forEach(group => group.pages.forEach(page => add(page.id, group.group)));
+      theme.list().forEach(item => list.push({ label: `Tema ${item.nome}`, hint: theme.get() === item.id ? 'em uso' : 'aparência', run: () => theme.set(item.id) }));
+      list.push(shell.get() === 'classica'
+        ? { label: 'Menu no topo (NetWire)', hint: 'aparência', run: () => shell.set('netwire') }
+        : { label: 'Menu clássico (barra lateral)', hint: 'aparência', run: () => shell.set('classica') });
+      return list;
+    }
+    function drawPalette() {
+      const query = foldForSearch(paletteInput.value.trim());
+      const all = paletteCommands();
+      const found = query ? all.filter(item => foldForSearch(`${item.label} ${item.hint}`).includes(query)) : all;
+      paletteItems = found.slice(0, 12);
+      if (query) paletteItems.push({ label: `Buscar na wiki: “${paletteInput.value.trim()}”`, hint: 'busca', run: () => { search.value = paletteInput.value.trim(); searchPages(search.value); search.focus(); } });
+      paletteIndex = Math.min(paletteIndex, Math.max(0, paletteItems.length - 1));
+      paletteList.innerHTML = paletteItems.map((item, index) => `<li role="option" id="nw-palette-${index}" data-palette-index="${index}" aria-selected="${index === paletteIndex}"><span>${escapeHtml(item.label)}</span>${item.hint ? `<small>${escapeHtml(item.hint)}</small>` : ''}</li>`).join('') || '<li class="nw-palette-empty">Nada com esse nome.</li>';
+      paletteInput.setAttribute('aria-activedescendant', paletteItems.length ? `nw-palette-${paletteIndex}` : '');
+      paletteList.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+    }
+    function runPalette(index) {
+      const item = paletteItems[index];
+      if (!item) return;
+      palette.close();
+      item.run();
+    }
+    function openPalette() {
+      if (palette.open) return;
+      paletteInput.value = '';
+      paletteIndex = 0;
+      drawPalette();
+      palette.showModal();
+      paletteInput.focus();
+    }
+    paletteInput.addEventListener('input', () => { paletteIndex = 0; drawPalette(); });
+    paletteInput.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        paletteIndex = (paletteIndex + (event.key === 'ArrowDown' ? 1 : -1) + paletteItems.length) % Math.max(1, paletteItems.length);
+        drawPalette();
+      }
+      if (event.key === 'Enter') { event.preventDefault(); runPalette(paletteIndex); }
+    });
+    paletteList.addEventListener('click', event => { const row = event.target.closest('[data-palette-index]'); if (row) runPalette(Number(row.dataset.paletteIndex)); });
+    // Clicar fora da caixa fecha.
+    palette.addEventListener('click', event => { if (event.target === palette) palette.close(); });
+
     search.addEventListener('keydown', event => {
       if (event.key === 'Escape') { reopenCurrent(); search.blur(); }
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -1894,7 +2097,7 @@
 
     // switchCampaign: troca a campanha ativa (pergunta antes, se a página pedir). setBadges: selos de novidade no menu.
     // status: o último /api/estado. hasPage: a página existe nesta wiki (a do mestre tem páginas que a dos jogadores não tem).
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, theme, shell, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
     // Quem depende da wiki montada (o menu da conta) começa aqui.
     document.dispatchEvent(new Event('wiki:pronta'));
 })();
