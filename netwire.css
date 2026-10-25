@@ -477,3 +477,28 @@
   .nw-list .nw-channel { width: auto; white-space: nowrap; }
   .nw-feed-body { max-height: none; min-height: 0; }
 }
+
+/* ================= 8. Polimento: a paleta de comandos, a entrada da página e o glitch da aba ================= */
+/* A paleta (Ctrl+K): a caixa do menu do jogo, no alto da tela. */
+.nw-palette { width: min(640px, calc(100vw - 32px)); max-height: min(70vh, 560px); margin: 12vh auto auto; padding: 0; border: 2px solid var(--nw-primary-dim, var(--nw-border)); background: var(--nw-surface); color: var(--tx); clip-path: var(--nw-notch-path); }
+.nw-palette::backdrop { background: rgb(0 0 0 / 60%); backdrop-filter: blur(2px); }
+.nw-palette-input { width: 100%; min-height: 52px; padding: 0 16px; border: 0; border-bottom: 1px solid var(--nw-primary); background: var(--nw-well); color: var(--tx); font: 500 18px var(--nw-font); outline: none; box-shadow: var(--nw-glow); }
+.nw-palette-list { max-height: calc(min(70vh, 560px) - 100px); margin: 0; padding: 6px; overflow-y: auto; list-style: none; scrollbar-width: thin; }
+.nw-palette-list li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid transparent; border-radius: 3px; color: var(--nw-tab); cursor: pointer; font: 500 16px var(--nw-font); }
+.nw-palette-list li small { flex: 0 0 auto; color: var(--mu); font: 400 13px var(--nw-font-label); letter-spacing: .04em; text-transform: uppercase; }
+.nw-palette-list li[aria-selected="true"], .nw-palette-list li:hover { border-color: var(--nw-border-strong); background: var(--nw-active-bg); color: var(--nw-tab-active); }
+.nw-palette-list .nw-palette-empty { color: var(--mu); cursor: default; }
+.nw-palette-hint { margin: 0; padding: 8px 16px 12px; border-top: 1px solid var(--nw-border); color: var(--mu); font: 400 13px var(--nw-font-label); letter-spacing: .03em; }
+/* A página nova entra com um esmaecer curto (só a opacidade). */
+:root:not([data-casca="classica"]) .content.nw-entra { animation: nw-entra .16s ease-out; }
+@keyframes nw-entra { from { opacity: .35; } to { opacity: 1; } }
+/* A aba nova pisca uma vez, como o menu do jogo ao trocar de tela. */
+.top-tab.nw-glitch { animation: nw-glitch .22s steps(3, end); }
+@keyframes nw-glitch {
+  0% { transform: translateX(-2px); text-shadow: 2px 0 var(--nw-primary), -2px 0 var(--nw-secondary); }
+  50% { transform: translateX(2px); text-shadow: -2px 0 var(--nw-primary), 2px 0 var(--nw-secondary); }
+  100% { transform: none; text-shadow: var(--nw-glow-text); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-casca="classica"]) .content.nw-entra, .top-tab.nw-glitch { animation: none; }
+}

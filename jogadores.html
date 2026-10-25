@@ -268,10 +268,12 @@
         // Mensagens no Início: o que é novo desde a última visita (notícias, Night City, sessões, pessoas, lugares), como
         // as mensagens do NetWire; sem nada novo, as três últimas notícias.
         const SOURCES = [['pvNews', news, 'Notícias e handouts'], ['pvNightCity', city, 'N54 News'], ['pvSessions', sessions, 'Sessões'], ['pvPeople', people, 'Pessoas'], ['pvMap', places, 'Mapa']];
-        const unread = SOURCES.flatMap(([page, items, label]) => items.filter(item => fresh(page, item)).map(item => ({ page, item, label })));
+        // As conversas do NetWire com novidade vêm primeiro (a última mensagem de cada uma, que abre a conversa).
+        const chats = (window.netwire ? window.netwire.unreadItems() : []).map(item => ({ page: 'pvMensagens', section: item.canal, item: { titulo: `${item.nome}${item.total > 1 ? ` (${item.total})` : ''}`, texto: item.autor === item.nome ? item.texto : `${item.autor}: ${item.texto}`, data: window.netwire.when(item.quando) }, label: 'NetWire' }));
+        const unread = [...chats, ...SOURCES.flatMap(([page, items, label]) => items.filter(item => fresh(page, item)).map(item => ({ page, item, label })))];
         const shown = unread.length ? unread.slice(0, 4) : [...news.slice(0, 2).map(item => ({ page: 'pvNews', item, label: 'Notícias e handouts' })), ...city.slice(0, 1).map(item => ({ page: 'pvNightCity', item, label: 'N54 News' }))];
         const excerpt = text => { const plain = String(text || '').replace(/[#*_>`[\]|]/g, '').replace(/\s+/g, ' ').trim(); return plain.length > 140 ? `${plain.slice(0, 139)}…` : plain; };
-        const inboxHtml = shown.length ? `<div class="section pv-inbox" data-toc="${unread.length ? 'Não lidas' : 'Últimas mensagens'}"><h3>${unread.length ? 'Não lidas' : 'Últimas mensagens'}${unread.length ? `<span class="ref">${unread.length}</span>` : ''}</h3>${shown.map(({ page, item, label }) => `<div class="nw-msg"><button type="button" class="nw-msg-body pv-inbox-item" data-page="${page}"><b>${escapeHtml(item.titulo || item.nome || 'Sem título')}</b>${excerpt(item.texto) ? `<span>${escapeHtml(excerpt(item.texto))}</span>` : ''}</button><div class="nw-msg-foot"><b>${escapeHtml(label)}</b>${item.data ? ` · ${escapeHtml(item.data)}` : ''}</div></div>`).join('')}<p><button class="action" type="button" data-page="pvMensagens">Abrir as mensagens</button></p></div>` : '';
+        const inboxHtml = shown.length ? `<div class="section pv-inbox" data-toc="${unread.length ? 'Não lidas' : 'Últimas mensagens'}"><h3>${unread.length ? 'Não lidas' : 'Últimas mensagens'}${unread.length ? `<span class="ref">${unread.length}</span>` : ''}</h3>${shown.map(({ page, section, item, label }) => `<div class="nw-msg"><button type="button" class="nw-msg-body pv-inbox-item" data-page="${page}"${section ? ` data-section="${escapeHtml(section)}"` : ''}><b>${escapeHtml(item.titulo || item.nome || 'Sem título')}</b>${excerpt(item.texto) ? `<span>${escapeHtml(excerpt(item.texto))}</span>` : ''}</button><div class="nw-msg-foot"><b>${escapeHtml(label)}</b>${item.data ? ` · ${escapeHtml(item.data)}` : ''}</div></div>`).join('')}<p><button class="action" type="button" data-page="pvMensagens">Abrir as mensagens</button></p></div>` : '';
         const clocksHtml = clocks.length ? `<div class="section" data-toc="Relógios"><h3>Relógios</h3>${clocks.map(clock => `<p class="pv-clock-name"><b>${escapeHtml(clock.nome)}</b> ${clock.valor}/${clock.passos.length}${clock.valor && clock.passos[clock.valor - 1] ? ` · agora: ${escapeHtml(clock.passos[clock.valor - 1])}` : ''}</p><div class="clock clock-readonly">${clock.passos.map((step, index) => `<span class="clock-segment" aria-pressed="${index < clock.valor}"><span>${index + 1}</span>${escapeHtml(step)}</span>`).join('')}</div>`).join('')}</div>` : '';
         // O quadro da coluna da direita (telas largas), nas outras páginas: a próxima sessão e os relógios, em pequeno.
         sideNow = {
@@ -377,6 +379,7 @@
             currentIds = Object.fromEntries(Object.entries(NEWS_PAGES).map(([page, list]) => [page, (data[list] || []).map(itemKey).filter(Boolean)]));
             let seen = readSeen();
             if (!seen) { seen = currentIds; writeSeen(seen); }
+            lastData = data;
             updatePages(buildPages(data, seen));
             updateBadges();
             renderMe();
@@ -388,8 +391,14 @@
             updatePages(emptyPages('offline'));
           });
       }
+      // As conversas do NetWire mudaram (chegou mensagem, ou o jogador leu): o Início se refaz com as Não lidas novas.
+      let lastData = null;
+      document.addEventListener('netwire:mudou', () => {
+        if (lastData && window.wikiApp.activeCampaign().real !== false) updatePages({ pvHome: buildPages(lastData, readSeen() || {}).pvHome });
+      });
       // Trocou de campanha no menu: lê a nova do zero.
       document.addEventListener('wiki:campanha', () => {
+        lastData = null;
         lastUpdate = null;
         currentIds = {};
         sideNow = { next: '', clocks: '' };

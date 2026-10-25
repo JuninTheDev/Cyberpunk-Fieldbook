@@ -667,7 +667,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     }
     // Notícias de Night City: o mural que todas as campanhas veem. Só o mestre lê o rascunho e publica.
     // NetWire: canais e mensagens dentro do jogo (api-netwire.js).
-    if (pathname === '/api/netwire' || pathname.startsWith('/api/netwire/')) return netwire.route({ request, response, pathname, method, identity, query, json, readJson, chosenCampaign, characterName });
+    if (pathname === '/api/netwire' || pathname.startsWith('/api/netwire/')) return netwire.route({ request, response, pathname, method, identity, query, json, readJson, chosenCampaign, characterName, who });
 
     if (pathname === '/api/night-city') {
       if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre.' });

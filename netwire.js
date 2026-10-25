@@ -42,6 +42,7 @@
     const marks = readMarks() || {};
     if (!last || marks[channel] >= last) return;
     app().prefs.set(readKey(), { ...marks, [channel]: last });
+    document.dispatchEvent(new CustomEvent('netwire:mudou'));
   }
   // Primeira vez nesta conta: tudo o que já existe conta como lido.
   function firstVisit() {
@@ -70,25 +71,45 @@
     return data;
   }
   // Confere a cada 10 s com a tela aberta e a cada 30 s fora dela (só com a aba à vista).
-  function poll() {
-    if (document.visibilityState !== 'visible' || !app()) return;
-    const open = ['pvMensagens', 'caixa'].includes(app().currentPage());
+  // pushed: veio do aviso do servidor (lê mesmo com a aba escondida, para o selo estar certo quando ela voltar).
+  function poll(pushed = false) {
+    if ((!pushed && document.visibilityState !== 'visible') || !app()) return;
     const before = data && data.atualizado;
     load().then(fresh => {
       if (!fresh || fresh.atualizado === before) return;
-      if (open && app().currentPage() === 'pvMensagens') renderPlayer();
-      if (open && app().currentPage() === 'caixa') renderGm();
+      document.dispatchEvent(new CustomEvent('netwire:mudou'));
+      // Não redesenha por cima de quem está escrevendo (a resposta do jogador, o formulário do mestre).
+      const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.nw-app textarea, .nw-app input, .nw-app select');
+      if (app().currentPage() === 'pvMensagens') renderPlayer();
+      if (app().currentPage() === 'caixa' && !typing) renderGm();
     });
     polled = new Date().toISOString();
   }
+  // Na hora: o servidor avisa pelo api/netwire/eventos (SSE) quando algo muda, e esta aba relê. Sem a conexão (rede
+  // caindo, servidor antigo), a conferência periódica segura: a cada 10 s com a tela aberta, 30 s fora dela; com a
+  // conexão de pé, a cada 60 s.
+  let source = null;
+  function listen() {
+    if (source) { source.close(); source = null; }
+    if (!role() || !window.EventSource || location.protocol === 'file:' || !campaignId()) return;
+    if (role() === 'jogador' && !(window.playerIdentity && window.playerIdentity.papel === 'jogador')) return;
+    source = new EventSource(url('/eventos'));
+    source.addEventListener('netwire', event => {
+      let at = null;
+      try { at = JSON.parse(event.data).atualizado; } catch { /* aviso sem hora: relê */ }
+      if (data && at && data.atualizado === at) return;
+      poll(true);
+    });
+  }
+  const live = () => source && source.readyState === 1;
   let ticks = 0;
   setInterval(() => {
     ticks += 1;
     const open = app() && ['pvMensagens', 'caixa'].includes(app().currentPage());
-    if (open || ticks % 3 === 0) poll();
+    if (live() ? ticks % 6 === 0 : open || ticks % 3 === 0) poll();
   }, 10000);
-  document.addEventListener('wiki:pronta', () => { if (role()) load(); });
-  document.addEventListener('wiki:campanha', () => { data = null; lastBadge = -1; player.canal = ''; gm.view = 'rascunhos'; if (role()) load(); });
+  document.addEventListener('wiki:pronta', () => { if (role()) { load(); listen(); } });
+  document.addEventListener('wiki:campanha', () => { data = null; lastBadge = -1; player.canal = ''; gm.view = 'rascunhos'; if (role()) { load(); listen(); } });
   document.addEventListener('wiki:preferencias', () => { if (data) updateBadge(); });
 
   // ---------------- Mensagens do jogador ----------------
@@ -123,6 +144,7 @@
     const group = (title, list) => (list.length ? `<div class="nw-group"><p class="nw-group-title">${title}</p>${list.map(link).join('')}</div>` : '');
     const messages = current ? data.mensagens.filter(item => item.canal === current.id) : [];
     const draft = root.querySelector('[data-nw-texto]') ? root.querySelector('[data-nw-texto]').value : '';
+    const writing = Boolean(document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-nw-texto]'));
     root.innerHTML = `<div class="nw-app">
       <nav class="nw-list" aria-label="Canais e conversas">${group('Feeds', channels.filter(channel => channel.tipo !== 'direto'))}${group('Direto', channels.filter(channel => channel.tipo === 'direto'))}</nav>
       <section class="nw-feed" aria-live="polite">${current ? `
@@ -132,6 +154,9 @@
       </section></div>`;
     const feed = root.querySelector('[data-nw-feed]');
     if (feed) feed.scrollTop = feed.scrollHeight;
+    // Uma mensagem chegou enquanto o jogador escrevia: o texto ficou, e o cursor volta para o fim dele.
+    const field = root.querySelector('[data-nw-texto]');
+    if (writing && field) { field.focus({ preventScroll: true }); field.setSelectionRange(field.value.length, field.value.length); }
     if (current) { markRead(current.id); updateBadge(); }
   }
   async function sendPlayer(form) {
@@ -377,5 +402,15 @@
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target.matches('[data-nw-texto]')) { event.preventDefault(); event.target.form.requestSubmit(); }
   });
 
-  window.netwire = { setupPlayer, setupGm, load, unread: () => (data ? data.canais.reduce((sum, channel) => sum + unreadIn(channel.id), 0) : 0), polledAt: () => polled };
+  // As não lidas de cada conversa, para o Início do jogador (o "netwire:mudou" avisa quando mudam).
+  function unreadItems() {
+    if (!data) return [];
+    return data.canais.filter(channel => unreadIn(channel.id)).map(channel => {
+      const seen = (readMarks() || {})[channel.id] || '';
+      const fresh = data.mensagens.filter(item => item.canal === channel.id && item.quando && item.quando > seen && !(item.autor && item.autor.minha));
+      const last = fresh[fresh.length - 1];
+      return { canal: channel.id, nome: channel.tipo === 'direto' ? (channel.contato && channel.contato.nome) || channel.nome : `#${channel.nome}`, autor: last.autor.nome, texto: last.texto, quando: last.quando, total: fresh.length };
+    });
+  }
+  window.netwire = { setupPlayer, setupGm, load, unread: () => (data ? data.canais.reduce((sum, channel) => sum + unreadIn(channel.id), 0) : 0), unreadItems, when, polledAt: () => polled };
 })();

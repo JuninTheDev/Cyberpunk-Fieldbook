@@ -63,8 +63,51 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
       data.atualizado = new Date().toISOString();
       fs.mkdirSync(path.dirname(fileOf(id)), { recursive: true });
       await writeJsonAtomic(fileOf(id), data);
+      notify(id);
       return { status: 200, data: { ok: true, atualizado: data.atualizado, ...(result || {}) } };
     });
+  }
+
+  // ---------------- Na hora: /api/netwire/eventos (SSE) ----------------
+  // Cada aba aberta fica ouvindo a campanha dela. O aviso só diz "mudou" (com a hora): quem ouve pede de novo o
+  // api/netwire, e o servidor filtra como sempre (o aviso não leva mensagem nenhuma). A cada 20 s, um pulso com a hora
+  // da última mudança (a agendada que chegou aparece por ele) e a conferência de quem ouve (saiu da conta, ou não joga
+  // mais na campanha: a conexão fecha).
+  const MAX_STREAMS = 300;
+  const streams = new Set(); // { campaign, response, request, wanted, account }
+  let pulse = null;
+  const write = (stream, event, payload) => { try { stream.response.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`); } catch { close(stream); } };
+  function close(stream) {
+    if (!streams.delete(stream)) return;
+    try { stream.response.end(); } catch { /* já fechada */ }
+    if (!streams.size && pulse) { clearInterval(pulse); pulse = null; }
+  }
+  function notify(id) {
+    const at = updated(id);
+    for (const stream of streams) if (stream.campaign === id) write(stream, 'netwire', { atualizado: at });
+  }
+  function openStream({ request, response, campaign, identity, wanted, who, chosenCampaign }) {
+    const account = identity.conta ? identity.conta.id : 'mestre';
+    if (streams.size >= MAX_STREAMS || [...streams].filter(item => item.account === account).length >= 6) {
+      response.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '30' });
+      return response.end('Conexões demais.');
+    }
+    response.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'private, no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+    response.write('retry: 3000\n\n');
+    const stream = { campaign, response, request, wanted, account, who, chosenCampaign };
+    streams.add(stream);
+    write(stream, 'netwire', { atualizado: updated(campaign) });
+    request.on('close', () => close(stream));
+    if (!pulse) {
+      pulse = setInterval(() => {
+        for (const item of [...streams]) {
+          const now = item.who(item.request);
+          if (now.papel === 'visitante' || item.chosenCampaign(now, item.wanted) !== item.campaign) { close(item); continue; }
+          write(item, 'netwire', { atualizado: updated(item.campaign) });
+        }
+      }, 20000);
+      if (pulse.unref) pulse.unref();
+    }
   }
 
   // ---------------- Quem vê o quê ----------------
@@ -163,10 +206,16 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
   }
 
   // ctx: { request, response, pathname, method, identity, query, json, readJson, chosenCampaign, characterName }.
-  async function route({ request, response, pathname, method, identity, query, json, readJson, chosenCampaign, characterName }) {
+  async function route({ request, response, pathname, method, identity, query, json, readJson, chosenCampaign, characterName, who }) {
     if (identity.papel === 'visitante') return json(response, 401, { erro: 'Entre com o seu código.' });
     const gm = identity.papel === 'mestre';
     const parts = pathname.split('/').slice(3); // ['', 'api', 'netwire', ...]
+    if (parts[0] === 'eventos') {
+      if (method !== 'GET') return json(response, 405, { erro: 'Use GET.' });
+      const campaign = chosenCampaign(identity, query.get('campanha'));
+      if (!campaign) return json(response, 404, { erro: 'Campanha não encontrada.' });
+      return openStream({ request, response, campaign, identity, wanted: query.get('campanha'), who, chosenCampaign });
+    }
     const body = method === 'POST' || method === 'PUT' ? await readJson(request, 64 * 1024) : {};
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json(response, 400, { erro: 'Envie um objeto JSON.' });
     const id = chosenCampaign(identity, query.get('campanha') || body.campanha);

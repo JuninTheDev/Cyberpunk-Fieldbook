@@ -4,7 +4,7 @@
 // Guarda os arquivos públicos (os mesmos que qualquer jogador baixa) e, da API, só o que é deste aparelho: quem
 // entrou (api/eu) e o que o mestre publicou nas campanhas dele (api/visao). Entrar ou sair apaga essas duas.
 // A wiki do mestre e o resto da API passam direto.
-const CACHE = 'fieldbook-jogadores-v17';
+const CACHE = 'fieldbook-jogadores-v18';
 const PUBLICOS = [
   '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/netwire.js', '/wiki-app.js', '/nightcity-map.js',
   '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',

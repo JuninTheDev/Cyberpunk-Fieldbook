@@ -388,12 +388,16 @@
         || (currentWorkspace === 'system' || pageWorkspace[currentPage] === 'system' ? topTabs.find(tab => tab.area === 'system') : null)
         || null;
     }
+    let lastTopTab = null;
     function drawTopTabs() {
       if (!topNav) return;
       const current = activeTopTab();
+      // Trocou de aba: a aba nova "pisca" uma vez (o glitch do menu do jogo; netwire.css).
+      const changed = lastTopTab !== null && current && current.id !== lastTopTab;
+      lastTopTab = current ? current.id : lastTopTab;
       topNav.innerHTML = `${topTabs.filter(tab => tabPages(tab).length).map(tab => {
         const news = tabPages(tab).reduce((sum, id) => sum + (badges[id] || 0), 0);
-        return `<button type="button" class="top-tab" data-top-tab="${escapeHtml(tab.id)}"${tab === current ? ' aria-current="page"' : ''}><span class="top-tab-long">${escapeHtml(tab.label)}</span><span class="top-tab-short" aria-hidden="true">${escapeHtml(tab.curto || tab.label)}</span>${news ? `<span class="top-tab-badge" aria-label="${news} novidade(s)">${news}</span>` : ''}</button>`;
+        return `<button type="button" class="top-tab${tab === current && changed ? ' nw-glitch' : ''}" data-top-tab="${escapeHtml(tab.id)}"${tab === current ? ' aria-current="page"' : ''}><span class="top-tab-long">${escapeHtml(tab.label)}</span><span class="top-tab-short" aria-hidden="true">${escapeHtml(tab.curto || tab.label)}</span>${news ? `<span class="top-tab-badge" aria-label="${news} novidade(s)">${news}</span>` : ''}</button>`;
       }).join('')}<button type="button" class="top-tab top-tab-more" data-top-more aria-label="Mais: o menu inteiro"><span class="top-tab-short">Mais</span></button>`;
     }
     if (topTabs.length) {
@@ -574,6 +578,8 @@
       side.innerHTML = '';
       content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
       tocClicked = -1;
+      // A página nova entra com um esmaecer curto (netwire.css; só a opacidade: as medidas da página não mudam).
+      if (historyMode !== 'none') { content.classList.remove('nw-entra'); void content.offsetWidth; content.classList.add('nw-entra'); }
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
       drawTopTabs();
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
@@ -1764,7 +1770,16 @@
     });
     document.addEventListener('keydown', event => {
       const typing = event.target.closest && event.target.closest('input, textarea, select, [contenteditable]');
-      if ((event.key === '/' && !typing) || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k')) {
+      // Ctrl+K: a paleta de comandos (que também busca). No mapa em tela cheia, como antes: suspende o mapa e vai para a
+      // busca (Esc volta ao mapa). 1–7, fora de um campo: as abas do topo.
+      const ctrlK = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && !event.altKey;
+      if (ctrlK && !document.body.classList.contains('map-immersive')) { event.preventDefault(); openPalette(); return; }
+      if (/^[1-9]$/.test(event.key) && !typing && !event.ctrlKey && !event.metaKey && !event.altKey && !palette.open) {
+        const tab = topNav && [...topNav.querySelectorAll('[data-top-tab]')][Number(event.key) - 1];
+        if (tab) { event.preventDefault(); tab.click(); }
+        return;
+      }
+      if ((event.key === '/' && !typing) || ctrlK) {
         event.preventDefault();
         if (document.body.classList.contains('map-immersive')) {
           stopCampaignMap();
@@ -1777,6 +1792,73 @@
       if (event.key === '[' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); toggleSidebar(); }
       if (event.key === 'Escape' && document.body.classList.contains('sidebar-open')) { setDrawer(false); if (!document.body.classList.contains('map-immersive')) menuButton.focus(); }
     });
+    // ---------------- Paleta de comandos (Ctrl+K) ----------------
+    // Ir a qualquer página da campanha ou das regras, trocar de aba, de tema ou de menu. O que não achar vira busca na
+    // wiki (a última linha). Enter abre, as setas escolhem, Esc fecha.
+    const palette = document.createElement('dialog');
+    palette.className = 'nw-palette';
+    palette.setAttribute('aria-label', 'Comandos e páginas');
+    palette.innerHTML = '<input type="search" class="nw-palette-input" placeholder="Ir para… (página, aba, tema)" aria-label="Comando ou página" autocomplete="off" aria-controls="nw-palette-list"><ul class="nw-palette-list" id="nw-palette-list" role="listbox" aria-label="Resultados"></ul><p class="nw-palette-hint">Enter abre · ↑↓ escolhem · Esc fecha · 1–7 trocam a aba do topo · / vai direto para a busca</p>';
+    document.body.append(palette);
+    const paletteInput = palette.querySelector('input');
+    const paletteList = palette.querySelector('ul');
+    let paletteItems = [];
+    let paletteIndex = 0;
+    const plain = text => String(text).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    function paletteCommands() {
+      const list = topTabs.filter(tab => tabPages(tab).length).map((tab, index) => ({ label: `Aba ${tab.label}`, hint: `tecla ${index + 1}`, run: () => topNav.querySelector(`[data-top-tab="${tab.id}"]`)?.click() }));
+      const seen = new Set();
+      const add = (id, where) => {
+        if (seen.has(id) || !pageContent[id] || id === 'criador') return;
+        seen.add(id);
+        list.push({ label: plain(navEntry(id).label), hint: plain(where), run: () => openPage(id) });
+      };
+      (activeCampaign() ? activeCampaign().groups : []).forEach(group => group.pages.forEach(page => { add(page.id, group.group); (page.tabs || []).forEach(tab => add(tab.id, page.label)); }));
+      systemSections.forEach(group => group.pages.forEach(page => add(page.id, group.group)));
+      theme.list().forEach(item => list.push({ label: `Tema ${item.nome}`, hint: theme.get() === item.id ? 'em uso' : 'aparência', run: () => theme.set(item.id) }));
+      list.push(shell.get() === 'classica'
+        ? { label: 'Menu no topo (NetWire)', hint: 'aparência', run: () => shell.set('netwire') }
+        : { label: 'Menu clássico (barra lateral)', hint: 'aparência', run: () => shell.set('classica') });
+      return list;
+    }
+    function drawPalette() {
+      const query = foldForSearch(paletteInput.value.trim());
+      const all = paletteCommands();
+      const found = query ? all.filter(item => foldForSearch(`${item.label} ${item.hint}`).includes(query)) : all;
+      paletteItems = found.slice(0, 12);
+      if (query) paletteItems.push({ label: `Buscar na wiki: “${paletteInput.value.trim()}”`, hint: 'busca', run: () => { search.value = paletteInput.value.trim(); searchPages(search.value); search.focus(); } });
+      paletteIndex = Math.min(paletteIndex, Math.max(0, paletteItems.length - 1));
+      paletteList.innerHTML = paletteItems.map((item, index) => `<li role="option" id="nw-palette-${index}" data-palette-index="${index}" aria-selected="${index === paletteIndex}"><span>${escapeHtml(item.label)}</span>${item.hint ? `<small>${escapeHtml(item.hint)}</small>` : ''}</li>`).join('') || '<li class="nw-palette-empty">Nada com esse nome.</li>';
+      paletteInput.setAttribute('aria-activedescendant', paletteItems.length ? `nw-palette-${paletteIndex}` : '');
+      paletteList.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+    }
+    function runPalette(index) {
+      const item = paletteItems[index];
+      if (!item) return;
+      palette.close();
+      item.run();
+    }
+    function openPalette() {
+      if (palette.open) return;
+      paletteInput.value = '';
+      paletteIndex = 0;
+      drawPalette();
+      palette.showModal();
+      paletteInput.focus();
+    }
+    paletteInput.addEventListener('input', () => { paletteIndex = 0; drawPalette(); });
+    paletteInput.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        paletteIndex = (paletteIndex + (event.key === 'ArrowDown' ? 1 : -1) + paletteItems.length) % Math.max(1, paletteItems.length);
+        drawPalette();
+      }
+      if (event.key === 'Enter') { event.preventDefault(); runPalette(paletteIndex); }
+    });
+    paletteList.addEventListener('click', event => { const row = event.target.closest('[data-palette-index]'); if (row) runPalette(Number(row.dataset.paletteIndex)); });
+    // Clicar fora da caixa fecha.
+    palette.addEventListener('click', event => { if (event.target === palette) palette.close(); });
+
     search.addEventListener('keydown', event => {
       if (event.key === 'Escape') { reopenCurrent(); search.blur(); }
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
