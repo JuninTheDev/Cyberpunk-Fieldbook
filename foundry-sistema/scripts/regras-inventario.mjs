@@ -70,3 +70,25 @@ export function apagarComInstalados(id, itens, junto) {
   for (let i = 0; i < apagar.length; i++) apagar.push(...dentro(apagar[i]).filter(filho => !apagar.includes(filho)));
   return { apagar, soltar: [] };
 }
+
+// Recolher e expandir as listas da ficha (o C34; o _expandButton do CORE, cpr-actor-sheet.js:433-453): as recolhidas de
+// um ator são uma lista de ids (o tipo dos itens, "arma"; o grupo de perícias, "pericias-Luta"), como o collapsedSections do
+// CORE. Recolher põe; expandir tira; sem nenhuma, null (o ator sai da flag do usuário).
+export function alternarRecolhida(recolhidas, lista) {
+  const novas = recolhidas.includes(lista) ? recolhidas.filter(outra => outra !== lista) : [...recolhidas, lista];
+  return novas.length ? novas : null;
+}
+// As linhas da lista completa de perícias, de grupo em grupo: o cabeçalho ganha o id da lista dele, e a perícia do grupo
+// recolhido, a marca. A favorita fica à vista, como o item preso do CORE (cpr-actor-sheet.js:441: o "favorite" não se
+// esconde). A busca (passaNaBusca) não abre o grupo: no CORE, o filtro só tira a linha (cpr-skills-category.hbs:35-36).
+export const listaDoGrupo = grupo => `pericias-${grupo}`;
+export function marcarRecolhidas(linhas, recolhidas) {
+  let recolhido = false;
+  return linhas.map(linha => {
+    if (linha.grupo) {
+      recolhido = recolhidas.includes(listaDoGrupo(linha.grupo));
+      return { ...linha, lista: listaDoGrupo(linha.grupo) };
+    }
+    return { ...linha, recolhida: recolhido && !linha.favorita };
+  });
+}

@@ -21,7 +21,7 @@ export class FichaCapanga extends FichaPersonagem {
 
   static PARTS = {
     topo: { template: modelo('topo') },
-    corpo: { template: modelo('corpo'), templates: [bloco('geral'), bloco('armas'), bloco('agarrao'), bloco('artes-marciais'), bloco('armadura'), bloco('lesoes')], scrollable: [''] },
+    corpo: { template: modelo('corpo'), templates: [bloco('geral'), bloco('armas'), bloco('agarrao'), bloco('artes-marciais'), bloco('armadura'), bloco('lesoes'), bloco('recolher')], scrollable: [''] },
     rodape: { template: modelo('rodape') }
   };
 

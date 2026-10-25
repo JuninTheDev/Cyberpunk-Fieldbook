@@ -20,6 +20,7 @@ defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões crí
           <b>
             <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY" role="button" tabindex="0" aria-label="Rolar o Death Save">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
             {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves" role="button" tabindex="0">zerar</a>{{/if}}
+            {{#if editavel}}<a class="subir" data-action="subirDeathSave" data-tooltip="Somar 1 à penalidade dos Death Saves, à mão (como o CORE)" role="button" tabindex="0" aria-label="Somar 1 à penalidade dos Death Saves">+1</a>{{/if}}
           </b>
         </div>
         <div class="medida"><span>MOVE</span><b>{{sistema.atributos.move.valor}}</b></div>

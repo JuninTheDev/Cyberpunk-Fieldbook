@@ -1,0 +1,5 @@
+{{!-- O nome da lista que recolhe e expande (o C34; o _expandButton do CORE): o "−" com a lista à vista, o "+" recolhida.
+Recolhida, só as favoritas ficam. lista: o id (o tipo dos itens, "arma"; o grupo de perícias, "pericias-Luta"); titulo. É um
+link com papel de botão, e não um <button>: a ficha de quem só vê desliga os controles do formulário (o _toggleDisabled do
+DocumentSheetV2), e recolher é de quem lê. --}}
+<a class="recolher" data-action="recolherLista" data-lista="{{lista}}" role="button" tabindex="0" aria-expanded="{{#if (lookup @root.recolhida lista)}}false{{else}}true{{/if}}" data-tooltip="{{#if (lookup @root.recolhida lista)}}Expandir a lista{{else}}Recolher a lista: as favoritas ficam à vista{{/if}}">{{titulo}}<i class="fa-solid {{#if (lookup @root.recolhida lista)}}fa-plus{{else}}fa-minus{{/if}}" inert></i></a>

@@ -10,14 +10,15 @@ import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
 import { ehArmaDoUpgrade, ehArmaMontadaEmItem, idDaOrigem } from './armas-cyberware.mjs';
+import { ligaAMao, resumoDasMudancas } from './regras-efeitos.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 // As opções de um select com o valor atual garantido. Um valor fora da lista (de outro conteúdo, de uma versão antiga)
 // apareceria como a primeira opção, e a ficha a gravaria ao salvar qualquer outro campo.
 const comAtual = (opcoes, atual) => (atual && !(atual in opcoes) ? { ...opcoes, [atual]: atual } : opcoes);
-// Os efeitos que se ligam à mão: os da droga e os do equipamento de ativação manual.
-const ligaAMao = item => item.type === 'droga' || (item.type === 'equipamento' && item.system.ativacao === 'manual');
+// Os efeitos que se ligam à mão (regras-efeitos.ligaAMao): os da droga e os do equipamento de ativação manual; a aba
+// Efeitos da ficha do personagem liga e desliga pela mesma regra.
 // As Artes Marciais no seletor da perícia da arma (o C10): a família toda (a forma com mais pontos, como a arma do CORE) e
 // as formas do dono.
 const opcoesDeArtesMarciais = ator => ({
@@ -179,7 +180,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
         : null,
       efeitos: item.effects.map(efeito => ({
         id: efeito.id, nome: efeito.name, ativo: efeito.active, desligado: efeito.disabled, ligavel: ligaAMao(item),
-        mudancas: efeito.system.changes.map(c => `${c.key.replace(/^system\./, '')} ${c.type === 'add' ? '+' : c.type} ${c.value}`).join(' · ')
+        mudancas: resumoDasMudancas(efeito.system.changes)
       })),
       descricaoRica: await foundry.applications.ux.TextEditor.implementation.enrichHTML(item.system.descricao, { relativeTo: item })
     });

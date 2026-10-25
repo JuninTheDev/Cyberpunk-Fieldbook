@@ -8111,6 +8111,65 @@ ciclos 156 a 164.
   não volta (M8).
 - **Próximo:** o C34 parte 1 (a ficha) e o C37 (arremessar), da mesma rodada.
 
+### Ciclo 166 (2026-10-25): o C34, parte 1, a ficha: a aba Efeitos, o +1 do Death Save e as listas que recolhem (sessão KouArt, com um worker)
+
+Commit anterior: `7e7b7c69` (o ciclo 165, o C36). O código e os testes saíram de um worker (`workers:artesao`), numa
+worktree própria a partir do `1c4be022`, revisados e integrados aqui pelo patch, sem conflito com o C36. Como o C36, a
+primeira tentativa (de 2026-10-22) se perdeu com a limpeza da pasta de rascunho; esta foi feita do zero, com as partes 2
+e 3 do C34 (os ciclos 158 a 161 da sessão Codex) já na branch. Com ela, o C34 está completo.
+
+- **As fontes (o CORE 0.92.4):** os três grupos (`cpr-actor-sheet.js:213-306`, `prepareActiveEffectCategories`); a
+  origem com o uso e o apagar só no efeito do ator (`cpr-effects.hbs:54-60` e `:74-85`); o ligar do próprio ator (a
+  primeira condição de `register-helpers.js:1035-1040`); as ações (`cpr-character-sheet.js:503-524`; criar,
+  `cpr-actor.js:1675-1686`; apagar, `:1699-1715`); o +1 (`cpr-actor.js:668-675`, `cpr-actor-sheet.js:686-694`,
+  `cpr-left-pane-info.hbs:115` e `cpr-mook-sheet.hbs:61`); recolher (`cpr-actor-sheet.js:433-453`, a favorita à vista
+  em `:441`; a configuração escondida `userSettings`, `settings.js:243-249`, e `persist-section-views.js:12-21`). A regra
+  de ligar e desligar e o estado vêm deste sistema (`ficha-item.mjs`, o `alternarEfeito`; `dados.mjs`, o `DadosEfeito`).
+- **O que muda:**
+  - **`scripts/regras-efeitos.mjs` (novo, sem Foundry):** `ligaAMao` (a regra que estava na ficha do item, agora num
+    lugar só), `resumoDasMudancas`, `usoQueLiga`, `estadoDoEfeito` (na ordem: desligado, fora de uso ou inoperante pelo
+    EMP, situacional, vencido, suprimido, valendo) e `controlesDoEfeito`;
+  - **a aba Efeitos** (`templates/personagem/efeitos.hbs`, a oitava aba da ficha): à esquerda a contagem por grupo e o
+    "+ EFEITO"; à direita os três grupos, cada linha com a imagem, o nome (abre a ficha do efeito), as mudanças, a origem
+    com o uso, a etiqueta do estado, e "Ligar/Desligar" e ✕ para quem edita (relendo a permissão e o efeito);
+  - **o +1 do Death Save:** `AtorCPR.subirDeathSave` e o botão logo depois do "zerar", na aba Combate e no painel geral
+    (também no capanga), só para quem edita;
+  - **recolher e expandir:** o `bloco-recolher.hbs` (o nome da lista, com o `aria-expanded`; um `<a>` com o papel de
+    botão, porque o `DocumentSheetV2` desliga os botões do formulário na ficha de quem só vê), as seis listas da aba
+    Equipamento e os grupos de perícias da lista completa; `regras-inventario.alternarRecolhida`, `listaDoGrupo` e
+    `marcarRecolhidas`; a flag do usuário `listasRecolhidas`, `{ [id do ator]: [listas] }`, como a árvore do C34.3.
+- **As diferenças em relação ao CORE:**
+  - ligar e desligar vale só para o efeito do personagem e o do item ligado à mão: o CORE também deixa desligar o do item
+    em uso (o cyberware instalado); aqui ele vale pelo uso, como a ficha do item manda. O "copiar efeito" ficou de fora;
+  - apagar efeito pergunta sempre (o CORE segue a `deleteItemConfirmation`; aqui não segue a `confirmarExclusaoItem` do
+    C34.2: fica para a mesa decidir), e o "+ EFEITO" não depende de "Jogadores podem criar itens" (o `createEffect` do
+    CORE também não);
+  - o situacional é por efeito (`DadosEfeito.situacional`), então o efeito fica num grupo só; no CORE, é por mudança;
+  - as recolhidas ficam por ator e por usuário, numa flag, gravadas a cada clique; no CORE, por ficha, no navegador,
+    gravadas ao fechar (aqui a ficha do token solto e a do ator dividem a escolha). Recolhem só as listas da aba
+    Equipamento e os grupos de perícias (no CORE, também a aba de Role); a busca não abre o grupo recolhido, como o CORE
+    (`cpr-skills-category.hbs:35-36`);
+  - os efeitos de status (a cobertura, o caído) aparecem como efeitos do personagem, como no CORE com a
+    `displayStatusAsActiveEffects` ligada (o padrão). A wiki não tem o +1 à mão: segue o CORE.
+- **Testes:**
+  - **G3:** `detalhes-da-ficha.test.mjs` (novo, 8 testes: os grupos e a ordem dos estados, lendo o CORE e o sistema; o uso
+    de cada tipo; os controles; o +1 nos dois templates; recolher e expandir, a favorita e a busca; a varredura dos
+    templates); o `acessibilidade.test.mjs` passa a exigir o `aria-pressed` no `alternarEfeito` e o `aria-expanded` no
+    `recolherLista`;
+  - **G4:** um passo novo (`tests/lib/c34-ficha.js`, depois do da exclusão do C34.2): a aba com um efeito próprio e quatro
+    itens com efeito (as linhas, os botões, a origem, a Percepção +2), ligar e desligar o do item (a Furtividade 2 e 0),
+    criar, desligar, ligar e apagar um efeito; o +1 das duas abas e o zerar; recolher a lista e o grupo (os favoritos à
+    vista), a busca, fechar e reabrir; o jogador, que recolhe na flag dele sem mudar a do mestre; o passo antigo das abas
+    passa de 7 para 8.
+- **Junto, no README:** a linha do C32 tinha os acentos quebrados por outra edição ("exclus?o", "S? tirar",
+  "muni??o", "est?"); foram corrigidos.
+- **Portões:** G1, 226 arquivos sem erro; G2, nenhum erro (com os `tests/lib/c34-*.js` e `c41-*.js`); G3, 508/508; G4
+  completo, 266/266, com a checagem dos dois navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos: no G3, o efeito do item que se apaga (M1), a
+  favorita escondida (M2), o situacional fora de uso no grupo errado (M3), o +2 (M4) e o CSS que esconde o favorito (M8);
+  no G4, a aba sem o fora de uso (M5), a ficha que não lê as recolhidas (M6) e o efeito novo desligado (M7).
+- **Próximo:** o C37 (arremessar, com o Codex), da mesma rodada.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

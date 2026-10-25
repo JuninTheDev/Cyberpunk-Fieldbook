@@ -501,6 +501,11 @@ export class AtorCPR extends Actor {
   zerarDeathSave() {
     return this.update({ 'system.deathSave.penalidade': 0 });
   }
+  // O +1 à mão (o C34; o increaseDeathPenalty do CORE, cpr-actor.js:668-675): a penalidade dos Death Saves sobe 1, sem
+  // rolar, como a do Death Save que passa.
+  subirDeathSave() {
+    return this.update({ 'system.deathSave.penalidade': this.system.deathSave.penalidade + 1 });
+  }
 
   // Sorte (RED p. 130): os pontos preparados na ficha para o próximo teste (+1 por ponto), que saem da Sorte quando ele
   // rola (rolagens.mjs, testar). No começo da sessão, a Sorte volta ao máximo (a STAT LUCK). O Black ICE e o demônio não

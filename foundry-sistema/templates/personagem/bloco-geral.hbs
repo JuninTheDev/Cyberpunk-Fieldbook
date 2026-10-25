@@ -28,6 +28,7 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
         <b>
           <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY" role="button" tabindex="0" aria-label="Rolar o Death Save">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
           {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves" role="button" tabindex="0">zerar</a>{{/if}}
+          {{#if editavel}}<a class="subir" data-action="subirDeathSave" data-tooltip="Somar 1 à penalidade dos Death Saves, à mão (como o CORE)" role="button" tabindex="0" aria-label="Somar 1 à penalidade dos Death Saves">+1</a>{{/if}}
         </b>
       </div>
       <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}</div>
@@ -51,9 +52,9 @@ Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas
     <ol class="lista-pericias">
       {{#each linhasDePericia}}
       {{#if grupo}}
-      <li class="grupo-pericias">{{grupo}}</li>
+      <li class="grupo-pericias">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista=lista titulo=grupo}}</li>
       {{else}}
-      <li class="pericia linha-pericia {{#if nivel}}tem{{/if}} {{#if alta}}alta{{/if}}" data-pericia="{{id}}">
+      <li class="pericia linha-pericia {{#if nivel}}tem{{/if}} {{#if alta}}alta{{/if}}{{#if recolhida}} recolhida{{/if}}" data-pericia="{{id}}">
         <span class="celula-nome">
           <a class="estrela {{#if favorita}}ligada{{/if}}" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Favorita: fica no painel Favoritos da aba Combate e na barra do Painel Tático" role="button" tabindex="0" aria-label="Perícia favorita: {{nome}}" aria-pressed="{{#if favorita}}true{{else}}false{{/if}}"><i class="fa-solid fa-star"></i></a>
           <a class="nome draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros" role="button" tabindex="0" aria-label="Rolar {{nome}}">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>

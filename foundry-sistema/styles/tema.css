@@ -450,6 +450,24 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-personagem .tab.net ol.itens .rez { flex: none; font-family: var(--cp-dados); font-size: 13px; color: var(--cp-ciano); }
 .cpr-fieldbook.ficha-personagem .tab.net ol.itens .rez.zerada { color: var(--cp-vermelho); }
 
+/* ---------- O C34: os efeitos, o +1 do Death Save e as listas que recolhem ---------- */
+/* A aba Efeitos: cada efeito com as mudanças, a origem e o estado (valendo em ciano, situacional em amarelo, parado apagado). */
+.cpr-fieldbook.ficha-personagem .tab.efeitos ol.itens > li { flex-wrap: wrap; }
+.cpr-fieldbook.ficha-personagem .tab.efeitos ol.itens .origem { flex: none; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .estado-efeito { flex: none; padding: 1px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .estado-valendo .estado-efeito { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .estado-situacional .estado-efeito { border-color: var(--cp-amarelo); color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .efeitos-parado ol.itens > li.efeito { opacity: 0.6; }
+/* O +1 do Death Save, ao lado do "zerar". */
+.cpr-fieldbook.ficha-personagem .death-save .subir { margin-left: 6px; color: var(--cp-fraco); text-decoration: underline; }
+/* O nome da lista que recolhe e expande (o _expandButton do CORE): recolhida, as linhas somem pelo CSS, menos as
+   favoritas; a busca da ficha esconde pelo hidden, e uma não desfaz a outra. */
+.cpr-fieldbook.ficha-personagem a.recolher { display: inline-flex; align-items: center; gap: 6px; color: inherit; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem a.recolher:hover { color: var(--cp-texto); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem a.recolher i { font-size: 9px; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .painel.recolhida ol.itens > li[data-item-id]:not(:has(.estrela.ligada)),
+.cpr-fieldbook.ficha-personagem .lista-pericias li.pericia.recolhida { display: none; }
+
 /* ---------- Capanga (o mook do CORE): uma página só, entre o cabeçalho e o rodapé ---------- */
 .cpr-fieldbook.ficha-capanga .corpo-capanga { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; }
 .cpr-fieldbook.ficha-capanga .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }

@@ -1424,7 +1424,7 @@ module.exports = async ({ edge, servidores, r }) => {
         `10+3: ${alto.total} (${alto.formula}) · 1−4: ${baixo.total} · 5: ${normal.total} · cartão ${JSON.stringify(cartao)}`];
     });
 
-    await r.passo('ficha: abre no tema escuro, com as fontes do modelo, as 7 abas, os 10 atributos e só as perícias com nível (o botão mostra todas); rola pelo atributo', async () => {
+    await r.passo('ficha: abre no tema escuro, com as fontes do modelo, as 8 abas, os 10 atributos e só as perícias com nível (o botão mostra todas); rola pelo atributo', async () => {
       await edge.evaluate(`game.actors.getName('Atiradora').sheet.render({ force: true })`);
       const olhar = () => edge.evaluate(`(() => { const f = document.querySelector('.cpr-fieldbook.ficha-personagem'); return f && {
         abas: f.querySelectorAll('nav.tabs [data-tab]').length, atributos: f.querySelectorAll('.atributo').length, pericias: f.querySelectorAll('.pericia').length,
@@ -1442,7 +1442,7 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.sleep(800);
       const depois = await edge.evaluate('game.messages.size');
       await edge.shot('ficha');
-      return [ficha && ficha.abas === 7 && ficha.atributos === 10 && ficha.pericias === 3 && ficha.escuro && ficha.hp === '/45' && ficha.botao === 'VER TODAS' && fontes === 3
+      return [ficha && ficha.abas === 8 && ficha.atributos === 10 && ficha.pericias === 3 && ficha.escuro && ficha.hp === '/45' && ficha.botao === 'VER TODAS' && fontes === 3
         && todas?.pericias >= 61 && todas.botao === 'SÓ COM NÍVEL' && depois === antes + 1, `${JSON.stringify({ ficha, todas, fontes })} · mensagens ${antes} → ${depois}`];
     });
 
@@ -17037,6 +17037,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await require('../lib/c34-mesa')(r, edge, jogador);
     await require('../lib/c34-lesoes')(r, edge, jogador);
     await require('../lib/c34-exclusao')(r, edge, jogador);
+    await require('../lib/c34-ficha')(r, edge, jogador);
     await require('../lib/c41-correr')(r, edge, jogador);
     await require('../lib/c41-escudo-humano')(r, edge, jogador);
     await require('../lib/c41-reputacao')(r, edge, jogador);

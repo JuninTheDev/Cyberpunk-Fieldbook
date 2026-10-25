@@ -1,6 +1,6 @@
 {{!-- A aba Equipamento, no jeito da maquete "Gear Tab" do usuário: à esquerda, o dinheiro (com o histórico recente) e a
 munição; à direita, as armas, as armaduras, o inventário, os upgrades e os veículos. O "+" de cada lista cria um item em
-branco do tipo dela (o C32). --}}
+branco do tipo dela (o C32), e o nome dela a recolhe e expande (o C34). --}}
 <section class="tab equipamento {{tab.cssClass}}" data-group="primary" data-tab="equipamento">
   <div class="aba-colunas">
     <aside class="coluna-resumo">
@@ -18,8 +18,8 @@ branco do tipo dela (o C32). --}}
         </ol>
       </section>
 
-      <section class="painel corte">
-        <div class="titulo">MUNIÇÃO<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="municao" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar munição">+</button>{{/if}}</span></div>
+      <section class="painel corte{{#if recolhida.municao}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="municao" titulo="MUNIÇÃO"}}<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="municao" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar munição">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each municoes}}
           <li class="draggable" data-item-id="{{id}}">
@@ -35,8 +35,8 @@ branco do tipo dela (o C32). --}}
     </aside>
 
     <div class="coluna-principal">
-      <section class="painel corte">
-        <div class="titulo">ARMAS<span>EQUIPADA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="arma" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar arma">+</button>{{/if}}</span></div>
+      <section class="painel corte{{#if recolhida.arma}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="arma" titulo="ARMAS"}}<span>EQUIPADA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="arma" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar arma">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each armas}}
           <li data-item-id="{{id}}" class="draggable {{#unless sistema.equipada}}guardada{{/unless}}">
@@ -64,8 +64,8 @@ branco do tipo dela (o C32). --}}
         {{/if}}
       </section>
 
-      <section class="painel corte vermelho">
-        <div class="titulo">ARMADURAS<span>VESTIDA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="armadura" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar armadura">+</button>{{/if}}</span></div>
+      <section class="painel corte vermelho{{#if recolhida.armadura}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="armadura" titulo="ARMADURAS"}}<span>VESTIDA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="armadura" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar armadura">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each armaduras}}
           <li data-item-id="{{id}}" class="draggable {{#unless equipada}}guardada{{/unless}}">
@@ -81,8 +81,8 @@ branco do tipo dela (o C32). --}}
       </section>
 
       {{#each inventario}}
-      <section class="painel corte">
-        <div class="titulo">{{titulo}}<span>EQUIPADO, CARREGANDO OU GUARDADO{{#if @root.podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="{{tipo}}" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar {{tipo}}">+</button>{{/if}}</span></div>
+      <section class="painel corte{{#if (lookup @root.recolhida tipo)}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista=tipo titulo=titulo}}<span>EQUIPADO, CARREGANDO OU GUARDADO{{#if @root.podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="{{tipo}}" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar {{tipo}}">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each itens}}
           <li data-item-id="{{id}}" class="draggable {{#if guardado}}guardada{{/if}}">
@@ -103,8 +103,8 @@ branco do tipo dela (o C32). --}}
       {{/each}}
 
       {{#if upgrades.length}}
-      <section class="painel corte">
-        <div class="titulo">UPGRADES E ACESSÓRIOS<span>ONDE ESTÁ INSTALADO{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="upgrade" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar upgrade">+</button>{{/if}}</span></div>
+      <section class="painel corte{{#if recolhida.upgrade}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="upgrade" titulo="UPGRADES E ACESSÓRIOS"}}<span>ONDE ESTÁ INSTALADO{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="upgrade" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar upgrade">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each upgrades}}
           <li data-item-id="{{id}}">
@@ -120,8 +120,8 @@ branco do tipo dela (o C32). --}}
       {{/if}}
 
       {{#if veiculos.length}}
-      <section class="painel corte">
-        <div class="titulo">VEÍCULOS<span>UM EM USO POR VEZ{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="veiculo" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar veículo">+</button>{{/if}}</span></div>
+      <section class="painel corte{{#if recolhida.veiculo}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="veiculo" titulo="VEÍCULOS"}}<span>UM EM USO POR VEZ{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="veiculo" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar veículo">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each veiculos}}
           <li class="draggable" data-item-id="{{id}}">

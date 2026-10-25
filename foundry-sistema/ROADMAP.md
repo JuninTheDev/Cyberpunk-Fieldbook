@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 166). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 167). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -337,8 +337,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   `hide-blind-rolls.js`); "Mostrar aos jogadores" no clique direito da imagem das fichas (`cpr-imageContextMenu.js`);
   a ficha do token solto que foi apagado (`close-unlinked-sheet-on-delete.js`), que o Foundry 14 já fecha. Ficaram de
   fora as etiquetas do modo no cartão (`cpr-chat.js:418-445`) e a NET (ver as dúvidas).
-- [ ] **C34. Os detalhes do CORE**, um ciclo por parte:
-  - [~] parte 1, a ficha (sessão KouArt, 2026-10-22): a aba de efeitos do ator; o +1 à mão na penalidade do Death Save;
+- [x] **C34. Os detalhes do CORE:** feito (ciclos 158 a 161 e 166, sessões Codex e KouArt). Um ciclo por parte:
+  - [x] parte 1, a ficha: feito no ciclo 166 (sessão KouArt, com um worker, 2026-10-25): a aba de efeitos do ator; o +1 à mão na penalidade do Death Save;
     expandir e recolher as listas;
   - [x] parte 2, as configurações (ciclos 158, 159 e 161, sessão Codex, 2026-10-24): a lesão repetida (desligado, avisar, rolar de novo: o
     `preventDuplicateCriticalInjuries`); as perícias do capanga por nível, base ou total; a confirmação ao apagar item e o

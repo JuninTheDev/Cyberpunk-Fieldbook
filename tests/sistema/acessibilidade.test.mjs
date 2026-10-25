@@ -43,9 +43,11 @@ for (const arquivo of arquivos) {
       if (['input', 'select', 'textarea', 'prose-mirror'].includes(tag) && a.type !== 'hidden') {
         assert.ok(rotulado || a['aria-label']?.trim() || a['aria-labelledby']?.trim(), 'Campo sem rótulo: ' + trecho);
       }
-      if (['favoritarPericia', 'favoritarItem', 'equipar', 'vestir', 'instalar'].includes(a['data-action'])) {
+      if (['favoritarPericia', 'favoritarItem', 'equipar', 'vestir', 'instalar', 'alternarEfeito'].includes(a['data-action'])) {
         assert.ok(a['aria-pressed']?.trim(), 'Estado só pela cor: ' + trecho);
       }
+      // A lista que recolhe (o C34) diz se está aberta.
+      if (a['data-action'] === 'recolherLista') assert.ok(a['aria-expanded']?.trim(), 'Recolhida só pelo ícone: ' + trecho);
     }
     if (arquivo === 'item.hbs') {
       assert.ok(elementos.some(e => e.tag === 'nav' && e.atributos.role === 'tablist'));

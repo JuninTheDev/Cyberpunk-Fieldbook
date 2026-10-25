@@ -1,7 +1,8 @@
 // Ficha do personagem (ApplicationV2 do Foundry 14), no visual do modelo da mesa ("Modelo de ficha/"): o cabeçalho com
 // a Role, o nome, o apelido e os indicadores (HP, Sorte, dinheiro, IP, reputação), e as abas Perícias (o painel geral:
-// atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET e Vida
-// (o Lifepath e as notas). Rola pela ficha: clique no atributo, na perícia ou nos botões da arma.
+// atributos, vitais, perícias, armadura, armas, cyberware e lesões), Combate, Equipamento, Cyberware, Role, NET, Vida
+// (o Lifepath e as notas) e Efeitos (os do personagem e os dos itens dele). Rola pela ficha: clique no atributo, na perícia
+// ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
 import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar, usarEscudoHumano } from './agarrao.mjs';
 import { escudoHumanoDe } from './escudo-humano.mjs';
@@ -18,7 +19,8 @@ import { contextoDaCura, descansar, estabilizar } from './estabilizar.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
 import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem, podeEditarParaApagar } from './exclusao-item.mjs';
-import { apagarComInstalados, descarregaAoApagar, divisaoDaPilha, passaNaBusca } from './regras-inventario.mjs';
+import { alternarRecolhida, apagarComInstalados, descarregaAoApagar, divisaoDaPilha, marcarRecolhidas, passaNaBusca } from './regras-inventario.mjs';
+import { controlesDoEfeito, estadoDoEfeito, resumoDasMudancas, usoQueLiga } from './regras-efeitos.mjs';
 import { acoesDe2077, STATUS_COBERTURA } from './combate.mjs';
 import { trocarMunicao } from './painel/acoes.mjs';
 import { roleDaWiki } from './dados.mjs';
@@ -47,6 +49,9 @@ const slug = texto => String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 const comJanela = evento => Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto'));
 // As perícias mais altas ficam em destaque no painel geral, como no modelo.
 const EM_DESTAQUE = 6;
+// As listas recolhidas (o C34): numa flag do usuário, { [id do ator]: [as listas] } (regras-inventario.alternarRecolhida),
+// como a árvore dos instalados guarda as abertas (arvore-itens.mjs, FLAG_ABERTOS).
+export const FLAG_RECOLHIDAS = 'listasRecolhidas';
 // A aba Vida em painéis, como a maquete "Lifepath Tab" do usuário: os 17 campos do Lifepath (config.LIFEPATH) por grupo.
 const GRUPOS_DO_LIFEPATH = [
   { titulo: 'ORIGENS', sub: 'QUEM VOCÊ É', chaves: ['origem', 'personalidade', 'roupa', 'cabelo', 'adorno'] },
@@ -130,6 +135,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       mirar: FichaPersonagem.#mirar,
       deathSave: FichaPersonagem.#deathSave,
       zerarDeathSave: FichaPersonagem.#zerarDeathSave,
+      subirDeathSave: FichaPersonagem.#subirDeathSave,
+      recolherLista: FichaPersonagem.#recolherLista,
+      criarEfeito: FichaPersonagem.#criarEfeito,
+      editarEfeito: FichaPersonagem.#editarEfeito,
+      alternarEfeito: FichaPersonagem.#alternarEfeito,
+      apagarEfeito: FichaPersonagem.#apagarEfeito,
       rolarDano: FichaPersonagem.#rolarDano,
       recarregar: FichaPersonagem.#recarregar,
       trocarMunicao: FichaPersonagem.#trocarMunicao,
@@ -174,13 +185,14 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static PARTS = {
     topo: parte('topo'),
     tabs: { template: 'templates/generic/tab-navigation.hbs' },
-    pericias: { ...aba('pericias'), templates: [bloco('geral'), bloco('lesoes')] },
+    pericias: { ...aba('pericias'), templates: [bloco('geral'), bloco('lesoes'), bloco('recolher')] },
     combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao'), bloco('artes-marciais'), bloco('armadura'), bloco('lesoes')] },
-    equipamento: aba('equipamento'),
+    equipamento: { ...aba('equipamento'), templates: [bloco('recolher')] },
     cyberware: aba('cyberware'),
     role: aba('role'),
     net: aba('net'),
     vida: aba('vida'),
+    efeitos: aba('efeitos'),
     rodape: parte('rodape')
   };
 
@@ -190,7 +202,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         { id: 'pericias', label: 'Perícias', icon: 'fa-solid fa-list-check' }, { id: 'combate', label: 'Combate', icon: 'fa-solid fa-crosshairs' },
         { id: 'equipamento', label: 'Equipamento', icon: 'fa-solid fa-briefcase' }, { id: 'cyberware', label: 'Cyberware', icon: 'fa-solid fa-microchip' },
         { id: 'role', label: 'Role', icon: 'fa-solid fa-id-badge' }, { id: 'net', label: 'NET', icon: 'fa-solid fa-network-wired' },
-        { id: 'vida', label: 'Vida', icon: 'fa-solid fa-book-open' }
+        { id: 'vida', label: 'Vida', icon: 'fa-solid fa-book-open' }, { id: 'efeitos', label: 'Efeitos', icon: 'fa-solid fa-bolt' }
       ],
       initial: 'pericias'
     }
@@ -289,9 +301,12 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (mostrarTodas) for (const p of todas) p.tirar = p.familia;
     const grupoDe = p => PERICIAS.find(base => base.id === p.id)?.grupo ?? FAMILIAS[s.pericias[p.id]?.familia]?.grupo ?? (p.propria ? 'Próprias' : 'Educação');
     const grupos = Map.groupBy(todas, grupoDe);
+    // As listas que este usuário recolheu nesta ficha (o C34; regras-inventario.marcarRecolhidas): os grupos de perícias
+    // da lista completa e as listas da aba Equipamento.
+    const recolhidas = game.user.getFlag(SISTEMA, FLAG_RECOLHIDAS)?.[ator.id] ?? [];
     const linhasDePericia = mostrarTodas
-      ? [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
-        .flatMap(([grupo, lista]) => [{ grupo }, ...lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))])
+      ? marcarRecolhidas([...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
+        .flatMap(([grupo, lista]) => [{ grupo }, ...lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))]), recolhidas)
       : listaCurta(comNivel, todas);
 
     // Inventário: um detalhe de cada tipo e o uso (o botão passa por equipado, carregando e guardado).
@@ -341,6 +356,26 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         id: item.id, nome: item.name, img: item.img, arma: item.type === 'arma', droga: item.type === 'droga', usavel: item.usavelAMao, emUso: item.emUso
       }))
     };
+
+    // A aba Efeitos (o C34; o prepareActiveEffectCategories do CORE, cpr-actor-sheet.js:213-306): os efeitos do personagem
+    // e os dos itens dele (allApplicableEffects), com a origem (o personagem, ou o item e o uso que liga o efeito dele), o
+    // estado de agora (regras-efeitos.estadoDoEfeito) e os botões de cada um, nos três grupos do CORE.
+    const linhasDeEfeito = [...ator.allApplicableEffects()].map(efeito => {
+      const item = efeito.parent instanceof Item ? efeito.parent : null;
+      const dados = efeito.system ?? {};
+      const uso = item ? usoQueLiga(item) : '';
+      const estado = estadoDoEfeito({
+        desligado: efeito.disabled, foraDeUso: Boolean(dados.foraDeUso), inoperante: Boolean(item?.inoperante), uso, situacional: Boolean(dados.situacional?.sim),
+        ligadoPorPadrao: Boolean(dados.situacional?.ligadoPorPadrao), vencido: Boolean(efeito.duration?.expired), suprimido: efeito.isSuppressed
+      });
+      return { uuid: efeito.uuid, nome: efeito.name, img: efeito.img, mudancas: resumoDasMudancas(dados.changes ?? []), desligado: efeito.disabled,
+        origem: item?.name ?? ator.name, tipo: item ? game.i18n.localize(CONFIG.Item.typeLabels[item.type] ?? item.type) : '', uso, ...estado, ...controlesDoEfeito({ proprio: !item, item }) };
+    });
+    const efeitos = [
+      { grupo: 'valendo', titulo: 'VALENDO', sub: 'SOMAM AGORA', vazio: 'Nenhum efeito valendo agora.' },
+      { grupo: 'situacional', titulo: 'SITUACIONAIS', sub: 'NA JANELA DE ROLAGEM', vazio: 'Nenhum efeito situacional.' },
+      { grupo: 'parado', titulo: 'SEM EFEITO AGORA', sub: 'DESLIGADOS, FORA DE USO OU SUPRIMIDOS', vazio: 'Nenhum efeito parado.' }
+    ].map(grupo => ({ ...grupo, linhas: linhasDeEfeito.filter(linha => linha.grupo === grupo.grupo) }));
 
     // Iniciativa e esquiva (a esquiva média, sem o dado).
     const esquiva = ator.partesDaPericia('evasion').partes.reduce((soma, p) => soma + p.valor, 0);
@@ -424,6 +459,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       movimento: movimentoDe(ator),
       corrida: corridaDe(ator),
       todasAsPericias: mostrarTodas, linhasDePericia, periciasComNivel: comNivel.length, periciasSemNivel: todas.length - comNivel.length, periciasTotal: todas.length, busca: this.#busca,
+      recolhida: Object.fromEntries(recolhidas.map(lista => [lista, true])), efeitos,
       armas, armasDeCombate, armasSemVeiculo, armasEquipadas: armasDeCombate.filter(arma => arma.pronta),
       armaduras, armadurasVestidas: armaduras.filter(armadura => armadura.equipada),
       locaisArmadura: ['cabeca', 'corpo'].map(local => ({ local, rotulo: local === 'cabeca' ? 'CABEÇA' : 'CORPO',
@@ -679,6 +715,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
   static #deathSave(evento) { return this.actor.rolarDeathSave({ perguntar: comJanela(evento) }); }
   static #zerarDeathSave() { return this.actor.zerarDeathSave(); }
+  // O +1 à mão na penalidade dos Death Saves (o C34; o _increaseDeathSave do CORE, cpr-actor-sheet.js:686-694).
+  static #subirDeathSave() { return this.isEditable ? this.actor.subirDeathSave() : null; }
   static #rolarDano(evento, alvo) { return this.#item(alvo)?.rolarDano({ perguntar: comJanela(evento) }); }
   static #recarregar(evento, alvo) { return this.#item(alvo)?.recarregar(); }
   // Trocar a munição (o mesmo do Painel Tático: a sobra do pente volta para a que estava nele) e descarregar (o C32; o
@@ -810,6 +848,48 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!this.isEditable) return null;
     const criado = await criarItemNaFicha(this.actor, tipo);
     return criado?.sheet.render(true) ?? null;
+  }
+  // Recolher e expandir uma lista (o C34; o _expandButton do CORE, cpr-actor-sheet.js:433-453). O CORE guarda as recolhidas
+  // de cada ficha numa configuração escondida de cliente ("userSettings", settings.js:243-249), gravada ao fechar a ficha
+  // (persist-section-views.js:12-21). Aqui, numa flag do usuário, como a árvore dos instalados (arvore-itens.mjs): vale para
+  // ele em qualquer navegador, não grava no ator (quem só vê a ficha também recolhe) e grava a cada clique.
+  static async #recolherLista(evento, alvo) {
+    const lista = alvo.dataset.lista;
+    if (!lista) return null;
+    const novas = alternarRecolhida(game.user.getFlag(SISTEMA, FLAG_RECOLHIDAS)?.[this.actor.id] ?? [], lista);
+    try { await game.user.setFlag(SISTEMA, FLAG_RECOLHIDAS, { [this.actor.id]: novas ?? new foundry.data.operators.ForcedDeletion() }); }
+    catch { ui.notifications.warn('Não foi possível guardar a lista recolhida.'); }
+    return this.render();
+  }
+  // O efeito da linha da aba Efeitos (o C34; o manageEffect do CORE, cpr-character-sheet.js:503-524): entre os do
+  // personagem e os dos itens dele.
+  #efeito(alvo) {
+    const uuid = alvo.closest('[data-efeito]')?.dataset.efeito;
+    return [...this.actor.allApplicableEffects()].find(efeito => efeito.uuid === uuid) ?? null;
+  }
+  // "+ EFEITO": um efeito em branco no personagem, que abre para ser preenchido (o createEffect do CORE,
+  // cpr-actor.js:1675-1686, com o "New Effect" em português).
+  static async #criarEfeito() {
+    if (!this.isEditable) return null;
+    const [criado] = await this.actor.createEmbeddedDocuments('ActiveEffect', [{ name: 'Efeito novo', img: 'icons/svg/aura.svg', type: 'base', origin: this.actor.uuid, disabled: false }]);
+    return criado?.sheet.render(true) ?? null;
+  }
+  // O nome do efeito abre a ficha dele (a do Foundry 14).
+  static #editarEfeito(evento, alvo) { return this.#efeito(alvo)?.sheet.render(true); }
+  // Ligar e desligar: o do personagem e o do item que se liga à mão (regras-efeitos.controlesDoEfeito), como o
+  // alternarEfeito da ficha do item; os outros efeitos de item valem pelo uso do item.
+  static #alternarEfeito(evento, alvo) {
+    const efeito = this.#efeito(alvo);
+    if (!this.isEditable || !efeito) return null;
+    const item = efeito.parent instanceof Item ? efeito.parent : null;
+    return controlesDoEfeito({ proprio: !item, item }).ligar ? efeito.update({ disabled: !efeito.disabled }) : null;
+  }
+  // Apagar: só o do personagem, depois da confirmação (o deleteEffect do CORE, cpr-actor.js:1699-1715).
+  static async #apagarEfeito(evento, alvo) {
+    const efeito = this.#efeito(alvo);
+    if (!this.isEditable || efeito?.parent !== this.actor) return null;
+    const ok = await DialogV2.confirm({ window: { title: 'Apagar efeito' }, rejectClose: false, content: `<p>Apagar <b>${foundry.utils.escapeHTML(efeito.name)}</b> da ficha?</p>` });
+    return ok && this.isEditable && this.actor.effects.has(efeito.id) ? efeito.delete() : null;
   }
   // A correção rápida, o tratamento e o "Voltou" da lesão (tratamento.mjs, pela wiki).
   // CORE: escolher a tabela e rolar a lesão à mão cria o item e o cartão, sem alterar o HP.
