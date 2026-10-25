@@ -392,7 +392,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     nas abas Perícias/Combate e no capanga, um d10 simples abaixo do nível; empate falha, má fama usa magnitude.
     Facedown, Sorte, recursos e extrato preservados; dono/UUID e ficha relidos após esperas, modo do chat respeitado.
     G1/G2 passam; G3, 491/491; G4 completo, 264/264; 50 mutações detectadas.
-  - [ ] o hospital e a instalação de cyberware
+  - [~] parte 4, o hospital e a instalação de cyberware (sessão Junin, 2026-10-25)
     (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`).
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
