@@ -226,7 +226,7 @@
   }
   function aiPanelHtml(channelId) {
     const ia = data.ia || {};
-    if (!ia.ligada) return '<p class="note-status nw-ai-off">A IA está desligada. Para ligar, ponha a ANTHROPIC_API_KEY no /etc/fieldbook.env do servidor (veja o README).</p>';
+    if (!ia.ligada) return '<p class="note-status nw-ai-off">A IA está desligada. Para ligar, ponha a ANTHROPIC_API_KEY (Claude) e/ou a GEMINI_API_KEY (Gemini) no /etc/fieldbook.env do servidor (veja o README).</p>';
     const channels = data.canais.filter(channel => !VIRTUAL(channel.id));
     if (!channels.length) return '';
     const options = channels.map(channel => `<option value="${esc(channel.id)}"${channel.id === channelId ? ' selected' : ''}>${channel.tipo === 'direto' ? `Direto: ${esc(channel.contato.nome || channel.nome)}` : `# ${esc(channel.nome)}`}</option>`).join('');

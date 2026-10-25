@@ -290,7 +290,7 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
     if (parts[0] === 'rascunhar') {
       if (!gm) return json(response, 403, { erro: 'Só o mestre.' });
       if (method !== 'POST') return json(response, 405, { erro: 'Use POST.' });
-      if (!drafter.enabled) return json(response, 503, { erro: 'A IA está desligada: falta a ANTHROPIC_API_KEY no servidor.' });
+      if (!drafter.enabled) return json(response, 503, { erro: 'A IA está desligada: falta a ANTHROPIC_API_KEY ou a GEMINI_API_KEY no servidor.' });
       const before = read(id);
       const channel = before.canais.find(item => item.id === body.canal);
       if (!channel) return json(response, 404, { erro: 'Canal não encontrado.' });
