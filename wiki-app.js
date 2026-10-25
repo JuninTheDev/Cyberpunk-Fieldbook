@@ -105,8 +105,23 @@
       document.dispatchEvent(new CustomEvent('wiki:tema', { detail: { id } }));
     }
   };
+  // A casca: NetWire (as abas do topo e, no celular, a barra de baixo) ou a clássica (a barra lateral com as abas
+  // Campanhas e Sistema, como antes). Também na conta (prefs "casca"); o script do <head> aplica a cópia do aparelho.
+  const shell = {
+    get: () => (prefs.get('casca') === 'classica' ? 'classica' : 'netwire'),
+    apply() {
+      if (shell.get() === 'classica') document.documentElement.dataset.casca = 'classica';
+      else delete document.documentElement.dataset.casca;
+    },
+    set(id) {
+      prefs.set('casca', id === 'classica' ? 'classica' : null);
+      shell.apply();
+      document.dispatchEvent(new CustomEvent('wiki:casca', { detail: { id: shell.get() } }));
+    }
+  };
   theme.apply();
-  document.addEventListener('wiki:preferencias', () => theme.apply());
+  shell.apply();
+  document.addEventListener('wiki:preferencias', () => { theme.apply(); shell.apply(); });
 
   const mapPages = ['campaignMap', ...(config.mapPages || [])];
   const mapData = () => (config.mapData ? config.mapData() : window.campaignMapData);
@@ -332,12 +347,73 @@
       document.getElementById('tab-campaigns').classList.toggle('active', currentWorkspace === 'campaigns');
       document.getElementById('tab-system').classList.toggle('active', currentWorkspace === 'system');
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(currentPage)));
+      drawTopTabs();
     }
     // Selos de novidade: { idDaPágina: quantidade } (0 tira o selo). A visão dos jogadores marca o que o mestre
     // publicou desde a última vez que o jogador abriu a página.
     function setBadges(map) {
       Object.entries(map).forEach(([id, count]) => { if (count > 0) badges[id] = count; else delete badges[id]; });
       buildNavigation();
+    }
+
+    // ---------------- Abas do topo (a casca NetWire) ----------------
+    // O menu principal, como o menu do jogo: cada aba reúne páginas (pela lista e pelos nomes dos grupos da campanha) e
+    // abre a última que a pessoa viu nela. A barra lateral continua com tudo, nas duas áreas (Campanhas e Sistema): a aba
+    // com area 'system' é a área Sistema. No celular, a barra de baixo, com as 4 primeiras e Mais (a gaveta).
+    // config.topTabs: [{ id, label, curto?, inicio? (a página inicial da campanha), paginas?, grupos?, area?, pagina? }].
+    // Aba sem nenhuma página nesta campanha (Sessões, numa campanha sem sessões) some.
+    const topTabs = config.topTabs || [];
+    const lastOfTab = {};
+    let topNav = null;
+    function ownPages(tab) {
+      if (tab.area === 'system') return systemSections.flatMap(group => group.pages.map(page => page.id)).filter(id => pageContent[id]);
+      const campaign = activeCampaign();
+      const fromGroups = campaign ? campaign.groups.filter(group => (tab.grupos || []).includes(group.group)).flatMap(group => group.pages.flatMap(withTabs)) : [];
+      return [...new Set([...(tab.inicio ? [homePage()] : []), ...(tab.paginas || []), ...fromGroups])].filter(id => pageContent[id]);
+    }
+    // Uma página fica só na primeira aba que a tem (o Resumo do mestre está no grupo da campanha, mas é do Início).
+    function tabPages(tab) {
+      const taken = new Set();
+      for (const item of topTabs) {
+        const pages = ownPages(item).filter(id => !taken.has(id));
+        if (item === tab) return pages;
+        pages.forEach(id => taken.add(id));
+      }
+      return [];
+    }
+    // A aba da página aberta: a primeira que a tem; página de regra (ou só da área Sistema) fica na aba da área.
+    function activeTopTab() {
+      const ids = [currentPage, navIdOf(currentPage)];
+      return topTabs.find(tab => tab.area !== 'system' && tabPages(tab).some(id => ids.includes(id)))
+        || (currentWorkspace === 'system' || pageWorkspace[currentPage] === 'system' ? topTabs.find(tab => tab.area === 'system') : null)
+        || null;
+    }
+    function drawTopTabs() {
+      if (!topNav) return;
+      const current = activeTopTab();
+      topNav.innerHTML = `${topTabs.filter(tab => tabPages(tab).length).map(tab => {
+        const news = tabPages(tab).reduce((sum, id) => sum + (badges[id] || 0), 0);
+        return `<button type="button" class="top-tab" data-top-tab="${escapeHtml(tab.id)}"${tab === current ? ' aria-current="page"' : ''}><span class="top-tab-long">${escapeHtml(tab.label)}</span><span class="top-tab-short" aria-hidden="true">${escapeHtml(tab.curto || tab.label)}</span>${news ? `<span class="top-tab-badge" aria-label="${news} novidade(s)">${news}</span>` : ''}</button>`;
+      }).join('')}<button type="button" class="top-tab top-tab-more" data-top-more aria-label="Mais: o menu inteiro"><span class="top-tab-short">Mais</span></button>`;
+    }
+    if (topTabs.length) {
+      topNav = document.createElement('nav');
+      topNav.className = 'top-tabs';
+      topNav.setAttribute('aria-label', 'Menu principal');
+      const brand = document.querySelector('.topbar .brand');
+      if (brand) brand.after(topNav); else document.querySelector('.topbar')?.append(topNav);
+      topNav.addEventListener('click', event => {
+        if (event.target.closest('[data-top-more]')) { setDrawer(!document.body.classList.contains('sidebar-open')); return; }
+        const button = event.target.closest('[data-top-tab]');
+        const tab = button && topTabs.find(item => item.id === button.dataset.topTab);
+        if (!tab) return;
+        const pages = tabPages(tab);
+        const target = [lastOfTab[tab.id], tab.pagina, ...pages].find(id => id && pages.includes(id));
+        if (tab.area === 'system') setWorkspace('system');
+        if (target) openPage(target);
+      });
+      // A última página vista em cada aba: voltar a ela pelo menu é voltar para onde estava.
+      document.addEventListener('wiki:pagina', event => { const tab = activeTopTab(); if (tab) lastOfTab[tab.id] = event.detail.id; });
     }
 
     // O botão ☰ (criado aqui, nas duas wikis) e o fundo escuro da gaveta do celular.
@@ -497,6 +573,7 @@
       content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
       tocClicked = -1;
       document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === navIdOf(id)));
+      drawTopTabs();
       // A página aberta sempre aparece no menu (o grupo recolhido abre); no celular, a gaveta fecha.
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
       if (document.body.classList.contains('sidebar-open')) setDrawer(false);
@@ -1918,7 +1995,7 @@
 
     // switchCampaign: troca a campanha ativa (pergunta antes, se a página pedir). setBadges: selos de novidade no menu.
     // status: o último /api/estado. hasPage: a página existe nesta wiki (a do mestre tem páginas que a dos jogadores não tem).
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, theme, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, theme, shell, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
     // Quem depende da wiki montada (o menu da conta) começa aqui.
     document.dispatchEvent(new Event('wiki:pronta'));
 })();

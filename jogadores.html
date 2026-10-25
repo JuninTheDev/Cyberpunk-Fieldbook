@@ -9,10 +9,11 @@
   <link rel="stylesheet" href="wiki.css">
   <link rel="stylesheet" href="netwire.css">
   <script>
-    // O tema escolhido no menu da conta (wikiApp.prefs "tema"), antes de desenhar: sem piscar o outro tema.
+    // O tema e a casca escolhidos no menu da conta (wikiApp.prefs "tema" e "casca"), antes de desenhar: sem piscar.
     try {
       const dono = localStorage.getItem('night-city-dono') || 'aparelho';
       if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') === '2077') document.documentElement.dataset.tema = '2077';
+      if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-casca`) || 'null') === 'classica') document.documentElement.dataset.casca = 'classica';
     } catch { /* sem armazenamento: fica o Fieldbook */ }
   </script>
   <link rel="manifest" href="manifest.webmanifest">
@@ -128,6 +129,15 @@
         campaigns: list ? list.map(item => ({ id: item.id, name: item.nome, color: item.cor, groups: playerGroups })) : [{ id: 'grupo', name: 'Night City, 2077', real: false, groups: playerGroups }],
         pageContent: { pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City'), pvGuia: playerGuide },
         mapPages: ['pvMap'],
+        // As abas do topo (a casca NetWire): o menu do jogo. Mensagens, por enquanto, são as notícias e os handouts.
+        topTabs: [
+          { id: 'inicio', label: 'Início', inicio: true, paginas: ['pvGuia'] },
+          { id: 'personagem', label: 'Personagem', curto: 'Ficha', paginas: ['ficha', 'personagens', 'loja', 'criador'] },
+          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['pvNews', 'pvNightCity'] },
+          { id: 'campanha', label: 'Campanha', paginas: ['pvSessions', 'pvPeople'] },
+          { id: 'mapa', label: 'Mapa', paginas: ['pvMap'] },
+          { id: 'regras', label: 'Regras', area: 'system', pagina: 'combat' }
+        ],
         mapData: () => window.playerMapData,
         pageSetup: { pvHome: content => window.playerView && window.playerView.setupHome(content) },
         topMeta: campaign => `${campaign.real === false ? 'Night City 2077' : campaign.name} / visão dos jogadores`.toUpperCase(),

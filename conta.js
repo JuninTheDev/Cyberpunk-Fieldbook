@@ -117,8 +117,10 @@
 
   const section = (title, body) => `<div class="account-section"><p class="account-label">${title}</p>${body}</div>`;
   const install = () => (state.instalar ? '<button type="button" class="account-item" data-install>Instalar no celular</button>' : '');
-  // O tema da wiki (wikiApp.theme): Fieldbook ou 2077. Vale para qualquer um, até o visitante (só neste aparelho).
-  const themeList = () => (app.theme ? section('Aparência', app.theme.list().map(item => `<button type="button" class="account-item account-radio" aria-current="${item.id === app.theme.get()}" data-account-theme="${esc(item.id)}"><span class="account-swatch account-swatch-${esc(item.id)}"></span>${esc(item.nome)}</button>`).join('')) : '');
+  // O tema da wiki (wikiApp.theme: Fieldbook ou 2077) e a casca (wikiApp.shell: as abas do topo do NetWire, ou a barra
+  // lateral clássica). Valem para qualquer um, até o visitante (só neste aparelho).
+  const SHELLS = [['netwire', 'Menu no topo'], ['classica', 'Menu clássico (barra lateral)']];
+  const themeList = () => (app.theme ? section('Aparência', `${app.theme.list().map(item => `<button type="button" class="account-item account-radio" aria-current="${item.id === app.theme.get()}" data-account-theme="${esc(item.id)}"><span class="account-swatch account-swatch-${esc(item.id)}"></span>${esc(item.nome)}</button>`).join('')}${app.shell ? SHELLS.map(([id, label]) => `<button type="button" class="account-item account-radio" aria-current="${id === app.shell.get()}" data-account-shell="${id}"><span class="account-swatch account-swatch-casca"></span>${label}</button>`).join('') : ''}`) : '');
   const campaignList = (items, active) => (items.length > 1 ? section('Campanha', items.map(item => `<button type="button" class="account-item account-radio" aria-current="${item.id === active}" data-account-campaign="${esc(item.id)}"><span class="account-swatch" style="background:${esc(item.cor || item.color || '#888')}"></span>${esc(item.nome || item.name)}</button>`).join('')) : '');
 
   function menuHtml() {
@@ -174,7 +176,7 @@
 
   // ---------------- Ações ----------------
   async function onClick(event) {
-    const target = event.target.closest('[data-account-pick], [data-account-new], [data-account-open], [data-account-campaign], [data-account-page], [data-account-theme], [data-account-logout], [data-account-logout-all]');
+    const target = event.target.closest('[data-account-pick], [data-account-new], [data-account-open], [data-account-campaign], [data-account-page], [data-account-theme], [data-account-shell], [data-account-logout], [data-account-logout-all]');
     if (!target) return;
     const close = () => openMenu(false);
     // Trocar o tema deixa o menu aberto, já com a escolha marcada (sem redesenhar: o botão clicado continua na página,
@@ -182,6 +184,11 @@
     if (target.dataset.accountTheme) {
       app.theme.set(target.dataset.accountTheme);
       root.querySelectorAll('[data-account-theme]').forEach(button => button.setAttribute('aria-current', String(button === target)));
+      return;
+    }
+    if (target.dataset.accountShell) {
+      app.shell.set(target.dataset.accountShell);
+      root.querySelectorAll('[data-account-shell]').forEach(button => button.setAttribute('aria-current', String(button === target)));
       return;
     }
     if (target.dataset.accountPick) { select(target.dataset.accountPick); close(); return; }
