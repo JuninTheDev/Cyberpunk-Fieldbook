@@ -864,7 +864,7 @@ export function textoNoToken({ resultado, dano = null }) {
   if (dano) {
     const perdeu = dano.hpAntes - dano.hpDepois;
     if (perdeu > 0) return { texto: `−${perdeu} HP${dano.lesoes?.length ? ' · crítico!' : ''}`, estilo: 'acerto' };
-    return { texto: dano.escudo ? 'No escudo' : 'A armadura segurou', estilo: 'defesa' };
+    return { texto: dano.estase && !dano.lugar ? 'Na estase' : dano.escudo ? 'No escudo' : 'A armadura segurou', estilo: 'defesa' };
   }
   const texto = { esquivou: 'Esquivou!', errou: 'Errou', fora: 'Fora do alcance', suprimido: 'Suprimido!', firme: 'Firme', acertou: 'Acertou' }[resultado];
   return texto ? { texto, estilo: resultado === 'suprimido' || resultado === 'acertou' ? 'acerto' : 'erro' } : null;

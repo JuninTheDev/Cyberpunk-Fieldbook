@@ -42,7 +42,7 @@ export async function cartaoDoResultado(ctx) {
   const desfazer = ctx.linhas.filter(l => l.dano || l.cadaver?.perdeu || l.veicular?.perdeu || l.veicular?.ablado || l.suprimido || l.municao?.efeitos.length || l.municao?.itens.length || (l.municao?.efeito === 'emp' && !l.municao.resistencia.passou)).map(l => ({
     ator: l.token.actor.uuid, veicular: l.veicular ?? null, suprimido: Boolean(l.suprimido), derrubado: Boolean(l.derrubado), municao: l.municao ?? null, lesoes: (l.dano?.lesoes ?? []).map(lesao => lesao.item).filter(Boolean),
     cadaver: l.cadaver?.perdeu ?? 0,
-    dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, armaduras: l.dano.armaduras, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado } : null
+    dano: l.dano ? { perdeu: l.dano.hpAntes - l.dano.hpDepois, armaduraId: l.dano.armaduraId, lugar: l.dano.lugar, ablado: l.dano.ablado, armaduras: l.dano.armaduras, escudoId: l.dano.escudoId, escudoAblado: l.dano.escudoAblado, estaseAblada: l.dano.estaseAblada ?? 0 } : null
   }));
   if (ctx.lesoesDoAtirador?.length) desfazer.push({ ator: ctx.atacante.uuid, suprimido: false, municao: null, lesoes: ctx.lesoesDoAtirador, dano: null });
   const danoDoArremesso = resumo.arremesso && ctx.pedido.total !== null && config('dano') === 'manual' && !R.MUNICAO_SEM_DANO[ctx.arma.municaoCarregada?.system.efeito] && linhas.some(l => l.resultado === 'acertou');

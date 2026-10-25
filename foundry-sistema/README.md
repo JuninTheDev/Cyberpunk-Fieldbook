@@ -68,6 +68,15 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
       plano pagam tudo. "Cobrar" tira o total dos Eurodólares pelo extrato (sair mais do que tem só avisa, como no
       extrato) e põe o cartão para o mestre e os donos, com o Desfazer, que devolve o dinheiro uma vez. Sem visita nem
       leito, não cobra. API: `game.system.api.hospital.abrirContaDoHospital(ator)`.
+    - **O Cryopump e o Cryotank** (o C41, ciclo 170; a wiki, Equipamento médico): junto do ferimento, "ESTASE" (para
+      quem edita a ficha do ferido) abre a janela com os Cryopumps e Cryotanks no inventário dos Medtechs (o token
+      selecionado, o personagem do jogador ou, para o mestre, os do mundo; nunca o próprio ferido). O Cryopump gasta 1
+      carga (as cargas e as pessoas pelos pontos em Criossistemas: 1; no 4, 2 cargas e 2 pessoas; no 5, 3 cargas); vazio,
+      recarrega antes, a 50eb por carga do dinheiro do Medtech. O Cryotank pede Tecnologia Médica DV13 (o empate falha) e
+      cabe 1. Na estase, a ficha mostra "EM ESTASE" com o HP da bolsa (15) ou do tanque (30); enquanto ele tiver 1 HP ou
+      mais, o Death Save do turno não roda, e o dano chega antes nele, como no escudo (a sobra se perde; só o explosivo que
+      o destrói passa inteiro; o Desfazer do ataque devolve). No Cryotank, o "Descansar" do C36 vale mesmo sem estar
+      estabilizado e cura no dobro. "SAIR DA ESTASE" tira o efeito. API: `game.system.api.cryo`.
   - **Equipamento:** à esquerda, os Eurodólares em grande, com o extrato e as últimas mudanças, e a munição; à direita, armas, armaduras, equipamento, roupas, drogas, upgrades e veículos.
   - **Armadura (C18):** personagem e capanga mostram qual armadura fornece o SP de cada local. **−1 SP** abla todas
     as camadas vestidas daquele local; **Consertar** restaura o SP dos locais da armadura escolhida e informa quem

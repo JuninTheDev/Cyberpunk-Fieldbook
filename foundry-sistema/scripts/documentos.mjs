@@ -23,6 +23,7 @@ import { ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cy
 import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
+import { danoNaEstase, desfazerDanoNaEstase } from './cryo.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -555,9 +556,16 @@ export class AtorCPR extends Actor {
   // local: "corpo", "cabeca", "perna" ou "item" (a armadura do corpo protege a perna e o item na mão).
   // escudo: o alvo se protegeu com o escudo, que leva o dano antes; só explosivo passa de um escudo destruído.
   // reducao: o que sai do dano que entra (a Deflexão de Dano do Solo).
+  // Na estase (o C41; cryo.mjs), a bolsa ou o tanque leva o dano antes, como o escudo: só o explosivo que a destrói passa.
   async receberDano({ dano, bonus = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, ablacao = 1, letal = true, escudo = false, explosivo = false, reducao = 0 }) {
     const hpAntes = this.system.hp.value;
-    const resumo = { local, dano, bonus, hpAntes, ablado: 0, armaduras: [], escudoAblado: 0, armadura: null, armaduraId: null };
+    const resumo = { local, dano, bonus, hpAntes, ablado: 0, armaduras: [], escudoAblado: 0, armadura: null, armaduraId: null, estaseAblada: 0 };
+    const estase = await danoNaEstase(this, { dano: dano + bonus, explosivo });
+    if (estase) {
+      resumo.estase = estase.rotulo;
+      resumo.estaseAblada = estase.absorveu;
+      if (!estase.passa) return { ...resumo, sp: 0, spEfetivo: 0, passou: false, bruto: 0, entrou: 0, recebido: 0, hpDepois: hpAntes };
+    }
     const protecao = escudo ? this.escudo : null;
     if (protecao) {
       resumo.escudoAblado = Math.min(dano + bonus, protecao.system.pvEscudo.value);
@@ -584,8 +592,9 @@ export class AtorCPR extends Actor {
   // Desfaz um dano aplicado: o HP perdido, o SP da armadura e os pontos do escudo voltam. Pela diferença, e não pelo
   // valor de antes: o que aconteceu com o ator depois (outro ataque, uma cura) continua valendo. O HP não passa do máximo
   // (o _reverseDamage do CORE, cpr-actor.js:1544-1556; aqui, o _preUpdate).
-  async desfazerDano({ perdeu = 0, armaduraId, lugar, ablado = 0, armaduras = null, escudoId, escudoAblado = 0 }) {
+  async desfazerDano({ perdeu = 0, armaduraId, lugar, ablado = 0, armaduras = null, escudoId, escudoAblado = 0, estaseAblada = 0 }) {
     if (perdeu) await this.update({ 'system.hp.value': this.system.hp.value + perdeu });
+    if (estaseAblada) await desfazerDanoNaEstase(this, estaseAblada);
     // O cartão antigo tem uma só fonte. O novo guarda cada ID e quanto de SP realmente perdeu, inclusive no zero.
     const fontes = armaduras ?? (armaduraId && ablado ? [{ item: armaduraId, ablado }] : []);
     const mudancas = fontes.flatMap(fonte => {

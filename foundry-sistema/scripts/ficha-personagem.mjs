@@ -16,6 +16,7 @@ import { avancarComIp } from './avanco.mjs';
 import { abrirExtrato } from './extrato.mjs';
 import { correr, corridaDe, levantar, movimentoDe } from './estados.mjs';
 import { contextoDaCura, descansar, estabilizar } from './estabilizar.mjs';
+import { contextoDaEstase, porEmEstase, sairDaEstase } from './cryo.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
 import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem, podeEditarParaApagar } from './exclusao-item.mjs';
@@ -104,7 +105,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       protegerSe: FichaPersonagem.#protegerSe,
       levantar: FichaPersonagem.#levantar,
       correr: FichaPersonagem.#correr,
-      estabilizar: FichaPersonagem.#estabilizar, descansar: FichaPersonagem.#descansar,
+      estabilizar: FichaPersonagem.#estabilizar, descansar: FichaPersonagem.#descansar, porEmEstase: FichaPersonagem.#porEmEstase, sairDaEstase: FichaPersonagem.#sairDaEstase,
       agarrar: FichaPersonagem.#agarrar, movimento: FichaPersonagem.#movimento,
       soltar: FichaPersonagem.#soltar,
       usarEscudoHumano: FichaPersonagem.#usarEscudoHumano,
@@ -442,6 +443,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     } : null;
     // Estabilizar e descansar (o C36; estabilizar.mjs), junto do ferimento.
     contexto.cura = contextoDaCura(ator, this.isEditable);
+    // O Cryopump e o Cryotank (o C41; cryo.mjs), junto do ferimento.
+    contexto.estase = contextoDaEstase(ator, this.isEditable);
 
     return Object.assign(contexto, {
       podeAtualizarWiki: game.user.isGM && Boolean(ator.getFlag(SISTEMA, 'wiki')) && !ator.isToken,
@@ -606,6 +609,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // Estabilizar o ferido e descansar o estabilizado (o C36; estabilizar.mjs, pela wiki, p. 222–223).
   static #estabilizar() { return this.isEditable ? estabilizar(this.actor) : null; }
   static #descansar() { return this.isEditable ? descansar(this.actor) : null; }
+  // A estase no Cryopump ou no Cryotank de um Medtech, e a saída dela (o C41; cryo.mjs).
+  static #porEmEstase() { return this.isEditable ? porEmEstase(this.actor) : null; }
+  static #sairDaEstase() { return this.isEditable ? sairDaEstase(this.actor) : null; }
   // O agarrão (as maquetes do usuário; a wiki, p. 177; agarrao.mjs): "Agarrar" (o alvo marcado, T, resiste pela janela
   // de reação do dono); agarrando, "Estrangular", "Derrubar" e "Soltar"; agarrado, "Escapar" (quem agarra resiste).
   static #agarrar(evento) { return agarrar(this.actor, { perguntar: comJanela(evento) }); }

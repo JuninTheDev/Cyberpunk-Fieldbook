@@ -17419,6 +17419,157 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...info, doJogador })];
     });
 
+    await r.passo('o Cryopump e o Cryotank (o C41, parte 4; a wiki, Equipamento médico): "ESTASE" na aba Combate do ferido lista os dispositivos dos Medtechs; o Cryopump gasta a carga (vazio, recarrega a 50eb); a bolsa (15 HP) leva o dano antes, o Desfazer devolve, e o explosivo que a destrói passa; na estase, sem Death Save no turno; o Cryotank pede Tecnologia Médica DV13 (o empate falha), cabe 1 e cura no dobro no descanso do C36', async () => {
+      // Os dados ficam na fila de cada momento (window.__fila): o Death Save do capanga (3) e os dois do Cryotank (3 e 4).
+      await fixar(edge, []);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const inicio = game.time.worldTime;
+        // O Medtech: TECH 8 + Tecnologia Médica 2 (2 pontos em Criossistemas: o Cryopump com 1 carga e 1 pessoa), 100eb.
+        const medico = await Actor.implementation.create({ name: 'Teste Crio', type: 'personagem', system: { atributos: { tech: { valor: 8 } }, dinheiro: 100, role: { nome: 'Medtech', rank: 4, habilidades: { 'Medical Tech (Cryosystem Operation)': 2 } } },
+          items: [foundry.utils.deepClone(cat['core_gear:cryopump']), foundry.utils.deepClone(cat['core_gear:cryotank'])] });
+        const pump = medico.items.find(i => i.name === 'Cryopump'), tank = medico.items.find(i => i.name === 'Cryotank');
+        const paciente = await Actor.implementation.create({ name: 'Teste Congelado', type: 'personagem', system: { atributos: { body: { valor: 6 } }, hp: { value: -2 } } });
+        // Quem não é Medtech não opera: o Cryopump dele não aparece na janela.
+        const leigo = await Actor.implementation.create({ name: 'Teste Leigo', type: 'personagem', items: [foundry.utils.deepClone(cat['core_gear:cryopump'])] });
+        // Sem dono (os passos de antes mudam a permissão padrão): o Death Save é do mestre, com os dados da fila.
+        const capanga = await Actor.implementation.create({ name: 'Teste Crio Capanga', type: 'capanga', ownership: { default: 0 }, system: { atributos: { body: { valor: 6 } }, hp: { value: -2 } } });
+        // Uma cena própria (os passos de antes podem deixar nenhuma ativa); a anterior volta no fim.
+        const anterior = canvas.scene;
+        const cena = await Scene.implementation.create({ name: 'C41 Cryo', active: false, width: 1600, height: 1200 });
+        await cena.activate();
+        await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        const [tokenCapanga] = await cena.createEmbeddedDocuments('Token', [(await capanga.getTokenDocument({ x: 500, y: 300 })).toObject()]);
+        await __esperar(() => canvas.tokens.get(tokenCapanga.id));
+        const mortal = () => tokenCapanga.actor;
+        const avisos = [];
+        const warn = ui.notifications.warn;
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let combate = null;
+        const lido = {};
+        const janela = classe => document.querySelector('.application.dialog.' + classe + ':not(.minimizing)');
+        const estase = ator => game.system.api.cryo.estaseDe(ator);
+        const marca = () => paciente.sheet.element?.querySelector('.botoes-resumo.estase .estabilizado')?.textContent.trim() ?? '';
+        const botoes = () => [...(paciente.sheet.element?.querySelectorAll('.botoes-resumo.estase [data-action]') ?? [])].map(b => b.dataset.action).join();
+        const ultimo = chave => game.messages.contents.at(-1)?.getFlag('${S}', chave);
+        const texto = () => new DOMParser().parseFromString(game.messages.contents.at(-1).content, 'text/html').body.textContent.trim();
+        const saves = () => game.messages.filter(m => m.getFlag('${S}', 'deathSave')).length;
+        // Responde a janela da estase: o dispositivo (0, Cryopump; 1, Cryotank) e a recarga.
+        const responder = async (indice, recarregar = false) => {
+          await __esperar(() => janela('por-em-estase')?.querySelector('select[name="dispositivo"]'));
+          const j = janela('por-em-estase');
+          const opcoes = [...j.querySelectorAll('select[name="dispositivo"] option')].map(o => o.textContent.trim());
+          j.querySelector('select[name="dispositivo"]').value = String(indice);
+          j.querySelector('[name="recarregar"]').checked = recarregar;
+          j.querySelector('button[data-action="ok"]').click();
+          await __esperar(() => !janela('por-em-estase'));
+          return opcoes;
+        };
+        try {
+          await paciente.sheet.render({ force: true });
+          paciente.sheet.changeTab('combate', 'primary');
+          await __esperar(() => botoes() === 'porEmEstase');
+          lido.antes = botoes();
+          // 1. O Cryopump: a carga sai, a bolsa com 15 HP.
+          let mensagens = game.messages.size;
+          paciente.sheet.element.querySelector('[data-action="porEmEstase"]').click();
+          lido.opcoes = await responder(0);
+          await __esperar(() => estase(paciente) && game.messages.size > mensagens && marca());
+          lido.pump = { estase: { ...estase(paciente) }, cargas: pump.getFlag('${S}', 'cargas'), marca: marca(), botoes: botoes(), cartao: texto() };
+          // 2. A bolsa leva o dano antes (9: fica com 6; o HP não muda); o Desfazer devolve; o explosivo de 20 a destrói e passa inteiro.
+          const r1 = await paciente.receberDano({ dano: 9 });
+          lido.dano = { bolsa: estase(paciente).hp, hp: paciente.system.hp.value, rotulo: r1.estase, segurou: r1.estaseAblada, recebido: r1.recebido };
+          await paciente.desfazerDano({ estaseAblada: r1.estaseAblada });
+          lido.desfeito = estase(paciente).hp;
+          const r2 = await paciente.receberDano({ dano: 20, explosivo: true });
+          await __esperar(() => marca().includes('0/15'));
+          lido.explosivo = { bolsa: estase(paciente).hp, hp: paciente.system.hp.value, segurou: r2.estaseAblada, marca: marca() };
+          // 3. Sair da estase.
+          paciente.sheet.element.querySelector('[data-action="sairDaEstase"]').click();
+          await __esperar(() => !estase(paciente) && botoes() === 'porEmEstase');
+          lido.saiu = { botoes: botoes(), cartao: texto() };
+          // 4. O capanga no Cryopump vazio: sem a recarga, recusa; com ela, 50eb do Medtech, e a carga sai de novo.
+          const porCapanga = game.system.api.cryo.porEmEstase(mortal());
+          await responder(0);
+          await porCapanga;
+          lido.vazio = { aviso: avisos.at(-1), estase: Boolean(estase(mortal())) };
+          const recarga = game.system.api.cryo.porEmEstase(mortal());
+          await responder(0, true);
+          await recarga;
+          lido.recarga = { estase: estase(mortal())?.hp, dinheiro: medico.system.dinheiro, cargas: pump.getFlag('${S}', 'cargas'), motivo: medico.system.extratos.dinheiro.at(-1)?.motivo };
+          // 5. Na vez do capanga em estase, sem Death Save (o 3 fica na fila); fora dela, o Death Save volta (o 3 passa).
+          combate = await Combat.implementation.create({ scene: cena.id, active: true });
+          await combate.createEmbeddedDocuments('Combatant', [{ tokenId: tokenCapanga.id, sceneId: cena.id, actorId: capanga.id }]);
+          await combate.startCombat();
+          let antes = saves();
+          window.__fila = [[3, 10]];
+          await combate.nextRound();
+          await new Promise(resolver => setTimeout(resolver, 800));
+          lido.semSave = { vez: combate.combatant?.tokenId === tokenCapanga.id, saves: saves() - antes, fila: window.__fila.length };
+          await game.system.api.cryo.sairDaEstase(mortal());
+          antes = saves();
+          await combate.nextRound();
+          await __esperar(() => saves() > antes, 50);
+          lido.voltou = { saves: saves() - antes, fila: window.__fila.length };
+          window.__fila = [];
+          // 6. O Cryotank: Tecnologia Médica 10 + 3 = 13 empata a DV13 e falha; com o 4, passa, e o tanque tem 30 HP.
+          window.__fila = [[3, 10]];
+          mensagens = game.messages.size;
+          paciente.sheet.element.querySelector('[data-action="porEmEstase"]').click();
+          await responder(1);
+          await __esperar(() => game.messages.size > mensagens + 1 && ultimo('estase')?.resultado === 'falhou');
+          lido.tanqueFalhou = { total: ultimo('estase').total, estase: Boolean(estase(paciente)), cartao: texto() };
+          window.__fila = [[4, 10]];
+          mensagens = game.messages.size;
+          paciente.sheet.element.querySelector('[data-action="porEmEstase"]').click();
+          await responder(1);
+          await __esperar(() => estase(paciente)?.tipo === 'cryotank' && game.messages.size > mensagens + 1);
+          lido.tanque = { estase: { ...estase(paciente) }, total: ultimo('estase').total, cartao: texto() };
+          // 7. No tanque, o descanso (sem estar estabilizado) cura no dobro: BODY 6 × 2 = 12 por dia, −22 → −10.
+          await __esperar(() => paciente.sheet.element?.querySelector('[data-action="descansar"]'));
+          mensagens = game.messages.size;
+          paciente.sheet.element.querySelector('[data-action="descansar"]').click();
+          await __esperar(() => janela('descansar')?.querySelector('[name="dias"]'));
+          janela('descansar').querySelector('[name="dias"]').value = '1';
+          janela('descansar').querySelector('button[data-action="ok"]').click();
+          await __esperar(() => game.messages.size > mensagens && ultimo('descanso'));
+          lido.descanso = { hp: paciente.system.hp.value, porDia: ultimo('descanso').porDia, cartao: texto() };
+          // 8. O Cryotank já tem alguém: o capanga não entra nele.
+          const cheio = game.system.api.cryo.porEmEstase(mortal());
+          await responder(1);
+          await cheio;
+          lido.cheio = { aviso: avisos.at(-1), estase: Boolean(estase(mortal())) };
+          return lido;
+        } finally {
+          ui.notifications.warn = warn;
+          window.__fila = [];
+          for (const app of [...foundry.applications.instances.values()].filter(app => ['por-em-estase', 'descansar'].some(classe => app.element?.classList.contains(classe)))) await app.close();
+          if (combate && game.combats.has(combate.id)) await combate.delete();
+          await paciente.sheet.close();
+          if (anterior && game.scenes.has(anterior.id)) await anterior.activate();
+          await cena.delete();
+          await Actor.implementation.deleteDocuments([medico.id, paciente.id, capanga.id, leigo.id]);
+          await game.time.advance(inicio - game.time.worldTime);
+        }
+      })()`);
+      const v = info;
+      const ok = v.antes === 'porEmEstase'
+        && v.opcoes.join('|') === 'Cryopump de Teste Crio (1/1 carga; cobertura 15 HP)|Cryotank de Teste Crio (Tecnologia Médica DV13; cobertura 30 HP)'
+        && v.pump.estase.tipo === 'cryopump' && v.pump.estase.hp === 15 && v.pump.estase.max === 15 && v.pump.cargas === 0 && v.pump.marca === 'EM ESTASE · Cryopump 15/15' && v.pump.botoes === 'sairDaEstase'
+        && v.pump.cartao === 'Teste Crio pôs Teste Congelado em estase no Cryopump: gastou 1 carga (0 restam). Sem Death Saves enquanto a bolsa tiver HP (cobertura 15 HP).'
+        && v.dano.bolsa === 6 && v.dano.hp === -2 && v.dano.rotulo === 'A bolsa do Cryopump' && v.dano.segurou === 9 && v.dano.recebido === 0 && v.desfeito === 15
+        && v.explosivo.bolsa === 0 && v.explosivo.hp === -22 && v.explosivo.segurou === 15 && v.explosivo.marca === 'EM ESTASE · Cryopump 0/15'
+        && v.saiu.botoes === 'porEmEstase' && v.saiu.cartao === 'Teste Congelado saiu da estase do Cryopump (cobertura 0/15 HP).'
+        && v.vazio.aviso === 'O Cryopump está sem carga: recarregue (50eb por carga).' && !v.vazio.estase
+        && v.recarga.estase === 15 && v.recarga.dinheiro === 50 && v.recarga.cargas === 0 && v.recarga.motivo === 'Recarga do Cryopump: 1 carga'
+        && v.semSave.vez && v.semSave.saves === 0 && v.semSave.fila === 1 && v.voltou.saves === 1 && v.voltou.fila === 0
+        && v.tanqueFalhou.total === 13 && !v.tanqueFalhou.estase && v.tanqueFalhou.cartao === 'Teste Crio não conseguiu pôr Teste Congelado em estase no Cryotank (Tecnologia Médica 13 contra DV13).'
+        && v.tanque.estase.tipo === 'cryotank' && v.tanque.estase.hp === 30 && v.tanque.total === 14 && v.tanque.cartao.includes('em estase no Cryotank (Tecnologia Médica 14 contra DV13)')
+        && v.descanso.hp === -10 && v.descanso.porDia === 12 && v.descanso.cartao.includes('(12 por dia: o BODY 6 × 2, no Cryotank)')
+        && v.cheio.aviso === 'O Cryotank já tem alguém em estase (cabe 1 pessoa).' && !v.cheio.estase;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

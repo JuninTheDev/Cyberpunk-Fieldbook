@@ -8,6 +8,8 @@
 // Reinforced Antibodies) e 1 SP em cada local do Skin Weave e do Subdermal Armor instalados; sem a marca, recusa.
 import { SISTEMA } from './config.mjs';
 import { naVezDoAtor } from './perigos.mjs';
+import { estaseDe } from './cryo.mjs';
+import { multiplicadorDaCura } from './regras-cryo.mjs';
 import { curaNaFicha, curaNatural, dvDeEstabilizar, ehAnticorpos, implanteDeSp, PERICIAS_DE_ESTABILIZAR, resultadoDeEstabilizar, spDepoisDoDescanso } from './regras-estabilizar.mjs';
 
 export const FLAG_ESTABILIZADO = 'estabilizado';
@@ -99,11 +101,14 @@ async function inconscientePorUmMinuto(ator) {
   await ActiveEffect.implementation.create(efeito.toObject(), { parent: ator });
 }
 
+// Descansa quem foi estabilizado e quem está no Cryotank (o C41; cryo.mjs: o tanque cura no dobro).
+const podeDescansar = ator => estaEstabilizado(ator) || multiplicadorDaCura(estaseDe(ator)) > 1;
+
 // O botão "Descansar": quantos dias inteiros; o estabilizado recupera o HP e o SP dos implantes; o cartão diz o que voltou.
 export function descansar(ator) { return naVez(ator, executarDescanso); }
 async function executarDescanso(ator) {
   const recusar = () => { ui.notifications.warn(`${ator.name} não está estabilizado: a cura natural é de quem foi estabilizado (Estabilizar, junto do ferimento).`); return null; };
-  if (!estaEstabilizado(ator)) return recusar();
+  if (!podeDescansar(ator)) return recusar();
   const dias = await foundry.applications.api.DialogV2.prompt({
     window: { title: `Descansar: ${ator.name}` }, classes: [SISTEMA, 'descansar'], rejectClose: false,
     content: '<label>Dias inteiros de descanso <input type="number" name="dias" value="1" min="1" step="1" autofocus></label>'
@@ -113,11 +118,11 @@ async function executarDescanso(ator) {
   if (!dias) return null;
   if (!Number.isSafeInteger(dias) || dias < 1) { ui.notifications.warn('Os dias de descanso são um número inteiro, de 1 para cima.'); return null; }
   // Depois da janela, de novo e na fila do ator (com os ticks dos perigos): o dano durante a pergunta tira a marca.
-  const feito = await naVezDoAtor(ator, atual => (!atorPresente(atual) ? null : estaEstabilizado(atual) ? gravarDescanso(atual, dias) : 'recusou'));
+  const feito = await naVezDoAtor(ator, atual => (!atorPresente(atual) ? null : podeDescansar(atual) ? gravarDescanso(atual, dias) : 'recusou'));
   if (feito === 'recusou') return recusar();
   if (!feito) return null;
-  const { cura, body, max, anticorpos, armaduras } = feito;
-  const conta = `${cura.porDia} por dia: o BODY ${body}${anticorpos ? ` × 2, com o ${esc(anticorpos)}` : ''}`;
+  const { cura, body, max, anticorpos, armaduras, tanque } = feito;
+  const conta = `${cura.porDia} por dia: o BODY ${body}${anticorpos ? ` × 2, com o ${esc(anticorpos)}` : ''}${tanque ? ' × 2, no Cryotank' : ''}`;
   const partes = [cura.recuperado ? `HP ${cura.antes} → ${cura.depois} de ${max} (${conta})` : `HP no máximo (${max})`,
     ...armaduras.map(({ nome, locais }) => `${esc(nome)}: ${locais.map(l => `${l.local === 'cabeca' ? 'cabeça' : 'corpo'} ${l.antes} → ${l.depois}`).join(', ')}`)];
   await ChatMessage.implementation.create({
@@ -135,7 +140,8 @@ async function gravarDescanso(ator, dias) {
   const body = ator.system.atributos.body.valor, max = ator.system.hp.max;
   const instalados = ator.items.filter(item => item.type === 'cyberware' && item.system.instalado);
   const anticorpos = instalados.find(item => ehAnticorpos(item.name, catalogo(item)))?.name ?? '';
-  const cura = curaNatural({ dias, body, hp: ator.system.hp.value, max, anticorpos: Boolean(anticorpos) });
+  const tanque = multiplicadorDaCura(estaseDe(ator)) > 1;
+  const cura = curaNatural({ dias, body, hp: ator.system.hp.value, max, anticorpos: Boolean(anticorpos), multiplicador: multiplicadorDaCura(estaseDe(ator)) });
   const implantes = new Set(instalados.map(item => implanteDeSp(item.name, catalogo(item))).filter(Boolean));
   const armaduras = ator.items.filter(item => item.type === 'armadura' && implantes.has(implanteDeSp(item.name, catalogo(item)))).map(item => ({
     id: item.id, nome: item.name,
@@ -145,7 +151,7 @@ async function gravarDescanso(ator, dias) {
   if (armaduras.length) {
     await ator.updateEmbeddedDocuments('Item', armaduras.map(({ id, locais }) => ({ _id: id, ...Object.fromEntries(locais.map(l => [`system.sp.${l.local}.value`, l.depois])) })));
   }
-  return { cura, body, max, anticorpos, armaduras };
+  return { cura, body, max, anticorpos, armaduras, tanque };
 }
 
 // O dano novo tira a marca (:552, "ainda rola Death Save se for atacado"): o HP que cai, na mesma gravação, no cliente que

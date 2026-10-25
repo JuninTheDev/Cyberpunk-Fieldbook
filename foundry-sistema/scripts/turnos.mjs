@@ -10,6 +10,7 @@ import { jogadorDe, pedir, souOMestreAtivo, STATUS_SUPRIMIDO } from './combate.m
 import { SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { controleNoComecoDoTurno } from './direcao.mjs';
+import { semDeathSaveNaEstase } from './cryo.mjs';
 import { fogoNoFimDoTurno } from './municoes.mjs';
 import { momentoDoTurno, perigosNoComecoDoTurno, perigosNoFimDoTurno } from './perigos.mjs';
 
@@ -37,6 +38,8 @@ async function deathSave(combatente) {
   const modo = config('deathSave');
   if (!ator || modo === 'nao' || !['personagem', 'capanga'].includes(ator.type) || combatente.isDefeated) return;
   if (ator.system.hp.value >= 1 || ator.statuses.has(CONFIG.specialStatusEffects.DEFEATED)) return;
+  // Na estase do Cryopump ou do Cryotank, sem Death Save enquanto a bolsa ou o tanque tiver HP (o C41; cryo.mjs).
+  if (semDeathSaveNaEstase(ator)) return;
   const jogador = jogadorDe(ator);
   if (!jogador && modo === 'jogadores') return;
   // O Death Save do turno é do fluxo: fica público, fora do modo do seletor do chat (o C33), como o do jogador

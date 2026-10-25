@@ -27,9 +27,10 @@ export function resultadoDeEstabilizar({ ferimento, total, hp }) {
 
 // O descanso: por dia inteiro, o estabilizado recupera HP igual ao BODY (:552); com o Reinforced Antibodies instalado, o
 // BODY × 2 (system-catalog.js:74). Nunca acima do máximo (o C31), e o HP não desce. Os dias são inteiros, de 1 para cima.
-export function curaNatural({ dias, body, hp, max, anticorpos = false }) {
+// multiplicador: o Cryotank cura no dobro (o C41; regras-cryo.multiplicadorDaCura).
+export function curaNatural({ dias, body, hp, max, anticorpos = false, multiplicador = 1 }) {
   if (!Number.isSafeInteger(dias) || dias < 1) return null;
-  const porDia = Number(body) * (anticorpos ? 2 : 1);
+  const porDia = Number(body) * (anticorpos ? 2 : 1) * multiplicador;
   const antes = Number(hp);
   const depois = Math.max(antes, Math.min(Number(max), antes + porDia * dias));
   return { dias, porDia, antes, depois, recuperado: depois - antes };

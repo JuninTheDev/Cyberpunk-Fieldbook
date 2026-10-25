@@ -8291,6 +8291,40 @@ abaixo).
   168 para 169, sem conflito.
 - **Próximo:** o Cryopump e o Cryotank (parte 4, terceiro ciclo).
 
+### Ciclo 170 (2026-10-25): C41, parte 4, o Cryopump e o Cryotank (sessão Junin)
+
+- **Fontes:** wiki, `system-catalog.js:218-228` ("Equipamento médico": o Cryopump, uma Ação e 1 carga, sem Death Saves
+  enquanto a bolsa tiver 1 HP ou mais, cobertura de 15 HP, recarga 50eb por carga; o Cryotank, Tecnologia Médica DV13,
+  1 pessoa, cura no dobro, cobertura de 30 HP; só o Medtech opera) e o "Criossistema do Medtech, por Rank" (no 4, o
+  Cryopump passa a 2 cargas e 2 pessoas; no 5, a 3 cargas). A cobertura pela regra da wiki (p. 182–183, a mesma do
+  escudo e do vidro). O CORE 0.92.4 não tem nenhum dos dois (os itens `core_gear:cryopump` e `core_gear:cryotank` são
+  só equipamento).
+- **Decisão do usuário (2026-10-25):** a estase completa, com as cargas e a cobertura; a cura em dobro esperava o C36,
+  que a KouArt fechou no ciclo 165.
+- **Entrega:** `regras-cryo.mjs` (os dispositivos, os pontos de Criossistemas, `planoDaEstase`, `coberturaDaEstase`,
+  `multiplicadorDaCura`) e `cryo.mjs` (a janela `por-em-estase`, as cargas no item, a recarga pelo extrato do Medtech, o
+  teste do Cryotank, o efeito "Em estase" com o HP da cobertura, a saída e o cartão). Fora dos meus arquivos, pequenas
+  mudanças: o `receberDano` (a cobertura leva o dano antes do escudo) e o `desfazerDano` (devolve), o Desfazer do ataque
+  (`combate/cartao.mjs`) e o cartão (`ataque.hbs`, "a cobertura da estase levou N"; o texto no token, "Na estase"); o
+  Death Save do turno (`turnos.mjs`); e, no C36 da KouArt, o "Descansar" vale no Cryotank sem a marca de estabilizado e
+  o `curaNatural` ganhou o `multiplicador` (o padrão 1 não muda nada do C36).
+- **Limites:** sem relógio, a semana do Cryopump fica no texto, e a carga gasta não volta sozinha. "Que aceita ou está
+  inconsciente" é do mestre. O botão fica só na ficha do personagem; o capanga entra pela API
+  (`game.system.api.cryo.porEmEstase`). O dano do perigo do ambiente que não passa pelo `receberDano` (o fogo, a
+  asfixia) não para na cobertura. O cartão do ataque com a linha da estase e o Desfazer pelo botão do ataque não têm
+  passo próprio no G4: o passo chama o `receberDano` e o `desfazerDano` direto (o caminho que o ataque usa).
+- **Portões:** G1, 184 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 537/537 (6 testes novos em
+  `tests/sistema/cryo.test.mjs`, que conferem a cobertura, a DV, a recarga e os pontos com o texto da wiki; o teste do
+  C33 em `mesa.test.mjs` passou a contar o teste do Cryotank). G4 completo, 272/272 em 580 s no Foundry 14.369, sem aviso nem erro do sistema, com o passo novo: a janela e a carga,
+  o dano na bolsa e o Desfazer, o explosivo que a destrói, a saída, o Cryopump vazio e a recarga, o turno sem Death Save
+  e depois com ele, o Cryotank que empata e o que passa, o descanso em dobro e o tanque cheio.
+- **Mutações:** 27 caíram, restauradas pelo md5: 13 da regra pura (G3, inclusive o multiplicador do C36) e 14 no Foundry (G4 focado, ~40 s). Uma sobreviveu na primeira rodada (listar o dispositivo de quem não é Medtech): no passo só o Medtech tinha um; um personagem sem a Role com um Cryopump entrou no passo, e ela caiu.
+- **No G4 focado:** o passo novo precisa de uma cena ativa; a do G4 completo depende dos atores dos passos de antes, e o
+  focado cria uma vazia. Um passo que usa dados fixos chama o `fixar` antes, mesmo com a fila vazia: sem ele, a primeira
+  rodada deste passo passou com um dado aleatório que caiu no número certo (o 13 do empate).
+- **No G4 completo:** o passo falhou duas vezes antes de passar, pelo que os passos de antes deixam: nenhuma cena ativa (o passo cria a dele e devolve a anterior) e a permissão padrão mudada, que dava dono ao capanga novo e mandava o Death Save para o navegador do jogador, que espera o prazo (o capanga nasce com `ownership: { default: 0 }`, como no passo do C38). Os dois só aparecem no G4 completo.
+- **O C41 está `[x]`** (as partes 1 a 3 da sessão Codex, a 4 desta).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

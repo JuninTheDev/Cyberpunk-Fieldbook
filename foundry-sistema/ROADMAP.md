@@ -377,7 +377,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   (60 × o Rank novo), um nível por vez, pelo extrato.
 - [x] **C40. Veículos fora do dano:** feito no ciclo 157 (sessão Junin, com o Codex, 2026-10-23) (p. 189–192, `:538`): a
   direção sob pressão no começo do turno, as manobras pela ficha, a batida (na janela de perigos) e desviar a pé.
-- [ ] **C41. O resto:**
+- [x] **C41. O resto:** feito nos ciclos 162 a 164 (sessão Codex) e 167, 169 e 170 (sessão Junin).
   - [x] parte 1, correr (ciclo 162, sessão Codex, 2026-10-24): a Ação de Movimento a mais (`:501` e `:514`). Botão
     nas abas Perícias e Combate e no capanga, com confirmação do Movimento prévio e da Ação disponível. O MOVE
     preparado dá o extra (×2) e o limite total do turno (×4); caído, agarrado e quem dirige não correm. Revalida
@@ -392,7 +392,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     nas abas Perícias/Combate e no capanga, um d10 simples abaixo do nível; empate falha, má fama usa magnitude.
     Facedown, Sorte, recursos e extrato preservados; dono/UUID e ficha relidos após esperas, modo do chat respeitado.
     G1/G2 passam; G3, 491/491; G4 completo, 264/264; 50 mutações detectadas.
-  - [~] parte 4, o hospital e a instalação de cyberware (sessão Junin, 2026-10-25)
+  - [x] parte 4, o hospital e a instalação de cyberware (ciclos 167, 169 e 170, sessão Junin, 2026-10-25)
     (`:564`), o Cryopump e o Cryotank (`system-catalog.js:218-228`). Decisões do usuário (2026-10-25): instalar como a
     wiki (o lugar, no mínimo o da peça, e o custo pelo extrato) ou com um Medtech do grupo, que rola em vez de pagar; a
     retirada com cirurgia destrói a peça se falhar; a conta do hospital numa janela do mestre; a estase completa do
@@ -404,7 +404,10 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     - [x] a conta do hospital (ciclo 169, sessão Junin, 2026-10-25): o botão "HOSPITAL" das lesões (só o mestre) abre
       a janela com a maior DV da visita (50, 100, 500 ou 1.000eb), as noites no leito (100eb) e o Trauma Team da ficha (o
       Executivo inclui a visita); cobra pelo extrato, com o cartão e o Desfazer.
-    - [ ] o Cryopump e o Cryotank (a estase, as cargas, a cobertura).
+    - [x] o Cryopump e o Cryotank (ciclo 170, sessão Junin, 2026-10-25): "ESTASE" junto do ferimento, com os
+      dispositivos dos Medtechs; o Cryopump gasta a carga (recarga 50eb), o Cryotank pede Tecnologia Médica DV13; sem
+      Death Save enquanto a bolsa (15 HP) ou o tanque (30 HP) tiver HP, que levam o dano antes (o Desfazer devolve); no
+      tanque, o descanso do C36 cura no dobro.
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
 - [ ] **C42. Dice So Nice:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
