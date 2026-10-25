@@ -79,6 +79,18 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 
 **Não escreva segredos** em `jogadores.html`, `wiki-app.js`, `wiki.css` ou `system-*.js`: esses arquivos vão para os aparelhos dos jogadores.
 
+## Mapa de Night City
+
+O mapa abre ocupando a janela inteira, tanto para o mestre quanto para os jogadores. A navegação da wiki fica no botão **Menu**; escolher outra página devolve o layout normal e mantém a sua preferência de barra lateral inteira ou compacta.
+
+- **Explorar:** arraste o mapa; use a roda do mouse, dois dedos ou os botões **+** e **−** para ampliar. Com o mapa em foco, as setas deslocam, **+** e **−** mudam o zoom e **Home** enquadra a cidade.
+- **Locais:** abre a lista de pontos, com busca e filtros. Selecione um ponto no mapa ou na lista para abrir a ficha do lugar, com o distrito e as informações disponíveis para quem está lendo. Os jogadores continuam recebendo somente o que o mestre publicou.
+- **Camadas:** reúne as versões do mapa e as opções de exibição. O mapa detalhado é o padrão; o mapa base continua disponível e o mestre também pode escolher a versão com referências originais.
+- **No celular e no tablet:** a lista, as camadas e a ficha aparecem na parte inferior, com rolagem própria e opção de expandir. Os controles de zoom ficam acima do painel aberto para continuar acessíveis.
+- **Teclado e navegação:** os marcadores podem ser abertos com **Enter** ou **Espaço**; **Esc** fecha o painel ou menu aberto. **/** ou **Ctrl+K** abre a busca da wiki. Os botões Voltar e Avançar do navegador continuam funcionando entre as páginas.
+
+O mapa detalhado carrega apenas a região visível, usando os arquivos locais do projeto. Até 256 trechos ficam guardados no aparelho para revisitar sem rede; uma região ainda não carregada precisa de conexão. A troca de layout não muda as coordenadas dos pontos nem revela informações de campanha.
+
 ## Campanhas
 
 Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o mesmo universo. Na wiki do mestre, a página **Campanhas** (no menu de cada campanha) cria, renomeia e apaga; o seletor **Campanha ativa** no menu troca entre elas.
@@ -119,6 +131,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `campaign-map.js` | Pinos do mapa de operações. Os lugares da base apontam para eles (`#campaignMap/<ponto>` abre o mapa já no ponto). |
 | `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
+| `nightcity-map.js`, `assets/nightcity-map/tiles/` | O mapa detalhado de Night City, padrão nas duas visões: 16.121 tiles locais (137,3 MiB), com cinco níveis de detalhe. Só a região visível é baixada; o aparelho guarda até 256 tiles para revisitar sem rede. O seletor mantém o mapa base e, para o mestre, a versão com referências. |
 | `system-rules.js` | As regras da mesa para consulta: uma regra só, com o Mission Kit valendo sobre o RED quando os dois conflitam. Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (a tabela da ciberpsicose e as de perda e ganho do Kit), terapia e drogas, netrunning (o do RED com os quickhacks no Neuroport do Kit), economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido ou do Kit. |
 | `system-net.js` | O Arsenal da NET (programas, Black ICE, demônios, upgrades, defesas e os 21 cyberdecks com marca, que são cyberdecks do RED da qualidade de cada um) e os quickhacks: os 11 do Mission Kit e os 5 do suplemento de fã que a mesa aprovou, todos de graça pelo Rank de Interface. Um cartão por item. |
 | `system-2077.js` | Os anos 2070: as regras de Power, Smart e Tech e os Rebuilds do Cyberpunk Edgerunners Mission Kit; as 41 armas (13 do Kit e 28 do suplemento de fã aprovados); os 37 implantes (o Neuroport e o cromo do Kit, os do suplemento aprovados e os 8 Berserk e Sandevistan dos anos 2070, mais caros e mais fracos que no suplemento e à venda em todo Night Market de cyberware); e a página **Suplemento de fã: o que saiu**, com o motivo de cada item recusado na revisão de 2026-10-13. As listas cruas (`data`) vão para o módulo do Foundry e a loja. |
