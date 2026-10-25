@@ -433,6 +433,20 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [~] parte 1, o conjunto de imagens, a escolha da imagem e a gravação no token (sessão Junin, 2026-10-25);
   - [ ] parte 2, o Caminhando durante o movimento, as transições e a pré-carga;
   - [ ] parte 3, o cortador da folha.
+- [ ] **C46. Veículos como atores** (pedido do usuário, 2026-10-25: o veículo com token próprio, como a mesa da wiki do
+  master faz no M17). O modelo híbrido: o ator Veículo é a presença na cena e guarda o estado físico (o SDP, o SP, os
+  vidros, os upgrades, as armas montadas, os assentos); o item na ficha do personagem continua como a posse (a frota, a
+  loja da wiki, a família do Nomad, o envio "Na mesa") e aponta para o ator. Assim a wiki e a loja não mudam. O CORE
+  0.92.4 e a 0.93 têm o veículo só como item. Um ciclo por parte:
+  - [~] parte 1, o ator e a ficha (sessão KouArt, com o Codex, 2026-10-25): o tipo de ator Veículo, a ficha, o token com
+    o SDP na barra e fora da iniciativa, o ataque direto no token do veículo pelas regras do C15 (o SDP menos o SP, sem
+    +5 nem lesão, sem esquiva) com o Desfazer, e o veículo de NPC a partir do catálogo;
+  - [ ] parte 2, a ligação com o item: "Pôr na cena" a partir do item do personagem, o estado passando a viver no ator
+    e a migração dos veículos que já existem (o SDP, os vidros, os upgrades e as armas montadas, sem perder nada);
+  - [ ] parte 3, a tripulação: embarcar, descer, o motorista, mover junto e os ocupantes protegidos pelo veículo (os
+    vidros, a cobertura), como a mesa da wiki;
+  - [ ] parte 4, o resto pelo ator: as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
+    C44 pelo MOVE dele.
 
 
 **Pronto, para cada item:**
