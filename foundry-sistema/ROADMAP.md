@@ -420,6 +420,19 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [ ] parte 3, as janelas: o navegador de itens e atores (a loja da wiki já é o carrinho) e o tema do sistema no resto
     do Foundry.
 - [~] **C44. A régua com Andar e Correr** (sessão KouArt, 2026-10-25) (o `drag-ruler.js` do CORE), junto da DV que ela já mostra.
+**Pedido do usuário fora da comparação com o CORE** (2026-10-25):
+- [ ] **C45. Tokens dinâmicos:** a imagem do token muda pela direção em que ele está virado, pela arma equipada, pelo
+  ferimento e por caído/inconsciente, com o giro automático do Foundry 14 (`core.tokenAutoRotate`) e a imagem em pé
+  (`lockRotation`). Decisões do usuário (2026-10-25), pela folha de exemplo: 8 direções em vista de cima 3/4 (Parado,
+  Caminhando e Mirando, com a tabela de ângulos calibrável); armado ou não (Mirando); parado e ferido, a pose de ferido
+  leve ou grave; andando ou mirando, as 8 direções; mortal, inconsciente e estase, Incapacitado; morto, Morto; o
+  Caminhando só durante o movimento, na tela de cada um; as imagens por uma pasta com nomes padronizados e uma janela no
+  ator, e um cortador de folha (com fundo transparente). Fora por agora: Correndo, Salto, Agachado e Levantando. Um ciclo
+  por parte:
+  - [~] parte 1, o conjunto de imagens, a escolha da imagem e a gravação no token (sessão Junin, 2026-10-25);
+  - [ ] parte 2, o Caminhando durante o movimento, as transições e a pré-carga;
+  - [ ] parte 3, o cortador da folha.
+
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
