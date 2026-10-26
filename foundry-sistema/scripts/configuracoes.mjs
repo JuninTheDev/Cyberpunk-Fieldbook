@@ -1,6 +1,7 @@
 // Configurações do mundo (Configurações → Sistema), as mesmas do Fluxo de Combate, com os mesmos padrões da mesa.
 import { SISTEMA } from './config.mjs';
 import { aplicarMarcadorDeTurno, MARCADORES_DE_TURNO } from './marcador-de-turno.mjs';
+import { aplicarTemaNoFoundry } from './tema-foundry.mjs';
 
 export const config = chave => game.settings.get(SISTEMA, chave);
 
@@ -98,6 +99,13 @@ export function registrarConfiguracoes() {
   registrar('reguaAndarCorrer', {
     name: 'Andar e Correr na régua do token', hint: 'Neste navegador, ao arrastar o personagem ou o capanga, o caminho sai em verde até Andar (MOVE × 2 m, a Ação de Movimento), em laranja até Correr (MOVE × 4 m no turno) e em vermelho além disso, com "Andar" ou "Correr" ao lado dos metros. Caído ou agarrado, não anda; quem dirige não corre.',
     scope: 'client', type: Boolean, default: true
+  });
+  // O tema do sistema no resto do Foundry (o C43, parte 3; o "themeFoundry" do CORE 0.93, settings.js:34-44: de cada
+  // navegador, ligado por padrão): o init o aplica (sistema.mjs), e a troca vale na hora.
+  registrar('temaNoFoundry', {
+    name: 'O tema do sistema no Foundry', hint: 'Neste navegador, leva o visual das fichas (o amarelo, o ciano e o vermelho sobre o escuro) à barra lateral, ao chat, aos controles da cena, à barra de macros e às outras janelas do Foundry. As janelas antigas (ApplicationV1) ficam como são; as fichas e as janelas do sistema têm o tema sempre.',
+    scope: 'client', type: Boolean, default: true,
+    onChange: valor => aplicarTemaNoFoundry(valor)
   });
   // A versão dos dados do mundo (migracao.mjs), escondida, como o "dataModelVersion" do CORE. 0: de antes da migração.
   game.settings.register(SISTEMA, 'versaoDosDados', { scope: 'world', config: false, type: Number, default: 0 });

@@ -27,6 +27,10 @@
       "layer": "system"
     },
     {
+      "src": "styles/tema-foundry.css",
+      "layer": "system"
+    },
+    {
       "src": "styles/painel-tatico.css",
       "layer": "system"
     },

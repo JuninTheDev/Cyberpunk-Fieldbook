@@ -8891,6 +8891,66 @@ completo.
   Black Chrome no compêndio de armas do livro, o compêndio fora da pasta e sem caminho) e S1 no G4 (o lote fora do modelo
   de dados: a sucata entregue sai a 1eb a unidade).
 
+### Ciclo 184 (2026-10-26): o C43, parte 3, o tema do sistema no resto do Foundry (sessão KouArt)
+
+Commit anterior: `ab9086d5` (o ciclo 183, o C48 parte 1, da sessão Junin). Antes dele, desta sessão, o `02a16196` (a
+reserva da parte 3 e a confirmação do usuário de que só o motorista dispara a arma montada do veículo, a decisão do ciclo
+181). Era o 182: a sessão Junin publicou o 182 e o 183 durante o G4 deste; renumerado, juntado sem conflito e com o G4 de
+novo na árvore juntada. A outra metade da parte 3, o navegador de itens e atores, está com um worker, numa worktree
+própria: é o ciclo 185.
+
+- **A fonte:** o CORE 0.93 (`fvtt-cyberpunk-red-core-dev/CHANGELOG.md:40`, "an optional client setting to extend the
+  Cyberpunk RED theme to Foundry's interface and ApplicationV2 windows using Foundry's supported theme tokens; legacy
+  ApplicationV1 windows retain their Foundry appearance"; a configuração `themeFoundry` em `src/modules/system/settings.js:34-44`,
+  de cada navegador e ligada por padrão; o atributo no `<html>` em `src/modules/utils/cpr-systemUtils.js:110-143`; as
+  variáveis trocadas em `src/css/variables/foundry.css`).
+- **O que muda:**
+  - **a configuração "O tema do sistema no Foundry"** (`scripts/configuracoes.mjs`, de cada navegador, ligada por
+    padrão, como no CORE): o init a aplica (`scripts/sistema.mjs`), e a troca vale na hora (`scripts/tema-foundry.mjs`
+    liga ou desliga o atributo `data-cprf-tema-foundry` no `<html>`);
+  - **`styles/tema-foundry.css`** (novo, na camada `system`, logo depois do `tema.css`): as mesmas 109 variáveis de tema
+    do Foundry que o CORE troca (o texto, a fonte, os fundos, a barra lateral, as tabelas, os campos, as caixas de
+    marcar, o menu de contexto, os controles da cena e o HUD, a barra de macros, o campo do chat, a lista de jogadores,
+    o combate, as câmeras, o autocompletar e os botões), com a paleta do `tema.css` (o fundo `#0b0b10`, o texto
+    `#e8e6d9`, o poço dos campos `#0d0d14`, o amarelo nos destaques e no passar do mouse, o ciano no foco, a Rajdhani nas
+    variáveis de fonte); fora das janelas ApplicationV1 (`.window-app`), como no CORE. A camada `system` vem depois das de
+    variáveis e de aplicações do Foundry (`foundry2.css`), e a troca vale sem depender da especificidade;
+  - **o `tema.css`:** o bloco da paleta vale também no `<html>` com o atributo.
+- **Decisões e dúvidas:**
+  - **ligado por padrão**, como no CORE (`settings.js:40`): para quem atualizar, a barra lateral e o resto do Foundry
+    mudam de cara; cada um desliga em Configurações → Sistema;
+  - **a paleta é sempre a escura** do modelo de ficha: o CORE tem tema claro e escuro e, com o tema dele escolhido à
+    mão, também troca o esquema de cores do Foundry (`core.uiConfig`, `cpr-systemUtils.js:145-163`); o nosso não tem
+    escolha e não mexe na configuração do Foundry de ninguém;
+  - **as fichas e as janelas do sistema** continuam com o tema delas sempre; o CORE também aplica as variáveis às
+    janelas dele sempre, e aqui elas só entram com a configuração ligada (os botões e os campos que as fichas não
+    pintam à mão seguem o Foundry com ela desligada);
+  - **a fonte:** as variáveis de fonte vão para a Rajdhani, como no CORE, mas o Foundry 14 põe a fonte uma vez no corpo
+    da página (`--font-body` em `foundry2.css`), fora dos elementos do tema: a barra lateral e quase todo o resto herdam
+    a Signika com o tema ligado (o G4 viu isso na barra). Fica como no CORE; levar a fonte ao corpo da página seria ir
+    além dele;
+  - **ficam de fora:** o tema dos cartões do chat que não são do sistema (as rolagens do Foundry e das tabelas: o CORE
+    0.93 faz em outro item, `CHANGELOG.md:70`) e as janelas destacadas do módulo PopOut! (`hooks/external/popout.js`).
+- **Testes:**
+  - **G3:** `tema-foundry.test.mjs` (novo, 4 testes: a configuração igual à do CORE e o init; ligar e desligar o atributo;
+    as 109 variáveis do `foundry.css` do CORE, nem uma a mais nem a menos, e cada cor usada existe na paleta do
+    `tema.css`, que vale no `<html>`; cada seletor só com o atributo e fora das janelas ApplicationV1, e o arquivo no
+    `system.json` logo depois do `tema.css`, na camada do sistema);
+  - **G4:** um passo novo, depois do "da 0.93 do CORE, a mesa (o C43, parte 2)": com a configuração ligada, a barra
+    lateral (o texto `#e8e6d9` e a variável da fonte com a Rajdhani), o campo do chat (`#0d0d14`) e um DialogV2 do
+    Foundry (o fundo e o campo); desligada, as do Foundry de volta na hora; as capturas
+    `tests/.saida/v14-tema-foundry-ligado.png` e `v14-tema-foundry-desligado.png`. Na primeira rodada, o passo conferia a
+    fonte desenhada na barra lateral, e ela continuava a Signika (veja "a fonte"): passou a conferir a variável.
+- **Portões:** na árvore juntada com o 182 e o 183 da sessão Junin: G1, 214 arquivos com sintaxe válida; G2, ESLint
+  10.12.0 sem erros; G3, 691/691; G4 completo, 304/304, com a checagem dos dois navegadores sem avisos ou erros de JS.
+  Antes da junção, 302/302 (a primeira rodada, 301/302, é a da fonte, acima).
+- **Mutações:** as seis caíram, uma por vez, e os arquivos voltaram exatos. No G3: o tema desligado por padrão (M1),
+  as janelas ApplicationV1 também com o tema (M2), o init que não aplica (M3) e a paleta que não vale no `<html>` (M5).
+  No G4, um G4 inteiro cada: desligar que não tira o tema na hora (M4) e o campo fora do poço escuro (M6), os dois no
+  passo do tema.
+- **Próximo:** o ciclo 185, o navegador de itens e atores (a outra metade da parte 3, com o worker) e, na Fase 7, o C42 (Dice So
+  Nice: falta saber se a mesa usa).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

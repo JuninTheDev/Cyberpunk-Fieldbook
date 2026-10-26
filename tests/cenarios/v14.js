@@ -18887,6 +18887,48 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('da 0.93 do CORE, o tema no resto do Foundry (o C43, parte 3; o "Theme Foundry", de cada navegador e ligado por padrão): ligado, a barra lateral, o campo do chat e uma janela ApplicationV2 do Foundry (um DialogV2) pegam a paleta do sistema (as variáveis do texto e da fonte, o fundo e o campo); desligado, voltam na hora às do Foundry', async () => {
+      // As cores esperadas são as da paleta do tema.css: o texto #e8e6d9, o fundo #0b0b10 e o poço dos campos #0d0d14. A
+      // fonte é a variável: o Foundry põe a fonte uma vez no corpo da página, fora dos elementos do tema, e a barra lateral
+      // herda a dele (como no CORE, que troca as mesmas variáveis).
+      const ler = `(() => {
+        const valor = (elemento, variavel) => getComputedStyle(elemento).getPropertyValue(variavel).trim();
+        const barra = document.getElementById('sidebar'), janela = foundry.applications.instances.get('c43-tema')?.element;
+        return {
+          atributo: document.documentElement.hasAttribute('data-cprf-tema-foundry'),
+          texto: valor(barra, '--color-text-primary'), rajdhani: valor(barra, '--font-body').includes('Rajdhani'),
+          chat: valor(document.getElementById('chat-message'), '--background-color'),
+          janela: janela ? getComputedStyle(janela).backgroundColor : null,
+          campo: janela ? getComputedStyle(janela.querySelector('input[name="c43"]')).backgroundColor : null
+        };
+      })()`;
+      const preparo = await edge.evaluate(`(async () => {
+        const configuracao = game.settings.settings.get('${S}.temaNoFoundry');
+        const preparo = { anterior: game.settings.get('${S}', 'temaNoFoundry'), escopo: configuracao.scope, padrao: configuracao.default };
+        await game.settings.set('${S}', 'temaNoFoundry', true);
+        const janela = new foundry.applications.api.DialogV2({ id: 'c43-tema', window: { title: 'C43 Tema' }, content: '<input type="text" name="c43" value="Night City">', buttons: [{ action: 'ok', label: 'OK', default: true }] });
+        await janela.render({ force: true });
+        await __esperar(() => janela.element?.querySelector('input[name="c43"]'));
+        return preparo;
+      })()`);
+      let ligado, desligado;
+      try {
+        ligado = await edge.evaluate(ler);
+        await edge.shot('tema-foundry-ligado');
+        await edge.evaluate(`game.settings.set('${S}', 'temaNoFoundry', false)`);
+        desligado = await edge.evaluate(ler);
+        await edge.shot('tema-foundry-desligado');
+      } finally {
+        await edge.evaluate(`(async () => { await foundry.applications.instances.get('c43-tema')?.close(); await game.settings.set('${S}', 'temaNoFoundry', ${JSON.stringify(preparo.anterior)}); })()`);
+      }
+      const ok = preparo.escopo === 'client' && preparo.padrao === true
+        && ligado.atributo && ligado.texto === '#e8e6d9' && ligado.rajdhani && ligado.chat === '#0d0d14'
+        && ligado.janela === 'rgb(11, 11, 16)' && ligado.campo === 'rgb(13, 13, 20)'
+        && !desligado.atributo && desligado.texto !== '#e8e6d9' && !desligado.rajdhani && desligado.chat !== '#0d0d14'
+        && desligado.janela !== 'rgb(11, 11, 16)' && desligado.campo !== 'rgb(13, 13, 20)';
+      return [ok, JSON.stringify({ preparo, ligado, desligado })];
+    });
+
     await r.passo('tokens dinâmicos (o C45, parte 1): a janela lê a pasta pelos nomes padronizados e liga o conjunto (o token em pé, com a imagem do estado); o movimento gira o token (o giro automático do Foundry) e troca a imagem no mesmo update, com a direção mais perto quando falta; a arma equipada (Mirando), o ferimento (Ferido leve; o grave cai no leve), caído (cai no Incapacitado) e morto trocam a imagem pelo mestre; a calibração inverte o sentido; o capanga de token solto herda; desligado, volta a imagem e o giro de antes', async () => {
       const info = await edge.evaluate(`(async () => {
         const FP = foundry.applications.apps.FilePicker.implementation;

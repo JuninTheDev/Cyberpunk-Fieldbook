@@ -17,6 +17,7 @@ import * as estabilizacao from './estabilizar.mjs';
 import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import { aplicarMarcadorDeTurno } from './marcador-de-turno.mjs';
+import { aplicarTemaNoFoundry } from './tema-foundry.mjs';
 import {
   DadosArma, DadosArmadura, DadosArquitetura, DadosBlackIce, DadosConteiner, DadosCyberdeck, DadosCyberware, DadosDemonio, DadosDroga, DadosEfeito, DadosEquipamento, DadosLesao, DadosMunicao, DadosPersonagem, DadosPrograma,
   DadosRoupa, DadosUpgrade, DadosVeiculo, DadosAtorVeiculo
@@ -86,6 +87,8 @@ Hooks.once('init', () => {
   registrarConfiguracoes();
   // O marcador de turno escolhido (o C43, parte 2), depois de registrado, como o CORE 0.93 no init.
   aplicarMarcadorDeTurno(game.settings.get(SISTEMA, 'marcadorDeTurno'));
+  // O tema do sistema no resto do Foundry (o C43, parte 3), já no init, para a interface não piscar sem ele.
+  aplicarTemaNoFoundry(game.settings.get(SISTEMA, 'temaNoFoundry'));
   registrarArvoreItens();
   // O Painel Tático (o C25): as configurações deste navegador e a tecla H; a barra monta no ready.
   registrarPainel();
