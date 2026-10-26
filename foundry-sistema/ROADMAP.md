@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 187). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 188). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -472,9 +472,11 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [x] Parte 1, os itens: feita no ciclo 183 (sessão Junin, 2026-10-26): os 179 itens dos pacotes do CORE no
     catálogo (os 176 da loja e três fora dela), três compêndios (armas, cyberware, moda e equipamento), a importação
     e os pedidos entregando, e o lote da munição (a sucata em 50, a caça pequena em 100).
-  - [ ] Parte 2, as armas: a Combinação (um modo por arma, sem gastar Ação; emperrar num não emperra o outro), o dano
-    direto no HP, as de arremesso que dividem o SP e as de CDT 2, a munição sucata (−1d6 em quem tem SP 1 ou mais), a
-    Pepper Shaker (só autofogo e supressivo, 6 balas) e os explosivos.
+  - [x] Parte 2, as armas: feita no ciclo 187 (sessão Junin, 2026-10-26): a Combinação (o outro modo como arma ligada,
+    sem gastar Ação; emperrar num não emperra o outro, menos na Sternmeyer), o dano direto no HP, as de arremesso que
+    continuam dividindo o SP, a munição sucata (−1d6 em quem tem SP 1 ou mais), a Pepper Shaker (só autofogo e
+    supressivo, 6 balas), os explosivos (não atacam; o dano pelo cartão, com a regra de cada um) e as granadas Shuriken
+    Tornado e Arachnid. O CDT 2 do arremesso fica com a mesa (o sistema não conta os ataques da rodada).
   - [ ] Parte 3, o cromo: os cyberdedos na mão modular (5 e 8 dedos), os quadros lineares (internos e externos) e a
     aparência de moda da armadura (Guarda-roupa e Estilo DV13, Percepção DV15).
   - [ ] Parte 4, os veículos: os 31 do CORE com o tipo de cada um, o "não aceita o upgrade" e o Acesso Nômade.
@@ -619,8 +621,8 @@ No fim de tudo, uma sessão de teste com a mesa.
   - só o ator ligado ao personagem entrega pedidos e manda a ficha (a wiki recusa o "ator antigo");
   - o pacote das cenas: as cenas, os diários e as playlists do mundo do Foundry 12 num módulo, com os arquivos.
 - [~] **Black Chrome** (conteúdo: fora do plano de paridade): os 176 itens da loja. Agora é o C48 (pedido do usuário de
-  2026-10-26), em partes: os itens entram desde o ciclo 183 (a importação e os pedidos entregam); as regras e os
-  veículos são as partes 2 a 4.
+  2026-10-26), em partes: os itens entram desde o ciclo 183 (a importação e os pedidos entregam), e as regras das armas
+  desde o 187; o cromo e os veículos são as partes 3 e 4.
 - [x] **Inventário:** (C16, ciclo 124) usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da

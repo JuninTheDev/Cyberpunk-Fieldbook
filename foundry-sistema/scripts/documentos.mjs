@@ -11,7 +11,7 @@ import {
   acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao, hpDepoisDoMaximo,
-  classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild
+  classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild, BALAS_RAJADA
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -22,7 +22,8 @@ import { rolarReputacao } from './reputacao.mjs';
 import { ehArremesso } from './arremessar.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
-import { ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
+import { ehArmaDaCombinacao, ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
+import { perfilDoBlackChrome } from './regras-black-chrome.mjs';
 import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
@@ -575,7 +576,8 @@ export class AtorCPR extends Actor {
   // escudo: o alvo se protegeu com o escudo, que leva o dano antes; só explosivo passa de um escudo destruído.
   // reducao: o que sai do dano que entra (a Deflexão de Dano do Solo).
   // Na estase (o C41; cryo.mjs), a bolsa ou o tanque leva o dano antes, como o escudo: só o explosivo que a destrói passa.
-  async receberDano({ dano, bonus = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, ablacao = 1, letal = true, escudo = false, explosivo = false, reducao = 0 }) {
+  // direto e menos: o dano direto no HP e o da munição sucata do Black Chrome (regras.aplicarDano).
+  async receberDano({ dano, bonus = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, ablacao = 1, letal = true, escudo = false, explosivo = false, reducao = 0, direto = false, menos = 0 }) {
     const hpAntes = this.system.hp.value;
     const resumo = { local, dano, bonus, hpAntes, ablado: 0, armaduras: [], escudoAblado: 0, armadura: null, armaduraId: null, estaseAblada: 0 };
     const estase = await danoNaEstase(this, { dano: dano + bonus, explosivo });
@@ -594,7 +596,7 @@ export class AtorCPR extends Actor {
     }
     const lugar = localDaArmadura(local);
     const armadura = this.system.armadura[lugar] || { sp: 0, item: null };
-    const conta = aplicarDano({ dano, bonus, sp: armadura.sp, local, ignorarPct, ignorarAbaixo, reducao, letal, hpAtual: hpAntes });
+    const conta = aplicarDano({ dano, bonus, sp: armadura.sp, local, ignorarPct, ignorarAbaixo, reducao, letal, hpAtual: hpAntes, direto, menos });
     await this.update({ 'system.hp.value': hpAntes - conta.recebido });
     if (conta.ablar && ablacao) {
       resumo.armaduras = await this.ablarArmaduras(lugar, ablacao);
@@ -773,9 +775,10 @@ export class ItemCPR extends Item {
 
   // Cyberdeck, arma, veículo e a fundação do cyberware: os itens instalados neles (programas, hardware, acessórios,
   // upgrades, as opções do cyberware, no mesmo ator) e os slots que ocupam.
+  // Na arma, o modo da Combinação (a arma ligada a ela) não é um acessório.
   get instalados() {
     const recebe = ['cyberdeck', 'arma', 'veiculo'].includes(this.type) || (this.type === 'cyberware' && this.system.fundacional);
-    return recebe ? this.actor?.items.filter(item => item.system.instaladoEm === this.id) ?? [] : [];
+    return recebe ? this.actor?.items.filter(item => item.system.instaladoEm === this.id && !(this.type === 'arma' && ehArmaDaCombinacao(item))) ?? [] : [];
   }
 
   get slotsUsados() {
@@ -862,12 +865,12 @@ export class ItemCPR extends Item {
   }
 
   // O item (do mesmo ator) onde este está instalado, ou null: o deck de um programa, a arma de um acessório, o veículo da
-  // arma montada, o cyberware ou o acessório da arma deles.
+  // arma montada, o cyberware ou o acessório da arma deles, a arma principal de um modo da Combinação.
   get instaladoNo() {
     const id = this.system.instaladoEm;
     const item = (id && this.actor?.items.get(id)) || null;
     if (this.type !== 'arma') return item;
-    return item?.type === 'veiculo' || (['cyberware', 'upgrade'].includes(item?.type) && idDaOrigem(this) === item.id) ? item : null;
+    return item?.type === 'veiculo' || (['cyberware', 'upgrade', 'arma'].includes(item?.type) && idDaOrigem(this) === item.id) ? item : null;
   }
   // Por que a arma montada (no veículo, no cyberware ou no acessório) não ataca nem recarrega agora ('' se pode). assento: o
   // de quem atira na arma do veículo (tripulacao.assentoDaArma; o C46, parte 4).
@@ -950,7 +953,16 @@ export class ItemCPR extends Item {
     if (this.type !== 'arma' || this.system.tipo !== 'martialArts' || !ator?.system.pericia) return '';
     return artesMarciaisLiberadas(ator.system.pericia(this.periciaDaArma).nivel) ? '' : 'as Artes Marciais pedem pelo menos 1 ponto numa forma (Aikido, Judô, Karatê ou Taekwondo).';
   }
-  // O catálogo do cyberware ou do acessório de onde vem a arma (o C11), ou ''.
+  // As regras de arma do Black Chrome (o C48, parte 2; regras-black-chrome.mjs), pelo catálogo dela ou, no modo da
+  // Combinação, pelo da principal; null nas outras.
+  get perfilDoBlackChrome() {
+    return this.type === 'arma' ? perfilDoBlackChrome(this.getFlag(SISTEMA, 'catalogo') || this.origemDaArma) : null;
+  }
+  // As balas que o autofogo gasta: as de 2077 (a Lexington), as do Black Chrome (a Pepper Shaker, 6) ou as 10 do RED.
+  get balasDoAutofogo() {
+    return this.perfil2077?.balasDoAutofogo ?? this.perfilDoBlackChrome?.balasDoAutofogo ?? BALAS_RAJADA;
+  }
+  // O catálogo do cyberware ou do acessório de onde vem a arma (o C11), ou o da arma principal no modo da Combinação, ou ''.
   get origemDaArma() {
     return ehArmaMontadaEmItem(this) ? this.instaladoNo?.getFlag(SISTEMA, 'catalogo') ?? '' : '';
   }

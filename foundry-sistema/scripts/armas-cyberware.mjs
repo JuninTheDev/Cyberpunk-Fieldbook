@@ -7,12 +7,16 @@
 // do inventário e da wiki (a wiki conhece o cyberware e o acessório). A do cyberware está pronta com ele instalado; a do
 // acessório, com a arma onde ele está equipada. Tirado ou apagado o item (ou a arma do acessório), a arma sai, e as balas
 // do pente voltam para a munição delas. A arma se muda na ficha do item, e a dela acompanha.
+// A Combinação do Black Chrome (o C48, parte 2; a wiki: "a arma junta duas ou mais armas, com um modo para cada uma. Você
+// escolhe o modo a cada ataque, e trocar não gasta Ação"): o outro modo de uma arma (o combinacao dela) é a arma ligada a
+// ela (a flag armaDaCombinacao), com o próprio pente e a própria munição, pronta com a arma equipada.
 import { SISTEMA } from './config.mjs';
 import { penteComCarregador, sobraDoPente } from './regras.mjs';
 
 export const FLAG_DA_ARMA = 'armaDoCyberware';
 export const FLAG_DO_UPGRADE = 'armaDoUpgrade';
-const FLAG_DO_TIPO = { cyberware: FLAG_DA_ARMA, upgrade: FLAG_DO_UPGRADE };
+export const FLAG_DA_COMBINACAO = 'armaDaCombinacao';
+const FLAG_DO_TIPO = { cyberware: FLAG_DA_ARMA, upgrade: FLAG_DO_UPGRADE, arma: FLAG_DA_COMBINACAO };
 // Os campos da arma que vêm do item (o pente atual e a munição carregada são da arma).
 const CAMPOS = ['tipo', 'pericia', 'dano', 'cdt', 'aDistancia', 'municoes', 'autofogo', 'supressivo', 'bonusAtaque', 'qualidade', 'falhaCritica', 'ocultavel', 'tabelaDV', 'ignorarArmadura', 'ignorarAbaixo'];
 const iguais = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -20,17 +24,19 @@ const iguais = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // A arma de um cyberware, a de um acessório, e o id do item de onde ela vem (nos documentos ou nos dados).
 export const ehArmaDoCyberware = item => item?.type === 'arma' && Boolean(item.flags?.[SISTEMA]?.[FLAG_DA_ARMA]);
 export const ehArmaDoUpgrade = item => item?.type === 'arma' && Boolean(item.flags?.[SISTEMA]?.[FLAG_DO_UPGRADE]);
-export const ehArmaMontadaEmItem = item => ehArmaDoCyberware(item) || ehArmaDoUpgrade(item);
-export const idDaOrigem = arma => (arma?.type === 'arma' ? arma.flags?.[SISTEMA]?.[FLAG_DA_ARMA] || arma.flags?.[SISTEMA]?.[FLAG_DO_UPGRADE] || '' : '');
+export const ehArmaDaCombinacao = item => item?.type === 'arma' && Boolean(item.flags?.[SISTEMA]?.[FLAG_DA_COMBINACAO]);
+export const ehArmaMontadaEmItem = item => ehArmaDoCyberware(item) || ehArmaDoUpgrade(item) || ehArmaDaCombinacao(item);
+export const idDaOrigem = arma => (arma?.type === 'arma' ? Object.values(FLAG_DO_TIPO).map(flag => arma.flags?.[SISTEMA]?.[flag]).find(Boolean) || '' : '');
 
 // Só dados: a arma que o cyberware ou o acessório dá, ou null (o que não ataca).
 export function dadosDaArmaMontada(item) {
-  const arma = item?.system?.arma;
+  const combinacao = item?.type === 'arma';
+  const arma = combinacao ? item.system?.combinacao : item?.system?.arma;
   const flag = FLAG_DO_TIPO[item?.type];
-  if (!flag || !arma?.ataca) return null;
+  if (!flag || !arma?.ataca || (combinacao && ehArmaMontadaEmItem(item))) return null;
   const id = item.id ?? item._id ?? '';
   return {
-    name: item.name, type: 'arma', img: arma.aDistancia ? 'icons/svg/target.svg' : 'icons/svg/sword.svg',
+    name: combinacao ? `${item.name} (${arma.modo || 'outro modo'})` : item.name, type: 'arma', img: arma.aDistancia ? 'icons/svg/target.svg' : 'icons/svg/sword.svg',
     system: { ...Object.fromEntries(CAMPOS.map(campo => [campo, structuredClone(arma[campo])])), pente: { value: 0, max: arma.pente }, maos: 0, slots: 0, equipada: false, instaladoEm: id },
     flags: { [SISTEMA]: { [flag]: id } }
   };
@@ -47,18 +53,22 @@ export function mudancasDaArma({ name, system, pente = system.pente.max }, item)
   return mudancas;
 }
 
-// Onde o item dá a arma: o cyberware instalado; o acessório instalado numa arma do ator.
-const montado = item => (item?.type === 'cyberware' ? item.system.instalado : item?.type === 'upgrade' && item.actor?.items.get(item.system.instaladoEm)?.type === 'arma');
+// Onde o item dá a arma: o cyberware instalado; o acessório instalado numa arma do ator; a arma da Combinação, sempre.
+const montado = item => (item?.type === 'cyberware' ? item.system.instalado : item?.type === 'arma' || (item?.type === 'upgrade' && item.actor?.items.get(item.system.instaladoEm)?.type === 'arma'));
 // A arma onde está o acessório da arma (a arma do acessório), ou null.
 export const armaDoAcessorio = arma => (ehArmaDoUpgrade(arma) ? arma.instaladoNo?.instaladoNo ?? null : null);
-// A arma do cyberware está pronta sempre; a do acessório, com a arma onde ele está equipada (o equipped do CORE).
-export const armaMontadaPronta = arma => ehArmaDoCyberware(arma) || Boolean(armaDoAcessorio(arma)?.system.equipada);
+// A arma principal de um modo da Combinação, ou null.
+export const armaDaCombinacao = arma => (ehArmaDaCombinacao(arma) ? arma.instaladoNo ?? null : null);
+// A arma do cyberware está pronta sempre; a do acessório, com a arma onde ele está equipada (o equipped do CORE); o modo
+// da Combinação, com a arma equipada.
+export const armaMontadaPronta = arma => ehArmaDoCyberware(arma) || Boolean((armaDoAcessorio(arma) ?? armaDaCombinacao(arma))?.system.equipada);
 
 // Por que a arma do item não ataca nem recarrega agora ('' se pode): o ataque confere antes e depois da rolagem.
 export function motivoDaArmaMontada(arma) {
   const id = idDaOrigem(arma);
   const origem = arma.actor?.items.get(id);
-  if (!FLAG_DO_TIPO[origem?.type] || arma.system.instaladoEm !== id) return `O ${ehArmaDoUpgrade(arma) ? 'acessório' : 'cyberware'} desta arma não está na ficha.`;
+  if (!FLAG_DO_TIPO[origem?.type] || arma.system.instaladoEm !== id) return ehArmaDaCombinacao(arma) ? 'A arma deste modo não está na ficha.' : `O ${ehArmaDoUpgrade(arma) ? 'acessório' : 'cyberware'} desta arma não está na ficha.`;
+  if (origem.type === 'arma') return origem.system.equipada ? '' : `Equipe ${origem.name} para usar este modo.`;
   if (origem.type === 'cyberware' && !origem.system.instalado) return `${origem.name} não está instalado.`;
   if (origem.type === 'upgrade') {
     const hospede = arma.actor.items.get(origem.system.instaladoEm);
@@ -128,7 +138,7 @@ export function registrarArmasDoCyberware() {
   const sincronizar = item => sincronizarArmaMontada(item.actor, item.id);
   Hooks.on('createItem', (item, _opcoes, usuario) => { if (daOrigem(item, usuario)) sincronizar(item); });
   Hooks.on('updateItem', (item, mudancas, _opcoes, usuario) => {
-    const campos = item.type === 'upgrade' ? ['instaladoEm', 'arma'] : ['instalado', 'arma'];
+    const campos = { upgrade: ['instaladoEm', 'arma'], arma: ['combinacao'] }[item.type] ?? ['instalado', 'arma'];
     if (daOrigem(item, usuario) && ('name' in mudancas || campos.some(campo => campo in (mudancas.system ?? {})))) sincronizar(item);
     if (item.type === 'upgrade' && meu(item, usuario) && 'instaladoEm' in (mudancas.system ?? {})) acertarPentes(item.actor);
   });

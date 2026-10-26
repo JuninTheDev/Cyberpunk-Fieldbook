@@ -9,6 +9,8 @@ import * as R from '../regras.mjs';
 import { techAtravessaVidro } from '../regras-veiculos.mjs';
 import { rolarDano } from '../rolagens.mjs';
 import { dvDoArremesso, ehArremesso, ignorarNoArremesso } from '../arremessar.mjs';
+import { ehArmaDaCombinacao } from '../armas-cyberware.mjs';
+import { danoPorAlvo, falhaNaCombinacao, lesaoDupla, MENOS_DA_SUCATA, MUNICAO_SUCATA, PONTO_FRACO } from '../regras-black-chrome.mjs';
 import { escudoHumanoDe, usadoComoEscudo, danoNoEscudoHumano } from '../escudo-humano.mjs';
 import { STATUS_COBERTURA, STATUS_SUPRIMIDO, ROTULO, precisaRolar, centroDe, combateDe, conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular, distancia, esc, jogadorDe, montadaNoVeiculo } from './apoio.mjs';
 import { cartaoDoResultado } from './cartao.mjs';
@@ -37,8 +39,16 @@ async function contexto(pedido, usuario) {
     // devolver: o que o "Desfazer" põe de volta (a carga Tech que o ataque gastou).
     linhas: [], notas: notasDe2077(pedido, arma), rolagens: [], marcas: [], devolver: [...(pedido.carga ? [{ doc: arma.uuid, chave: 'cargaTech', valor: pedido.carga }] : []), ...(pedido.ferrolho ? [{ doc: arma.uuid, chave: 'ferrolhoPendente', valor: null }] : [])],
     lesoesDoAtirador: [], cabecalho: '',
-    falhaDaArma: R.falhaDaArma({ qualidade: arma.system.qualidade, efeito: arma.system.falhaCritica, critico: game.messages.get(pedido.mensagem)?.getFlag(SISTEMA, 'teste')?.critico })
+    falhaDaArma: falhaDaArma(arma, game.messages.get(pedido.mensagem)?.getFlag(SISTEMA, 'teste')?.critico)
   };
+}
+
+// A falha da arma ruim (regras.falhaDaArma). Na Combinação do Black Chrome (o C48, parte 2), o emperramento é só do modo
+// que disparou, menos na que emperra os dois (a Sternmeyer).
+function falhaDaArma(arma, critico) {
+  const falha = R.falhaDaArma({ qualidade: arma.system.qualidade, efeito: arma.system.falhaCritica, critico });
+  if (falha?.efeito !== 'jammed' || !(arma.system.combinacao?.ataca || ehArmaDaCombinacao(arma))) return falha;
+  return { ...falha, texto: falhaNaCombinacao(falha.texto, { emperraJunto: Boolean(arma.perfilDoBlackChrome?.emperraJunto) }) };
 }
 
 // A regra de 2077 deste ataque, para o cartão.
@@ -94,7 +104,7 @@ async function lesoesDoAtirador(ctx) {
 // as balas do modo (o Autofogo gasta 10). Sem balas bastantes, o ataque não se resolve.
 async function gastarOPenteNoMestre(ctx) {
   const arma = ctx.arma;
-  const balas = arma.system.aDistancia && arma.system.pente.max ? R.balasDoModo(ctx.modo, { autofogo: ctx.perfil?.balasDoAutofogo, doisCanos: Boolean(ctx.pedido.doisCanos) }) : 0;
+  const balas = arma.system.aDistancia && arma.system.pente.max ? R.balasDoModo(ctx.modo, { autofogo: arma.balasDoAutofogo, doisCanos: Boolean(ctx.pedido.doisCanos) }) : 0;
   if (!balas) return true;
   if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: precisa de ${balas} balas no pente (tem ${arma.system.pente.value}). Recarregue.`); return false; }
   await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
@@ -393,6 +403,16 @@ async function receptoresDoAtaque(ctx, pegas, area = false) {
   });
 }
 
+// O 1d6 da munição sucata do Black Chrome, rolado uma vez por ataque (o autofogo e a área usam o mesmo).
+async function menosDaSucata(ctx) {
+  if (ctx.sucata === undefined) {
+    const roll = await new Roll(MENOS_DA_SUCATA).evaluate();
+    ctx.rolagens.push(roll);
+    ctx.sucata = roll.total;
+  }
+  return ctx.sucata;
+}
+
 // Aplica o dano num alvo e cuida das lesões: dois 6 (a tabela da cabeça só no tiro mirado na cabeça), tiro na perna
 // que passou da armadura (Perna quebrada), mortalmente ferido atingido de novo. A Deflexão de Dano do Solo tira do
 // primeiro dano que ele sofre na rodada. A munição de borracha não mata nem causa lesão crítica (wiki, munições). A carga
@@ -416,8 +436,11 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
   const ignorarPct = ctx.arma ? ignorarNoArremesso(ctx.arma, ctx.pedido) : 0;
   const destino = destinoVeicular(ctx, linha.token);
   if (destino?.tipo === 'veiculo') {
-    const recebido = await destino.item.receberDanoVeicular({ dano: dano.total,
-      ignorarPct: ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
+    // O TR-4 do Black Chrome (ctx.explosivo, pelo cartão): no ponto fraco, sem a blindagem e com o dano dobrado.
+    const fraco = ctx.explosivo?.pontoFraco;
+    if (fraco) linha.notas.push(`No ponto fraco do veículo: sem a blindagem e com o dano ×${PONTO_FRACO.multiplicador}.`);
+    const recebido = await destino.item.receberDanoVeicular({ dano: dano.total * (fraco ? PONTO_FRACO.multiplicador : 1),
+      ignorarPct: fraco ? PONTO_FRACO.ignorarPct : ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
       ignorarAbaixo: ctx.arma?.system.ignorarAbaixo, ablacao: dano.ablacao ?? municao?.system.ablacao ?? 1 });
     if (recebido) linha.veicular = { tipo: 'veiculo', ...recebido, ator: destino.item.actor?.uuid ?? destino.item.uuid };
     return;
@@ -439,10 +462,16 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
   const jaMortal = ator.system.hp.value < 1;
   const borracha = municao?.system.efeito === 'rubber';
   const deflexao = ator.system.consciencia.deflexao && primeiraNaRodada(ator, 'deflexao') ? ator.system.consciencia.deflexao : 0;
+  // O Black Chrome (o C48, parte 2): a munição sucata tira 1d6 (rolado uma vez por ataque) de quem tem SP 1 ou mais no
+  // local; o explosivo direto no HP (o KillChip, ctx.explosivo, pelo cartão) passa pela armadura sem desgastá-la.
+  const sucata = municao?.system.efeito === MUNICAO_SUCATA ? await menosDaSucata(ctx) : 0;
   const efeito = await ator.receberDano({
     dano: dano.total, bonus: dano.bonus, local: ctx.local, ignorarPct: ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
-    ignorarAbaixo: ctx.arma?.system.ignorarAbaixo, ablacao: dano.ablacao ?? municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao
+    ignorarAbaixo: ctx.arma?.system.ignorarAbaixo, ablacao: dano.ablacao ?? municao?.system.ablacao ?? 1, letal: !borracha, escudo, explosivo: ctx.modo === 'explosivo', reducao: deflexao,
+    direto: Boolean(ctx.explosivo?.direto), menos: sucata
   });
+  if (efeito.menos) linha.notas.push(`${municao.name}: −${efeito.menos} (${MENOS_DA_SUCATA}) no dano, contra SP ${efeito.sp}.`);
+  if (ctx.explosivo?.direto) linha.notas.push('Direto no HP: a armadura não reduz nem se desgasta, e o lugar do corpo não multiplica.');
   // A deflexão só se gasta quando entra dano de verdade: o que a armadura ou o escudo seguraram inteiro não é "dano
   // sofrido".
   const sofreu = deflexao > 0 && efeito.entrou > 0;
@@ -466,14 +495,15 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
     }
     const feita = await lesaoCritica(ator, { naFicha: modo === 'ficha', ...opcoes });
     if (feita) linha.dano.lesoes.push({ nome: feita.nome, item: feita.item?.id ?? null });
-    if (municao?.system.efeito === 'expansive' && feita?.id.includes(':foreign-object')) {
+    if (lesaoDupla({ efeito: municao?.system.efeito, catalogo: municao?.getFlag(SISTEMA, 'catalogo') }) && feita?.id.includes(':foreign-object')) {
       const segunda = await lesaoCritica(ator, { naFicha: modo === 'ficha', cabeca: ctx.local === 'cabeca', excluir: [feita.id] });
       if (segunda) linha.dano.lesoes.push({ nome: segunda.nome, item: segunda.item?.id ?? null });
-      linha.notas.push('Munição expansiva: outra lesão além do objeto estranho, sem segundo dano bônus.');
+      linha.notas.push(`${municao.system.efeito === 'expansive' ? 'Munição expansiva' : municao.name}: outra lesão além do objeto estranho, sem segundo dano bônus.`);
     }
   };
   if (dano.critico && lesaoDoCritico) await lesao({ cabeca: ctx.local === 'cabeca' });
   if (ctx.local === 'perna' && efeito.passou) await lesao({ id: PERNA_QUEBRADA });
+  if (ctx.explosivo?.lesao) await lesao({ id: ctx.explosivo.lesao });
   if (ctx.local === 'item' && efeito.passou) linha.notas.push(`${linha.nome} larga o item na mão que ${ctx.nomeAtq} escolher.`);
   // Os golpes das Artes Marciais (o C10): a lesão certa do Golpe quebra-ossos e do Ponto de pressão (a da cabeça no
   // mirado), e a queda da Voadora, que o "Desfazer" tira.
@@ -502,7 +532,7 @@ async function repetirInteligente(ctx, contra) {
   if (!R.podeRepetirComInteligente({ efeito, modo: ctx.modo, local: ctx.local, ataque: ctx.pedido.total, contra, municao: municao?.system.tipo })) return null;
   const dados = { ator: ctx.atacante.uuid };
   const segunda = (ctx.usuario.isGM ? null : await pedir(ctx.usuario, 'inteligente', dados)) ?? await rolarInteligente(dados, { perguntar: !config('rolarDireto') });
-  if (segunda) ctx.falhaDaArma ??= R.falhaDaArma({ qualidade: ctx.arma.system.qualidade, efeito: ctx.arma.system.falhaCritica, critico: segunda.critico });
+  if (segunda) ctx.falhaDaArma ??= falhaDaArma(ctx.arma, segunda.critico);
   return segunda;
 }
 
@@ -601,9 +631,16 @@ async function danoNaArea(ctx, pegas, formula = null) {
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
   pegas = await receptoresDoAtaque(ctx, pegas, true);
   if (!pegas.length || await aplicarMunicaoDoAtaque(ctx, pegas)) return;
-  const dano = await rolarDanoDoAtaque(ctx, { formula });
-  if (!dano) return;
-  for (const linha of ctx.linhas.filter(l => pegas.includes(l))) await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
+  // A granada Shuriken Tornado do Black Chrome: o dano se rola separado para cada alvo.
+  const porAlvo = danoPorAlvo(ctx.arma.municaoCarregada?.getFlag(SISTEMA, 'catalogo'));
+  if (porAlvo) ctx.notas.push(`${ctx.arma.municaoCarregada.name}: o dano se rola separado para cada alvo.`);
+  let dano = porAlvo ? null : await rolarDanoDoAtaque(ctx, { formula });
+  if (!porAlvo && !dano) return;
+  for (const linha of ctx.linhas.filter(l => pegas.includes(l))) {
+    if (porAlvo) dano = await rolarDanoDoAtaque(ctx, { formula });
+    if (!dano) return;
+    await ferir(ctx, linha, dano, { escudo: linha.escolha === 'escudo' });
+  }
 }
 
 // O ataque de área (o cartucho e o explosivo) passou da DV? Com a munição Smart melhorada, a segunda chance vale para a

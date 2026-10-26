@@ -12,6 +12,8 @@
 // - Armas de 2077 (a wiki, system-2077.js): a Carga e a Rajada das Tech (ainda do suplemento de fã) e, pelo Mission Kit,
 //   o Ricochete e o crítico das Power e a arma Smart (no fim deste arquivo).
 
+import { danoComMenos } from './regras-black-chrome.mjs';
+
 // HP máximo (p. 82): 10 + 5 × (BODY + WILL) / 2, arredondado para cima.
 export const hpMaximo = (body, will) => 10 + 5 * Math.ceil((Number(body) + Number(will)) / 2);
 
@@ -486,15 +488,18 @@ export const empAtual = (humanidade, empBase) => Math.max(0, Math.min(Number(emp
 //   arma branca e artes marciais ignoram metade (ignorarPct 50, arredondado como o sistema oficial);
 // - se o dano não passa do SP, só o bônus do crítico entra; se passa, o que passou (×2 na cabeça) mais o bônus;
 // - dano não letal deixa o alvo com 1 HP; a armadura perde SP (ablação) quando o dano passa.
-export function aplicarDano({ dano, bonus = 0, sp = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, reducao = 0, letal = true, hpAtual = 0 }) {
-  const ignorarTudo = sp < ignorarAbaixo;
+// O Black Chrome (o C48, parte 2; regras-black-chrome.mjs): o dano direto no HP ("a armadura não reduz nem se desgasta, e
+// o lugar do corpo não multiplica") e o que sai do dano de quem tem SP 1 ou mais (menos: o 1d6 da munição sucata).
+export function aplicarDano({ dano, bonus = 0, sp = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, reducao = 0, letal = true, hpAtual = 0, direto = false, menos = 0 }) {
+  const tirado = danoComMenos(dano, sp, menos);
+  const ignorarTudo = direto || sp < ignorarAbaixo;
   let spEfetivo = ignorarTudo ? 0 : sp;
   if (!ignorarTudo && ignorarPct) spEfetivo = Math.round(sp - sp * (ignorarPct / 100));
-  const passou = Number(dano) > spEfetivo;
-  const bruto = passou ? (Number(dano) - spEfetivo) * (local === 'cabeca' ? 2 : 1) : 0;
+  const passou = tirado > spEfetivo;
+  const bruto = passou ? (tirado - spEfetivo) * (local === 'cabeca' && !direto ? 2 : 1) : 0;
   let recebido = Math.max(Number(bonus) + bruto - Number(reducao), 0);
   if (!letal && recebido >= hpAtual) recebido = Math.max(hpAtual - 1, 0);
-  return { spEfetivo, passou, bruto, recebido, ablar: passou && sp > 0 };
+  return { spEfetivo, passou, bruto, recebido, ablar: passou && sp > 0 && !direto, menos: Number(dano) - tirado };
 }
 
 // Crítico do dano (p. 187): dois ou mais 6 nos dados de dano. Soma 5 de bônus direto no HP e uma Lesão Crítica.
@@ -598,7 +603,9 @@ export const MUNICAO_SEM_DANO = {
   poison: 'quem é atingido faz Resistir a Tortura/Drogas DV13 ou sofre 2d6 direto no HP.',
   sleep: 'quem é atingido faz Resistir a Tortura/Drogas DV13 ou cai inconsciente por 1 minuto, até sofrer dano ou alguém usar uma Ação para acordá-lo.',
   smoke: 'Cobre de fumaça uma área de 10 × 10 m por 1 minuto. Agir dentro dela costuma ter −4.',
-  teargas: 'quem tem olhos de carne faz Resistir a Tortura/Drogas DV13 ou sofre Olho danificado por 1 minuto, sem dano bônus.'
+  teargas: 'quem tem olhos de carne faz Resistir a Tortura/Drogas DV13 ou sofre Olho danificado por 1 minuto, sem dano bônus.',
+  // A granada Arachnid do Black Chrome (o C48, parte 2; system-blackchrome.js, p. 86): a teia, sem dano.
+  arachnid: 'quem é atingido fica coberto de teia: se em 10 rodadas não se banhar em álcool (uma Ação, dele ou de outro), fica agarrado (sem Ação de Movimento, sem arma de duas mãos e com −2 em todas as ações). A teia tem 15 HP; para sair, Briga DV15, que qualquer um ao alcance corpo a corpo pode tentar.'
 };
 
 // Munição RED, p. 344–347 (system-catalog.js). O dano da toxina é próprio, sem crítico, armadura ou multiplicador.

@@ -21,7 +21,7 @@ function schema(nome) {
   assert.ok(inicio >= 0, `sem o schema ${nome}`);
   const metodo = dados.slice(inicio, dados.indexOf('\n  }', inicio) + 4).replace('static ', '');
   return runInNewContext(`({ ${metodo} }).defineSchema()`, {
-    fields, inteiro, texto: () => new Campo({}), recurso: () => new Schema({}), fonte: () => new Schema({})
+    fields, inteiro, texto: () => new Campo({}), recurso: () => new Schema({}), fonte: () => new Schema({}), armaMontada: () => new Schema({})
   });
 }
 const inicialDoCore = (texto, campo) => {

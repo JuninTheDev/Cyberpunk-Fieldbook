@@ -11,6 +11,7 @@ import { aplicarDanoDeNet } from '../net.mjs';
 import { desfazerEscudoHumano } from '../escudo-humano.mjs';
 import { rolarDanoDoArremesso } from '../arremessar.mjs';
 import * as R from '../regras.mjs';
+import { danoDoExplosivo } from '../regras-black-chrome.mjs';
 import { CANAL, STATUS_SUPRIMIDO, ROTULO, conferirArmaVeicular, renderizar } from './apoio.mjs';
 import { ferir, linhaDe } from './modos.mjs';
 import { desistir } from './socket.mjs';
@@ -145,17 +146,22 @@ export async function aplicarDanoDoCartao(mensagem) {
   if (!formula && !arma?.actor) { ui.notifications.warn('A arma deste dano não está mais na ficha.'); return null; }
   if (R.MUNICAO_SEM_DANO[arma?.municaoCarregada?.system.efeito]) { ui.notifications.warn('Esta munição aplica seu efeito, sem o dano da arma.'); return null; }
   if (arma && !conferirArmaVeicular(arma, 'tiro')) return null;
+  // O explosivo do Black Chrome (o C48, parte 2; regras-black-chrome.mjs) aplica o dano pela regra dele; o Door Cracker
+  // só atinge a cobertura.
+  const doBlackChrome = arma?.perfilDoBlackChrome?.explosivo;
+  const explosivo = danoDoExplosivo(doBlackChrome);
+  if (doBlackChrome && !explosivo) { ui.notifications.warn(`${arma.name}: ${doBlackChrome.texto}; ninguém recebe o dano.`); return null; }
   const alvos = alvosDoCartao(['personagem', 'capanga', 'veiculo']);
   if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) do dano.'); return null; }
   const ctx = {
     pedido: { id: foundry.utils.randomID(), total: null, arremesso: Boolean(dados.arremesso) }, usuario: game.user, arma, atacante: arma?.actor ?? null, tokenAtq: null, cena: alvos[0].parent, alvos,
-    modo: dados.arremesso && dados.modoDoArremesso === 'explosivo' ? 'explosivo' : 'tiro', local: 'corpo', descricao: dados.arremesso ? 'dano do arremesso' : 'dano rolado à parte', nomeAtq: arma?.actor.name ?? mensagem.alias, perfil: null, linhas: [], rolagens: [], marcas: [],
-    notas: dados.critico ? ['Crítico: a lesão sai pelo botão "Rolar a lesão" do cartão do dano.'] : [], cabecalho: `${dados.total} de dano${dados.critico ? ', crítico' : ''}, no corpo`
+    modo: explosivo?.modo ?? (dados.arremesso && dados.modoDoArremesso === 'explosivo' ? 'explosivo' : 'tiro'), local: 'corpo', explosivo, descricao: dados.arremesso ? 'dano do arremesso' : 'dano rolado à parte', nomeAtq: arma?.actor.name ?? mensagem.alias, perfil: null, linhas: [], rolagens: [], marcas: [],
+    notas: [...(doBlackChrome ? [`${arma.name}: ${doBlackChrome.texto}.`] : []), ...(dados.critico ? ['Crítico: a lesão sai pelo botão "Rolar a lesão" do cartão do dano.'] : [])], cabecalho: `${dados.total} de dano${dados.critico ? ', crítico' : ''}, no corpo`
   };
   for (const token of alvos) {
     const linha = linhaDe(ctx, token);
     linha.resultado = 'acertou';
-    await ferir(ctx, linha, { total: dados.total, bonus: dados.bonus, critico: dados.critico, formula: dados.formula, ...(formula ? { ablacao: dados.ablacao } : {}) }, { lesaoDoCritico: false });
+    await ferir(ctx, linha, { total: dados.total, bonus: dados.bonus, critico: dados.critico, formula: dados.formula, ...(formula ? { ablacao: dados.ablacao } : {}), ...(explosivo?.ablacao ? { ablacao: explosivo.ablacao } : {}) }, { lesaoDoCritico: false });
   }
   return cartaoDoResultado(ctx);
 }

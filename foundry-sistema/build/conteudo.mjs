@@ -17,6 +17,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import { converter2077 } from './conteudo-2077.mjs';
+import { corrigirBlackChrome } from './conteudo-blackchrome.mjs';
 
 const VERSAO = 'v0.92.4';
 const PROJETO = 'cyberpunk-red-team%2Ffvtt-cyberpunk-red-core';
@@ -551,6 +552,8 @@ async function main() {
     }
   }
   traduzirLesoes(itens, lesoes);
+  // As armas e a munição do Black Chrome que o CORE traz diferentes da wiki (build/conteudo-blackchrome.mjs).
+  const doBlackChrome = corrigirBlackChrome(itens);
   // O conteúdo de 2077, da própria wiki (build/conteudo-2077.mjs), com os ids da loja.
   const de2077 = converter2077({ raizDaWiki: path.join(raiz, '..'), itensDoCore: itens, slug });
   for (const id of Object.keys(de2077)) {
@@ -585,7 +588,7 @@ async function main() {
 
   const semItem = Object.values(lesoes).flat().filter(([, , id]) => !itens[id]).map(([, , id]) => id);
   console.log(`Itens: ${Object.entries(contagem).map(([k, n]) => `${k} ${n}`).join(' · ')}`);
-  console.log(`Black ICE: ${net.ice.length} · demônios: ${net.demonios.length}`);
+  console.log(`Black ICE: ${net.ice.length} · demônios: ${net.demonios.length} · Black Chrome corrigidos: ${doBlackChrome.length}`);
   console.log(`Perícias: ${pericias.length} (+${Object.keys(familias).length} famílias) · tabelas de DV: ${Object.keys(tabelas).length} · tabelas de lesão: ${Object.keys(lesoes).join(', ')}`);
   if (semItem.length) console.log(`Resultados de lesão sem item no catálogo: ${semItem.join(', ')}`);
   if (semNome.length) console.log(`Perícias sem nome em português na wiki: ${semNome.join(', ')}`);

@@ -13848,6 +13848,8 @@ module.exports = async ({ edge, servidores, r }) => {
     await r.passo('veículo ator (C46.2), jogador dono: o botão pede ao mestre a criação do ator e token ligados, sem criar atores diretamente; mudar o item atualiza o espelho mesmo sem permissão no ator; sem mestre ativo o pedido avisa e não cria', async () => comVeiculoLigado(async ids => {
       const pedido = await jogador.evaluate(`(async () => {
         const p = game.actors.get('${ids.dono}'), item = p.items.get('${ids.item}'); await item.sheet.render({ force: true });
+        // O pedido leva a cena do jogador: espera ele estar na cena do passo (a troca de cena do passo anterior chega depois às vezes).
+        await window.__c46bEsperar(() => canvas.ready && canvas.scene?.id === '${ids.cena}');
         await window.__c46bEsperar(() => item.sheet.element?.querySelector('[data-action="porVeiculoNaCena"]')); const botao = item.sheet.element?.querySelector('[data-action="porVeiculoNaCena"]'); botao?.click();
         await window.__c46bEsperar(() => item.getFlag('${S}', 'veiculoAtor') && canvas.scene.tokens.some(t => t.actorId === item.getFlag('${S}', 'veiculoAtor')));
         const id = item.getFlag('${S}', 'veiculoAtor'), a = game.actors.get(id), token = canvas.scene.tokens.find(t => t.actorId === id);
@@ -19584,6 +19586,107 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.itens.join(' | ') === 'arma:GunMart Special:1 | armadura:Dirk Combat Jacket:1 | cyberware:Modular Finger Cyberhand:1 | municao:Heavy Pistol (Junk):50 | roupa:Masetto Holo-Wear:1'
         && entrega.dinheiro === info.dinheiro - 110 && entrega.chipvault === 1 && entrega.sucata.reduce((a, b) => a + b, 0) === 100 && entrega.unidade.length && entrega.unidade.every(u => u === 0.2) && status === 'entregue';
       return [ok, JSON.stringify({ info, entrega, status })];
+    });
+
+    await r.passo('as armas do Black Chrome (o C48, parte 2): o modo da Combinação vira uma arma ligada (pronta com a Mastiff equipada, com o pente dela, que sai com a arma); a sucata tira o 1d6 de quem tem SP; a Pepper Shaker só faz rajada, com 6 balas; a Tomahawk arremessada reduz o SP à metade; o explosivo não ataca, o KillChip vai direto no HP com a Lesão cerebral e o Door Cracker não fere ninguém', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const atores = [], mensagens = new Set(game.messages.map(m => m.id)), anterior = game.scenes.active, random = CONFIG.Dice.randomUniform;
+        const defesa = game.settings.get('${S}', 'defesaDosNpcs'); let cena;
+        const avisos = [], warn = ui.notifications.warn;
+        const esperar = async condicao => { for (let i = 0; i < 80 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(condicao()); };
+        try {
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          await game.settings.set('${S}', 'defesaDosNpcs', 'automatica');
+          const cat = await game.system.api.wiki.carregarCatalogo(), pegar = id => foundry.utils.deepClone(cat[id]);
+          const atirador = await Actor.implementation.create({ name: 'C48 Atirador', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, pericias: { handgun: { nivel: 10 }, 'shoulder-arms': { nivel: 10 }, autofire: { nivel: 10 }, athletics: { nivel: 10 } } } }); atores.push(atirador);
+          const jaqueta = pegar('core_armor:light-armorjack-body'); jaqueta.system.equipada = true;
+          const modelo = await Actor.implementation.create({ name: 'C48 Alvo', type: 'capanga', system: { hp: { value: 40 }, atributos: { ref: { valor: 6 }, body: { valor: 6 }, will: { valor: 6 } } }, items: [jaqueta] }); atores.push(modelo);
+          cena = await Scene.implementation.create({ name: 'C48 Armas', active: false, width: 1000, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate(); await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          await cena.createEmbeddedDocuments('Token', [(await atirador.getTokenDocument({ x: 100, y: 100 })).toObject()]);
+          // Um alvo novo (token solto, com a jaqueta de SP 11 e 40 HP) para cada ataque.
+          const novoAlvo = async () => (await cena.createEmbeddedDocuments('Token', [(await modelo.getTokenDocument({ x: 200, y: 100, actorLink: false })).toObject()]))[0];
+          const criar = async (id, mudar = {}) => { const dados = pegar(id); foundry.utils.mergeObject(dados, mudar); return (await atirador.createEmbeddedDocuments('Item', [dados]))[0]; };
+          const fixar = fila => { CONFIG.Dice.randomUniform = () => { const p = fila.shift() ?? [5, 6]; return 1 - (p[0] - .5) / p[1]; }; };
+          const atacar = async (arma, opcoes = {}) => {
+            const alvo = await novoAlvo();
+            const n = avisos.length;
+            const feito = await game.system.api.combate.atacar(arma, { alvos: [alvo], destinos: {}, ...opcoes });
+            const cartao = feito && game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === feito.id);
+            const linha = cartao?.getFlag('${S}', 'ataque').linhas[0];
+            return { nulo: feito === null, aviso: avisos.slice(n).join(' '), resultado: linha?.resultado ?? null, dano: linha?.dano ? { recebido: linha.dano.recebido, spEfetivo: linha.dano.spEfetivo, menos: linha.dano.menos ?? 0, ablado: linha.dano.ablado } : null, notas: linha?.notas ?? [] };
+          };
+          const lido = {};
+          // 1. A Combinação: a Mastiff ganha o modo espingarda (uma arma ligada, com o pente de 3), fora dos acessórios.
+          const mastiff = await criar('black-chrome_weapons:militech-mastiff-smg');
+          const nome = 'Militech Mastiff SMG (espingarda)';
+          await esperar(() => atirador.items.getName(nome));
+          const espingarda = atirador.items.getName(nome);
+          const balote = await criar('core_ammo:shotgun-slug-basic', { system: { quantidade: 10 } });
+          await espingarda.update({ 'system.carregada': balote.id, 'system.pente.value': 3 });
+          lido.modo = { tipo: espingarda?.system.tipo, pente: espingarda?.system.pente.max, ligada: espingarda?.system.instaladoEm === mastiff.id, maos: espingarda?.system.maos, acessorios: mastiff.instalados.length, motivo: espingarda?.motivoVeicular('tiro') };
+          // Com a Mastiff guardada, o modo não ataca; equipada, a espingarda acerta (5d6 = 20 contra SP 11) e gasta o pente dela.
+          lido.guardada = await atacar(espingarda);
+          await mastiff.update({ 'system.equipada': true });
+          fixar([[5, 10], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6]]);
+          lido.equipada = await atacar(espingarda);
+          lido.pentes = { espingarda: espingarda.system.pente.value, mastiff: mastiff.system.pente.value };
+          // Apagada a Mastiff, o modo sai, e o balote do pente volta para a munição.
+          await mastiff.delete();
+          lido.saiu = await esperar(() => !atirador.items.getName(nome));
+          lido.balote = atirador.items.get(balote.id)?.system.quantidade;
+          // 2. A sucata: 3d6 = 15, menos o 1d6 (3) de quem tem SP: 12 contra SP 11.
+          const pesada = await criar('core_weapons:heavy-pistol', { system: { equipada: true } });
+          const sucata = await criar('dlc_black-chrome-plus:heavy-pistol-junk', { system: { quantidade: 10 } });
+          await pesada.update({ 'system.carregada': sucata.id, 'system.pente.value': 8 });
+          fixar([[5, 10], [5, 6], [5, 6], [5, 6], [3, 6]]);
+          lido.sucata = await atacar(pesada);
+          // 3. A Pepper Shaker: o tiro único recusa; o autofogo gasta 6 balas.
+          const pepper = await criar('black-chrome_weapons:federated-arms-pepper-shaker', { system: { equipada: true } });
+          const media = await criar('core_ammo:medium-pistol-basic', { system: { quantidade: 30 } });
+          await pepper.update({ 'system.carregada': media.id, 'system.pente.value': 30 });
+          lido.pepperTiro = await atacar(pepper);
+          fixar([[5, 10]]);
+          lido.pepperRajada = await atacar(pepper, { modo: 'autofogo' });
+          lido.pepperPente = pepper.system.pente.value;
+          // 4. A Tomahawk arremessada: 3d6 = 15 contra a metade do SP (6), 9 de dano.
+          const tomahawk = await criar('black-chrome_weapons:utility-tomahawk', { system: { equipada: true } });
+          fixar([[5, 10], [5, 6], [5, 6], [5, 6]]);
+          lido.tomahawk = await atacar(tomahawk, { modo: 'arremesso' });
+          // 5. Os explosivos: não atacam; o dano do KillChip pelo cartão vai direto no HP, com a Lesão cerebral; o Door
+          // Cracker não fere ninguém.
+          const killchip = await criar('black-chrome_weapons:killchip-100-micro-bomb');
+          lido.killchipAtaque = await atacar(killchip);
+          const alvoDoChip = await novoAlvo();
+          canvas.tokens.setTargets([alvoDoChip.id]);
+          const cartaoFalso = arma => ({ getFlag: (escopo, chave) => chave === 'danoDeArma' ? { arma: arma.uuid, total: 20, bonus: 0, critico: false, formula: '6d6' } : null });
+          const chip = await game.system.api.combate.aplicarDanoDoCartao(cartaoFalso(killchip));
+          lido.killchip = { dano: chip?.linhas[0]?.dano && { recebido: chip.linhas[0].dano.recebido, ablado: chip.linhas[0].dano.ablado }, hp: alvoDoChip.actor.system.hp.value,
+            jaqueta: alvoDoChip.actor.items.find(i => i.type === 'armadura')?.system.sp.corpo.value, lesoes: alvoDoChip.actor.items.filter(i => i.type === 'lesao').map(i => i.name) };
+          const cracker = await criar('black-chrome_weapons:gunmart-door-cracker');
+          const n = avisos.length;
+          lido.cracker = { nulo: (await game.system.api.combate.aplicarDanoDoCartao(cartaoFalso(cracker))) === null, aviso: avisos.slice(n).join(' '), hp: alvoDoChip.actor.system.hp.value };
+          return lido;
+        } finally {
+          ui.notifications.warn = warn; CONFIG.Dice.randomUniform = random; canvas.tokens?.setTargets([]);
+          await game.settings.set('${S}', 'defesaDosNpcs', defesa);
+          if (anterior && game.scenes.has(anterior.id)) await anterior.activate();
+          await cena?.delete(); for (const ator of atores) await ator.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      const v = info;
+      const ok = v.modo.tipo === 'shotgun' && v.modo.pente === 3 && v.modo.ligada && v.modo.maos === 0 && v.modo.acessorios === 0 && v.modo.motivo === 'Equipe Militech Mastiff SMG para usar este modo.'
+        && v.guardada.nulo && v.guardada.aviso.includes('Equipe Militech Mastiff SMG para usar este modo.')
+        && v.equipada.resultado === 'acertou' && v.equipada.dano?.recebido === 9 && v.pentes.espingarda === 2 && v.pentes.mastiff === 0
+        && v.saiu && v.balote === 12
+        && v.sucata.resultado === 'acertou' && v.sucata.dano?.menos === 3 && v.sucata.dano.recebido === 1 && v.sucata.notas.some(nota => nota.includes('−3 (1d6) no dano, contra SP 11'))
+        && v.pepperTiro.nulo && v.pepperTiro.aviso.includes('só faz autofogo e fogo supressivo') && !v.pepperRajada.nulo && v.pepperPente === 24
+        && v.tomahawk.resultado === 'acertou' && v.tomahawk.dano?.spEfetivo === 6 && v.tomahawk.dano.recebido === 9
+        && v.killchipAtaque.nulo && v.killchipAtaque.aviso.includes('é um explosivo')
+        && v.killchip.dano?.recebido === 20 && v.killchip.dano.ablado === 0 && v.killchip.hp === 20 && v.killchip.jaqueta === 11 && v.killchip.lesoes.includes('Lesão cerebral')
+        && v.cracker.nulo && v.cracker.aviso.includes('ninguém recebe o dano') && v.cracker.hp === 20;
+      return [ok, JSON.stringify(info)];
     });
 
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {

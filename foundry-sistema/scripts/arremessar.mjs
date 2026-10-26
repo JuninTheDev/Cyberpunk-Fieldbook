@@ -13,7 +13,9 @@ export const podeArremessar = arma => arma?.type === 'arma' && !arma.system.aDis
 // CORE, modules/item/mixins/cpr-attackable.js:95–102: a Thrown Weapon também usa DEX.
 export const ehArremesso = (arma, pedido = null) => arma?.system.tipo === 'thrownWeapon' || (pedido === 'arremesso' && podeArremessar(arma));
 export const dvDoArremesso = metros => dvArremesso(metros, TABELAS_DV['DV Grenade Launcher']);
-export const ignorarNoArremesso = (arma, pedido) => pedido?.arremesso ? 0 : arma.system.ignorarArmadura;
+// As do Black Chrome que "continuam reduzindo o SP à metade quando arremessadas" (o C48, parte 2; regras-black-chrome.mjs)
+// guardam a delas.
+export const ignorarNoArremesso = (arma, pedido) => (pedido?.arremesso && !arma.perfilDoBlackChrome?.metadeArremessada ? 0 : arma.system.ignorarArmadura);
 
 // Dano manual parte do cartão deste ataque: o botão Dano comum da ficha continua sendo o golpe da arma.
 export async function rolarDanoDoArremesso(mensagem) {

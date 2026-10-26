@@ -13,6 +13,7 @@ import { perguntarTeste } from './janela-rolagem.mjs';
 import * as R from './regras.mjs';
 import { testar } from './rolagens.mjs';
 import { ehArremesso, podeArremessar } from './arremessar.mjs';
+import { impedimentoDoBlackChrome } from './regras-black-chrome.mjs';
 import { CANAL, combateDe, conferirArmaVeicular, conferirDestinos, distancia, esc, montadaNoVeiculo, tokenNaCena } from './combate/apoio.mjs';
 import { resolver } from './combate/modos.mjs';
 import { naFila } from './combate/socket.mjs';
@@ -93,6 +94,9 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // O ricochete de um cartucho (o Kit) continua cartucho: o leque sai da superfície do ricochete.
   const pelaMunicao = R.classificar(pelaArma);
   const modo = arremesso ? pelaMunicao : pedido === 'ricochete' && pelaMunicao === 'cartucho' ? 'cartucho' : R.classificar({ pedido, ...pelaArma });
+  // O Black Chrome (o C48, parte 2): o explosivo não ataca, e a Pepper Shaker só faz autofogo e fogo supressivo.
+  const impedidoNoBlackChrome = impedimentoDoBlackChrome(arma.perfilDoBlackChrome, modo);
+  if (impedidoNoBlackChrome) { ui.notifications.warn(`${arma.name} ${impedidoNoBlackChrome}`); return null; }
   const pedidoDoToken = tokenAtirador?.document ?? tokenAtirador;
   const tokenAtq = pedidoDoToken?.actor?.uuid === atacante.uuid ? pedidoDoToken : tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
   if (!conferirArmaVeicular(arma, modo, { atacante, tokenAtq })) return null;
@@ -124,7 +128,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const porTiro = comPente ? R.balasPorTiro({ modo, perfil, pente: arma.system.pente.value, doisCanos }) : null;
   // A Omaha carregada gasta até 3 balas por ataque.
   const balasDaCarga = comPente && carga ? R.balasDaCarga({ modo, perfil, pente: arma.system.pente.value }) : null;
-  const balas = comPente ? (balasDaCarga ?? porTiro?.balas ?? R.balasDoModo(modo, { autofogo: perfil?.balasDoAutofogo, doisCanos })) : 0;
+  const balas = comPente ? (balasDaCarga ?? porTiro?.balas ?? R.balasDoModo(modo, { autofogo: arma.balasDoAutofogo, doisCanos })) : 0;
   if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
   const { pericia, partes } = arma.partesDoAtaque(arremesso ? 'arremesso' : modo, { pericia: periciaDoGolpe, ator: alheia ? atacante : null });
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
@@ -220,7 +224,11 @@ function efeitoDaCarga(perfil) {
 export function acoesDe2077(arma) {
   const perfil = arma.perfil2077;
   const ator = arma.actor;
-  const resultado = { modos: [], alternar: [], avisos: [], dicaAtaque: '', balasAutofogo: perfil?.balasDoAutofogo ?? R.BALAS_RAJADA };
+  const resultado = { modos: [], alternar: [], avisos: [], dicaAtaque: '', balasAutofogo: arma.balasDoAutofogo };
+  // O Black Chrome (o C48, parte 2): a arma que só faz rajada e o explosivo, que não ataca.
+  const doBlackChrome = arma.perfilDoBlackChrome;
+  if (doBlackChrome?.soRajada) resultado.avisos.push({ texto: 'só rajada', dica: `Só autofogo e fogo supressivo: não faz tiro único nem mirado. O autofogo gasta ${arma.balasDoAutofogo} balas.` });
+  if (doBlackChrome?.explosivo) resultado.avisos.push({ texto: 'explosivo', dica: `Não ataca: ${doBlackChrome.explosivo.texto}. Role o dano pelo botão Dano e aplique pelo cartão.` });
   if (!perfil || !ator) return resultado;
   const doisAlvos = perfil.doisAlvos ? ` Trava dois alvos: marque os dois (o primeiro é o alvo); se o tiro não pegar, as balas vão para o segundo, a até ${R.ALCANCE_DOS_DOIS_ALVOS} m dele.` : '';
   if (perfil.doisCanos) resultado.modos.push({ modo: 'doisCanos', rotulo: 'Dois canos', dica: `Os dois canos de uma vez: ${perfil.doisCanos.dano} de dano, e gasta os 2 cartuchos.` });

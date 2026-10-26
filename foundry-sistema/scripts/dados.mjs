@@ -28,7 +28,7 @@ const custoMensal = () => new fields.SchemaField({ custo: inteiro(0, { min: 0 })
 // A arma do cyberware e do acessório de arma (o C11; o isWeapon do cyberware e o secondaryWeapon do itemUpgrade do CORE,
 // com os campos do attackable e do loadable): montado, o item ataca pela arma ligada a ele (armas-cyberware.mjs), com
 // estes campos. pente: o tamanho do pente (0, sem munição).
-const armaMontada = () => new fields.SchemaField({
+const armaMontada = (extras = {}) => new fields.SchemaField({
   ataca: new fields.BooleanField({ initial: false }),
   tipo: texto(),
   pericia: texto('melee-weapon'),
@@ -45,7 +45,8 @@ const armaMontada = () => new fields.SchemaField({
   ocultavel: new fields.BooleanField({ initial: false }),
   tabelaDV: texto(),
   ignorarArmadura: inteiro(0, { min: 0, max: 100 }),
-  ignorarAbaixo: inteiro(0, { min: 0 })
+  ignorarAbaixo: inteiro(0, { min: 0 }),
+  ...extras
 });
 const fonte = () => new fields.SchemaField({ livro: texto(), pagina: inteiro(0) });
 const eletronica = (eletronico = false) => ({ eletronico: new fields.BooleanField({ initial: eletronico }), endurecido: new fields.BooleanField({ initial: false }) });
@@ -290,6 +291,9 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
       ignorarAbaixo: inteiro(0, { min: 0 }),
       // Slots de acessório (3 na arma de longo alcance que não é exótica).
       slots: inteiro(0, { min: 0 }),
+      // A Combinação do Black Chrome (o C48, parte 2): o outro modo da arma (o nome dele e os campos de arma), que vira uma
+      // arma ligada a esta, como a do acessório (armas-cyberware.mjs). ataca: false nas outras armas.
+      combinacao: armaMontada({ modo: texto() }),
       equipada: new fields.BooleanField({ initial: false }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()

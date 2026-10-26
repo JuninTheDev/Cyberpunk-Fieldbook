@@ -544,6 +544,19 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     de 2077 já vem com o dela. O que não cabe é recusado, com o motivo; com o EMP no Rebuild, ou tirado, a arma volta a
     ser do RED. A hora para pôr ou tirar fica com o mestre.
   - **O acessório que é arma** (o C11, parte 3, ciclo 135; o secondaryWeapon do CORE): a baioneta (arma branca leve, 1d6), o lança-granadas sob o cano (6d6, uma granada) e a espingarda sob o cano (5d6, dois cartuchos), instalados numa arma, dão a arma deles na aba Combate, marcada "Em <a arma>", pronta só com a arma onde estão equipada e sem mãos a mais. Ela ataca, recarrega e gasta o pente como as outras, e fica fora do inventário e da ficha que volta para a wiki. Tirado o acessório, ou apagada a arma onde ele está, a arma dele sai, e as balas do pente voltam. A ficha do acessório de arma tem o "É arma" e os campos, como a do cyberware.
+  - **As armas do Black Chrome** (o C48, parte 2, ciclo 187; a wiki, system-blackchrome.js):
+    - a **Combinação** (a Bouncer, a Survivalist, a TechHammer, a Mastiff, a Sternmeyer M-04 e a Tommyknocker): o outro
+      modo é uma arma ligada à principal na aba Combate, marcada "Modo", com o pente e a munição dele, pronta com a arma
+      equipada; trocar de modo não gasta Ação, e emperrar num modo não emperra o outro (na Sternmeyer, emperram os dois);
+    - a **Pepper Shaker** só faz autofogo e fogo supressivo, e o autofogo gasta 6 balas;
+    - o **Boomerang**, a **Mono-Star** e a **Tomahawk** arremessados continuam reduzindo o SP à metade (a Mono-Star e a
+      Tomahawk são armas brancas, que também se arremessam);
+    - a **munição sucata** tira 1d6 (rolado uma vez por ataque) do dano de quem tem SP 1 ou mais no local;
+    - os **explosivos** não atacam: o dano rolado pelo botão Dano se aplica pelo cartão, com a regra de cada um (o KillChip
+      direto no HP, com a Lesão cerebral; o OUTLet, o Micro Hydrogen Combustor e o TR-4 como granada perfurante, o TR-4
+      no ponto fraco do veículo, sem a blindagem e com o dano dobrado; o Door Cracker só na cobertura, sem ferir ninguém);
+    - a granada **Shuriken Tornado** rola o dano para cada alvo e dobra a lesão do objeto estranho; a **Arachnid** não
+      causa dano (a teia vai no cartão).
   - **Veículos:** SDP, assentos, MOVE (a velocidade de combate) e a velocidade narrativa. Os upgrades instalados somam SDP e assentos (o Chassis pesado dá +20 SDP; o Upgrade de assento, +2 assentos); como no CORE 0.93, o modificador pode ser negativo, e a soma nunca passa abaixo de 0, com o SDP de agora até o máximo (o C43, parte 2, ciclo 171). O bônus de ataque do upgrade também pode ser negativo e entra na rolagem com o sinal; o pente do carregador não soma: troca o da arma. Os da família do Nomad vêm marcados. A ficha seleciona um único veículo em uso e permite marcar quando o personagem dirige. Trocar o veículo encerra a direção; os demais ficam na frota.
     O Chassis blindado dá SP13, com ablação própria. Ao atacar o token do ocupante, escolha a pessoa, o veículo ou uma janela registrada: o dano ao SDP usa dano menos SP, sem +5 ou lesão crítica, e o veículo não esquiva. Cada janela conserva seu HP: vidro blindado tem 15 HP ou 30 com a segunda instalação. O tiro que destrói o vidro perde a sobra; a explosão que o destrói passa inteira para o ocupante. Tech carregada atravessa vidro fino sem danificá-lo; a Nekomata também atravessa o grosso. Nesse caso, a pessoa conserva sua defesa e armadura. A espessura usa o máximo original da janela. O cartão permite desfazer pela diferença.
     No upgrade instalado, **Preparar arma** cria uma única arma vinculada à instalação: metralhadora (30 balas, só Autofogo, voltada para a frente), lança-chamas ou arma branca muito pesada. Elas aparecem sob o veículo, sem ocupar mãos. Metralhadora e lança-chamas não recarregam enquanto o personagem dirige. Na ficha do veículo, adicione as janelas e use **Ajustar vidros** ao mudar os upgrades; o ajuste conserva o dano de cada janela. **Dirigir** controla a restrição de recarga. Mãos no volante, iniciativa, MOVE, manobras, orientação e condições descritivas de instalação continuam com o mestre.
@@ -660,7 +673,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga).
-- **As regras próprias do Black Chrome** (o C48, a partir da parte 2): a Combinação (duas armas numa), o dano direto no HP, as armas de arremesso que dividem o SP e as de CDT 2, a munição sucata (−1d6 em quem tem SP), a Pepper Shaker (só autofogo, 6 balas), os cyberdedos na mão modular e os quadros lineares. Os itens já existem; o efeito que não é automático fica no texto do item.
+- **As regras do cromo do Black Chrome** (o C48, parte 3): os cyberdedos na mão modular, os quadros lineares e a aparência de moda da armadura. Das armas (a parte 2), ficam com a mesa: o CDT 2 do arremesso, a munição de caça pequena, a teia da Arachnid (o agarrão), a cobertura que a granada KTech não fura, os fluidos da Weeping Reaver e as regras de cada arma que são texto (a chave biométrica das monolâminas, a segunda lesão, os sons). O efeito que não é automático fica no texto do item.
 - **Os veículos do Black Chrome** (31 no CORE) e o Acesso Nômade.
 - **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart
   melhorada desde o 112, as balas por tiro desde o 113, a Power desde o 114 e a Tech desde o 115). As regras próprias
@@ -689,7 +702,7 @@ E a do navegador de cada um:
   - 22 lesões críticas e as duas tabelas, com o nome e o texto em português das tabelas da wiki;
   - as 61 perícias, com os nomes em português da tabela da wiki;
   - as 13 tabelas de DV;
-  - o **Black Chrome** (o C48): 179 itens dos pacotes `black-chrome/*` e do Black Chrome Plus (`dlc/black-chrome-plus`), pelo id da loja da wiki (`black-chrome_weapons:...`, `dlc_black-chrome-plus:...`): 57 armas, 24 armaduras, 20 munições (com o lote do pacote: a sucata em 50, a caça pequena em 100), 42 cyberwares, 29 itens de equipamento, 1 roupa, 5 upgrades e 1 droga. Os 176 que a loja vende entram pela importação e pelos pedidos.
+  - o **Black Chrome** (o C48): 179 itens dos pacotes `black-chrome/*` e do Black Chrome Plus (`dlc/black-chrome-plus`), pelo id da loja da wiki (`black-chrome_weapons:...`, `dlc_black-chrome-plus:...`): 57 armas, 24 armaduras, 20 munições (com o lote do pacote: a sucata em 50, a caça pequena em 100), 42 cyberwares, 29 itens de equipamento, 1 roupa, 5 upgrades e 1 droga. Os 176 que a loja vende entram pela importação e pelos pedidos. As armas e a munição que o CORE traz diferentes da wiki se corrigem em `build/conteudo-blackchrome.mjs` (os modos da Combinação, o dano da Pepper Shaker, a Tomahawk e a Mono-Star de arma branca, os explosivos, a sucata e a Arachnid).
 - **2077:** `build/conteudo-2077.mjs` converte o 2077 da própria wiki (`system-2077.js` e `system-net.js`): o do **Mission Kit** (a base) e o do suplemento de fã adaptado. São os mesmos dados de que o módulo cpr-2077 gera os compêndios do Foundry 12, com as regras de conversão dele:
   - 41 armas, os 3 Rebuilds e as 9 munições Smart melhorada do Kit;
   - 37 cyberwares (com o Neuroport e as opções do Kit) e a droga Immunoblockers;

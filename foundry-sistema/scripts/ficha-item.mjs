@@ -10,7 +10,7 @@ import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
 import { porVeiculoNaCena } from './vinculo-veiculo.mjs';
-import { ehArmaDoUpgrade, ehArmaMontadaEmItem, idDaOrigem } from './armas-cyberware.mjs';
+import { ehArmaDaCombinacao, ehArmaDoUpgrade, ehArmaMontadaEmItem, idDaOrigem } from './armas-cyberware.mjs';
 import { ligaAMao, resumoDasMudancas } from './regras-efeitos.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -131,7 +131,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       armaDeAtor: tipo === 'arma' && Boolean(item.actor),
       armaMontada: tipo === 'arma' && Boolean(fonte.instaladoEm), veiculosDaArma, soAutofogo: Boolean(item.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
       // O cyberware e o acessório de arma que são arma (o C11): a arma diz de onde vem; o item, se a arma dele está na ficha.
-      armaDe: ehArmaMontadaEmItem(item) ? { rotulo: ehArmaDoUpgrade(item) ? 'Do acessório' : 'Do cyberware', nome: item.instaladoNo?.name ?? 'Item ausente' } : null,
+      armaDe: ehArmaMontadaEmItem(item) ? { rotulo: ehArmaDoUpgrade(item) ? 'Do acessório' : ehArmaDaCombinacao(item) ? 'Modo de' : 'Do cyberware', nome: item.instaladoNo?.name ?? 'Item ausente' } : null,
       editaArma: tipo === 'cyberware' || (tipo === 'upgrade' && fonte.alvo === 'arma'),
       periciasDaArma: ['cyberware', 'upgrade'].includes(tipo) ? comAtual(Object.fromEntries(PERICIAS.map(p => [p.id, p.nome])), fonte.arma?.pericia) : null,
       armaNaFicha: ['cyberware', 'upgrade'].includes(tipo) && item.actor?.items.some(outro => idDaOrigem(outro) === item.id)

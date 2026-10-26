@@ -9081,6 +9081,61 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   errado do DSN (M4). No G4, um G4 inteiro cada, no passo do C42: o cartão do Black Lace sem a rolagem (M5) e o init sem o
   registro (M6).
 - **Próximo:** a Fase 7 está completa. Abertos no ROADMAP: o C28 (do usuário) e os C48 e C49 (sessão Junin).
+### Ciclo 187 (2026-10-26): C48 parte 2, as armas do Black Chrome (sessão Junin)
+
+- **Pedido do usuário (2026-10-26):** o Black Chrome com os itens e as regras novas, um ciclo por parte; esta é a das
+  armas. Fonte: a wiki (`system-blackchrome.js`: as armas, p. 85–124, a munição do Black Chrome Plus e as
+  palavras-chave, p. 9), com os pacotes do CORE 0.92.4 da parte 1.
+- **Entrega:**
+  - **A Combinação** (as seis da wiki: a Bouncer, a Survivalist, a TechHammer, a Mastiff, a Sternmeyer M-04 e a
+    Tommyknocker). O CORE traz só o primeiro modo; o build (`build/conteudo-blackchrome.mjs`) põe o outro no campo novo
+    `combinacao` da arma, a partir da arma do RED (o Microwaver, o rifle de assalto, o lança-foguetes, a espingarda, o
+    lança-granadas), com o que a wiki muda (o pente, a qualidade, a Survivalist sem autofogo). O modo vira uma arma ligada à
+    principal, pelo mesmo mecanismo da arma do cyberware e do acessório (`armas-cyberware.mjs`, a flag
+    `armaDaCombinacao`): fica na aba Combate, marcada "Modo", com o pente e a munição dele, sem mãos a mais, pronta com a
+    arma equipada, fora dos acessórios dela, do inventário e da wiki; apagada a arma, o modo sai e as balas voltam.
+    Trocar de modo é atacar com o outro (sem gastar Ação). Na falha da arma ruim, o emperramento é só do modo que disparou;
+    na Sternmeyer, "emperram os dois modos".
+  - **A Pepper Shaker:** só autofogo e fogo supressivo (o tiro único e o mirado recusam, com o motivo), e o autofogo gasta
+    6 balas (o `balasDoAutofogo` da arma, que também serve às de 2077); o dano do CORE (0) vira o 2d6 da wiki.
+  - **As de arremesso que "continuam reduzindo o SP à metade"** (o Boomerang, a Mono-Star e a Tomahawk). A Mono-Star e a
+    Tomahawk, só de arremesso no CORE, são armas brancas (média e pesada) que também se arremessam, como na wiki.
+  - **O dano direto no HP** (`aplicarDano` com `direto`): a armadura não reduz nem se desgasta, e o lugar do corpo não
+    multiplica.
+  - **A munição sucata** (o efeito `junk`, das seis do Black Chrome Plus): o 1d6, rolado uma vez por ataque, sai do dano
+    de quem tem SP 1 ou mais no local, antes da armadura, com a nota no cartão.
+  - **Os explosivos** (o KillChip, o Door Cracker, o OUTLet, o Micro Hydrogen Combustor e o TR-4) não atacam: o dano
+    rolado pelo botão Dano se aplica pelo cartão, com a regra de cada um. O KillChip vai direto no HP, com a Lesão
+    cerebral; o OUTLet, o Combustor e o TR-4 são granada perfurante (ablação 2), e o TR-4 no veículo vai no ponto fraco
+    (sem a blindagem e com o dano dobrado); o Door Cracker só atinge a cobertura e recusa ferir alguém. O "ignora metade do
+    SP" que o CORE copiou neles sai.
+  - **As granadas:** a Shuriken Tornado rola o dano separado para cada alvo e, como a expansiva, o objeto estranho vira
+    duas lesões; a Arachnid não causa dano (o efeito `arachnid`, com a teia no cartão).
+- **Limites:** ficam com a mesa o CDT 2 do arremesso (o sistema não conta os ataques da rodada), a munição de caça pequena
+  (e a SportMaster, que só a aceita), a teia da Arachnid como agarrão, a cobertura que a granada KTech não fura, os
+  fluidos da Weeping Reaver e as regras de cada arma que são texto (a chave biométrica das monolâminas, a segunda lesão
+  da Mono-Star e do Mono-Guard, o foguete Smart da TechHammer sem a Luneta de Mira, a bateria da Bouncer). O cromo
+  (cyberdedos, quadros lineares, moda) é a parte 3; os veículos, a 4.
+- **Portões:** na árvore juntada com o 186 da sessão KouArt (o Dice So Nice): G3, 714/714; G4 completo, 308/308 em
+  685 s. Antes da junção: G1, 228 arquivos com sintaxe válida (o conjunto do G2); G2, ESLint 10.12.0 sem erros; G3, 712 testes, 0
+  falhas (10 testes novos em `tests/sistema/blackchrome-armas.test.mjs`: os seis modos da Combinação, conferidos com as
+  armas "Combinação:" da wiki; o modo como arma ligada; o emperramento; o dano direto; a sucata; a Pepper Shaker; o
+  arremesso; os explosivos, conferidos com os da wiki; as granadas; e os perfis no catálogo. A munição sem dano conta a
+  Arachnid; a Pepper Shaker saiu das armas sem dano; o teste do schema do C43 conhece o `armaMontada`); G4 completo,
+  307/307 em 630 s, com o passo novo: a Mastiff ganha o modo espingarda (pente 3, sem mãos, fora dos acessórios), que recusa
+  com a Mastiff guardada e, equipada, acerta (20 contra SP 11: 9) e gasta o pente dele; apagada a Mastiff, o modo sai e
+  os 2 balotes voltam; a sucata na pistola pesada tira 3 (15 − 3 contra SP 11: 1); a Pepper Shaker recusa o tiro e o
+  autofogo gasta 6 balas; a Tomahawk arremessada pega SP 6 (9 de dano); o KillChip recusa o ataque e, pelo cartão, dá 20
+  direto no HP, sem ablar a jaqueta, com a Lesão cerebral; o Door Cracker recusa ferir. No foco, 12/12.
+- **O passo do veículo ator (C46.2), jogador dono:** falhou em 5 das 6 rodadas completas com este ciclo, antes do conserto (a base sem ele
+  passou na única rodada; antes, já falhava de vez em quando, nos ciclos 178 e 182). O diagnóstico: o pedido do jogador
+  leva a cena dele, e na hora do clique ele ainda estava na cena do passo anterior (já apagada): o mestre recusava ("O
+  veículo, a cena ou a permissão mudou"), e logo depois o jogador chegava à cena certa. É uma corrida do teste, não do
+  sistema. O passo agora espera o jogador estar na cena dele antes de clicar.
+- **Mutações:** as 11 caíram: B1 a B7 no G3 (o direto que passa pela armadura, a sucata em quem não tem SP, o arremesso
+  com o SP inteiro, a Pepper Shaker com tiro único, a arma da Combinação sem o modo, a Sternmeyer com um modo só e, no
+  build, a Pepper Shaker sem dano) e S1 a S4 no G4 (o ataque sem o 1d6 da sucata, o cartão sem a regra do explosivo, o
+  modo que ataca com a arma guardada, o autofogo da Pepper Shaker com 10 balas).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

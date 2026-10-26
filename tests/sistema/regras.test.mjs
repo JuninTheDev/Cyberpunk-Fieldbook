@@ -233,7 +233,7 @@ test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, a
 // Armas exóticas sem dano no CORE: o efeito delas é especial (a Shrieker dá lesão no ouvido; a Air Pistol dispara tinta
 // ou ácido) e não é automático nem no CORE. A Pepper Shaker do Black Chrome só faz autofogo (o dano dele, 2d6 × o que
 // passou), e o CORE a traz com dano 0; o "só autofogo, 6 balas" é regra do C48.
-const SEM_DANO = ['core_weapons:air-pistol', 'core_weapons:microwaver', 'core_weapons:shrieker', 'black-chrome_weapons:federated-arms-pepper-shaker'];
+const SEM_DANO = ['core_weapons:air-pistol', 'core_weapons:microwaver', 'core_weapons:shrieker'];
 test('Catálogo: a ablação da munição segue a tabela de munição da wiki (perfurante 2; borracha, biotoxina e venenosa 0)', () => {
   // As linhas da tabela "Munição" de system-catalog.js: o tipo e o que ele faz.
   const texto = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
@@ -254,9 +254,10 @@ test('Munição que não causa dano: as mesmas da tabela de munição da wiki, c
   const secao = texto.slice(texto.indexOf('data-toc="Munição"'), texto.indexOf('data-toc="Acessórios de arma"'));
   const linhas = Object.fromEntries([...secao.matchAll(/\['<b>([^<]+)<\/b>[^']*', '[^']*', '[^']*', '([^']*)'\]/g)].map(([, nome, efeito]) => [nome, efeito]));
   const EFEITO = { Biotoxina: 'biotoxin', EMP: 'emp', Flashbang: 'flashbang', Venenosa: 'poison', Sonífera: 'sleep', Fumaça: 'smoke', 'Gás lacrimogêneo': 'teargas' };
-  // Toda linha da wiki que diz "Não causa dano" (e a fumaça, que só cobre a área) está no sistema, e nenhuma a mais.
+  // Toda linha da wiki que diz "Não causa dano" (e a fumaça, que só cobre a área) está no sistema, e nenhuma a mais além da
+  // granada Arachnid do Black Chrome (o C48, parte 2; o teste dela está em blackchrome.test.mjs).
   const daWikiSemDano = Object.keys(linhas).filter(nome => /^Não causa dano/.test(linhas[nome]) || nome === 'Fumaça').map(nome => EFEITO[nome]);
-  assert.deepEqual(daWikiSemDano.sort(), Object.keys(regras.MUNICAO_SEM_DANO).sort());
+  assert.deepEqual([...daWikiSemDano, 'arachnid'].sort(), Object.keys(regras.MUNICAO_SEM_DANO).sort());
   for (const [nome, efeito] of Object.entries(EFEITO)) {
     assert.ok(linhas[nome].includes(regras.MUNICAO_SEM_DANO[efeito]), `${nome}: o texto do sistema não é o da wiki`);
     assert.ok(Object.values(catalogo).some(item => item.type === 'municao' && item.system.efeito === efeito), `${nome}: nenhuma munição no catálogo`);

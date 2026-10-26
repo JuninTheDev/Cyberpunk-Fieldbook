@@ -38,7 +38,7 @@ import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { manobra } from './direcao.mjs';
 import { porVeiculoNaCena } from './vinculo-veiculo.mjs';
-import { armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
+import { armaDaCombinacao, armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 import { alternarItemFavorito, alternarPericiaFavorita, arrastoDaPericia, FLAG_FAVORITAS, FLAG_FAVORITO, listaCurta, perguntarLocalMirado } from './macros.mjs';
 import { ESTADOS_MENTAIS, estadoMental, fazerTerapia, TRACOS_DE_HARE } from './terapia.mjs';
 
@@ -280,7 +280,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         dicaAtaque: de2077.dicaAtaque, balasAutofogo: de2077.balasAutofogo, soAutofogo: Boolean(arma.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo),
         // A arma do cyberware instalado (o C11) está sempre pronta, sem ocupar as mãos; a do acessório, com a arma onde ele
         // está equipada.
-        doCyberware: ehArmaDoCyberware(arma), doAcessorio: armaDoAcessorio(arma)?.name ?? '', pronta: arma.system.equipada || armaMontadaPronta(arma),
+        doCyberware: ehArmaDoCyberware(arma), doAcessorio: armaDoAcessorio(arma)?.name ?? '', daCombinacao: armaDaCombinacao(arma)?.name ?? '', pronta: arma.system.equipada || armaMontadaPronta(arma),
         resumo: [arma.danoDaArma, `CDT ${arma.system.cdt}`, arma.system.pente.max ? `${arma.system.pente.value}/${arma.system.pente.max}` : ''].filter(Boolean).join(' // ') };
     };
     // A arma montada fica com o veículo, sem ocupar a lista das armas de mãos. A montagem órfã continua editável. A do
