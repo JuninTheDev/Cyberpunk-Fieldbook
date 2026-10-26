@@ -27,6 +27,7 @@ import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
 import { danoNaEstase, desfazerDanoNaEstase } from './cryo.mjs';
 import { gravarNoItemDoVeiculo, limparVinculosCopiados } from './vinculo-veiculo.mjs';
+import { veiculoDirigidoPor } from './tripulacao.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -862,8 +863,9 @@ export class ItemCPR extends Item {
     if (this.type !== 'arma') return item;
     return item?.type === 'veiculo' || (['cyberware', 'upgrade'].includes(item?.type) && idDaOrigem(this) === item.id) ? item : null;
   }
-  // Por que a arma montada (no veículo, no cyberware ou no acessório) não ataca nem recarrega agora ('' se pode).
-  motivoVeicular(modo) { return ehArmaMontadaEmItem(this) ? motivoDaArmaMontada(this) : veiculos.motivoVeicular(this, modo); }
+  // Por que a arma montada (no veículo, no cyberware ou no acessório) não ataca nem recarrega agora ('' se pode). assento: o
+  // de quem atira na arma do veículo (tripulacao.assentoDaArma; o C46, parte 4).
+  motivoVeicular(modo, assento = null) { return ehArmaMontadaEmItem(this) ? motivoDaArmaMontada(this) : veiculos.motivoVeicular(this, modo, assento); }
   prepararArmaVeicular() { return veiculos.prepararArma(this); }
   adicionarJanela(nome) { return veiculos.adicionarJanela(this, nome); }
   removerJanela(id) { return veiculos.removerJanela(this, id); }
@@ -947,9 +949,10 @@ export class ItemCPR extends Item {
   // Atributo + perícia + bônus da arma + 1d10 (p. 172–176): REF para tiro, DEX para corpo a corpo. Autofogo, fogo
   // supressivo e a rajada Tech usam a perícia Autofogo. As lesões tiram dos tiros (olho) ou do corpo a corpo (músculo).
   // A arma Smart de 2077 (o Kit) dá +1 nos ataques à distância. As Artes Marciais usam a forma do dono (periciaDaArma).
-  // pericia: a de um golpe das Artes Marciais (a forma do movimento; artes-marciais.mjs), no lugar da da arma.
-  partesDoAtaque(modo = null, { pericia: periciaDoGolpe = null } = {}) {
-    const ator = this.actor;
+  // pericia: a de um golpe das Artes Marciais (a forma do movimento; artes-marciais.mjs), no lugar da da arma. ator: quem
+  // atira, se não é o dono (o motorista com a arma montada do veículo de outro dono; o C46, parte 4).
+  partesDoAtaque(modo = null, { pericia: periciaDoGolpe = null, ator: atirador = null } = {}) {
+    const ator = atirador ?? this.actor;
     const arremesso = ehArremesso(this, modo);
     const atributo = arremesso ? 'dex' : this.system.aDistancia ? 'ref' : 'dex';
     const pericia = arremesso ? 'athletics' : ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : periciaDoGolpe ?? this.periciaDaArma;
@@ -995,7 +998,8 @@ export class ItemCPR extends Item {
     if (this.system.instaladoEm || this.getFlag(SISTEMA, 'armaVeicular')) {
       const regra = this.getFlag(SISTEMA, 'armaVeicular');
       const motivo = this.motivoVeicular(regra?.soAutofogo ? 'autofogo' : null);
-      if (motivo || (regra?.semRecargaDirigindo && this.actor?.system.dirigindo)) {
+      // Quem dirige: o "Dirigindo" do C40 ou o motorista de um token de veículo, também o que não é dele (o C46, parte 4).
+      if (motivo || (regra?.semRecargaDirigindo && (this.actor?.system.dirigindo || veiculoDirigidoPor(this.actor)))) {
         ui.notifications.warn(motivo || 'Não é possível recarregar esta arma enquanto dirige.');
         return null;
       }

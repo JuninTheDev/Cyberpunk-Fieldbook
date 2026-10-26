@@ -5,12 +5,14 @@
 // rótulo mostra; no combate, ele já soma o que o token andou no turno (o histórico, que o Foundry zera a cada turno).
 import { SISTEMA } from './config.mjs';
 import { corridaDe, movimentoDe } from './estados.mjs';
-import { CORES_DA_REGUA, faixaDoGasto, faixasDaRegua, ROTULOS_DA_REGUA } from './regras-regua.mjs';
+import { corDaFaixa, faixaDoGasto, faixasDaRegua, faixasDoVeiculo, rotuloDaFaixa } from './regras-regua.mjs';
 
-// As faixas do ator do token (o personagem e o capanga, os que correm), com a configuração deste navegador ligada.
+// As faixas do ator do token, com a configuração deste navegador ligada: o personagem e o capanga (Andar e Correr) e o
+// veículo (o C46, parte 4: a velocidade de combate, o system.velocidade.combate do ator, que no ligado é o espelho do item).
 export function faixasDoToken(token) {
   const ator = token?.actor;
-  if (!ator || !['personagem', 'capanga'].includes(ator.type) || !game.settings.get(SISTEMA, 'reguaAndarCorrer')) return null;
+  if (!ator || !['personagem', 'capanga', 'veiculo'].includes(ator.type) || !game.settings.get(SISTEMA, 'reguaAndarCorrer')) return null;
+  if (ator.type === 'veiculo') return faixasDoVeiculo(ator.system.velocidade?.combate);
   return faixasDaRegua(movimentoDe(ator), corridaDe(ator));
 }
 
@@ -18,11 +20,12 @@ const faixaDoPonto = (regua, waypoint) => {
   const faixas = faixasDoToken(regua.token);
   return faixas ? faixaDoGasto(waypoint?.measurement?.cost, faixas) : null;
 };
-const comACor = (estilo, faixa) => (faixa ? { ...estilo, color: CORES_DA_REGUA[faixa] } : estilo);
+const comACor = (estilo, faixa) => (faixa ? { ...estilo, color: corDaFaixa(faixa) } : estilo);
 
-// "Andar" ou "Correr" ao lado dos metros, como a DV do C26 (regua-dv.mjs), que se registra depois e fica no fim.
+// "Andar", "Correr" ou "Velocidade de combate" ao lado dos metros, como a DV do C26 (regua-dv.mjs), que se registra depois
+// e fica no fim.
 function acrescentarFaixaNoContexto(context, faixa) {
-  const rotulo = ROTULOS_DA_REGUA[faixa];
+  const rotulo = rotuloDaFaixa(faixa);
   if (!context || !rotulo) return context;
   context.faixa = faixa;
   if (context.cost) context.cost.units = context.cost.units ? `${context.cost.units} · ${rotulo}` : rotulo;

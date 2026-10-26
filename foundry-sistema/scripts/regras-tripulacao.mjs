@@ -45,3 +45,28 @@ export function posicoesDeSaida(veiculo, ocupante, grade) {
   return [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [-1, -1], [1, -1]]
     .map(([x, y]) => ({ x: v.x + x * dx - largura * g / 2, y: v.y + y * dy - altura * g / 2 }));
 }
+
+// ---------------- O resto pelo ator (o C46, parte 4) ----------------
+// O veículo que a pessoa dirige. A wiki, system-rules.js:538 (p. 189–192): ao ligar o veículo, "o MOVE do veículo passa a
+// ser o dele e ele não usa mais Ações de Movimento"; M17, mesa-api.js:691-693: o primeiro da tripulação dirige. Dentro de
+// um token de veículo (dentro: os ocupantes e o veículo, o que guarda o estado), o motorista dirige aquele veículo, também
+// quando não é dele, e o passageiro não dirige nenhum; fora, o do C40 (proprio: o item em uso com "Dirigindo"), menos quando
+// esse veículo tem token na cena da pessoa (proprioNaCena): aí ele se dirige de dentro. Devolve o veículo, ou null.
+export function veiculoDaDirecao({ tokenId = null, dentro = null, proprio = null, proprioNaCena = false } = {}) {
+  if (dentro) return tokenId && dentro.ocupantes?.[0] === tokenId ? dentro.veiculo ?? null : null;
+  return proprio && !proprioNaCena ? proprio : null;
+}
+
+// Quem dispara a arma montada no veículo. O CORE 0.92.4 (os upgrades Onboard, RED p. 163–164;
+// babele/en/cyberpunk-red-core.core_upgrades.json:166, :170 e :174): o lança-chamas e a metralhadora, "The driver may fire
+// it using an Action"; a arma branca, "The driver may attack with it using an Action"; a wiki, system-criacao.js:267 (o
+// lança-chamas): "O motorista dispara com a Ação". Dentro de um token de veículo (dentro),
+// só o motorista, e só as armas daquele veículo (doVeiculo); fora, se o veículo da arma tem token na cena de quem atira
+// (naCena), ninguém: ela se usa de dentro; sem o token, o C15 (dono: quem atira é o dono da arma; emUso: com o veículo dela
+// em uso). Devolve o motivo da recusa, ou ''.
+export function motivoDoAssento({ dentro = false, motorista = false, doVeiculo = false, naCena = false, dono = true, emUso = false } = {}) {
+  if (dentro && !doVeiculo) return 'Esta arma montada é de outro veículo.';
+  if (dentro) return motorista ? '' : 'Só o motorista dispara a arma montada do veículo.';
+  if (naCena || !dono) return 'Entre no veículo como motorista para usar a arma montada.';
+  return emUso ? '' : 'Selecione o veículo desta arma antes de atacar.';
+}

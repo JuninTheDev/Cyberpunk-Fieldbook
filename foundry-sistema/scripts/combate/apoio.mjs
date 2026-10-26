@@ -3,7 +3,7 @@
 import { SISTEMA } from '../config.mjs';
 import * as R from '../regras.mjs';
 import { techAtravessaVidro } from '../regras-veiculos.mjs';
-import { protecaoDoOcupante, veiculoDaTripulacao } from '../tripulacao.mjs';
+import { assentoDaArma, protecaoDoOcupante, veiculoDaTripulacao } from '../tripulacao.mjs';
 
 export const CANAL = `system.${SISTEMA}`;
 export const STATUS_SUPRIMIDO = `${SISTEMA}-suprimido`;
@@ -38,9 +38,17 @@ export function jogadorDe(ator) {
   return donos.find(usuario => usuario.character?.id === ator.id) ?? donos[0] ?? null;
 }
 
+// O C46, parte 4: a arma montada no veículo do dono (o item veiculo, o C15), a única que quem não é o dono usa.
+export const montadaNoVeiculo = arma => arma?.actor?.items?.get(arma.system?.instaladoEm)?.type === 'veiculo';
+
 // A instalação pode mudar enquanto a janela de rolagem está aberta. A mesma conferência vale no cliente e no mestre.
-export function conferirArmaVeicular(arma, modo) {
-  const motivo = arma.motivoVeicular(modo);
+// quem: { atacante, tokenAtq } (o contexto do ataque): na arma do veículo, o assento de quem atira, pelo token dele (o C46,
+// parte 4); o dono sem token na cena e o dano avulso do cartão ficam com o C15. Quem não é o dono sempre precisa do assento,
+// e só a arma montada no veículo tem assento.
+export function conferirArmaVeicular(arma, modo, quem = null) {
+  const atacante = quem?.atacante ?? arma.actor, alheia = atacante?.uuid !== arma.actor?.uuid;
+  const assento = quem && (quem.tokenAtq || alheia) ? assentoDaArma(arma, atacante, quem.tokenAtq ?? null) : null;
+  const motivo = alheia && !assento ? 'de outro dono, só a arma montada do veículo em que se dirige.' : arma.motivoVeicular(modo, assento);
   if (motivo) ui.notifications.warn(`${arma.name}: ${motivo}`);
   return !motivo;
 }

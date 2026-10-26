@@ -403,3 +403,137 @@ test('C46.3 aplicação: com visão de token o mestre em outra cena recusa antes
   assert.match(e.pedidos.at(-1).dados.resposta.erro, /mestre precisa abrir esta cena/);
   assert.equal(e.visao.fontes.length, 0);
 }));
+
+// ---------------- C46.4: o resto pelo ator ----------------
+// O item de veículo de outro dono ligado ao ator do token (a parte 2: os dois ponteiros e o dono concordam).
+async function posseLigada(e, dono, veiculo, id = 'posse') {
+  const item = { id, uuid: `${dono.uuid}.Item.${id}`, type: 'veiculo', documentName: 'Item', name: `Carro de ${dono.name}`, parent: dono, actor: dono,
+    system: { janelas: {} }, flags: { [SISTEMA]: { veiculoAtor: veiculo.actor.id } }, getFlag: (escopo, chave) => item.flags[escopo]?.[chave] };
+  dono.items.push(item); e.docs.set(item.uuid, item);
+  await veiculo.actor.update({ [`flags.${SISTEMA}.veiculoItem`]: { atorId: dono.id, itemId: id } });
+  return item;
+}
+// A metralhadora de bordo do C15 instalada no item (armas-veiculos.mjs: só Autofogo; o upgrade instalado no mesmo item).
+function metralhadoraNo(dono, posse) {
+  const upgrade = { id: 'instalacao', type: 'upgrade', system: { alvo: 'veiculo', instaladoEm: posse.id },
+    getFlag: (escopo, chave) => (escopo === SISTEMA && chave === 'catalogo' ? 'core_upgrades:onboard-machine-gun' : undefined) };
+  const arma = { id: 'metralhadora', uuid: `${dono.uuid}.Item.metralhadora`, type: 'arma', name: 'Onboard Machine Gun', parent: dono, actor: dono,
+    system: { instaladoEm: posse.id }, ataques: [], atacar: opcoes => { arma.ataques.push(opcoes); return 'atacou'; },
+    getFlag: (escopo, chave) => (escopo === SISTEMA && chave === 'armaVeicular' ? { tipo: 'metralhadora', soAutofogo: true, upgrade: upgrade.id } : undefined) };
+  dono.items.push(upgrade, arma);
+  return arma;
+}
+
+test('C46.4 aplicação: o motorista dirige o carro do token (o NPC e o de outro dono); o passageiro não; fora, o C40 de hoje', async () => ambiente(async e => {
+  // Wiki, system-rules.js:538; M17, mesa-api.js:691-693: o primeiro da tripulação dirige.
+  await e.api.embarcar(e.a, e.carro); await e.api.embarcar(e.c, e.carro);
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor, e.a), e.carro.actor);
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor), e.carro.actor);
+  assert.equal(e.api.veiculoQueDirige(e.a.actor), e.carro);
+  assert.equal(e.api.veiculoDirigidoPor(e.c.actor, e.c), null);
+  assert.equal(e.api.veiculoQueDirige(e.c.actor, e.c), null);
+  // Quem não está no token pedido (o token de outro ator) não dirige por ele.
+  assert.equal(e.api.veiculoDirigidoPor(e.c.actor, e.a), null);
+  // Assumir a direção troca quem dirige; o NPC continua sem o "Dirigindo" do C40 em ninguém.
+  await e.api.dirigir(e.c);
+  assert.equal(e.api.veiculoDirigidoPor(e.c.actor, e.c), e.carro.actor);
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor, e.a), null);
+  assert.deepEqual([e.a.actor.system.dirigindo, e.c.actor.system.dirigindo], [false, false]);
+  // No ligado de outro dono, o estado é o item (a parte 2).
+  const posse = await posseLigada(e, e.b.actor, e.carro);
+  assert.equal(e.api.veiculoDirigidoPor(e.c.actor, e.c), posse);
+  // Passageira com o próprio carro do C40 em "Dirigindo": dentro de outro, não dirige o dela.
+  const moto = { id: 'moto', uuid: `${e.a.actor.uuid}.Item.moto`, type: 'veiculo', parent: e.a.actor, actor: e.a.actor, system: {}, flags: {}, getFlag: () => undefined };
+  e.a.actor.items.push(moto);
+  await e.a.actor.update({ 'system.veiculo': 'moto', 'system.dirigindo': true });
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor, e.a), null);
+  // Fora de qualquer veículo: o C40 de hoje, o item em uso.
+  await e.api.descer(e.a);
+  await e.a.actor.update({ 'system.veiculo': 'moto', 'system.dirigindo': true });
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor, e.a), moto);
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor), moto);
+}));
+
+test('C46.4 aplicação: o veículo do C40 com token na cena se dirige de dentro; sem o token, como antes', async () => ambiente(async e => {
+  const posse = await posseLigada(e, e.a.actor, e.carro);
+  await e.a.actor.update({ 'system.veiculo': posse.id, 'system.dirigindo': true });
+  e.a.actor.veiculoAtivo = posse;
+  // A dona fora do token do próprio carro, na mesma cena: não dirige.
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor, e.a), null);
+  // Dentro, como motorista: o item (embarcar liga o "Dirigindo" do C40).
+  await e.api.embarcar(e.a, e.carro);
+  assert.equal(e.a.actor.system.dirigindo, true);
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor, e.a), posse);
+  await e.api.descer(e.a);
+  // Sem o token do carro na cena: o C40 de hoje.
+  await e.cena.deleteEmbeddedDocuments('Token', [e.carro.id]);
+  await e.api.esperarTripulacao();
+  await e.a.actor.update({ 'system.dirigindo': true });
+  assert.equal(e.api.veiculoDirigidoPor(e.a.actor, e.a), posse);
+}));
+
+test('C46.4 aplicação: a metralhadora do carro de outro dono: o motorista dispara; o passageiro, o dono de fora e outro carro, não', async () => ambiente(async e => {
+  // CORE 0.92.4, core_upgrades.json:170: "The driver may fire it using an Action"; o C15 (só Autofogo) continua valendo.
+  const veiculos = await import('../../foundry-sistema/scripts/veiculos.mjs');
+  const dono = e.c.actor, posse = await posseLigada(e, dono, e.carro), arma = metralhadoraNo(dono, posse);
+  dono.veiculoAtivo = posse;
+  const motivo = (atirador, token, modo = 'autofogo') => veiculos.motivoVeicular(arma, modo, e.api.assentoDaArma(arma, atirador, token));
+  assert.deepEqual(e.api.armasDoVeiculo(e.carro), [arma]);
+  await e.api.embarcar(e.a, e.carro); await e.api.embarcar(e.b, e.carro);
+  assert.equal(motivo(e.a.actor, e.a), '');
+  assert.equal(motivo(e.a.actor, e.a, 'tiro'), 'A metralhadora de bordo só dispara com Autofogo.');
+  assert.equal(motivo(e.b.actor, e.b), 'Só o motorista dispara a arma montada do veículo.');
+  // O dono de fora, com o carro em uso e o token dele na cena: entra para usar; o C15 sem assento continua.
+  assert.equal(motivo(dono, e.c), 'Entre no veículo como motorista para usar a arma montada.');
+  assert.equal(veiculos.motivoVeicular(arma, 'autofogo'), '');
+  // O motorista de outro carro não usa as armas deste.
+  const van = e.token('van', e.ator('van', 'veiculo'), { x: 1500, y: 1500 });
+  await e.api.descer(e.a); await e.a.update({ x: 1400, y: 1500 }); await e.api.embarcar(e.a, van);
+  assert.equal(e.api.veiculoQueDirige(e.a.actor, e.a), van);
+  assert.equal(motivo(e.a.actor, e.a), 'Esta arma montada é de outro veículo.');
+  assert.deepEqual(e.api.armasDoVeiculo(van), []);
+  // Sem a arma no veículo (a do cyberware, a solta): nenhum assento.
+  assert.equal(e.api.assentoDaArma({ ...arma, system: { instaladoEm: '' } }, e.a.actor, e.a), null);
+}));
+
+test('C46.4 aplicação: o HUD do motorista ganha Manobra e Armas do veículo; o passageiro, não; os cliques levam o token', async () => ambiente(async e => {
+  const posse = await posseLigada(e, e.c.actor, e.carro), arma = metralhadoraNo(e.c.actor, posse);
+  const manobras = [];
+  globalThis.game.system.api.veiculos = { manobra: (...argumentos) => { manobras.push(argumentos); return null; } };
+  globalThis.foundry.applications.api.DialogV2.wait = async () => arma.id;
+  const hud = token => {
+    const coluna = { botoes: [], append: botao => coluna.botoes.push(botao),
+      querySelector: seletor => coluna.botoes.find(botao => `.${botao.className.split(' ')[1]}` === seletor) ?? null };
+    globalThis.document = { createElement: () => { const botao = { dataset: {}, setAttribute() {}, addEventListener: (tipo, tratar) => { botao.clique = tratar; } }; return botao; } };
+    e.disparar('renderTokenHUD', { object: { document: token } }, { querySelector: seletor => (seletor === '.col.left' ? coluna : null) });
+    return Object.fromEntries(coluna.botoes.map(botao => [botao.className.split(' ')[1].replace(`${SISTEMA}-`, ''), botao]));
+  };
+  await e.api.embarcar(e.a, e.carro); await e.api.embarcar(e.b, e.carro);
+  const doMotorista = hud(e.a);
+  assert.deepEqual(Object.keys(doMotorista), ['descer', 'dirigir', 'manobra', 'armas']);
+  assert.deepEqual(Object.keys(hud(e.b)), ['descer', 'dirigir']);
+  const clique = { preventDefault() {}, stopPropagation() {}, ctrlKey: false };
+  doMotorista.manobra.clique(clique); await e.api.esperarTripulacao();
+  assert.equal(manobras.length, 1);
+  assert.equal(manobras[0][0], e.a.actor); assert.equal(manobras[0][1], null); assert.equal(manobras[0][2].token, e.a);
+  doMotorista.armas.clique(clique); await e.api.esperarTripulacao();
+  assert.equal(arma.ataques.length, 1);
+  assert.equal(arma.ataques[0].atirador, e.a.actor); assert.equal(arma.ataques[0].tokenAtirador, e.a); assert.equal(arma.ataques[0].modo, 'autofogo');
+  // Sem arma montada (o carro de NPC sem o item), a Manobra fica e as armas não.
+  await e.carro.actor.update({ [`flags.${SISTEMA}.veiculoItem`]: { atorId: 'ninguem', itemId: 'nada' } });
+  assert.deepEqual(Object.keys(hud(e.a)), ['descer', 'dirigir', 'manobra']);
+}));
+
+test('C46.4 aplicação: o motorista do carro de NPC não corre; o passageiro corre', async () => ambiente(async e => {
+  // Wiki, system-rules.js:538: quem dirige não usa mais Ações de Movimento; :501: Correr é uma Ação de Movimento extra.
+  const estados = await import('../../foundry-sistema/scripts/estados.mjs');
+  for (const token of [e.a, e.c]) {
+    token.actor.statuses = new Set(); token.actor.veiculoAtivo = null;
+    await token.actor.update({ 'system.atributos.move.valor': 6 });
+  }
+  await e.api.embarcar(e.a, e.carro); await e.api.embarcar(e.c, e.carro);
+  assert.equal(estados.corridaDe(e.a.actor).bloqueio, 'Quem dirige não usa Ações de Movimento.');
+  assert.deepEqual(estados.corridaDe(e.c.actor), { metros: 12, total: 24, acoes: 1, bloqueio: null });
+  await e.api.descer(e.a);
+  assert.equal(estados.corridaDe(e.a.actor).bloqueio, null);
+}));

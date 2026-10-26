@@ -3667,11 +3667,13 @@ module.exports = async ({ edge, servidores, r }) => {
           const testesAntes = game.messages.filter(m => m.getFlag('${S}', 'droga')?.resultado === 'viciou').length;
           CONFIG.Dice.randomUniform = () => 1 - (7 - .5) / 10;
           await game.time.advance(1);
-          await __esperar(() => !droga.getFlag('${S}', 'sobEfeito'));
+          // O cartão do teste sai depois de a marca sair: contar antes dele pegava o do passo anterior.
+          const viciados = () => game.messages.filter(m => m.getFlag('${S}', 'droga')?.resultado === 'viciou').length - testesAntes;
+          await __esperar(() => !droga.getFlag('${S}', 'sobEfeito') && viciados() > 0);
           const automatico = !droga.getFlag('${S}', 'sobEfeito');
           await Promise.all([api.expirarDrogas(), api.expirarDrogas()]);
           await __esperar(() => !droga.getFlag('${S}', 'sobEfeito'));
-          const depois = estado(), testes = game.messages.filter(m => m.getFlag('${S}', 'droga')?.resultado === 'viciou').length - testesAntes;
+          const depois = estado(), testes = viciados();
           const resultado = game.messages.contents.filter(m => m.getFlag('${S}', 'droga')?.resultado === 'viciou').at(-1)?.getFlag('${S}', 'droga');
           const avisos = [], warn = ui.notifications.warn; ui.notifications.warn = m => avisos.push(String(m));
           try { await api.usarDroga(droga); } finally { ui.notifications.warn = warn; }
@@ -12519,9 +12521,13 @@ module.exports = async ({ edge, servidores, r }) => {
           await window.__esperar(() => game.system.api.netrun.estado(tile).log.some(l => l.texto.includes('começa o turno com 1 Ação NET a menos')));
           const acoes = game.system.api.netrun.estado(tile).corredores[0].acoes;
           const hpAntes = token.actor.system.hp.value;
+          // Só as mensagens de fogo desta rodada: o queimar grava o HP antes de criar a mensagem, e uma de um passo anterior
+          // (o Overheat do Capanga) não pode passar por esta.
+          const antes = game.messages.size;
+          const doFogo = () => game.messages.contents.slice(antes).filter(m => m.content.includes('está em chamas'));
           await c.nextRound();
-          await window.__esperar(() => token.actor.system.hp.value === hpAntes - 2 && game.messages.contents.some(m => m.content.includes('está em chamas')));
-          const queimou = { hp: hpAntes - token.actor.system.hp.value, mensagem: game.messages.contents.filter(m => m.content.includes('está em chamas')).at(-1)?.content.replace(/<[^>]+>/g, '') };
+          await window.__esperar(() => token.actor.system.hp.value === hpAntes - 2 && doFogo().length);
+          const queimou = { hp: hpAntes - token.actor.system.hp.value, mensagem: doFogo().at(-1)?.content.replace(/<[^>]+>/g, '') };
           await window.__esperar(() => game.system.api.netrun.estado(tile).corredores[0].acoes === 0);
           const depois = game.system.api.netrun.estado(tile).corredores[0].acoes;
           await c.delete();
@@ -13890,9 +13896,9 @@ module.exports = async ({ edge, servidores, r }) => {
         const apagouAtor = { desligou: !f.item.getFlag('${S}', 'veiculoAtor'), item: f.dono.items.has(id), estado: f.foto(f.item) };
         await f.api.porVeiculoNaCena(f.item); const ultimo = f.registrar(), antes = f.foto(ultimo), recados = []; ui.notifications.info = mensagem => { recados.push(String(mensagem)); return null; };
         try {
-          await f.item.delete(); await f.esperar(() => !ultimo.getFlag('${S}', 'veiculoItem'));
+          await f.item.delete(); await f.esperar(() => !ultimo.getFlag('${S}', 'veiculoItem') && recados.length);
           const apagouItem = { existe: game.actors.has(ultimo.id), npc: !f.api.itemDoVeiculo(ultimo) && !ultimo.getFlag('${S}', 'veiculoItem'), estado: f.foto(ultimo), igual: JSON.stringify(antes) === JSON.stringify(f.foto(ultimo)), aviso: recados.some(m => /veículo|item|NPC/i.test(m)) };
-          const antesDaDona = f.foto(atorDaCopia); recados.length = 0; await copia.delete(); await f.esperar(() => !atorDaCopia.getFlag('${S}', 'veiculoItem'));
+          const antesDaDona = f.foto(atorDaCopia); recados.length = 0; await copia.delete(); await f.esperar(() => !atorDaCopia.getFlag('${S}', 'veiculoItem') && recados.length);
           const apagouDona = { existe: game.actors.has(atorDaCopia.id), npc: !f.api.itemDoVeiculo(atorDaCopia) && !atorDaCopia.getFlag('${S}', 'veiculoItem'), igual: JSON.stringify(antesDaDona) === JSON.stringify(f.foto(atorDaCopia)), aviso: recados.some(m => /veículo|personagem|NPC/i.test(m)) };
           return { copiou, crossover, atualizou, apagouAtor, apagouItem, apagouDona };
         } finally { delete ui.notifications.info; }
@@ -14114,6 +14120,257 @@ module.exports = async ({ edge, servidores, r }) => {
         desfez: [info.desfez, true], voltou: [info.voltou, [[43, 50, 13, 0], [43, 50, 13, 0]]],
         apagou: [info.apagou, { sumiu: true, marcas: [true, true], formas: [[1, 1, 17, 3], [1.4, 1.2, 19, 5]], fora: [true, true], separados: true, perto: true, ator: true }] },
       { escolha: info.escolha, sdp: info.tiro.par[0][0], desfez: info.desfez, apagou: info.apagou.marcas });
+    }));
+
+    // C46.4: o resto pelo ator. A direção, a manobra e a batida pelo veículo do token em que a pessoa é o motorista (a wiki,
+    // system-rules.js:538), as armas montadas pelo assento (só o motorista: o CORE, core_upgrades.json:166-174) e a régua do
+    // veículo pela velocidade de combate (system-rules.js:538 e :499).
+    await r.passo('veículo ator (C46.4), a direção pelo carro de NPC: o capanga que entrou depois e assumiu a direção dirige o NPC, sem o "Dirigindo" do C40; no começo do turno dele, REF 6 + Conduzir 0 = 6 rola DV10 (o d10 2: 8, perdeu, com a Batida no token dele), e no da passageira nada; a Manobra do HUD dele (desviar, 6 + 8 = 14 contra DV13) usa a perícia do tipo do carro, e o Aéreo passa a Pilotar Veículo Aéreo (o pouso, 6 + 5 = 11, perdeu); a passageira não tem a Manobra nem a faz; o motorista não corre', async () => comTripulacao(async () => {
+      await fixar(edge, [[2, 10], [8, 10], [5, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, S = '${S}', api = game.system.api;
+        const janelas = () => [...foundry.applications.instances.values()];
+        const direcoes = tipo => game.messages.contents.filter(m => m.getFlag(S, 'direcao')?.tipo === tipo);
+        const noHud = async token => {
+          await f.esperar(() => canvas.tokens.get(token.id)); await canvas.hud.token.bind(canvas.tokens.get(token.id));
+          await f.esperar(() => canvas.hud.token.element?.querySelector('.' + S + '-descer'));
+          return ['manobra', 'armas'].filter(acao => canvas.hud.token.element?.querySelector('.' + S + '-' + acao));
+        };
+        await c.embarcarDois(); await c.api.dirigir(c.p2()); await c.api.esperarTripulacao();
+        const motorista = c.p2(), passageira = c.p1(), carro = c.veiculo();
+        const hud = { motorista: await noHud(motorista), passageira: await noHud(passageira) };
+        const ctrl = api.veiculos.controleDe(motorista.actor, { token: motorista });
+        const controle = { ordem: c.ordem(carro)[0] === c.idCapanga, carro: ctrl?.veiculo?.uuid === carro.actor.uuid, pericia: ctrl?.pericia ?? null, soma: ctrl?.soma ?? null,
+          passageira: api.veiculos.controleDe(passageira.actor, { token: passageira }) === null, semC40: [motorista.actor.system.dirigindo, c.pessoa.system.dirigindo] };
+        // O começo do turno do capanga, pelo combate (turnos.mjs, no mestre ativo).
+        const combate = await Combat.implementation.create({ scene: c.cena().id, active: true }); c.combates.push(combate);
+        await combate.createEmbeddedDocuments('Combatant', [{ actorId: c.capanga.id, tokenId: c.idCapanga, sceneId: c.cena().id, initiative: 20 },
+          { actorId: c.pessoa.id, tokenId: c.idPessoa, sceneId: c.cena().id, initiative: 10 }]);
+        await combate.startCombat();
+        for (let i = 0; i < 4 && combate.combatant?.tokenId !== c.idCapanga; i++) await combate.nextTurn();
+        await f.esperar(() => direcoes('controle').length === 1);
+        const cartao = direcoes('controle')[0], d = cartao?.getFlag(S, 'direcao');
+        const turno = { veiculo: d?.veiculo === carro.actor.uuid, pericia: d?.pericia ?? null, soma: d?.soma ?? null, total: d?.total ?? null, dv: d?.dv ?? null, manteve: d?.manteve ?? null,
+          batida: Boolean(cartao?.content.includes('data-cprf-perigo="batida" data-ator="' + motorista.uuid + '"')), fila: window.__fila.length };
+        await combate.nextTurn(); await new Promise(r => setTimeout(r, 600));
+        turno.daPassageira = [combate.combatant?.tokenId === c.idPessoa, direcoes('controle').length];
+        // A Manobra do HUD do motorista: a janela das manobras do chão e a rolagem (o "Rolar direto" do fixture).
+        await canvas.hud.token.bind(canvas.tokens.get(motorista.id));
+        await f.esperar(() => canvas.hud.token.element?.querySelector('.' + S + '-manobra'));
+        canvas.hud.token.element.querySelector('.' + S + '-manobra').click();
+        const escolha = () => janelas().find(app => app.rendered && app.options.classes.includes('manobra-de-veiculo'));
+        await f.esperar(() => escolha()?.element.querySelector('select[name="manobra"]'));
+        const opcoes = [...(escolha()?.element.querySelectorAll('select[name="manobra"] option') ?? [])].map(o => o.value);
+        escolha().element.querySelector('select[name="manobra"]').value = 'desviar';
+        escolha().element.querySelector('button[data-action="rolar"]').click();
+        await c.api.esperarTripulacao(); await f.esperar(() => direcoes('manobra').length === 1);
+        const m = direcoes('manobra')[0]?.getFlag(S, 'direcao');
+        const manobra = { opcoes: opcoes.join(), veiculo: m?.veiculo === carro.actor.uuid, pericia: m?.pericia ?? null, total: m?.total ?? null, dv: m?.dv ?? null, passou: m?.passou ?? null };
+        // O tipo do carro do token manda na perícia: Aéreo, Pilotar Veículo Aéreo e o pouso.
+        await carro.actor.update({ 'system.tipo': 'aereo' });
+        const aereo = await api.veiculos.manobra(motorista.actor, 'pouso', { perguntar: false, token: motorista });
+        const pouso = { pericia: aereo?.pericia ?? null, tipo: aereo?.tipo ?? null, total: aereo?.total ?? null, passou: aereo?.passou ?? null };
+        await carro.actor.update({ 'system.tipo': '' });
+        // A passageira não faz manobra; o motorista não corre, e a passageira corre.
+        const avisos = []; ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        let feita;
+        try { feita = await api.veiculos.manobra(passageira.actor, 'desviar', { perguntar: false, token: passageira }); } finally { delete ui.notifications.warn; }
+        await canvas.hud.token.close();
+        const correr = [api.estados.corridaDe(motorista.actor).bloqueio, api.estados.corridaDe(passageira.actor).bloqueio];
+        return { hud, controle, turno, manobra, pouso, recusa: { feita, avisos }, correr, fila: window.__fila.length };
+      })()`);
+      return conferirAtorVeiculo({ hud: [info.hud, { motorista: ['manobra'], passageira: [] }],
+        controle: [info.controle, { ordem: true, carro: true, pericia: 'drive-land-vehicle', soma: 6, passageira: true, semC40: [false, false] }],
+        turno: [info.turno, { veiculo: true, pericia: 'drive-land-vehicle', soma: 6, total: 8, dv: 10, manteve: false, batida: true, fila: 2, daPassageira: [true, 1] }],
+        manobra: [info.manobra, { opcoes: 'desviar,curvaFechada,paradaDeEmergencia,cavaloDePau,salto', veiculo: true, pericia: 'drive-land-vehicle', total: 14, dv: 13, passou: true }],
+        pouso: [info.pouso, { pericia: 'pilot-air-vehicle', tipo: 'aereo', total: 11, passou: false }],
+        recusa: [info.recusa, { feita: null, avisos: ['C46.3 Passageira: para uma manobra, escolha o veículo em uso e ligue "Dirigir".'] }],
+        correr: [info.correr, ['Quem dirige não usa Ações de Movimento.', null]], fila: [info.fila, 0] },
+      { turno: [info.turno.total, info.turno.manteve], manobra: info.manobra.total, pouso: info.pouso.pericia, correr: info.correr[0] });
+    }));
+
+    await r.passo('veículo ator (C46.4), a batida pelo carro do token: o motorista e o passageiro do NPC na batida tiram 6d6 = 30 − SP 13 = 17 do SDP do token uma vez só (50 → 33, a blindagem 12), cada um com o Traumatismo Cervical e os +5, e o Desfazer devolve tudo; no carro ligado, a dona passageira sozinha na batida tira 24 − 13 = 11 do item (43 → 32, o espelho junto), e o Desfazer devolve', async () => comTripulacao(async () => {
+      await fixar(edge, [[5, 6], [5, 6], [5, 6], [5, 6], [5, 6], [5, 6], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, S = '${S}', api = game.system.api;
+        const P = await import('/systems/' + S + '/scripts/perigos.mjs');
+        const lesoes = ator => ator.items.filter(i => i.type === 'lesao').map(i => i.getFlag(S, 'catalogo')).join();
+        const estado = token => [token.actor.system.hp.value, lesoes(token.actor)];
+        const carroDo = () => { const a = c.veiculo().actor; return [a.system.sdp.value, a.system.blindagem.sp, a.system.ablacao]; };
+        await c.embarcarDois();
+        const npc = await api.perigos.aplicar({ perigo: 'batida', atores: [c.p1(), c.p2()] });
+        const bateu = { carro: carroDo(), modelo: c.modelo.system.sdp.value, pessoas: [estado(c.p1()), estado(c.p2())],
+          notas: (npc?.atores ?? []).map(a => a.notas.slice(0, 2).join(' | ')), veiculos: (npc?.atores ?? []).map(a => a.veiculos.length), fila: window.__fila.length };
+        await P.desfazer(game.messages.get(npc.mensagem)); await P.esperarOsPerigos();
+        const desfeito = { carro: carroDo(), pessoas: [estado(c.p1()), estado(c.p2())] };
+        // O ligado: a dona entra atrás da Passageira (que dirige) e só ela está na batida; o item leva os 6d6.
+        await c.api.descer(c.p1()); await c.api.descer(c.p2()); await c.api.esperarTripulacao();
+        const criado = await f.api.porVeiculoNaCena(f.item); f.registrar(); const ligado = () => c.doc(criado.tokenId);
+        await c.api.embarcar(c.p1(), ligado()); await c.api.embarcar(c.terceiro(), ligado()); await c.api.esperarTripulacao();
+        const daDona = await api.perigos.aplicar({ perigo: 'batida', atores: [c.terceiro()] });
+        await f.esperar(() => f.ator().system.sdp.value === f.item.system.sdp.value);
+        const ligadoBateu = { par: f.par(), dona: estado(c.terceiro()), nota: daDona?.atores[0]?.notas[0] ?? null, veiculos: daDona?.atores[0]?.veiculos.length ?? null, fila: window.__fila.length };
+        await P.desfazer(game.messages.get(daDona.mensagem)); await P.esperarOsPerigos();
+        await f.esperar(() => f.item.system.sdp.value === 43 && f.ator().system.sdp.value === 43);
+        return { bateu, desfeito, ligadoBateu, ligadoDesfeito: { par: f.par(), dona: estado(c.terceiro()) } };
+      })()`);
+      const lesao = 'core_critical-injuries-head:whiplash';
+      return conferirAtorVeiculo({
+        bateu: [info.bateu, { carro: [33, 12, 1], modelo: 50, pessoas: [[35, lesao], [35, lesao]],
+          notas: ['No veículo, dirigindo C46.3 Carro NPC. | C46.3 Carro NPC: 6d6: 30 contra SP 13: perdeu 17 de SDP (50 → 33); a blindagem perdeu 1 de SP.',
+            'No veículo C46.3 Carro NPC, sem dirigir. | C46.3 Carro NPC: os 6d6 já entraram nesta batida.'], veiculos: [1, 0], fila: 6 }],
+        desfeito: [info.desfeito, { carro: [50, 13, 0], pessoas: [[40, ''], [40, '']] }],
+        ligadoBateu: [info.ligadoBateu, { par: [[32, 50, 12, 1], [32, 50, 12, 1]], dona: [35, lesao], nota: 'No veículo C46.2 Carro da proprietária, sem dirigir.', veiculos: 1, fila: 0 }],
+        ligadoDesfeito: [info.ligadoDesfeito, { par: [[43, 50, 13, 0], [43, 50, 13, 0]], dona: [40, ''] }] },
+      { npc: info.bateu.carro, desfeito: info.desfeito.carro, ligado: info.ligadoBateu.par[0], voltou: info.ligadoDesfeito.par[0] });
+    }));
+
+    // C46.4: a metralhadora de bordo do C15 no carro da proprietária (o upgrade no item, a arma preparada e o pente cheio), o
+    // carro na cena, a Passageira (outra dona) ao volante e a proprietária atrás.
+    const comMetralhadora = async teste => comTripulacao(async ids => {
+      const montado = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f;
+        const dados = f.pegar('core_upgrades:onboard-machine-gun'); dados.system.instaladoEm = f.item.id;
+        const balas = f.pegar('core_ammo:rifle-basic'); balas.system.quantidade = 60;
+        const criados = await f.dono.createEmbeddedDocuments('Item', [dados, balas]);
+        const upgrade = criados.find(i => i.type === 'upgrade'), bala = criados.find(i => i.type === 'municao');
+        const arma = await upgrade.prepararArmaVeicular();
+        await arma.update({ 'system.carregada': bala.id }); await arma.recarregar();
+        c.arma = () => f.dono.items.get(arma.id); c.bala = () => f.dono.items.get(bala.id);
+        const criado = await f.api.porVeiculoNaCena(f.item); f.registrar(); c.idLigado = criado.tokenId; c.ligado = () => c.doc(c.idLigado);
+        await c.api.embarcar(c.p1(), c.ligado()); await c.api.embarcar(c.terceiro(), c.ligado()); await c.api.esperarTripulacao();
+        return { arma: arma.id, ligado: criado.tokenId, pente: c.arma().system.pente.value, reserva: c.bala().system.quantidade, ordem: c.ordem(c.ligado()).length };
+      })()`);
+      if (montado.pente !== 30 || montado.reserva !== 30 || montado.ordem !== 2) throw new Error('C46.4: a metralhadora ou o carro não ficaram prontos: ' + JSON.stringify(montado));
+      return teste({ ...ids, ...montado });
+    });
+
+    await r.passo('veículo ator (C46.4), a metralhadora montada pelo assento: a Passageira ao volante do carro da proprietária (sem ser dona dele) atira em Autofogo pelo navegador dela; o ataque é dela (REF 6 + Autofogo 3 + 5 = 14), a 6 m do carro (DV22), e o mestre gasta as 10 balas do pente do item (30 → 20, a reserva fica); a proprietária atrás é recusada pela ficha e pelo assento, e só o motorista tem as Armas do veículo no HUD', async () => comMetralhadora(async ids => {
+      const preparo = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, S = '${S}', jogador = game.users.getName('Jogador');
+        await c.pessoa.update({ 'system.pericias.autofire.nivel': 3 });
+        // A proprietária deixa de ser do jogador: a Passageira dele não grava no pente da arma dela.
+        await f.dono.update({ ['ownership.' + jogador.id]: 0 });
+        await f.esperar(() => !f.ator()?.testUserPermission(jogador, 'OWNER'));
+        const noHud = async token => {
+          await canvas.hud.token.bind(canvas.tokens.get(token.id)); await f.esperar(() => canvas.hud.token.element?.querySelector('.' + S + '-descer'));
+          return Boolean(canvas.hud.token.element?.querySelector('.' + S + '-armas'));
+        };
+        const hud = { motorista: await noHud(c.p1()), dona: await noHud(c.terceiro()) }; await canvas.hud.token.close();
+        // A dona atrás: pela ficha (o ataque da arma) e pelo assento.
+        const avisos = []; ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        let dona;
+        try {
+          const pelaFicha = await c.arma().atacar({ alvos: [c.veiculo()], modo: 'autofogo', perguntar: false });
+          const peloAssento = await game.system.api.tripulacao.atacarDoAssento(c.terceiro(), c.arma(), { alvos: [c.veiculo()], modo: 'autofogo', perguntar: false });
+          dona = { pelaFicha, peloAssento, pente: c.arma().system.pente.value, avisos: avisos.length, motivo: avisos.every(a => a.includes('Só o motorista dispara a arma montada do veículo.')) };
+        } finally { delete ui.notifications.warn; }
+        return { hud, dona, metros: game.system.api.combate.distancia(c.ligado(), c.veiculo()) };
+      })()`);
+      await fixar(jogador, [[5, 10]]);
+      const tiro = await jogador.evaluate(`(async () => {
+        const cena = game.scenes.get('${ids.cena}'), esperar = window.__c46bEsperar;
+        const token = () => cena.tokens.get('${ids.pessoa}'), alvo = cena.tokens.get('${ids.veiculo}'), arma = () => game.actors.get('${ids.dono}')?.items.get('${ids.arma}');
+        await esperar(() => token()?.getFlag('${S}', 'embarcado')?.veiculoId === '${ids.ligado}' && arma() && !arma().isOwner && token().actor.system.pericias.autofire?.nivel === 3);
+        await canvas.hud.token.bind(canvas.tokens.get('${ids.pessoa}'));
+        await esperar(() => canvas.hud.token.element?.querySelector('.${S}-armas'));
+        const hud = Boolean(canvas.hud.token.element?.querySelector('.${S}-armas')); await canvas.hud.token.close();
+        const dados = await game.system.api.tripulacao.atacarDoAssento(token(), arma(), { alvos: [alvo], modo: 'autofogo', perguntar: false });
+        return { hud, id: dados?.id ?? null, atirador: dados?.atirador === token().actor.uuid, total: dados?.total ?? null, dono: arma().isOwner, fila: window.__fila.length };
+      })()`);
+      const mestre = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, S = '${S}';
+        const cartao = () => game.messages.find(m => m.getFlag(S, 'ataque')?.id === ${JSON.stringify(tiro.id)});
+        await f.esperar(() => cartao() && c.arma().system.pente.value === 20);
+        await new Promise(r => setTimeout(r, 300));
+        const r = cartao()?.getFlag(S, 'ataque'), l = r?.linhas?.[0];
+        return { pente: c.arma().system.pente.value, reserva: c.bala().system.quantidade, atacante: r?.atacante ?? null, modo: r?.modo ?? null, ataque: r?.ataque ?? null,
+          metros: l?.metros ?? null, dv: l?.dv ?? null, resultado: l?.resultado ?? null, sdp: c.veiculo().actor.system.sdp.value };
+      })()`);
+      // A distância é do centro do carro ao do alvo (6,3 m nesta cena): a faixa de DV é a dos 6 m.
+      return conferirAtorVeiculo({ preparo: [{ ...preparo, metros: Math.round(preparo.metros) }, { hud: { motorista: true, dona: false }, dona: { pelaFicha: null, peloAssento: null, pente: 30, avisos: 2, motivo: true }, metros: 6 }],
+        tiro: [{ ...tiro, id: Boolean(tiro.id) }, { hud: true, id: true, atirador: true, total: 14, dono: false, fila: 0 }],
+        mestre: [mestre, { pente: 20, reserva: 30, atacante: 'C46.3 Passageira', modo: 'autofogo', ataque: 14, metros: preparo.metros, dv: 22, resultado: 'errou', sdp: 50 }] },
+      { hud: [preparo.hud.motorista, tiro.hud], dona: preparo.dona.motivo, pente: mestre.pente, metros: mestre.metros, ataque: mestre.ataque });
+    }));
+
+    await r.passo('veículo ator (C46.4), recarregar a metralhadora dirigindo: a proprietária ao volante do próprio carro é recusada (o pente fica em 20); passando a direção à Passageira, recarrega (30, a reserva 20); ao volante do carro de NPC, que não é dela e não liga o "Dirigindo", é recusada de novo', async () => comMetralhadora(async () => {
+      const info = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f;
+        const foto = () => [c.arma().system.pente.value, c.bala().system.quantidade, f.dono.system.dirigindo];
+        const avisos = []; ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        try {
+          await c.arma().update({ 'system.pente.value': 20 });
+          await c.api.dirigir(c.terceiro()); await c.api.esperarTripulacao();
+          const proprio = { recarregou: await c.arma().recarregar(), foto: foto(), avisos: avisos.splice(0) };
+          await c.api.dirigir(c.p1()); await c.api.esperarTripulacao();
+          const atras = { recarregou: Boolean(await c.arma().recarregar()), foto: foto(), avisos: avisos.splice(0) };
+          await c.arma().update({ 'system.pente.value': 20 });
+          await c.api.descer(c.terceiro()); await c.api.embarcar(c.terceiro(), c.veiculo()); await c.api.esperarTripulacao();
+          const npc = { motorista: c.ordem(c.veiculo())[0] === c.terceiro().id, recarregou: await c.arma().recarregar(), foto: foto(), avisos: avisos.splice(0) };
+          return { proprio, atras, npc };
+        } finally { delete ui.notifications.warn; }
+      })()`);
+      const dirigindo = 'Não é possível recarregar esta arma enquanto dirige.';
+      return conferirAtorVeiculo({ proprio: [info.proprio, { recarregou: null, foto: [20, 30, true], avisos: [dirigindo] }],
+        atras: [info.atras, { recarregou: true, foto: [30, 20, false], avisos: [] }],
+        npc: [info.npc, { motorista: true, recarregou: null, foto: [20, 20, false], avisos: [dirigindo] }] },
+      { proprio: info.proprio.foto, atras: info.atras.foto, npc: info.npc.foto });
+    }));
+
+    await r.passo('veículo ator (C46.4), a régua pelo MOVE do veículo: o carro de NPC com MOVE 5 (a velocidade de combate) tem a linha e os quadrados em verde até 10 m e vermelhos além, sem Correr, e o rótulo "Velocidade de combate" (6 m e 10 m; a 14 m, só os metros); o carro ligado mede pela velocidade do item (MOVE 4: verde até 8 m); a pessoa continua com Andar e Correr', async () => comTripulacao(async () => {
+      const d = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, S = '${S}';
+        const hex = cor => Number(cor).toString(16).padStart(6, '0');
+        const reguas = [];
+        try {
+          await c.veiculo().actor.update({ 'system.velocidade.combate': 5 });
+          await f.item.update({ 'system.velocidade.combate': 4 });
+          const criado = await f.api.porVeiculoNaCena(f.item); f.registrar();
+          await f.esperar(() => f.ator()?.system.velocidade.combate === 4 && canvas.tokens.get(criado.tokenId) && canvas.tokens.get(c.idVeiculo));
+          await new Promise(r => setTimeout(r, 300));
+          const medidor = async tokDoc => {
+            const tokObj = tokDoc.object, ruler = new CONFIG.Token.rulerClass(tokObj); reguas.push(ruler);
+            await ruler.draw();
+            const proto = Object.getPrototypeOf(ruler), linha = [], grade = {};
+            ruler._getSegmentStyle = function (w) {
+              const s = proto._getSegmentStyle.call(this, w);
+              if (s.width > 0) linha.push(Math.round(w.measurement.cost) + ':' + hex(s.color));
+              return s;
+            };
+            ruler._getGridHighlightStyle = function (w, o) {
+              const s = proto._getGridHighlightStyle.call(this, w, o), custo = Math.round(w.measurement.cost), k = hex(s.color);
+              if ((s.alpha ?? 0.5) > 0) grade[k] = [Math.min(grade[k]?.[0] ?? custo, custo), Math.max(grade[k]?.[1] ?? custo, custo)];
+              return s;
+            };
+            return async metros => {
+              linha.length = 0;
+              for (const k of Object.keys(grade)) delete grade[k];
+              const caminho = tokDoc.getCompleteMovementPath([
+                { x: tokDoc.x, y: tokDoc.y, action: 'walk', explicit: true },
+                { x: tokDoc.x, y: tokDoc.y + metros * 50, action: 'walk', explicit: true }
+              ]);
+              const medida = tokObj.measureMovementPath(caminho);
+              caminho.forEach((w, i) => { w.cost = i ? medida.waypoints[i].backward?.cost ?? 0 : 0; });
+              caminho[0].checkpoint = true;
+              ruler.refresh({ passedWaypoints: [], pendingWaypoints: [], plannedMovement: { [game.user.id]: { foundPath: caminho, unreachableWaypoints: [], history: [], hidden: false, searching: false } } });
+              const texto = () => document.querySelector('#token-ruler-' + tokDoc.id + ' .total-measurement')?.textContent?.replace(/\\s+/g, ' ').trim() ?? '';
+              await f.esperar(() => texto().startsWith(metros + ' '));
+              return { rotulo: texto(), linha: [...linha], grade: Object.entries(grade).sort() };
+            };
+          };
+          const npc = await medidor(c.veiculo()), ligado = await medidor(c.doc(criado.tokenId));
+          const m6 = await npc(6), m10 = await npc(10), m14 = await npc(14), l12 = await ligado(12);
+          const RM = await import('/systems/' + S + '/scripts/regua-movimento.mjs');
+          return { m6, m10, m14, l12, faixas: { npc: RM.faixasDoToken(c.veiculo().object), ligado: RM.faixasDoToken(canvas.tokens.get(criado.tokenId)), pessoa: RM.faixasDoToken(c.p1().object) } };
+        } finally { for (const ruler of reguas) ruler.destroy(); }
+      })()`);
+      return conferirAtorVeiculo({ m6: [d.m6, { rotulo: '6 m · Velocidade de combate', linha: ['6:00ff00'], grade: [['00ff00', [0, 6]]] }],
+        m10: [d.m10, { rotulo: '10 m · Velocidade de combate', linha: ['10:00ff00'], grade: [['00ff00', [0, 10]]] }],
+        m14: [d.m14, { rotulo: '14 m', linha: ['10:00ff00', '14:ff0000'], grade: [['00ff00', [0, 10]], ['ff0000', [12, 14]]] }],
+        l12: [d.l12, { rotulo: '12 m', linha: ['8:00ff00', '12:ff0000'], grade: [['00ff00', [0, 8]], ['ff0000', [10, 12]]] }],
+        faixas: [d.faixas, { npc: { veiculo: 10 }, ligado: { veiculo: 8 }, pessoa: { andar: 10, correr: 20 } }] },
+      { rotulos: [d.m6.rotulo, d.m14.rotulo, d.l12.rotulo], faixas: d.faixas });
     }));
 
     await r.passo('veículos (C15), carga Tech e vidro: atravessa o fino sem tirar HP da cobertura, conserva armadura e esquiva da pessoa; vidro grosso com 5 de 30 HP ainda barra a Tech comum, e a Nekomata carregada o atravessa', async () => {
@@ -14967,12 +15224,12 @@ module.exports = async ({ edge, servidores, r }) => {
             return { titulo, texto };
           };
           const janelaDaParte = await comprarParte(5);
-          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 5 && municao.system.quantidade === 25 && fregues.system.dinheiro === 45);
+          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 5 && municao.system.quantidade === 25 && fregues.system.dinheiro === 45 && loja.system.dinheiro === 105);
           const parte = { dinheiro: [fregues.system.dinheiro, loja.system.dinheiro], balas: [fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade, municao.system.quantidade], ...janelaDaParte, extrato: ultima(fregues) };
           // O estoque infinito: mais 5, e a pilha da loja fica.
           await loja.update({ 'system.permissoes.estoqueInfinito': true });
           await comprarParte(5);
-          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 10 && fregues.system.dinheiro === 40);
+          await esperar(() => fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade === 10 && fregues.system.dinheiro === 40 && loja.system.dinheiro === 110);
           const infinito = { balas: [fregues.items.getName('Heavy Pistol (Basic)')?.system.quantidade, municao.system.quantidade], dinheiro: [fregues.system.dinheiro, loja.system.dinheiro] };
           return { antes, comprou, semDinheiro, parte, infinito };
         } finally {
@@ -18489,7 +18746,7 @@ module.exports = async ({ edge, servidores, r }) => {
           lido.explosivo = { bolsa: estase(paciente).hp, hp: paciente.system.hp.value, segurou: r2.estaseAblada, marca: marca() };
           // 3. Sair da estase.
           paciente.sheet.element.querySelector('[data-action="sairDaEstase"]').click();
-          await __esperar(() => !estase(paciente) && botoes() === 'porEmEstase');
+          await __esperar(() => !estase(paciente) && botoes() === 'porEmEstase' && /saiu da estase/.test(texto()));
           lido.saiu = { botoes: botoes(), cartao: texto() };
           // 4. O capanga no Cryopump vazio: sem a recarga, recusa; com ela, 50eb do Medtech, e a carga sai de novo.
           const porCapanga = game.system.api.cryo.porEmEstase(mortal());

@@ -17,11 +17,25 @@ export function faixasDaRegua(movimento, corrida) {
   return { andar, correr };
 }
 
+// O veículo (o C46, parte 4): a velocidade de combate é o MOVE dele (a tabela da wiki, system-rules.js:538, a coluna MOVE;
+// dados.mjs), e, ligado, "o MOVE do veículo passa a ser o dele [do motorista] e ele não usa mais Ações de Movimento" (:538).
+// O veículo anda pela Ação de Movimento do motorista, com esse MOVE (system-criacao.js:266, o NOS: "Uma Ação de Movimento a
+// mais ao dirigir"), e a Ação de Movimento anda até MOVE × 2 m, ou MOVE quadrados no grid (:499). Uma faixa só, na cor da
+// Ação de Movimento (o "walk" do CORE): Correr é outra Ação de Movimento (:501), que quem dirige não usa; a do NOS fica com o
+// mestre. O CORE 0.92.4 não tem régua de veículo.
+export const METROS_POR_MOVE = 2;
+export const ROTULO_DO_VEICULO = 'Velocidade de combate';
+export const faixasDoVeiculo = move => ({ veiculo: Math.max(0, Number(move) || 0) * METROS_POR_MOVE });
+export const corDaFaixa = faixa => CORES_DA_REGUA[faixa === 'veiculo' ? 'andar' : faixa];
+export const rotuloDaFaixa = faixa => (faixa === 'veiculo' ? ROTULO_DO_VEICULO : ROTULOS_DA_REGUA[faixa]);
+
 // A faixa do que se gastou até um ponto do caminho (o custo do movimento, arredondado como o rótulo da régua): até andar,
-// 'andar'; até correr, 'correr'; além, 'longe'. Sem o custo (NaN), nenhuma: o caminho fica como o do Foundry.
-export function faixaDoGasto(gasto, { andar = 0, correr = 0 } = {}) {
+// 'andar'; até correr, 'correr'; além, 'longe'. No veículo (faixasDoVeiculo), até a velocidade de combate, 'veiculo'; além,
+// 'longe'. Sem o custo (NaN), nenhuma: o caminho fica como o do Foundry.
+export function faixaDoGasto(gasto, { andar = 0, correr = 0, veiculo = null } = {}) {
   if (typeof gasto !== 'number' || Number.isNaN(gasto) || gasto < 0) return null;
   const metros = Math.round(gasto * 100) / 100;
+  if (veiculo !== null) return veiculo > 0 && metros <= veiculo ? 'veiculo' : 'longe';
   if (andar > 0 && metros <= andar) return 'andar';
   if (correr > andar && metros <= correr) return 'correr';
   return 'longe';

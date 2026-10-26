@@ -8756,6 +8756,83 @@ documentação foram feitas aqui, a partir do código.
 - **Próximo:** o C46, parte 4 (as armas pelo assento, a direção, as manobras e a batida pelo ator, e a régua pelo MOVE do
   veículo).
 
+### Ciclo 181 (2026-10-26): o C46, parte 4, o resto pelo ator: a direção, as armas pelo assento e a régua do veículo (sessão KouArt, com um worker)
+
+Commit anterior: `b5ca8118` (a reserva da parte 4). O código e os testes saíram de um worker (`workers:artesao`), numa
+worktree própria a partir do `b5ca8118`, revisados e integrados aqui pelo patch, sem conflito. Com ela, o C46 está
+completo.
+
+- **As fontes:** a wiki (`system-rules.js:538`: "o MOVE do veículo passa a ser o dele e ele não usa mais Ações de
+  Movimento", e a tabela com o MOVE; `:499`, MOVE × 2 m; `:501`, Correr; `system-criacao.js:266-268`: o NOS, "uma Ação de
+  Movimento a mais ao dirigir", e o lança-chamas, "o motorista dispara com a Ação"); o CORE 0.92.4
+  (`cyberpunk-red-core/babele/en/cyberpunk-red-core.core_upgrades.json:166`, `:170` e `:174`: "The driver may fire it
+  using an Action" e "The driver may attack with it"; `:162`, o NOS); a mesa do master (`Tabletop/README.md:161`, a
+  velocidade de combate no MOVE; `mesa.js:1617-1624`, que usava × 2 e × 4 também no veículo).
+- **O que muda:**
+  - **a direção pelo ator** (`regras-tripulacao.veiculoDaDirecao`, `tripulacao.veiculoDirigidoPor`, `direcao.mjs`,
+    `perigos.mjs`, `estados.mjs`): dentro de um token de veículo, o primeiro da tripulação dirige aquele veículo pelo
+    C40, também o de NPC e o de outro dono (a direção sob pressão no começo do turno dele, pelo token do combatente; a
+    **Manobra** no HUD, com a perícia pelo tipo do veículo do token); o passageiro não dirige; fora de um token de veículo,
+    vale o C40 de antes, a não ser que o veículo próprio tenha token na cena; quem dirige não corre. A batida guarda o
+    token de cada um: quem está num token de veículo não está a pé, e os 6d6 vão no veículo daquele token, uma vez por
+    veículo (no ligado, no item), com o Desfazer pelo uuid;
+  - **as armas pelo assento** (`regras-tripulacao.motivoDoAssento`, `tripulacao.atacarDoAssento`, `combate.mjs`,
+    `combate/apoio.mjs`, `combate/modos.mjs`, `veiculos.mjs`, `documentos.mjs`): no carro ligado com arma montada, o
+    botão **Armas do veículo** fica no HUD do motorista; só o motorista dispara (o CORE), também quem não é o dono, com a
+    perícia dele e o pente da arma montada no item do dono (o mestre gasta as balas, uma vez só, as 10 do Autofogo); com
+    o token do veículo na cena, a arma montada só se usa de dentro; sem ele, como o C15; quem dirige qualquer veículo não
+    recarrega a metralhadora nem o lança-chamas; a arma do cyberware de outro dono continua fechada;
+  - **a régua do veículo** (`regras-regua.faixasDoVeiculo`, `regua-movimento.mjs`): o token do veículo pinta a régua
+    pela velocidade de combate (`system.velocidade.combate`, que no ligado vem do item), verde até MOVE × 2 m (MOVE 20:
+    40 m), com "Velocidade de combate" no rótulo, e vermelha além; o C44 da pessoa não muda.
+- **Decisões e dúvidas:**
+  - **quem dispara:** o pedido sugeria o passageiro; o CORE diz "the driver" nas três armas montadas, e a wiki o diz do
+    lança-chamas: segue o CORE, e o passageiro é recusado (para o usuário confirmar);
+  - **a régua:** a wiki não diz quantos metros o veículo anda por turno; usa MOVE × 2 m (`:538`, `:499` e o NOS), uma
+    faixa só, sem Correr (`:538` e `:501`; a mesa do master usava × 2 e × 4). A Ação de Movimento a mais do NOS e o
+    histórico do turno ficam com o mestre (o veículo não é combatente, e o Foundry só guarda o histórico de quem é: cada
+    arrasto mede do zero);
+  - **o que mudou de comportamento:** com o token do carro na cena e o dono fora dele, o dono não dirige nem dispara a arma
+    montada; a batida atinge o veículo também quando só o passageiro está na lista;
+  - **a origem do tiro** é o token de quem atira, que fica no centro do veículo (a parte 3): a distância e a linha de
+    visão são as do carro; o cartão do dano da arma de outro dono sai com o dono como orador; o motorista que não é o dono
+    não recarrega (não tem permissão nos itens do dono);
+  - **ficam para depois:** as armas no veículo de NPC (o ator não tem inventário nem instalação de upgrades: pede uma
+    decisão de desenho) e o `speedCombat` dos upgrades do CORE (o sistema não tem esse modificador, uma lacuna antiga).
+- **Testes:**
+  - **G3:** `veiculo-pelo-ator.test.mjs` (novo, 4 testes: os textos da wiki e do CORE, a direção, o assento e a régua,
+    MOVE 20/40/60 dá 40/80/120 m); mais 5 em `tripulacao-aplicacao.test.mjs` (a direção do NPC e do ligado, o C40 com
+    token na cena, a metralhadora pelo assento, os botões do HUD, não correr), 1 em `tripulacao-combate.test.mjs` (o
+    atirador: o passageiro recusado, o motorista com o pente 30 → 20 pelo mestre, sem descontar duas vezes, o pente
+    curto, o tiro único, a arma do cyberware de outro dono) e 1 em `regua-movimento.test.mjs`;
+  - **G4:** cinco passos novos, depois do "veículo ator (C46.3), proteção e exclusão": a direção pelo carro de NPC (o
+    começo do turno do capanga que assumiu a direção, 6 + 2 = 8, perdeu, com o botão Batida; a passageira não rola; a
+    Manobra pelo HUD, 14 contra DV13; o carro aéreo, o pouso por Pilotar, 11; o passageiro recusado; o motorista não
+    corre); a batida (o NPC de 50 a 33, a blindagem 12, uma vez só, o Desfazer; no ligado, o item de 43 a 32); a
+    metralhadora montada (a personagem "Passageira", ao volante do carro de outra dona, atira em Autofogo no navegador do
+    jogador, 14 a 6 m contra DV22, e o pente vai de 30 a 20 pelo mestre; a dona, no banco de trás, é recusada);
+    recarregar dirigindo (recusado ao volante do próprio carro, recarrega como passageira, recusado ao volante do NPC); a
+    régua (o NPC com MOVE 5, verde até 10 m e vermelho além; o ligado com MOVE 4 no item, 8 m; a pessoa continua com 10
+    e 20).
+- **Na integração:** o passo da metralhadora conferia a distância como 6, e ela é do centro do carro ao do alvo (6,3 m
+  nesta cena): a conta usa os metros arredondados, e a faixa de DV continua a dos 6 m. Cinco passos antigos esperavam um
+  lado da mudança e liam o outro logo depois, e falharam nas rodadas do G4 desta parte (os dois primeiros sempre, os
+  outros três em uma ou duas de três): o fogo do netrunner na NET (a última mensagem "está em chamas" era a do Overheat do Capanga, de antes; agora
+  só contam as da rodada), o aviso "o veículo ficou como NPC" do C46.2 (sai depois de soltar os tokens da cena), o
+  cartão do vício do C16 no relógio, o dinheiro da loja do C24 (no "Comprar parte" e no estoque infinito) e o cartão de sair da estase do C41.4. Os cinco passam a
+  esperar os dois lados; o código do sistema não mudou por eles.
+- **Portões:** G1, 210 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 681/681; G4 completo, 301/301,
+  com a checagem dos dois navegadores sem avisos ou erros de JS (as três rodadas anteriores, antes de todas as correções
+  dos passos: 296, 297 e 299 de 301).
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos. No G3: todo ocupante dirige (M1, 2
+  testes), o passageiro dispara a arma montada (M2, 3), a régua do veículo com Andar e Correr da pessoa (M3), o mestre
+  que não gasta o pente de quem atira sem ser o dono (M6) e o motorista de token que corre (M7). No G4, um G4 inteiro
+  cada: a batida no veículo próprio e não no do token (M4: o passo da batida e um aviso do sistema no navegador do
+  mestre), os 6d6 duas vezes no mesmo veículo (M5: o passo da batida) e o motorista de um NPC que recarrega dirigindo
+  (M11: o passo de recarregar dirigindo).
+- **Próximo:** na Fase 7, o C42 (Dice So Nice: falta saber se a mesa usa) e o C43 parte 3 (o navegador de itens e o tema
+  no resto do Foundry).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -10,7 +10,7 @@ import { techAtravessaVidro } from '../regras-veiculos.mjs';
 import { rolarDano } from '../rolagens.mjs';
 import { dvDoArremesso, ehArremesso, ignorarNoArremesso } from '../arremessar.mjs';
 import { escudoHumanoDe, usadoComoEscudo, danoNoEscudoHumano } from '../escudo-humano.mjs';
-import { STATUS_COBERTURA, STATUS_SUPRIMIDO, ROTULO, precisaRolar, centroDe, combateDe, conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular, distancia, esc, jogadorDe } from './apoio.mjs';
+import { STATUS_COBERTURA, STATUS_SUPRIMIDO, ROTULO, precisaRolar, centroDe, combateDe, conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular, distancia, esc, jogadorDe, montadaNoVeiculo } from './apoio.mjs';
 import { cartaoDoResultado } from './cartao.mjs';
 import { pedir, perguntarDefesa, rolarDefesa, rolarSegundaChance } from './socket.mjs';
 
@@ -19,8 +19,11 @@ const BOTAO = { ...DEFESAS, escudo: 'Escudo', escudoHumano: 'Interpor escudo hum
 // ---------------- No mestre ativo ----------------
 async function contexto(pedido, usuario) {
   const arma = await fromUuid(pedido.arma);
-  const atacante = arma?.actor;
-  if (!atacante || !usuario) return null;
+  // O C46, parte 4: o motorista com a arma montada do veículo de outro dono (combate.atacar). Só a montada; o assento se
+  // confere no resolver, com o token de quem atira.
+  const atacante = pedido.atirador ? await fromUuid(pedido.atirador) : arma?.actor;
+  if (!arma || !atacante || !usuario) return null;
+  if (pedido.atirador && (atacante.documentName !== 'Actor' || !montadaNoVeiculo(arma))) return null;
   if (!usuario.isGM && !atacante.testUserPermission(usuario, 'OWNER')) return null;
   if (pedido.arremesso && !ehArremesso(arma, 'arremesso')) return null;
   pedido = { ...pedido, arremesso: Boolean(pedido.arremesso || ehArremesso(arma)) };
@@ -87,12 +90,24 @@ async function lesoesDoAtirador(ctx) {
   }
 }
 
+// O C46, parte 4: o pente da arma montada de outro dono, que quem atirou não pode gravar (combate.atacar), sai aqui, com
+// as balas do modo (o Autofogo gasta 10). Sem balas bastantes, o ataque não se resolve.
+async function gastarOPenteNoMestre(ctx) {
+  const arma = ctx.arma;
+  const balas = arma.system.aDistancia && arma.system.pente.max ? R.balasDoModo(ctx.modo, { autofogo: ctx.perfil?.balasDoAutofogo, doisCanos: Boolean(ctx.pedido.doisCanos) }) : 0;
+  if (!balas) return true;
+  if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: precisa de ${balas} balas no pente (tem ${arma.system.pente.value}). Recarregue.`); return false; }
+  await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
+  return true;
+}
+
 // Defesa, acerto, dano e o cartão do resultado. Devolve o resumo (macros e o teste leem).
 export async function resolver(pedido, usuario = game.user) {
   if (!config('ativo')) return null;
   const ctx = await contexto(pedido, usuario);
   if (!ctx) return null;
-  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo, ctx)) return null;
+  if (ctx.pedido.atirador && !ctx.arma.testUserPermission(ctx.usuario, 'OWNER') && !await gastarOPenteNoMestre(ctx)) return null;
   if (ctx.modo === 'supressivo') await supressao(ctx);
   else if (ctx.modo === 'explosivo') await explosao(ctx);
   else if (ctx.modo === 'cartucho') await cartucho(ctx);
@@ -306,7 +321,7 @@ async function marcarRodada(ctx, ator, chave) {
 // Quem atacou rola, se for um jogador conectado; senão (ou se ele não responder), o mestre. O Ponto Fraco do Solo soma
 // no dano (antes da armadura) do primeiro acerto dele na rodada.
 async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}) {
-  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo, ctx)) return null;
   let dano = null;
   const jogador = !ctx.usuario.isGM && ctx.usuario.active ? ctx.usuario : null;
   if (jogador && config('rolagemManual') && config('jogadorRolaDano')) {
@@ -319,7 +334,7 @@ async function rolarDanoDoAtaque(ctx, { multiplicador = 1, formula = null } = {}
     ctx.rolagens.push(rolado.roll);
     dano = { total: rolado.total, critico: rolado.critico, bonus: rolado.bonus, formula: rolado.formula };
   }
-  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return null;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo, ctx)) return null;
   const pontoFraco = ctx.atacante.system.consciencia.pontoFraco;
   if (pontoFraco && primeiraNaRodada(ctx.atacante, 'pontoFraco')) {
     await marcarRodada(ctx, ctx.atacante, 'pontoFraco');
@@ -384,7 +399,7 @@ async function receptoresDoAtaque(ctx, pegas, area = false) {
 // Tech ignora metade do SP (regras.CARGA_TECH). lesaoDoCritico: false no dano aplicado pelo cartão, em que a lesão do crítico sai pelo botão "Rolar a lesão".
 export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico = true } = {}) {
   if (!await conferirEscudoDaLinha(ctx, linha)) return;
-  if (ctx.arma && !conferirArmaVeicular(ctx.arma, ctx.modo)) return;
+  if (ctx.arma && !conferirArmaVeicular(ctx.arma, ctx.modo, ctx)) return;
   if (!conferirDestinos([linha.token], ctx.pedido.destinos?.[linha.token.uuid] ? { [linha.token.uuid]: ctx.pedido.destinos[linha.token.uuid] } : {}, ctx)) return;
   const ator = linha.token.actor;
   if (linha.humano?.morto) {
@@ -554,7 +569,7 @@ async function individual(ctx) {
       : linha.interposicao ? 'Role o dano pelo botão Dano e marque a vítima interposta para aplicá-lo; o dano avulso não repete a reação.' : 'Role o dano pelo botão Dano da ficha.');
     return;
   }
-  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo, ctx)) return;
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
   pegas = await receptoresDoAtaque(ctx, pegas);
   if (await aplicarMunicaoDoAtaque(ctx, pegas)) return;
@@ -582,7 +597,7 @@ async function danoNaArea(ctx, pegas, formula = null) {
       : `Role o dano pelo botão ${botao} e aplique em quem ficou na área.`);
     return;
   }
-  if (!conferirArmaVeicular(ctx.arma, ctx.modo)) return;
+  if (!conferirArmaVeicular(ctx.arma, ctx.modo, ctx)) return;
   if (!conferirDestinos(ctx.alvos, ctx.pedido.destinos ?? {}, ctx)) return;
   pegas = await receptoresDoAtaque(ctx, pegas, true);
   if (!pegas.length || await aplicarMunicaoDoAtaque(ctx, pegas)) return;

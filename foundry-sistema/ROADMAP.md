@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 181). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 182). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -439,7 +439,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [x] parte 3, o cortador da folha (ciclo 179, sessão Junin, 2026-10-25): a folha transparente em grade, as linhas de
     8 direções e as de poses, a faixa do rótulo, a caixa comum, os quadros em WebP com os nomes padronizados e o conjunto
     preenchido.
-- [ ] **C46. Veículos como atores** (pedido do usuário, 2026-10-25: o veículo com token próprio, como a mesa da wiki do
+- [x] **C46. Veículos como atores** (pedido do usuário, 2026-10-25: o veículo com token próprio, como a mesa da wiki do
   master faz no M17). O modelo híbrido: o ator Veículo é a presença na cena (o token, a ficha, o alvo do ataque; o de
   NPC guarda o próprio estado, e o do personagem espelha o item, a parte 2); o item na ficha do personagem continua como a posse (a frota, a
   loja da wiki, a família do Nomad, o envio "Na mesa") e aponta para o ator. Assim a wiki e a loja não mudam. O CORE
@@ -455,7 +455,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     ganham o ator quando forem postos na cena, com o estado de agora;
   - [x] parte 3, a tripulação: feito no ciclo 180 (sessão KouArt, com o Codex, 2026-10-25): embarcar, descer, o motorista, mover junto e os ocupantes protegidos pelo veículo (os
     vidros, a cobertura), como a mesa da wiki;
-  - [~] parte 4, o resto pelo ator (sessão KouArt, com um worker, 2026-10-25): as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
+  - [x] parte 4, o resto pelo ator: feito no ciclo 181 (sessão KouArt, com um worker, 2026-10-26): as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
     C44 pelo MOVE dele.
 
 

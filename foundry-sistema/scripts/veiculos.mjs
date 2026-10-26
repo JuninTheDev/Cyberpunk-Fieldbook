@@ -2,6 +2,7 @@
 import { itemDoCatalogo } from './catalogo.mjs';
 import { ARMAS_VEICULARES, prepararArmaVeicular as prepararDados } from './armas-veiculos.mjs';
 import { SISTEMA } from './config.mjs';
+import { motivoDoAssento } from './regras-tripulacao.mjs';
 import { danoNoVeiculo, danoNoVidro } from './regras-veiculos.mjs';
 import { itemDoVeiculo, sincronizarVeiculo } from './vinculo-veiculo.mjs';
 
@@ -40,13 +41,16 @@ export function dirigirVeiculo(ator, dirigindo = true) {
 }
 
 // A instalação e a seleção são conferidas novamente depois das janelas de ataque, antes de consumir munição.
-export function motivoVeicular(arma, modo) {
+// assento: o de quem atira (tripulacao.assentoDaArma; o C46, parte 4: com o token do veículo na cena, só o motorista dele);
+// sem ele (a recarga, o dano avulso), o C15: o veículo da arma em uso pelo dono.
+export function motivoVeicular(arma, modo, assento = null) {
   const id = arma.system.instaladoEm;
   const regra = arma.getFlag(SISTEMA, 'armaVeicular');
   if (!id && !regra) return '';
   const veiculo = arma.actor?.items.get(id);
   if (veiculo?.type !== 'veiculo') return 'A arma montada está sem veículo.';
-  if (arma.actor.veiculoAtivo?.id !== id) return 'Selecione o veículo desta arma antes de atacar.';
+  const doAssento = motivoDoAssento(assento ?? { emUso: arma.actor.veiculoAtivo?.id === id });
+  if (doAssento) return doAssento;
   if (regra) {
     const upgrade = arma.actor.items.get(regra.upgrade);
     if (upgrade?.type !== 'upgrade' || upgrade.system.alvo !== 'veiculo' || upgrade.system.instaladoEm !== id

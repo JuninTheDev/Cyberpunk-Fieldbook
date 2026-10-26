@@ -1,10 +1,13 @@
 // Os estados padrão do Foundry, como na mesa com o CORE: só as contas definidas na wiki entram aqui.
 import { SISTEMA } from './config.mjs';
 import { corridaPorEstado, movimentoPorEstado } from './regras-estados.mjs';
+import { veiculoQueDirige } from './tripulacao.mjs';
 
 export const movimentoDe = ator => movimentoPorEstado(ator.statuses, ator.system.atributos.move.valor);
+// Quem dirige não corre (a wiki, system-rules.js:538): o "Dirigindo" do C40 ou o motorista de um token de veículo, também o
+// de NPC ou o de outro dono (o C46, parte 4).
 export const corridaDe = ator => corridaPorEstado(ator.statuses, ator.system.atributos.move.valor,
-  { dirigindo: Boolean(ator.system.dirigindo && ator.veiculoAtivo) });
+  { dirigindo: Boolean(ator.system.dirigindo && ator.veiculoAtivo) || Boolean(veiculoQueDirige(ator)) });
 
 const corridasPendentes = new WeakSet();
 const podeCorrer = ator => ator?.isOwner && ['personagem', 'capanga'].includes(ator.type) && fromUuidSync(ator.uuid) === ator;

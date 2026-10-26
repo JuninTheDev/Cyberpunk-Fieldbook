@@ -13,7 +13,7 @@ import { perguntarTeste } from './janela-rolagem.mjs';
 import * as R from './regras.mjs';
 import { testar } from './rolagens.mjs';
 import { ehArremesso, podeArremessar } from './arremessar.mjs';
-import { CANAL, combateDe, conferirArmaVeicular, conferirDestinos, distancia, esc, tokenNaCena } from './combate/apoio.mjs';
+import { CANAL, combateDe, conferirArmaVeicular, conferirDestinos, distancia, esc, montadaNoVeiculo, tokenNaCena } from './combate/apoio.mjs';
 import { resolver } from './combate/modos.mjs';
 import { naFila } from './combate/socket.mjs';
 import { protecaoDoOcupante, veiculoDaTripulacao } from './tripulacao.mjs';
@@ -54,9 +54,15 @@ async function perguntarDestinos(alvos, modo) {
 // abre a janela de rolagem (a ficha abre; Ctrl + clique, não). destinos: por UUID do token, { tipo: 'veiculo', veiculo:
 // id } ou { tipo: 'vidro', veiculo: id, janela: chave }; {} mantém as pessoas. Sem o mapa, pergunta pelo veículo ativo.
 // movimento e pericia: o golpe das Artes Marciais (artes-marciais.mjs; regras.MOVIMENTOS) e a perícia da forma dele.
-export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, destinos = null, perguntar = false, movimento = null, pericia: periciaDoGolpe = null } = {}) {
-  const atacante = arma.actor;
+// atirador e tokenAtirador (o C46, parte 4; tripulacao.atacarDoAssento): o motorista que dispara a arma montada do veículo
+// em que está, também a de outro dono, e o token dele; sem eles, o dono da arma.
+export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo', modo: pedido = null, destinos = null, perguntar = false, movimento = null, pericia: periciaDoGolpe = null, atirador = null, tokenAtirador = null } = {}) {
+  const atacante = atirador ?? arma.actor;
   if (!atacante) return null;
+  // A arma de outro dono: só a montada no veículo (o assento confere qual e de que lugar), com o personagem de quem clica.
+  const alheia = atacante.uuid !== arma.actor?.uuid;
+  if (alheia && !atacante.isOwner) { ui.notifications.warn(`${atacante.name} não é seu.`); return null; }
+  if (alheia && !montadaNoVeiculo(arma)) { ui.notifications.warn(`${arma.name}: de outro dono, só a arma montada do veículo que ${atacante.name} dirige.`); return null; }
   if (pedido === 'arremesso' && !podeArremessar(arma) && arma.system.tipo !== 'thrownWeapon') { ui.notifications.warn('Só uma arma branca solta pode ser arremessada.'); return null; }
   const arremesso = ehArremesso(arma, pedido);
   // As Artes Marciais pedem pelo menos 1 ponto numa forma (o C10).
@@ -68,6 +74,9 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   }
   // captura.mjs:lerAtaque, no Fluxo: desligado, só a rolagem da arma, sem pedir defesa nem dano.
   const resolverAtaques = config('ativo');
+  // O pente da arma de outro dono: quem atira não grava nela; o mestre ativo gasta as balas ao resolver (modos.mjs).
+  const penteNoMestre = alheia && !arma.isOwner;
+  if (penteNoMestre && !resolverAtaques) { ui.notifications.warn(`${arma.name}: sem o fluxo de combate ligado, só quem controla o dono gasta o pente desta arma.`); return null; }
   const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
   // O Black ICE e o demônio ficam na NET: a arma não os atinge (o dano neles vem dos programas e do Zap).
   const lista = marcados.filter(token => !ATORES_DA_NET.includes(token.actor.type));
@@ -84,9 +93,10 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // O ricochete de um cartucho (o Kit) continua cartucho: o leque sai da superfície do ricochete.
   const pelaMunicao = R.classificar(pelaArma);
   const modo = arremesso ? pelaMunicao : pedido === 'ricochete' && pelaMunicao === 'cartucho' ? 'cartucho' : R.classificar({ pedido, ...pelaArma });
-  if (!conferirArmaVeicular(arma, modo)) return null;
+  const pedidoDoToken = tokenAtirador?.document ?? tokenAtirador;
+  const tokenAtq = pedidoDoToken?.actor?.uuid === atacante.uuid ? pedidoDoToken : tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
+  if (!conferirArmaVeicular(arma, modo, { atacante, tokenAtq })) return null;
   const montada = Boolean(arma.system.instaladoEm || arma.getFlag(SISTEMA, 'armaVeicular'));
-  const tokenAtq = tokenNaCena(atacante, lista[0]?.parent ?? canvas.scene);
   if (resolverAtaques && !lista.length && modo !== 'supressivo') { ui.notifications.warn('Marque um alvo (tecla T sobre o token) antes de atacar.'); return null; }
   if (resolverAtaques && modo === 'supressivo' && !tokenAtq) { ui.notifications.warn(`Ponha o token de ${atacante.name} na cena para o fogo supressivo.`); return null; }
   if (modo === 'supressivo' && !arma.system.supressivo) { ui.notifications.warn(`${arma.name} não faz fogo supressivo.`); return null; }
@@ -116,7 +126,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const balasDaCarga = comPente && carga ? R.balasDaCarga({ modo, perfil, pente: arma.system.pente.value }) : null;
   const balas = comPente ? (balasDaCarga ?? porTiro?.balas ?? R.balasDoModo(modo, { autofogo: perfil?.balasDoAutofogo, doisCanos })) : 0;
   if (balas && arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: ${balas === 1 ? 'pente vazio' : `precisa de ${balas} balas no pente (tem ${arma.system.pente.value})`}. Recarregue.`); return null; }
-  const { pericia, partes } = arma.partesDoAtaque(arremesso ? 'arremesso' : modo, { pericia: periciaDoGolpe });
+  const { pericia, partes } = arma.partesDoAtaque(arremesso ? 'arremesso' : modo, { pericia: periciaDoGolpe, ator: alheia ? atacante : null });
   // Tiro mirado (p. 173): −8 no ataque (o bônus de tiro mirado do cyberware compensa).
   if (R.LOCAIS_MIRADOS[local]) partes.push({ rotulo: 'Mirado', valor: -8 + (atacante.system.bonus.tiroMirado || 0) });
   // O ricochete (o Kit): −4, ou −2 com o Ballistic Coprocessor; num tiro mirado, só a penalidade do mirado.
@@ -139,7 +149,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // A munição Smart melhorada na arma Smart: as penalidades de visão não contam; as outras voltam na segunda chance.
   const smartMelhorada = R.smartMelhoradaVale({ perfil, municao: municao?.getFlag(SISTEMA, 'arma2077') });
   const extras = smartMelhorada ? escolhidas.filter(parte => !R.ehPenalidadeDeVisao(parte)) : escolhidas;
-  if (!conferirArmaVeicular(arma, modo) || !conferirDestinos(lista, destinos, { modo, local })) return null;
+  if (!conferirArmaVeicular(arma, modo, { atacante, tokenAtq }) || !conferirDestinos(lista, destinos, { modo, local })) return null;
   if (balas && !montada) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
   // O ataque gasta a carga (a Omaha fica carregada até o fim do turno em que disparou); a Grad pede o ferrolho. O
   // "Desfazer" do mestre devolve os dois. Na montada, as marcas esperam a conferência depois da rolagem.
@@ -149,15 +159,16 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
     rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: resolverAtaques && config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
-  if (!conferirArmaVeicular(arma, modo) || !conferirDestinos(lista, destinos, { modo, local })) return null;
-  // Na arma montada, só gasta o pente depois de conferir a instalação ao fim da rolagem.
+  if (!conferirArmaVeicular(arma, modo, { atacante, tokenAtq }) || !conferirDestinos(lista, destinos, { modo, local })) return null;
+  // Na arma montada, só gasta o pente depois de conferir a instalação ao fim da rolagem (a de outro dono, no mestre).
   if (balas && montada) {
     if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: precisa de ${balas} balas no pente (tem ${arma.system.pente.value}). Recarregue.`); return null; }
-    await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
+    if (!penteNoMestre) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
   }
   if (montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const dados = {
     id: foundry.utils.randomID(), modo, arremesso, local, total, arma: arma.uuid, token: tokenAtq?.uuid ?? null, alvos: lista.map(alvo => alvo.uuid), mensagem: mensagem.id,
+    atirador: alheia ? atacante.uuid : null,
     carga, doisCanos, porTiro, ricochete, ferrolho, destinos, movimento: golpe ? movimento : null,
     smartMelhorada: smartMelhorada ? { penalidades: [...partes, ...extras].filter(parte => parte.valor < 0), ignoradas: escolhidas.filter(R.ehPenalidadeDeVisao).map(parte => parte.rotulo) } : null
   };

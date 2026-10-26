@@ -15,7 +15,8 @@
 // - batida de veículo (o C40; a wiki, system-rules.js:538, p. 189–192): os tokens selecionados estão no veículo que
 //   bateu, os alvos marcados (T) foram atingidos. O Traumatismo Cervical (com os +5) em todos; 6d6 no veículo de quem
 //   dirige (o SDP menos o SP, uma vez por veículo); quem está a pé desvia com DEX + Evasão contra DV13 ou leva 6d6 no
-//   corpo (a armadura absorve).
+//   corpo (a armadura absorve). O C46, parte 4: quem está num token de veículo (o motorista ou o passageiro) não está a pé,
+//   e os 6d6 vão no veículo daquele token (no ligado, no item; no de NPC, no ator do token), uma vez por veículo.
 import { jogadorDe, pedir, souOMestreAtivo } from './combate.mjs';
 import { SISTEMA } from './config.mjs';
 import { lesaoCritica } from './lesoes.mjs';
@@ -23,7 +24,7 @@ import { rolarResistencia } from './municoes.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import * as R from './regras-perigos.mjs';
 import * as RV from './regras-veiculos.mjs';
-import { veiculoDirigido } from './veiculos.mjs';
+import { tokenDaPessoa, veiculoDaTripulacao, veiculoDirigidoPor } from './tripulacao.mjs';
 
 export const STATUS_SEM_AR = 'cprf-sem-ar';
 export const STATUS_ELETROCUTADO = 'cprf-eletrocutado';
@@ -51,6 +52,14 @@ async function atorDe(alvo) {
   const doc = typeof alvo === 'string' ? await fromUuid(alvo) : alvo;
   const documento = doc?.document ?? doc;
   return documento instanceof Actor ? documento : documento?.actor ?? null;
+}
+
+// O TokenDocument de um Token, de um TokenDocument ou de um uuid; o do ator sintético. O ator do mundo: null (a batida
+// procura o token dele na cena, tripulacao.tokenDaPessoa).
+async function tokenDoAlvo(alvo) {
+  const doc = typeof alvo === 'string' ? await fromUuid(alvo) : alvo;
+  const documento = doc?.document ?? doc;
+  return documento?.documentName === 'Token' ? documento : documento?.token ?? null;
 }
 
 // Os tokens da vez: o do HUD primeiro, com os outros controlados; sem ele, os controlados; sem nenhum, os alvos marcados.
@@ -306,10 +315,14 @@ const APLICAR = {
       : `${n.nome}: ${n.dano} direto no HP no fim de cada turno, enquanto estiver na zona (não se apaga com uma Ação).${decisao === 'trocar' ? ` Tomou o lugar da radiação de ${atual}.` : ''}`);
     linha.botoes.push(botaoDeSaida(ator, STATUS_RADIACAO));
   },
-  // A batida (o C40): linha.papel diz se o ator estava no veículo que bateu ("veiculo") ou foi atingido ("atingido").
+  // A batida (o C40): linha.papel diz se o ator estava no veículo que bateu ("veiculo") ou foi atingido ("atingido"). O C46,
+  // parte 4: dentro de um token de veículo (linha.token, o token dele), o veículo batido é o daquele token (o ator dele, que
+  // no ligado grava no item), também para o passageiro; fora, o que ele dirige (o do C40).
   async batida(ator, linha, ctx) {
-    const veiculo = veiculoDirigido(ator);
-    if (linha.papel === 'atingido' && !veiculo) {
+    const veiculo = veiculoDirigidoPor(ator, linha.token);
+    const dentro = veiculoDaTripulacao(tokenDaPessoa(ator, linha.token));
+    const batido = dentro?.actor ?? veiculo;
+    if (linha.papel === 'atingido' && !batido) {
       linha.notas.push('Atingido a pé.');
       const teste = await resistir(ator, { pericia: RV.PERICIA_DE_DESVIAR, dv: RV.DV_DESVIAR_A_PE, nome: 'Batida: desviar do veículo (DEX + Evasão)' });
       linha.teste = teste;
@@ -326,16 +339,22 @@ const APLICAR = {
       linha.desfazer.dano = danoParaDesfazer(resumo, resumo.hpAntes - resumo.hpDepois + bonus);
       return;
     }
-    linha.notas.push(linha.papel === 'atingido' ? `Atingido, dirigindo ${veiculo.name}.` : veiculo ? `No veículo, dirigindo ${veiculo.name}.` : 'No veículo, sem dirigir.');
-    if (veiculo) await baterOVeiculo(veiculo, linha, ctx);
+    const sem = dentro ? `No veículo ${batido.name}, sem dirigir.` : 'No veículo, sem dirigir.';
+    linha.notas.push(linha.papel === 'atingido' ? (veiculo ? `Atingido, dirigindo ${veiculo.name}.` : `Atingido no veículo ${batido.name}, sem dirigir.`)
+      : veiculo ? `No veículo, dirigindo ${veiculo.name}.` : sem);
+    if (batido) await baterOVeiculo(batido, linha, ctx);
     const bonus = await lesaoDaBatida(ator, linha);
     if (bonus) linha.desfazer.dano = { perdeu: bonus };
   }
 };
 
-// Os 6d6 da batida no veículo (o receberDanoVeicular: o SDP menos o SP, com a ablação). O veículo é item do próprio ator, e
-// a lista do aplicar não repete o ator: cada veículo leva o dano uma vez.
+// Os 6d6 da batida no veículo (o receberDanoVeicular: o SDP menos o SP, com a ablação). Uma vez por veículo: a lista do
+// aplicar não repete o ator, mas o motorista e os passageiros do mesmo token de veículo (o C46, parte 4) são linhas
+// diferentes.
 async function baterOVeiculo(veiculo, linha, ctx) {
+  ctx.batidos ??= new Set();
+  if (ctx.batidos.has(veiculo.uuid)) { linha.notas.push(`${veiculo.name}: os ${RV.DANO_DA_BATIDA} já entraram nesta batida.`); return; }
+  ctx.batidos.add(veiculo.uuid);
   const roll = await new Roll(RV.DANO_DA_BATIDA).evaluate();
   ctx.rolagens.push(roll);
   const conta = await veiculo.receberDanoVeicular({ dano: roll.total });
@@ -370,17 +389,19 @@ export async function aplicar({ perigo, nivel = '', metros = 0, atores = [], ati
   const regra = R.PERIGOS[perigo];
   if (!regra) { ui.notifications.warn(`Perigo do ambiente desconhecido: ${perigo}.`); return null; }
   const lista = [];
-  const papeis = new Map();
+  const papeis = new Map(), tokens = new Map();
   for (const [papel, alvos] of [['veiculo', atores], ['atingido', regra.batida ? atingidos : []]]) {
     for (const alvo of [alvos].flat()) {
       const ator = await atorDe(alvo);
       if (comHp(ator) && !lista.includes(ator)) { lista.push(ator); papeis.set(ator, papel); }
+      // O token de cada um (a batida acha o veículo em que ele está, o C46 parte 4): o primeiro que vier.
+      if (comHp(ator) && !tokens.get(ator)) tokens.set(ator, await tokenDoAlvo(alvo));
     }
   }
   if (!lista.length) { ui.notifications.warn('Perigo do ambiente: selecione os tokens (ou marque os alvos) que o sofrem.'); return null; }
   const ctx = { perigo, nivel: R.nivelValido(perigo, nivel), metros: Math.max(0, Number(metros) || 0), rolagens: [], linhas: [] };
   for (const ator of lista) {
-    const linha = { ator, papel: papeis.get(ator), hpAntes: null, notas: [], botoes: [], teste: null, lesao: null,
+    const linha = { ator, papel: papeis.get(ator), token: tokens.get(ator) ?? null, hpAntes: null, notas: [], botoes: [], teste: null, lesao: null,
       desfazer: { ator: ator.uuid, dano: null, estados: [], trocados: [], lesoes: [], veiculos: [] } };
     // Na fila do ator: o perigo lê os efeitos e o HP que a aplicação anterior no mesmo ator deixou. Um erro no meio (o
     // ator apagado durante a rolagem) fica numa nota da linha: os outros seguem, e o cartão sai com o Desfazer do que já
@@ -525,10 +546,12 @@ async function desfazerJa(mensagem) {
     // Na fila do ator, como os ticks: um tick que grava o HP ao mesmo tempo não apaga o que o Desfazer devolve.
     await naFila(filasDosAtores, ator.uuid, async () => {
       if (entrada.dano) await ator.desfazerDano(entrada.dano);
-      // O SDP e a ablação do veículo (a batida), pela diferença (o desfazerDanoVeicular).
+      // O SDP e a ablação do veículo (a batida), pela diferença (o desfazerDanoVeicular): o item do próprio ator (o C40) ou
+      // o ator do token de veículo em que ele estava (o C46, parte 4: o de NPC ou o ligado, que grava no item).
       for (const batido of entrada.veiculos ?? []) {
-        const veiculo = ator.items.get(batido.veiculo.split('.').at(-1));
-        if (veiculo?.uuid === batido.veiculo) await veiculo.desfazerDanoVeicular(batido);
+        let veiculo = ator.items.get(batido.veiculo.split('.').at(-1));
+        if (veiculo?.uuid !== batido.veiculo) veiculo = await fromUuid(batido.veiculo);
+        if (veiculo?.type === 'veiculo' && veiculo.uuid === batido.veiculo) await veiculo.desfazerDanoVeicular(batido);
       }
       const nossos = entrada.estados.filter(id => ator.effects.has(id));
       if (nossos.length) await ator.deleteEmbeddedDocuments('ActiveEffect', nossos);

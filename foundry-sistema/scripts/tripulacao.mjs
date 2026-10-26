@@ -1,9 +1,10 @@
 // C46.3: a tripulação pertence ao token, inclusive nos veículos soltos de NPC.
 // M17 do master, Tabletop/README.md:104-111 e mesa-api.js:1302-1342. O mestre ativo grava e relê os pedidos na fila.
 import { SISTEMA } from './config.mjs';
-import { motivoEmbarque, ordemMotorista, posicaoEmbarcada, posicoesDeSaida } from './regras-tripulacao.mjs';
-import { itemDoVeiculo } from './vinculo-veiculo.mjs';
-import { usarVeiculo, dirigirVeiculo } from './veiculos.mjs';
+import { config } from './configuracoes.mjs';
+import { motivoEmbarque, ordemMotorista, posicaoEmbarcada, posicoesDeSaida, veiculoDaDirecao } from './regras-tripulacao.mjs';
+import { atorDoItem, itemDoVeiculo } from './vinculo-veiculo.mjs';
+import { usarVeiculo, dirigirVeiculo, veiculoDirigido } from './veiculos.mjs';
 
 const CANAL = `system.${SISTEMA}`;
 const filas = new Map(), esperando = new Map(), pendentes = new Set();
@@ -42,6 +43,73 @@ export function veiculoDaTripulacao(token) {
 export function protecaoDoOcupante(token) {
   const veiculo = veiculoDaTripulacao(token);
   return veiculo ? itemDoVeiculo(veiculo.actor) ?? veiculo.actor : token?.actor?.veiculoAtivo ?? null;
+}
+
+// ---------------- O resto pelo ator (o C46, parte 4) ----------------
+// O estado do veículo de um token: no ligado, o item (a parte 2); no de NPC, o ator do token.
+export const estadoDoVeiculo = veiculo => (veiculo ? itemDoVeiculo(veiculo.actor) ?? veiculo.actor ?? null : null);
+
+// O token da pessoa: o pedido, se é dela; sem ele, o do ator sintético ou o dela na cena vista ou na ativa (o embarcado
+// primeiro). Fora do Foundry (os testes de regras), nenhum.
+export function tokenDaPessoa(ator, token = null) {
+  token = token?.document ?? token;
+  if (token) return ator && token.actor?.uuid === ator.uuid ? token : null;
+  if (!ator) return null;
+  if (ator.token) return ator.token;
+  const cenas = [globalThis.canvas?.scene, globalThis.game?.scenes?.active].filter(Boolean);
+  const dela = cenas.flatMap(cena => cena.tokens.filter(t => t.actorLink && t.actorId === ator.id));
+  return dela.find(t => veiculoDaTripulacao(t)) ?? dela[0] ?? null;
+}
+
+// O token de veículo em que a pessoa é o motorista (o primeiro da tripulação), ou null.
+export function veiculoQueDirige(ator, token = null) {
+  const daPessoa = tokenDaPessoa(ator, token), dentro = veiculoDaTripulacao(daPessoa);
+  return dentro && tripulantes(dentro)[0] === daPessoa.id ? dentro : null;
+}
+
+// O veículo da arma ou do C40 tem token na cena?
+const temTokenNaCena = (item, cena) => {
+  const ligado = item ? atorDoItem(item) : null;
+  return Boolean(ligado && cena?.tokens?.some(token => token.actorId === ligado.id));
+};
+
+// O veículo que o ator dirige agora (regras-tripulacao.veiculoDaDirecao), para a direção sob pressão, as manobras e a
+// batida do C40: o do token de veículo em que ele é o motorista, também o de NPC ou o de outro dono (o estado: o item no
+// ligado, o ator no de NPC); dentro como passageiro, nenhum; fora, o do C40 (o item em uso com "Dirigindo"), se esse
+// veículo não tem token na cena dele. token: o da pessoa (o do combatente, o do HUD). Devolve o veículo, ou null.
+export function veiculoDirigidoPor(ator, token = null) {
+  const daPessoa = tokenDaPessoa(ator, token), dentro = veiculoDaTripulacao(daPessoa);
+  const doC40 = ator?.items ? veiculoDirigido(ator) : null;
+  return veiculoDaDirecao({ tokenId: daPessoa?.id ?? null, dentro: dentro && { ocupantes: tripulantes(dentro), veiculo: estadoDoVeiculo(dentro) },
+    proprio: doC40, proprioNaCena: temTokenNaCena(doC40, daPessoa?.parent) });
+}
+
+// O assento de quem dispara a arma montada no veículo (regras-tripulacao.motivoDoAssento; veiculos.motivoVeicular confere):
+// atirador, quem ataca (o dono ou o motorista); token, o dele. A arma fora de um veículo do C15 (a do cyberware, a solta):
+// null.
+export function assentoDaArma(arma, atirador = arma?.actor, token = null) {
+  const item = arma?.actor?.items?.get(arma.system?.instaladoEm);
+  if (item?.type !== 'veiculo') return null;
+  const daPessoa = tokenDaPessoa(atirador, token), dentro = veiculoDaTripulacao(daPessoa);
+  return { dentro: Boolean(dentro), motorista: Boolean(dentro) && tripulantes(dentro)[0] === daPessoa.id,
+    doVeiculo: Boolean(dentro) && itemDoVeiculo(dentro.actor) === item, naCena: temTokenNaCena(item, daPessoa?.parent),
+    dono: atirador?.uuid === arma.actor.uuid, emUso: arma.actor.veiculoAtivo?.id === item.id };
+}
+
+// As armas montadas no veículo de um token: no ligado, as do item (as do C15, na ficha do dono); o de NPC não tem itens.
+export function armasDoVeiculo(veiculo) {
+  const item = itemDoVeiculo(veiculo?.actor);
+  return item ? item.parent.items.filter(arma => arma.type === 'arma' && arma.system.instaladoEm === item.id) : [];
+}
+
+// O motorista dispara uma arma montada do veículo em que está, também a de outro dono (a API e o botão do HUD). O ataque
+// é o do combate.mjs, com quem atira e o token dele (a origem: dentro, o token fica no centro do veículo); o assento, o
+// pente e o resto se conferem lá e no mestre.
+export function atacarDoAssento(token, arma, opcoes = {}) {
+  token = atual(token?.document ?? token);
+  if (!token || !dono(token, game.user)) { ui.notifications.warn('Esse token não é seu.'); return null; }
+  if (arma?.type !== 'arma') { ui.notifications.warn('Escolha uma arma montada do veículo.'); return null; }
+  return arma.atacar({ ...opcoes, atirador: token.actor, tokenAtirador: token });
 }
 
 const centro = (token, grade) => ({ x: dados(token).x + dados(token).width * grade / 2, y: dados(token).y + dados(token).height * grade / 2, elevation: dados(token).elevation ?? 0 });
@@ -279,6 +347,22 @@ async function entrarPeloHud(veiculo) {
   if (token) await embarcar(token, veiculo);
 }
 
+// A janela de rolagem, como a ficha (ficha-personagem.mjs): Ctrl + clique faz o contrário do "Rolar direto".
+const comJanela = evento => Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto'));
+
+// C46.4: as armas montadas do veículo, para o motorista: a escolha e o ataque (a metralhadora só com Autofogo, o C15).
+async function escolherArmaDoAssento(token, evento) {
+  const armas = armasDoVeiculo(veiculoDaTripulacao(token));
+  if (!armas.length) return null;
+  const esc = foundry.utils.escapeHTML;
+  const id = await foundry.applications.api.DialogV2.wait({ window: { title: 'Armas do veículo' }, classes: [SISTEMA, 'tripulacao', 'armas-do-veiculo'],
+    content: `<label>Arma <select name="arma">${armas.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')}</select></label>`,
+    buttons: [{ action: 'atacar', label: 'Atacar', default: true, callback: (e, b) => b.form.elements.arma.value }], rejectClose: false }).catch(() => null);
+  const arma = armas.find(a => a.id === id);
+  if (!arma) return null;
+  return atacarDoAssento(token, arma, { modo: arma.getFlag(SISTEMA, 'armaVeicular')?.soAutofogo ? 'autofogo' : null, perguntar: comJanela(evento) });
+}
+
 function botaoNoHud(app, elemento) {
   const token = app.object?.document, coluna = elemento.querySelector('.col.left');
   if (!token || !coluna) return;
@@ -287,13 +371,19 @@ function botaoNoHud(app, elemento) {
     const b = document.createElement('button');
     b.type = 'button'; b.className = `control-icon ${SISTEMA}-${classe}`; b.title = titulo; b.setAttribute('aria-label', titulo);
     b.innerHTML = `<i class="fa-solid ${icone}" inert></i>`;
-    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); acompanhar(Promise.resolve(acao())); });
+    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); acompanhar(Promise.resolve(acao(e))); });
     coluna.append(b);
   };
   if (token.actor?.type === 'veiculo' && visivelPara(token, game.user)) botao('entrar', 'Entrar', 'fa-right-to-bracket', () => entrarPeloHud(token));
   if (marca(token) && dono(token, game.user)) {
     botao('descer', 'Descer', 'fa-right-from-bracket', () => descer(token));
     botao('dirigir', veiculoDaTripulacao(token) && tripulantes(veiculoDaTripulacao(token))[0] === token.id ? 'Dirigindo' : 'Dirigir', 'fa-car', () => dirigir(token));
+    // C46.4: o motorista faz a manobra do C40 pelo veículo do token e dispara as armas montadas dele.
+    const veiculo = veiculoQueDirige(token.actor, token);
+    if (veiculo) {
+      botao('manobra', 'Manobra', 'fa-car-burst', e => game.system.api.veiculos.manobra(token.actor, null, { token, perguntar: comJanela(e) }));
+      if (armasDoVeiculo(veiculo).length) botao('armas', 'Armas do veículo', 'fa-crosshairs', e => escolherArmaDoAssento(token, e));
+    }
   }
 }
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { SISTEMA } from '../../foundry-sistema/scripts/config.mjs';
-import { conferirDestinos, destinoEstrutural, destinoVeicular } from '../../foundry-sistema/scripts/combate/apoio.mjs';
+import { conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular } from '../../foundry-sistema/scripts/combate/apoio.mjs';
 import { protecaoDoOcupante } from '../../foundry-sistema/scripts/tripulacao.mjs';
 import { desfazerDanoNoVidro, desfazerDanoVeicular, receberDanoNoVidro, receberDanoVeicular } from '../../foundry-sistema/scripts/veiculos.mjs';
 
@@ -227,4 +227,57 @@ test('C46.3 combate: fora da tripulação, a escolha legada do C15 conserva veí
   }
   assert.equal(protecaoDoOcupante(e.alvo), e.proprio);
   assert.equal(e.avisos.length, 0);
+}));
+
+test('C46.4 combate: a metralhadora do carro de outro dono pelo motorista: o mestre confere o assento e gasta o pente dele', async () => ambiente(async e => {
+  // CORE 0.92.4, core_upgrades.json:170: "The driver may fire it using an Action"; o Autofogo gasta 10 balas (regras.mjs).
+  const veiculos = await import('../../foundry-sistema/scripts/veiculos.mjs');
+  const modos = await import('../../foundry-sistema/scripts/combate/modos.mjs');
+  const jogador = { id: 'jogador', isGM: false, active: true };
+  const upgrade = { id: 'instalacao', type: 'upgrade', system: { alvo: 'veiculo', instaladoEm: e.deOutro.id },
+    getFlag: (escopo, chave) => (escopo === SISTEMA && chave === 'catalogo' ? 'core_upgrades:onboard-machine-gun' : undefined) };
+  const arma = { id: 'metralhadora', uuid: `${e.outroDono.uuid}.Item.metralhadora`, type: 'arma', name: 'Onboard Machine Gun', actor: e.outroDono, parent: e.outroDono,
+    system: { instaladoEm: e.deOutro.id, aDistancia: true, autofogo: 4, pente: { value: 30, max: 30 } }, tabelaDaArma: 'DV Assault Rifle',
+    getFlag: (escopo, chave) => (escopo === SISTEMA && chave === 'armaVeicular' ? { tipo: 'metralhadora', soAutofogo: true, frontal: true, upgrade: upgrade.id } : undefined),
+    motivoVeicular: (modo, assento) => veiculos.motivoVeicular(arma, modo, assento), testUserPermission: usuario => Boolean(usuario?.isGM),
+    update: async mudancas => gravar(arma, mudancas) };
+  e.outroDono.items.push(upgrade, arma); e.docs.set(arma.uuid, arma);
+  const pedido = (extra = {}) => ({ id: 'metralhadora', arma: arma.uuid, atirador: e.atacante.uuid, token: e.tokenAtq.uuid, alvos: [], modo: 'autofogo', local: 'corpo', total: 30, destinos: {}, ...extra });
+  e.tokenAtq.flags[SISTEMA] = { embarcado: { veiculoId: e.tokenLigado.id } };
+  // Passageiro (o segundo da tripulação): recusa antes de gastar o pente.
+  e.tokenLigado.flags[SISTEMA] = { tripulacao: [e.alvo.id, e.tokenAtq.id] };
+  e.alvo.flags[SISTEMA] = { embarcado: { veiculoId: e.tokenLigado.id } };
+  assert.equal(await modos.resolver(pedido(), jogador), null);
+  assert.equal(arma.system.pente.value, 30);
+  assert.match(e.avisos.at(-1), /Só o motorista dispara a arma montada do veículo/);
+  // Motorista: o mestre gasta as 10 balas do Autofogo no pente do dono e resolve.
+  e.tokenLigado.flags[SISTEMA].tripulacao = [e.tokenAtq.id, e.alvo.id];
+  const resumo = await modos.resolver(pedido(), jogador);
+  assert.equal(resumo?.modo, 'autofogo'); assert.equal(resumo?.atacante, e.tokenAtq.name);
+  assert.equal(arma.system.pente.value, 20);
+  // O mestre que atira pelo motorista já gastou no cliente dele: não gasta de novo.
+  assert.ok(await modos.resolver(pedido(), globalThis.game.user));
+  assert.equal(arma.system.pente.value, 20);
+  // Sem balas bastantes, o mestre recusa; o tiro único não serve à metralhadora; outra arma de outro dono, nada.
+  arma.system.pente.value = 5;
+  assert.equal(await modos.resolver(pedido(), jogador), null);
+  assert.equal(arma.system.pente.value, 5); assert.match(e.avisos.at(-1), /precisa de 10 balas/);
+  arma.system.pente.value = 30;
+  assert.equal(await modos.resolver(pedido({ modo: 'tiro' }), jogador), null);
+  assert.equal(arma.system.pente.value, 30); assert.match(e.avisos.at(-1), /só dispara com Autofogo/);
+  assert.equal(await modos.resolver(pedido({ arma: e.arma.uuid }), jogador), null);
+  assert.equal(await modos.resolver(pedido({ atirador: e.tokenAtq.uuid }), jogador), null);
+  // A arma do cyberware de outro dono não tem assento: nem no mestre nem na conferência.
+  const cyber = { id: 'cyber', type: 'cyberware', system: {} };
+  const braco = { id: 'braco', uuid: `${e.outroDono.uuid}.Item.braco`, type: 'arma', name: 'Braço armado', actor: e.outroDono, parent: e.outroDono,
+    system: { instaladoEm: cyber.id }, getFlag: () => undefined, motivoVeicular: () => '' };
+  e.outroDono.items.push(cyber, braco); e.docs.set(braco.uuid, braco);
+  assert.equal(await modos.resolver(pedido({ arma: braco.uuid, modo: 'tiro' }), jogador), null);
+  assert.equal(conferirArmaVeicular(braco, 'tiro', { atacante: e.atacante, tokenAtq: e.tokenAtq }), false);
+  assert.match(e.avisos.at(-1), /de outro dono, só a arma montada do veículo/);
+  assert.equal(conferirArmaVeicular(braco, 'tiro', { atacante: e.outroDono, tokenAtq: null }), true);
+  // Fora do carro: o motorista que desceu não dispara.
+  delete e.tokenAtq.flags[SISTEMA]; e.tokenLigado.flags[SISTEMA].tripulacao = [e.alvo.id];
+  assert.equal(await modos.resolver(pedido(), jogador), null);
+  assert.equal(arma.system.pente.value, 30); assert.match(e.avisos.at(-1), /Entre no veículo como motorista/);
 }));

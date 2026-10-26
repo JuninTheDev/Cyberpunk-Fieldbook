@@ -150,3 +150,34 @@ test('C44 régua: caído, só vermelho e sem rótulo; o MOVE preparado da ficha;
     assert.equal(regua._getGridHighlightStyle(ponto(2)).color, 'usuario');
   } finally { limpar(); }
 });
+
+test('C46.4 régua: o token do veículo pela velocidade de combate (MOVE 20: verde até 40 m, vermelho além), sem Correr', () => {
+  // Wiki, system-rules.js:538 (o MOVE do veículo passa a ser o do motorista, sem Ações de Movimento) e :499 (MOVE × 2 m).
+  const env = ambiente();
+  try {
+    registrarReguaMovimento();
+    const { regua } = env;
+    regua.token = { actor: { type: 'veiculo', system: { velocidade: { combate: 20, narrativa: '160 km/h' } } } };
+    assert.deepEqual(faixasDoToken(regua.token), { veiculo: 40 });
+    assert.deepEqual([10, 40, 42, 80].map(c => regua._getSegmentStyle(ponto(c)).color), [0x00ff00, 0x00ff00, 0xff0000, 0xff0000]);
+    assert.deepEqual([0, 40, 60].map(c => regua._getGridHighlightStyle(ponto(c)).color), [0x00ff00, 0x00ff00, 0xff0000]);
+    assert.equal(regua._getWaypointLabelContext(ponto(30), {}).cost.units, 'm · Velocidade de combate');
+    assert.equal(regua._getWaypointLabelContext(ponto(50), {}).cost.units, 'm');
+    // A linha muda de cor no último quadrado da faixa.
+    const intermediario = (c, proximo) => ({ intermediate: true, measurement: { cost: c }, next: { measurement: { cost: proximo } } });
+    assert.deepEqual([[38, 40], [40, 42], [42, 44]].map(([c, p]) => regua._shouldRenderWaypoint(intermediario(c, p))), [false, true, false]);
+    // O carro esportivo (MOVE 40): até 80 m; o veículo parado (MOVE 0): tudo vermelho, sem rótulo.
+    regua.token.actor.system.velocidade.combate = 40;
+    assert.equal(regua._getSegmentStyle(ponto(80)).color, 0x00ff00);
+    regua.token.actor.system.velocidade.combate = 0;
+    assert.equal(regua._getSegmentStyle(ponto(0)).color, 0xff0000);
+    assert.equal(regua._getWaypointLabelContext(ponto(2), {}).cost.units, 'm');
+    // A configuração desligada vale também para o veículo; a pessoa continua com Andar e Correr.
+    env.ligada = false;
+    assert.equal(faixasDoToken(regua.token), null);
+    assert.equal(regua._getSegmentStyle(ponto(2)).color, 'usuario');
+    env.ligada = true;
+    regua.token = { actor: env.ator };
+    assert.deepEqual(faixasDoToken(regua.token), { andar: 8, correr: 16 });
+  } finally { limpar(); }
+});
