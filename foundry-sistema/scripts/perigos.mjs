@@ -129,6 +129,7 @@ export async function abrir({ perigo = '', nivel = '', metros = null, tokens = n
 export function botaoNoHud(app, elemento) {
   if (!game.user.isGM) return;
   const doc = app?.document ?? app?.object?.document;
+  if (!comHp(doc?.actor)) return;
   const coluna = (elemento instanceof HTMLElement ? elemento : app?.element)?.querySelector?.('.col.left');
   if (!doc || !coluna || coluna.querySelector(`.${SISTEMA}-perigo`)) return;
   const botao = document.createElement('button');

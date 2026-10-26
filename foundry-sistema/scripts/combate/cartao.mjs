@@ -96,7 +96,7 @@ export async function desfazer(mensagem) {
     if (!ator) continue;
     if (item.veicular) {
       const veiculo = await fromUuid(item.veicular.veiculo);
-      if (veiculo?.type === 'veiculo' && veiculo.actor?.uuid === ator.uuid) {
+      if (veiculo?.type === 'veiculo' && (veiculo === ator || veiculo.actor?.uuid === ator.uuid)) {
         if (item.veicular.tipo === 'vidro') await veiculo.desfazerDanoNoVidro(item.veicular);
         else if (item.veicular.tipo === 'veiculo') await veiculo.desfazerDanoVeicular(item.veicular);
       }
@@ -129,8 +129,8 @@ export async function desfazer(mensagem) {
 }
 
 // ---------------- O dano rolado à parte, pelos botões do cartão ----------------
-// Os alvos marcados (T) do mestre que levam dano de arma: quem tem HP (personagem e capanga).
-const alvosComHp = () => [...game.user.targets].map(token => token.document ?? token).filter(token => ['personagem', 'capanga'].includes(token.actor?.type));
+// Os alvos marcados (T) do mestre: a lesão só em pessoas; o dano também no SDP do ator Veículo.
+const alvosDoCartao = (tipos = ['personagem', 'capanga']) => [...game.user.targets].map(token => token.document ?? token).filter(token => tipos.includes(token.actor?.type));
 
 // "Aplicar dano" (o "apply damage" das maquetes do usuário): o dano rolado pelo botão "Dano" da ficha, nos alvos marcados
 // (T), como o ataque aplica (ferir: a armadura, o +5 do crítico, a Deflexão, a munição de borracha, o mortalmente ferido).
@@ -144,7 +144,7 @@ export async function aplicarDanoDoCartao(mensagem) {
   if (!formula && !arma?.actor) { ui.notifications.warn('A arma deste dano não está mais na ficha.'); return null; }
   if (R.MUNICAO_SEM_DANO[arma?.municaoCarregada?.system.efeito]) { ui.notifications.warn('Esta munição aplica seu efeito, sem o dano da arma.'); return null; }
   if (arma && !conferirArmaVeicular(arma, 'tiro')) return null;
-  const alvos = alvosComHp();
+  const alvos = alvosDoCartao(['personagem', 'capanga', 'veiculo']);
   if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) do dano.'); return null; }
   const ctx = {
     pedido: { id: foundry.utils.randomID(), total: null, arremesso: Boolean(dados.arremesso) }, usuario: game.user, arma, atacante: arma?.actor ?? null, tokenAtq: null, cena: alvos[0].parent, alvos,
@@ -169,7 +169,7 @@ export async function rolarLesaoDoCartao(mensagem) {
   if (dados.semLesao || efeito === 'rubber' || R.MUNICAO_SEM_DANO[efeito]) { ui.notifications.warn('Esta munição não causa lesão crítica.'); return null; }
   const modo = config('lesaoCritica');
   if (modo === 'nao') { ui.notifications.warn('A configuração "Lesão crítica" está desligada.'); return null; }
-  const alvos = alvosComHp();
+  const alvos = alvosDoCartao();
   if (!alvos.length) { ui.notifications.warn('Marque o alvo (T) da lesão.'); return null; }
   const feitos = new Set(mensagem.getFlag(SISTEMA, 'lesoesRoladas') ?? []);
   const novos = alvos.filter(token => !feitos.has(token.uuid));

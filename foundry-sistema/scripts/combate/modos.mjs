@@ -106,6 +106,8 @@ export async function resolver(pedido, usuario = game.user) {
 
 function infoDoAlvo(ctx, token) {
   const ator = token.actor;
+  // Wiki, system-rules.js:538: veículos têm SDP e não esquivam; não possuem atributos nem perícias de pessoa.
+  if (ator.type === 'veiculo') return { token, ator, nome: token.name, dono: null, metros: distancia(ctx.tokenAtq, token) };
   const esquiva = ator.partesDaPericia('evasion').partes.reduce((soma, parte) => soma + parte.valor, 0);
   return { token, ator, nome: token.name, dono: jogadorDe(ator), ref: ator.system.atributos.ref.valor, semPerna: ator.system.semPerna, metros: distancia(ctx.tokenAtq, token), mediaEsquiva: esquiva + R.MEDIA_D10, escudo: ator.escudo };
 }
@@ -677,7 +679,7 @@ function sobFogo(ctx) {
   const veCena = canvas.ready && canvas.scene?.id === ctx.cena.id;
   const origem = centroDe(ctx.tokenAtq);
   return ctx.cena.tokens.filter(token => {
-    if (token.id === ctx.tokenAtq.id || token.hidden || !token.actor) return false;
+    if (token.id === ctx.tokenAtq.id || token.hidden || !token.actor || token.actor.type === 'veiculo') return false;
     if (token.actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED)) return false;
     const metros = distancia(ctx.tokenAtq, token);
     if (metros === null || metros > R.RAIO_SUPRESSAO + 0.5) return false;

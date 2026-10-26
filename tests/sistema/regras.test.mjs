@@ -962,11 +962,12 @@ test('Ficha: o Lifepath tem os campos e os rótulos do criador da wiki (criador.
 
 test('Capanga (o mook do CORE): um tipo de ator a mais, com o nome em português; ao receber um item, instala o cyberware e equipa o que o CORE equipa (o "equippable": arma, armadura, roupa, cyberdeck, droga e equipamento)', () => {
   const sistema = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'system.json'), 'utf8'));
-  // O Black ICE e o demônio vieram no ciclo 43 (o C7); o contêiner (o container do CORE), no 122 (o C24).
-  assert.deepEqual(Object.keys(sistema.documentTypes.Actor), ['personagem', 'capanga', 'blackice', 'demonio', 'conteiner']);
-  for (const tipo of ['capanga', 'blackice', 'demonio', 'conteiner']) assert.deepEqual(sistema.documentTypes.Actor[tipo], { htmlFields: ['notas'] }, tipo);
+  // O Black ICE e o demônio vieram no C7; o contêiner, no C24; o veículo com token próprio, no C46.
+  assert.deepEqual(Object.keys(sistema.documentTypes.Actor), ['personagem', 'capanga', 'veiculo', 'blackice', 'demonio', 'conteiner']);
+  for (const tipo of ['capanga', 'veiculo', 'blackice', 'demonio', 'conteiner']) assert.deepEqual(sistema.documentTypes.Actor[tipo], { htmlFields: ['notas'] }, tipo);
   const idioma = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'lang', 'pt-BR.json'), 'utf8'));
   assert.equal(idioma.TYPES.Actor.capanga, 'Capanga');
+  assert.equal(idioma.TYPES.Actor.veiculo, 'Veículo');
   assert.equal(idioma.TYPES.Actor.blackice, 'Black ICE');
   assert.equal(idioma.TYPES.Actor.demonio, 'Demônio');
   assert.equal(idioma.TYPES.Actor.conteiner, 'Contêiner');

@@ -105,7 +105,7 @@ async function mandarTransferidos(personagens, campanha) {
   if (!campanha?.id || !souOMestreAtivo()) return notas;
   for (const doc of personagens.filter(p => !p.publico && mudouDeCampanha(p) && vinculoDaGeracao14(p)?.campanha === campanha.id)) {
     const ator = game.actors.get(vinculoDaGeracao14(doc).ator);
-    if (!ator || ator.getFlag(SISTEMA, 'wiki')?.id !== doc.id || ator.getFlag(SISTEMA, 'saiu') || transferenciasEmCurso.has(doc.id)) continue;
+    if (ator?.type !== 'personagem' || ator.getFlag(SISTEMA, 'wiki')?.id !== doc.id || ator.getFlag(SISTEMA, 'saiu') || transferenciasEmCurso.has(doc.id)) continue;
     transferenciasEmCurso.add(doc.id);
     try {
       const anterior = await wikiFetch(`/api/personagens/${doc.id}/ator`).catch(erro => { if (erro.status === 404) return null; throw erro; });
@@ -495,6 +495,7 @@ const USO_NA_WIKI = { equipado: 'equipped', carregando: 'carried', guardado: 'ow
 const nomeDaPericia = (id, propria) => PERICIAS.find(p => p.id === id)?.en ?? (FAMILIAS[propria.familia] ? `${FAMILIAS[propria.familia].en} (${propria.nome})` : propria.atributo ? propria.nome : id);
 
 export function fichaParaAWiki(ator) {
+  if (ator?.type !== 'personagem') return null;
   const s = ator.system;
   const usoDe = item => (['arma', 'armadura'].includes(item.type) ? (item.system.equipada ? 'equipped' : 'carried') : USO_NA_WIKI[item.system.uso] || '');
   // A arma do cyberware e a do acessório (o C11) não vão: a wiki conhece o item, e a arma volta dele quando ele está
@@ -552,6 +553,7 @@ export function fichaParaAWiki(ator) {
 
 // Manda a ficha de um ator importado da wiki (o "wiki" na flag do sistema).
 export async function mandarFicha(ator) {
+  if (ator?.type !== 'personagem') return null;
   const vinculo = ator?.getFlag(SISTEMA, 'wiki');
   if (!vinculo?.id || ator.getFlag(SISTEMA, 'saiu')) return null;
   const campanha = await campanhaDoMundo();
@@ -577,7 +579,7 @@ async function mandarAgora(id) {
   });
 }
 function agendarVolta(ator) {
-  if (!ator || ator.documentName !== 'Actor' || ator.isToken || !ator.getFlag(SISTEMA, 'wiki') || !souQuemManda()) return;
+  if (!ator || ator.type !== 'personagem' || ator.documentName !== 'Actor' || ator.isToken || !ator.getFlag(SISTEMA, 'wiki') || !souQuemManda()) return;
   clearTimeout(esperando.get(ator.id));
   esperando.set(ator.id, setTimeout(() => { esperando.delete(ator.id); mandarAgora(ator.id); }, ESPERA_DA_VOLTA));
 }
@@ -605,7 +607,7 @@ function registrarVoltaParaWiki() {
   // O ator ligado apagado: a wiki fica sabendo (no vínculo deste Foundry), e o personagem pode ser importado de novo.
   Hooks.on('deleteActor', ator => {
     const vinculo = ator.getFlag(SISTEMA, 'wiki');
-    if (!vinculo?.id || ator.isToken || !souOMestreAtivo()) return;
+    if (ator.type !== 'personagem' || !vinculo?.id || ator.isToken || !souOMestreAtivo()) return;
     wikiFetch(`/api/personagens/${vinculo.id}/foundry`, { method: 'PUT', body: { geracao: GERACAO, ator: ator.id, removido: true } })
       .catch(erro => console.debug(`${SISTEMA} | wiki: ator apagado`, erro.message));
   });
@@ -652,9 +654,9 @@ export async function entregarPedido(ator, wikiId, pedido) {
 // 409). Sem vínculo nenhum, o que tiver a flag do personagem.
 function atorLigado(personagem, wikiId) {
   const vinculos = [personagem?.foundry14, personagem?.foundry12, personagem?.foundry].filter(vinculo => vinculo?.ator && !vinculo.removido);
-  const ligado = vinculos.map(vinculo => game.actors.get(vinculo.ator)).find(ator => ator?.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu'));
+  const ligado = vinculos.map(vinculo => game.actors.get(vinculo.ator)).find(ator => ator?.type === 'personagem' && ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu'));
   if (ligado || vinculos.length) return ligado ?? null;
-  return game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu')) ?? null;
+  return game.actors.find(ator => ator.type === 'personagem' && ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu')) ?? null;
 }
 
 // Os pedidos aprovados dos personagens que estão neste mundo (pelo id da wiki na flag do ator).

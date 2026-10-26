@@ -6,7 +6,7 @@ import test from 'node:test';
 import { prepararAcessibilidade } from '../../foundry-sistema/scripts/acessibilidade.mjs';
 
 const raiz = new URL('../../foundry-sistema/templates/', import.meta.url);
-const arquivos = ['personagem', 'capanga'].flatMap(pasta => readdirSync(new URL(pasta + '/', raiz))
+const arquivos = ['personagem', 'capanga', 'veiculo'].flatMap(pasta => readdirSync(new URL(pasta + '/', raiz))
   .filter(nome => nome.endsWith('.hbs')).map(nome => pasta + '/' + nome))
   .concat(['item.hbs', 'janela-rolagem.hbs', 'defesa.hbs']);
 

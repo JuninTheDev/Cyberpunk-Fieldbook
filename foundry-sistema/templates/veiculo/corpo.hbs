@@ -1,0 +1,24 @@
+<div class="corpo-capanga">
+  {{#if editavel}}
+  <section class="painel corte">
+    <div class="titulo">CATÁLOGO<span>VEÍCULOS DO SISTEMA</span></div>
+    <div class="campos-veiculo"><label>Veículo do catálogo<select name="catalogoVeiculo"><option value="">Escolha um veículo</option>{{selectOptions modelos}}</select></label><button type="button" data-action="escolherVeiculo">Usar os números do catálogo</button></div>
+  </section>
+  {{/if}}
+  <section class="painel corte">
+    <div class="titulo">VEÍCULO<span>QUEM AGE É O MOTORISTA</span></div>
+    <div class="campos-veiculo">
+      <label>Tipo<select name="system.tipo" {{#unless editavel}}disabled{{/unless}}>{{selectOptions tipos selected=sistema.tipo}}</select></label>
+      <label>Assentos<input type="number" name="system.assentos" value="{{sistema.assentos}}" min="0" {{#unless editavel}}disabled{{/unless}}></label>
+      <label>MOVE (combate)<input type="number" name="system.velocidade.combate" value="{{sistema.velocidade.combate}}" min="0" {{#unless editavel}}disabled{{/unless}}></label>
+      <label>Velocidade narrativa<input type="text" name="system.velocidade.narrativa" value="{{sistema.velocidade.narrativa}}" {{#unless editavel}}disabled{{/unless}}></label>
+      <label>SP máximo do chassis<input type="number" name="system.sp" value="{{sistema.sp}}" min="0" {{#unless editavel}}disabled{{/unless}}></label>
+      <label>Ablação do chassis<input type="number" name="system.ablacao" value="{{sistema.ablacao}}" min="0" {{#unless editavel}}disabled{{/unless}}></label>
+      {{#if editavel}}<button type="button" data-action="ablarChassis" aria-label="Reduzir o SP do chassis em 1">−1 SP</button><button type="button" data-action="consertarChassis">Consertar o chassis</button>{{/if}}
+    </div>
+  </section>
+  <section class="painel corte notas">
+    <div class="titulo">NOTAS<span>VEÍCULO</span></div>
+    {{#if editavel}}<prose-mirror aria-label="Notas do veículo" name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>{{else}}<div class="texto">{{{notasRicas}}}</div>{{/if}}
+  </section>
+</div>

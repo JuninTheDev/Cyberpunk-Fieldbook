@@ -105,7 +105,7 @@ export class PainelTatico {
     if (this.fixo) {
       const doc = fromUuidSync(this.fixo);
       if (doc instanceof TokenDocument) { token = doc; actor = doc.actor; } else if (doc instanceof Actor) { actor = doc; }
-      if (!actor || !actor.isOwner) { this.fixo = null; actor = null; token = null; }
+      if (!actor || !TIPOS_DE_ATOR.includes(actor.type) || !actor.isOwner) { this.fixo = null; actor = null; token = null; }
       else if (!token) token = actor.getActiveTokens(false, true)[0] || null;
     }
     if (!actor) {

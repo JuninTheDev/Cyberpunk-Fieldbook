@@ -59,6 +59,11 @@
           "notas"
         ]
       },
+      "veiculo": {
+        "htmlFields": [
+          "notas"
+        ]
+      },
       "blackice": {
         "htmlFields": [
           "notas"

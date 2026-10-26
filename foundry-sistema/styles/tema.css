@@ -478,6 +478,13 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-capanga .capanga-limitado .retrato { width: 120px; height: 136px; cursor: default; }
 .cpr-fieldbook.ficha-capanga .capanga-limitado .nome-linha .nome { font-size: 34px; border-bottom: none; }
 
+/* Veículo (C46): os campos curtos seguem os painéis e o cabeçalho do capanga. */
+.cpr-fieldbook.ficha-veiculo .campos-veiculo { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.cpr-fieldbook.ficha-veiculo .campos-veiculo label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 12ch; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.ficha-veiculo .campos-veiculo input[type="number"] { width: 8ch; }
+.cpr-fieldbook.ficha-veiculo .notas prose-mirror { min-height: 8rem; }
+.cpr-fieldbook.ficha-veiculo .retrato:not([data-action]) { cursor: default; }
+
 /* ---------- Black ICE e demônio (os atores da NET): uma página só, no visual da ficha do personagem ---------- */
 .cpr-fieldbook.ficha-net .window-content { overflow-y: auto; }
 .cpr-fieldbook.ficha-net .ficha-net-corpo { display: flex; flex-direction: column; gap: 14px; }

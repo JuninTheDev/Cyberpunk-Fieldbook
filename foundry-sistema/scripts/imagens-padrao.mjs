@@ -4,7 +4,7 @@ import { caminho } from './config.mjs';
 
 const ATORES = {
   personagem: 'Default_CPR_Mystery_Man.svg', capanga: 'Default_Mook.svg', conteiner: 'Default_Container.svg',
-  blackice: 'default-blackice.svg', demonio: 'default-demon.svg'
+  blackice: 'default-blackice.svg', demonio: 'default-demon.svg', veiculo: 'Default_Vehicle.svg'
 };
 const ITENS = {
   arma: 'Default_Weapon.svg', armadura: 'Default_Armor.svg', municao: 'Default_Ammo.svg', cyberware: 'Default_Cyberware.svg',

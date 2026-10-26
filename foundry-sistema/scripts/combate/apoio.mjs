@@ -44,9 +44,13 @@ export function conferirArmaVeicular(arma, modo) {
   return !motivo;
 }
 
-// O token continua dando a posição; só uma escolha explícita muda o destino da pessoa para o carro ou seu vidro.
+// O ator Veículo é a própria estrutura; no token de uma pessoa, o destino explícito conserva o C15.
 export function conferirDestinos(alvos, destinos, { modo, local } = {}) {
   if (!destinos || typeof destinos !== 'object' || Array.isArray(destinos)) { ui.notifications.warn('Escolha um destino válido para o ataque.'); return false; }
+  if (alvos.some(token => token.actor?.type === 'veiculo')) {
+    if (modo === 'supressivo') { ui.notifications.warn('Fogo supressivo afeta pessoas; escolha a pessoa como destino.'); return false; }
+    if (R.LOCAIS_MIRADOS[local]) { ui.notifications.warn('Cabeça, perna e item na mão são locais da pessoa; escolha o corpo para atingir o veículo.'); return false; }
+  }
   for (const [uuid, destino] of Object.entries(destinos)) {
     const token = alvos.find(alvo => alvo.uuid === uuid);
     const veiculo = token?.actor.items.get(destino?.veiculo);
@@ -62,6 +66,7 @@ export function conferirDestinos(alvos, destinos, { modo, local } = {}) {
 }
 
 export function destinoVeicular(ctx, token) {
+  if (token.actor?.type === 'veiculo') return { tipo: 'veiculo', item: token.actor };
   const destino = ctx.pedido.destinos?.[token.uuid];
   return destino ? { ...destino, item: token.actor.items.get(destino.veiculo) } : null;
 }

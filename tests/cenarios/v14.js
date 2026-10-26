@@ -13456,6 +13456,233 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // C46.1: os documentos são próprios de cada passo; o token solto é quem recebe o dano, preservando o ator modelo.
+    // Wiki, system-rules.js:515, :518, :521 e :538: DV pela distância, autofogo, área e SDP sem esquiva.
+    const comAtorVeiculo = async teste => {
+      try {
+        await edge.evaluate(`(async () => {
+          const f = window.__c46 = { atores: [], combates: [], antes: {
+            cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, alvos: [...game.user.targets].map(t => t.id),
+            mensagens: game.messages.map(m => m.id), aplicativos: [...foundry.applications.instances.keys()], random: CONFIG.Dice.randomUniform, fila: window.__fila,
+            ajustes: Object.fromEntries(['ativo', 'area', 'dano', 'defesaDosNpcs', 'lesaoCritica', 'rolarDireto', 'animacoes', 'resultado'].map(k => [k, game.settings.get('${S}', k)]))
+          } };
+          f.esperar = async condicao => { for (let i = 0; i < 120 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return Boolean(condicao()); };
+          for (const [k, v] of Object.entries({ ativo: true, area: false, dano: 'automatico', defesaDosNpcs: 'automatica', lesaoCritica: 'ficha', rolarDireto: true, animacoes: 'nao', resultado: 'publico' })) await game.settings.set('${S}', k, v);
+          f.cat = await game.system.api.wiki.carregarCatalogo();
+          f.pegar = id => foundry.utils.deepClone(f.cat[id]);
+          f.criar = async dados => { const ator = await Actor.implementation.create(dados); f.atores.push(ator); return ator; };
+          f.modelo = await f.criar({ name: 'C46 Veículo', type: 'veiculo', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER }, system: { sdp: { value: 50, max: 50 }, sp: 13, assentos: 4 } });
+          f.atirador = await f.criar({ name: 'C46 Atiradora', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, pericias: { 'shoulder-arms': { nivel: 6 }, 'heavy-weapons': { nivel: 6 }, autofire: { nivel: 6 }, 'melee-weapon': { nivel: 6 }, handgun: { nivel: 6 } } } });
+          for (const [chave, id, municao] of [['rifle', 'core_weapons:assault-rifle', 'core_ammo:rifle-armor-piercing'], ['lancador', 'core_weapons:grenade-launcher', 'core_ammo:grenade-armor-piercing'], ['tech', 'armas-2077:arasaka-jke-x2-kenshin', 'core_ammo:medium-pistol-basic'], ['branca', 'core_weapons:heavy-melee', null]]) {
+            const arma = f.pegar(id); arma.name = 'C46 ' + chave;
+            f[chave] = (await f.atirador.createEmbeddedDocuments('Item', [arma]))[0];
+            if (municao) {
+              const dados = f.pegar(municao); dados.system.quantidade = 100;
+              const bala = (await f.atirador.createEmbeddedDocuments('Item', [dados]))[0];
+              await f[chave].update({ 'system.carregada': bala.id }); await f[chave].recarregar();
+            }
+          }
+          f.cena = await Scene.implementation.create({ name: 'C46 Veículo com token', width: 2400, height: 1400, grid: { size: 100, distance: 2, units: 'm' } });
+          await f.cena.activate(); await f.esperar(() => canvas.ready && canvas.scene?.id === f.cena.id);
+          for (const [ator, x, y, actorLink] of [[f.atirador, 100, 300, true], [f.modelo, 550, 250, false]]) await f.cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y, actorLink })).toObject()]);
+          await f.esperar(() => canvas.tokens.placeables.length === 2);
+          f.token = f.cena.tokens.find(t => t.actorId === f.modelo.id); f.veiculo = f.token.actor;
+          f.foto = () => [f.veiculo.system.sdp.value, f.veiculo.system.blindagem.sp, f.veiculo.system.ablacao, f.veiculo.items.filter(i => i.type === 'lesao').length];
+          f.cartao = resultado => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === resultado?.id);
+          f.resumo = resultado => {
+            const l = resultado?.linhas.find(l => l.receptor === f.veiculo.uuid), m = f.cartao(resultado), v = l?.veicular;
+            return { ataque: resultado?.ataque, dv: l?.dv, metros: l?.metros, escolha: l?.escolha, defesa: l?.defesa, resultado: l?.resultado,
+              dano: v ? [v.perdeu, v.spEfetivo, v.ablado] : null, humano: Boolean(l?.dano), multiplicador: l?.multiplicador,
+              estado: f.foto(), modelo: f.modelo.system.sdp.value, fila: window.__fila.length,
+              cartao: Boolean(m?.content.includes('SDP')), uuid: m?.getFlag('${S}', 'desfazer')?.some(d => d.veicular?.veiculo === f.veiculo.uuid) ?? false };
+          };
+          return true;
+        })()`);
+        return await teste();
+      } finally {
+        await edge.evaluate(`(async () => {
+          const f = window.__c46; if (!f) return true;
+          try {
+            for (const [id, app] of foundry.applications.instances) if (!f.antes.aplicativos.includes(id)) await app.close();
+            for (const ator of f.atores) await ator.sheet?.close();
+            for (const combate of f.combates) await combate.delete();
+            await f.cena?.delete();
+            for (const ator of f.atores) await ator.delete();
+            await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !f.antes.mensagens.includes(m.id)).map(m => m.id));
+            for (const [k, v] of Object.entries(f.antes.ajustes)) await game.settings.set('${S}', k, v);
+            if (game.scenes.has(f.antes.ativa)) await game.scenes.get(f.antes.ativa).activate();
+            if (game.scenes.has(f.antes.cena)) { await game.scenes.get(f.antes.cena).view(); await f.esperar(() => canvas.ready && canvas.scene?.id === f.antes.cena); }
+            canvas.tokens.setTargets(f.antes.alvos);
+          } finally { CONFIG.Dice.randomUniform = f.antes.random; window.__fila = f.antes.fila; delete window.__c46; }
+          return true;
+        })()`);
+      }
+    };
+    const conferirAtorVeiculo = (campos, amostra) => {
+      const falhas = Object.entries(campos).filter(([, [lido, esperado]]) => JSON.stringify(lido) !== JSON.stringify(esperado));
+      return [!falhas.length, JSON.stringify({ ...amostra, falhas: falhas.length, primeiras: falhas.slice(0, 2).map(([campo, [lido]]) => [campo, lido ?? null]) })];
+    };
+
+    await r.passo('veículo ator (C46.1), ficha e token: o catálogo preenche Helicopter e Compact Groundcar; SP −1 e Consertar; SDP na barra, token 2 × 2 solto e independente; iniciativa recusada com info, inclusive no rastreador; observador só lê', async () => comAtorVeiculo(async () => {
+      const ficha = await edge.evaluate(`(async () => {
+        const f = window.__c46, a = f.modelo, padrao = a.img;
+        await a.sheet.render({ force: true });
+        const escolher = async id => {
+          await f.esperar(() => a.sheet.element?.querySelector('[name="catalogoVeiculo"]'));
+          const campo = a.sheet.element?.querySelector('[name="catalogoVeiculo"]'); if (!campo) return null;
+          campo.value = id; campo.dispatchEvent(new Event('change', { bubbles: true }));
+          a.sheet.element.querySelector('[data-action="escolherVeiculo"]')?.click();
+          await f.esperar(() => a.system.velocidade.combate === f.cat[id].system.velocidade.combate && a.system.assentos === f.cat[id].system.assentos);
+          return [a.system.sdp.value, a.system.sdp.max, a.system.assentos, a.system.velocidade.combate, a.system.velocidade.narrativa, a.system.tipo, a.img === f.cat[id].img];
+        };
+        const helicoptero = await escolher('core_vehicles:helicopter'), compacto = await escolher('core_vehicles:compact-groundcar');
+        await a.update({ 'system.sp': 13, 'system.ablacao': 0 });
+        await f.esperar(() => a.sheet.element?.querySelector('[data-action="ablarChassis"]'));
+        a.sheet.element?.querySelector('[data-action="ablarChassis"]')?.click();
+        const ablou = await f.esperar(() => a.system.blindagem.sp === 12);
+        await f.esperar(() => a.sheet.element?.querySelector('[data-action="consertarChassis"]'));
+        a.sheet.element?.querySelector('[data-action="consertarChassis"]')?.click();
+        const consertou = await f.esperar(() => a.system.blindagem.sp === 13 && a.system.ablacao === 0);
+        const dados = (await a.getTokenDocument({ x: 1700, y: 800 })).toObject();
+        const outro = (await f.cena.createEmbeddedDocuments('Token', [dados]))[0];
+        const barra = outro.getBarAttribute('bar1');
+        f.veiculo = f.token.actor; await f.veiculo.update({ 'system.sdp.value': 41 });
+        f.combate = await Combat.implementation.create({ scene: f.cena.id, active: false }); f.combates.push(f.combate);
+        const recados = []; ui.notifications.info = mensagem => { recados.push(String(mensagem)); return null; };
+        let iniciativa;
+        try {
+          await f.veiculo.rollInitiative({ createCombatants: true });
+          const pelaFicha = recados.length;
+          await f.token.toggleCombatant({ active: true, combat: f.combate });
+          const peloToken = recados.length - pelaFicha;
+          const id = foundry.utils.randomID(), legado = new Combat.implementation({ scene: f.cena.id, combatants: [{ _id: id, actorId: a.id, tokenId: f.token.id, sceneId: f.cena.id, initiative: null }] });
+          const cb = legado.combatants.get(id);
+          await legado.rollInitiative([id]); const peloRastreador = recados.length - pelaFicha - peloToken;
+          await cb.rollInitiative();
+          iniciativa = { pelaFicha, peloToken, peloRastreador, peloCombatente: recados.length - pelaFicha - peloToken - peloRastreador,
+            entrou: f.combate.combatants.size, legado: cb.initiative, recados: recados.every(m => /veículo|motorista/i.test(m)) };
+        } finally { delete ui.notifications.info; }
+        return { id: a.id, helicoptero, compacto, padrao, ablou, consertou, iniciativa,
+          token: [outro.actorLink, outro.width, outro.height, barra?.attribute, barra?.value, barra?.max, barra?.editable],
+          independentes: [f.veiculo.system.sdp.value, outro.actor.system.sdp.value, a.system.sdp.value] };
+      })()`);
+      const observador = await jogador.evaluate(`(async () => {
+        const esperar = async condicao => { for (let i = 0; i < 100 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return Boolean(condicao()); };
+        await esperar(() => game.actors.get('${ficha.id}')?.system.sp === 13);
+        const a = game.actors.get('${ficha.id}');
+        try {
+          await a.sheet.render({ force: true }); await esperar(() => a.sheet.element?.querySelector('[name="system.sdp.value"]'));
+          const elemento = a.sheet.element;
+          const editaveis = [...(elemento?.querySelectorAll('input, select, textarea, prose-mirror') ?? [])].filter(c => !c.disabled && !c.readOnly && c.type !== 'hidden').length;
+          await a.sheet.options.actions.ablarChassis.call(a.sheet);
+          await a.sheet.options.actions.consertarChassis.call(a.sheet);
+          return { gm: game.user.isGM, dono: a.isOwner, editavel: a.sheet.isEditable, visivel: Boolean(elemento), editaveis,
+            botoes: elemento?.querySelectorAll('[data-action="ablarChassis"], [data-action="consertarChassis"], [data-action="escolherVeiculo"]').length,
+            sp: a.system.blindagem.sp, ablacao: a.system.ablacao };
+        } finally { await a.sheet?.close(); }
+      })()`);
+      return conferirAtorVeiculo({ helicoptero: [ficha.helicoptero, [60, 60, 4, 40, '200 MPH / 322 KPH', 'aereo', true]],
+        compacto: [ficha.compacto, [50, 50, 4, 20, '100 MPH / 161 KPH', 'terrestre', true]],
+        padrao: [ficha.padrao, 'systems/' + S + '/icones/padrao/Default_Vehicle.svg'], ablou: [ficha.ablou, true], consertou: [ficha.consertou, true],
+        token: [ficha.token, [false, 2, 2, 'sdp', 50, 50, true]], independentes: [ficha.independentes, [41, 50, 50]],
+        iniciativa: [ficha.iniciativa, { pelaFicha: 1, peloToken: 1, peloRastreador: 1, peloCombatente: 1, entrou: 0, legado: null, recados: true }],
+        observador: [observador, { gm: false, dono: false, editavel: false, visivel: true, editaveis: 0, botoes: 0, sp: 13, ablacao: 0 }] },
+      { token: ficha.token, sp: observador.sp, iniciativa: ficha.iniciativa.entrou });
+    }));
+
+    await r.passo('veículo ator (C46.1), tiro e Desfazer: a 10 m DV16 sem esquiva; 24 − SP13 tira 11 SDP, AP abla 2, sem +5 nem lesão; o cartão desfaz pela diferença e conserva o dano posterior do token solto', async () => comAtorVeiculo(async () => {
+      await fixar(edge, [[9, 10], [6, 6], [6, 6], [4, 6], [4, 6], [4, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const f = window.__c46; canvas.tokens.setTargets([f.token.id]);
+        const resultado = await f.rifle.atacar(), tiro = f.resumo(resultado), m = f.cartao(resultado);
+        await f.veiculo.update({ 'system.sdp.value': f.veiculo.system.sdp.value - 3, 'system.ablacao': f.veiculo.system.ablacao + 1 });
+        const seletor = '[data-message-id="' + m?.id + '"] [data-cprf-acao="desfazer"]';
+        await f.esperar(() => document.querySelector(seletor)); document.querySelector(seletor)?.click();
+        const marcou = await f.esperar(() => m?.getFlag('${S}', 'desfeito'));
+        return { tiro, marcou, voltou: f.foto(), modelo: f.modelo.system.sdp.value };
+      })()`);
+      return conferirAtorVeiculo({ tiro: [info.tiro, { ataque: 23, dv: 16, metros: 10, escolha: 'aguentar', defesa: null, resultado: 'acertou', dano: [11, 13, 2], humano: false, multiplicador: null,
+        estado: [39, 11, 2, 0], modelo: 50, fila: 0, cartao: true, uuid: true }], marcou: [info.marcou, true], voltou: [info.voltou, [47, 12, 1, 0]], modelo: [info.modelo, 50] },
+      { dv: info.tiro.dv, sdp: info.tiro.estado[0], sp: info.tiro.estado[1], voltou: info.voltou });
+    }));
+
+    await r.passo('veículo ator (C46.1), explosivo na área: a granada marcada numa pessoa alcança o veículo não marcado; 24 − SP13 tira 11 SDP, AP abla 2, sem lesão, e Desfazer restaura o token', async () => comAtorVeiculo(async () => {
+      await edge.evaluate(`(async () => {
+        const f = window.__c46;
+        const pessoa = await f.criar({ name: 'C46 Centro da explosão', type: 'personagem', system: { hp: { value: 80 }, atributos: { ref: { valor: 0 }, body: { valor: 20 }, will: { valor: 8 } } } });
+        const documento = (await f.cena.createEmbeddedDocuments('Token', [(await pessoa.getTokenDocument({ x: 600, y: 500, actorLink: true })).toObject()]))[0];
+        f.principal = documento; await f.esperar(() => canvas.tokens.get(documento.id)); await game.settings.set('${S}', 'area', true); return true;
+      })()`);
+      await fixar(edge, [[9, 10], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6], [4, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const f = window.__c46; canvas.tokens.setTargets([f.principal.id]);
+        const resultado = await f.lancador.atacar(), atingido = f.resumo(resultado), linhas = resultado?.linhas.length;
+        const desfez = await game.system.api.combate.desfazer(f.cartao(resultado));
+        return { atingido, linhas, marcado: [...game.user.targets].some(t => t.id === f.token.id), desfez, voltou: f.foto() };
+      })()`);
+      return conferirAtorVeiculo({ dano: [info.atingido.dano, [11, 13, 2]], estado: [info.atingido.estado, [39, 11, 2, 0]],
+        defesa: [[info.atingido.escolha, info.atingido.defesa, info.atingido.humano, info.atingido.fila], ['aguentar', null, false, 0]],
+        cartao: [[info.atingido.cartao, info.atingido.uuid], [true, true]], linhas: [info.linhas, 2], marcado: [info.marcado, false], desfez: [info.desfez, true], voltou: [info.voltou, [50, 13, 0, 0]] },
+      { linhas: info.linhas, sdp: info.atingido.estado[0], sp: info.atingido.estado[1], voltou: info.voltou });
+    }));
+
+    await r.passo('veículo ator (C46.1), autofogo, arma branca e Tech: mesmas regras do C15; autofogo a 10 m usa DV20 e ×3, corpo usa a DV do mestre e metade do SP, carga Tech ignora metade; estrutura nunca ganha lesão', async () => comAtorVeiculo(async () => {
+      await fixar(edge, [[9, 10], [4, 6], [4, 6]]);
+      const autofogo = await edge.evaluate(`(async () => { const f = window.__c46, r = await f.rifle.atacar({ alvo: f.token, modo: 'autofogo' }), foto = f.resumo(r); await game.system.api.combate.desfazer(f.cartao(r)); return { foto, voltou: f.foto() }; })()`);
+      await fixar(edge, [[9, 10], [6, 6], [6, 6], [4, 6]]);
+      const corpo = await edge.evaluate(`(async () => {
+        const f = window.__c46, ataque = f.branca.atacar({ alvo: f.token, modo: 'corpo' });
+        const janela = () => [...document.querySelectorAll('.application.dialog:not(.minimizing)')].find(j => j.querySelector('[name="dv"]'));
+        await f.esperar(() => janela()); const campo = janela()?.querySelector('[name="dv"]'), botao = janela()?.querySelector('[data-action="ok"]');
+        if (!campo || !botao) throw new Error('C46: a DV do mestre não abriu.'); campo.value = '15'; botao.click();
+        const r = await ataque, foto = f.resumo(r); await game.system.api.combate.desfazer(f.cartao(r)); return { foto, voltou: f.foto() };
+      })()`);
+      await edge.evaluate(`(async () => { await game.system.api.combate.alternarCarga(window.__c46.tech); return true; })()`);
+      await fixar(edge, [[9, 10], [6, 6], [5, 6]]);
+      const tech = await edge.evaluate(`(async () => { const f = window.__c46, r = await f.tech.atacar({ alvo: f.token }), foto = f.resumo(r), gastou = !game.system.api.combate.cargaDa(f.tech); await game.system.api.combate.desfazer(f.cartao(r)); return { foto, gastou, voltou: f.foto(), devolveu: Boolean(game.system.api.combate.cargaDa(f.tech)) }; })()`);
+      const campos = {};
+      for (const [nome, caso, dv, dano, estado] of [['autofogo', autofogo, 20, [11, 13, 2], [39, 11, 2, 0]], ['corpo', corpo, 15, [9, 7, 1], [41, 12, 1, 0]], ['tech', tech, 15, [4, 7, 1], [46, 12, 1, 0]]]) {
+        campos[nome] = [[caso.foto.dv, caso.foto.dano, caso.foto.estado, caso.foto.escolha, caso.foto.defesa, caso.foto.humano, caso.foto.fila, caso.voltou], [dv, dano, estado, 'aguentar', null, false, 0, [50, 13, 0, 0]]];
+      }
+      campos.multiplicador = [autofogo.foto.multiplicador, 3]; campos.carga = [[tech.gastou, tech.devolveu], [true, true]];
+      return conferirAtorVeiculo(campos, { autofogo: autofogo.foto.dano, corpo: corpo.foto.dano, tech: tech.foto.dano });
+    }));
+
+    await r.passo('veículo ator (C46.1), dano manual: Aplicar dano do cartão alcança o token marcado; 24 − SP13 tira 11 SDP e AP abla 2, sem +5 nem lesão; Desfazer restaura a estrutura', async () => comAtorVeiculo(async () => {
+      await fixar(edge, [[6, 6], [6, 6], [4, 6], [4, 6], [4, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const f = window.__c46; canvas.tokens.setTargets([f.token.id]);
+        const r = await f.rifle.rolarDano({ perguntar: false }), m = r.mensagem;
+        const seletor = '[data-message-id="' + m.id + '"] [data-cprf-acao="aplicarDano"]';
+        await f.esperar(() => document.querySelector(seletor));
+        const antes = new Set(game.messages.map(m => m.id)); document.querySelector(seletor)?.click();
+        await f.esperar(() => game.messages.some(m => !antes.has(m.id) && m.getFlag('${S}', 'ataque')));
+        const aplicado = game.messages.find(m => !antes.has(m.id) && m.getFlag('${S}', 'ataque'));
+        const foto = f.resumo(aplicado?.getFlag('${S}', 'ataque'));
+        const desfez = aplicado ? await game.system.api.combate.desfazer(aplicado) : false;
+        return { foto, desfez, voltou: f.foto() };
+      })()`);
+      return conferirAtorVeiculo({ dano: [info.foto.dano, [11, 13, 2]], estado: [info.foto.estado, [39, 11, 2, 0]],
+        estrutura: [[info.foto.humano, info.foto.cartao, info.foto.uuid, info.foto.fila], [false, true, true, 0]], desfez: [info.desfez, true], voltou: [info.voltou, [50, 13, 0, 0]] },
+      { sdp: info.foto.estado[0], sp: info.foto.estado[1], voltou: info.voltou });
+    }));
+
+    await r.passo('veículo ator (C46.1), C14 e supressivo: EMP não causa dano nem estado na estrutura; fogo supressivo direto é recusado antes de gastar bala ou rolar, como o destino veículo do C15', async () => comAtorVeiculo(async () => {
+      await edge.evaluate(`(async () => { const f = window.__c46, dados = f.pegar('core_ammo:grenade-emp'); dados.system.quantidade = 5; const bala = (await f.atirador.createEmbeddedDocuments('Item', [dados]))[0]; await f.lancador.descarregar(); await f.lancador.update({ 'system.carregada': bala.id }); await f.lancador.recarregar(); return true; })()`);
+      await fixar(edge, [[9, 10]]);
+      const semDano = await edge.evaluate(`(async () => { const f = window.__c46, r = await f.lancador.atacar({ alvo: f.token }), l = r?.linhas[0]; return { estado: f.foto(), humano: Boolean(l?.dano), veicular: Boolean(l?.veicular), municao: Boolean(l?.municao), efeitos: f.veiculo.effects.size, fila: window.__fila.length, nota: l?.notas.some(n => n.includes('não causa dano da arma à estrutura')) }; })()`);
+      await fixar(edge, [[9, 10], [4, 6]]);
+      const supressivo = await edge.evaluate(`(async () => {
+        const f = window.__c46, antes = f.rifle.system.pente.value, mensagens = game.messages.size, avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        try { const r = await f.rifle.atacar({ alvo: f.token, modo: 'supressivo' }); return { nulo: r === null, balas: f.rifle.system.pente.value === antes, mensagens: game.messages.size - mensagens, fila: window.__fila.length, estado: f.foto(), avisos: avisos.length === 1 && /supressivo.*pessoas/i.test(avisos[0]) }; }
+        finally { delete ui.notifications.warn; }
+      })()`);
+      return conferirAtorVeiculo({ semDano: [semDano, { estado: [50, 13, 0, 0], humano: false, veicular: false, municao: false, efeitos: 0, fila: 0, nota: true }],
+        supressivo: [supressivo, { nulo: true, balas: true, mensagens: 0, fila: 2, estado: [50, 13, 0, 0], avisos: true }] },
+      { semDano: semDano.estado, supressivo: supressivo.nulo, balas: supressivo.balas });
+    }));
+
     await r.passo('veículos (C15), carga Tech e vidro: atravessa o fino sem tirar HP da cobertura, conserva armadura e esquiva da pessoa; vidro grosso com 5 de 30 HP ainda barra a Tech comum, e a Nekomata carregada o atravessa', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();

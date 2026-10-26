@@ -4,6 +4,8 @@ import { ATORES_DA_NET, caminho, EXTRATOS, SIGLA, SISTEMA, STATUS_AGARRAO } from
 import { roleDaWiki } from './dados.mjs';
 import { escolherArmaduraMonitorada, mudarSPMonitorado, mostrarSPNoToken } from './armadura-monitorada.mjs';
 import { imagemPadrao } from './imagens-padrao.mjs';
+import { tokenDoVeiculo } from './regras-ator-veiculo.mjs';
+import { AVISO_INICIATIVA_VEICULO, podeEntrarNaIniciativa } from './regras-iniciativa.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
@@ -35,6 +37,14 @@ const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[o
 export const encaixeDe = item => ({ tipo: item.system.tipo, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', slots: item.system.slots, tamanho: item.system.tamanho });
 
 export class AtorCPR extends Actor {
+  async rollInitiative(opcoes = {}) {
+    if (!podeEntrarNaIniciativa(this.type)) {
+      ui.notifications.info(AVISO_INICIATIVA_VEICULO);
+      return null;
+    }
+    return super.rollInitiative(opcoes);
+  }
+
   static getDefaultArtwork(dados) {
     const img = imagemPadrao('Actor', dados.type);
     return img ? { img, texture: { src: img } } : super.getDefaultArtwork(dados);
@@ -47,6 +57,8 @@ export class AtorCPR extends Actor {
   }
   get veiculoAtivo() { return veiculos.veiculoAtivo(this); }
   usarVeiculo(id = '') { return veiculos.usarVeiculo(this, id); }
+  receberDanoVeicular(dados) { return veiculos.receberDanoVeicular(this, dados); }
+  desfazerDanoVeicular(dados) { return veiculos.desfazerDanoVeicular(this, dados); }
   dirigirVeiculo(dirigindo = true) { return veiculos.dirigirVeiculo(this, dirigindo); }
   get maosLivres() {
     const armas = this.items.filter(item => item.type === 'arma' && !item.system.instaladoEm).map(item => item.system);
@@ -70,6 +82,7 @@ export class AtorCPR extends Actor {
       ...(!Object.hasOwn(dados.prototypeToken ?? {}, 'bar2') ? { bar2: { attribute: 'spMonitorado.corpo' } } : {}) };
     if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, ...token } });
     if (this.type === 'capanga' && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, ...token } });
+    if (this.type === 'veiculo') this.updateSource({ prototypeToken: tokenDoVeiculo(dados.prototypeToken) });
     if (ATORES_DA_NET.includes(this.type) && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, bar1: { attribute: 'rez' } } });
     if (this.type === 'conteiner') {
       if (!dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL } });

@@ -8,7 +8,7 @@ import { mudouDeCampanha } from './wiki-campanha.mjs';
 import { estadoDeEnvioDaWiki } from './wiki-avisos.mjs';
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
-const atorDa = wikiId => game.actors.find(ator => ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu')) ?? null;
+const atorDa = wikiId => game.actors.find(ator => ator.type === 'personagem' && ator.getFlag(SISTEMA, 'wiki')?.id === wikiId && !ator.getFlag(SISTEMA, 'saiu')) ?? null;
 const quando = data => (data ? new Date(data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
 export class JanelaDaWiki extends HandlebarsApplicationMixin(ApplicationV2) {

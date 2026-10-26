@@ -1,0 +1,12 @@
+<header class="topo">
+  <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" {{#if editavel}}data-action="editImage" data-edit="img" role="button" tabindex="0" aria-label="Trocar a imagem do veículo"{{/if}}>
+  <div class="identidade">
+    <p class="linha-id"><span>VEÍCULO://</span><span class="modelo">{{#if naCena}}ESTE TOKEN{{else}}MODELO DOS TOKENS{{/if}}</span></p>
+    <div class="nome-linha"><input class="nome" type="text" name="name" value="{{nomeNaFicha}}" aria-label="Nome do veículo" {{#unless editavel}}disabled{{/unless}}></div>
+    <div class="indicadores">
+      <label class="indicador hp corte"><span class="valor"><input type="number" name="system.sdp.value" value="{{sistema.sdp.value}}" min="0" aria-label="SDP atual" {{#unless editavel}}disabled{{/unless}}></span><i>SDP ATUAL</i></label>
+      <label class="indicador corte"><span class="valor"><input type="number" name="system.sdp.max" value="{{sistema.sdp.max}}" min="0" aria-label="SDP máximo" {{#unless editavel}}disabled{{/unless}}></span><i>SDP MÁXIMO</i></label>
+      <div class="indicador corte sp"><span class="valor"><b>{{sistema.blindagem.sp}}</b><small>/{{sistema.blindagem.max}}</small></span><i>SP DO CHASSIS</i></div>
+    </div>
+  </div>
+</header>

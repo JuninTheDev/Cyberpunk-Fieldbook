@@ -8502,6 +8502,63 @@ worktree própria a partir do `7ad7e05b`, revisados e integrados aqui pelo patch
 - **Próximo:** na Fase 7, o C42 (Dice So Nice: esperando a decisão do usuário) e o C43 parte 3 (o navegador de itens e
   atores; o tema no resto do Foundry). O C45 (tokens dinâmicos) está com a sessão Junin.
 
+### Ciclo 175 (2026-10-25): o C46, parte 1, o ator e a ficha do veículo (sessão KouArt, com o Codex)
+
+Commit anterior: `ca1e63d2` (a reserva do C46). Pedido do usuário (2026-10-25): o veículo com token próprio, no modelo
+híbrido (o ator na cena guarda o estado físico; o item na ficha do personagem continua como a posse, e a wiki e a loja não
+mudam). O código e os testes saíram do Codex (`codex exec`, numa worktree própria a partir do `ca1e63d2`), revisados e
+integrados aqui pelo patch.
+
+- **As fontes:** o CORE 0.92.4 tem o veículo só como item (`modules/item/types/cpr-vehicle.js:7`; os padrões em
+  `datamodels/item/vehicle-datamodel.js:18-41`: SDP 50, 2 assentos, MOVE 20); a recusa da iniciativa segue a do
+  contêiner (`combat/cpr-combat.js:68-78`); a mesa da wiki do master (`Tabletop/README.md:104` e `:109`, o SDP na barra,
+  2 quadrados e o veículo fora da iniciativa; `Tabletop/mesa-api.js:1589-1590`); a conta do dano é a do C15
+  (`regras-veiculos.mjs:27-35`, confirmada pelo usuário em 2026-10-18), sem mudança nem cópia; a wiki
+  (`system-rules.js:515`, `:518`, `:521` e `:538`; `system-2077.js:41`, a Tech); o Foundry 14
+  (`client/documents/actor.mjs:492-529`, `combatant.mjs:228-232`, `token.mjs:1545-1549`).
+- **O que muda:**
+  - **o tipo de ator `veiculo`** (`system.json`, `lang/pt-BR.json`, `scripts/dados.mjs`): um pedaço de esquema comum ao
+    item e ao ator (o SDP, o SP e a ablação do chassis, os assentos, as velocidades, o tipo), com os nomes e os padrões
+    do item, que não muda; o ator prepara o SDP dentro do máximo e a blindagem atual e máxima pela ablação;
+  - **`scripts/regras-ator-veiculo.mjs` (novo, sem Foundry):** os números e a imagem do catálogo para o ator e o padrão do
+    token (solto, 2 × 2, o SDP na barra);
+  - **`scripts/ficha-veiculo.mjs` e `templates/veiculo/` (novos):** a ficha (o catálogo, o SDP, o SP com o "−1" e o
+    "Consertar", os assentos, as velocidades, o tipo, as notas; o observador só lê; as ações conferem o dono e a edição, e
+    o catálogo relê a permissão e a escolha depois de carregar);
+  - **a iniciativa** (`scripts/iniciativa.mjs`, `scripts/regras-iniciativa.mjs`): o veículo não entra (o rastreador, o
+    combatente, a rolagem pelo combatente e a rolagem em lote), com um recado `info`; um registro antigo de veículo é
+    pulado sem impedir os outros;
+  - **o ataque** (`scripts/combate/`): o token do veículo vira o destino "veículo" do C15 sozinho, sem ler atributos de
+    pessoa e sem esquiva; o tiro, o autofogo, o corpo a corpo e a área usam a conta do C15; o supressivo direto é recusado
+    e o automático ignora veículos; as munições sem dano do C14 não fazem nada na estrutura; o Desfazer e o "Aplicar
+    dano" manual alcançam o ator;
+  - **os filtros:** a wiki (o envio, a transferência, os vínculos), o Painel Tático e o botão dos perigos do C38 ficam
+    só com quem tem HP; a imagem padrão do tipo (o C34.3, o `Default_Vehicle` do CORE).
+- **Na integração:** a ficha tinha o cabeçalho, o corpo e o rodapé numa parte só, e o Foundry 14 recusa desenhá-la
+  ("Template part must render a single HTML element", `client/applications/api/handlebars-application.mjs:172`): o G4
+  pegou ("Failed to render Application"), o G3 não. A ficha passou para três partes (`topo`, `corpo` e `rodape`), como a
+  do capanga, e o `partes-da-ficha-veiculo.test.mjs` (novo) confere um elemento raiz por parte.
+- **Dúvidas e diferenças:** o ator não se liga ao item do personagem nem há migração (a parte 2); a mesa da wiki deixa o
+  mestre pôr o veículo na iniciativa à mão, e aqui a recusa é geral; o corpo a corpo contra a estrutura pede a DV ao
+  mestre, como o C15; escolher um veículo do catálogo põe o SDP cheio e o chassis sem ablação e conserva as notas.
+- **Testes:**
+  - **G3:** `ator-veiculo.test.mjs` (6: o catálogo, o esquema, a preparação, o token, as permissões e a seleção, os
+    controles do SP), `veiculo-ator-combate.test.mjs` (8, com o resolver e o cartão de verdade: o tiro crítico e a AP, a
+    Tech, a arma branca, o autofogo, a área, o C14, o supressivo, o dano manual, o Desfazer pela diferença),
+    `veiculo-iniciativa-guardas.test.mjs` (8: a iniciativa, a migração, a wiki, o Painel, os perigos) e
+    `partes-da-ficha-veiculo.test.mjs` (1); o `acessibilidade.test.mjs` varre os templates do veículo; o
+    `imagens-padrao.test.mjs` e o `regras.test.mjs` ganham o tipo novo;
+  - **G4:** seis passos novos, depois do "veículos (C15), combate e Desfazer": a ficha e o token (o catálogo, o SP, a
+    barra, o 2 × 2, os tokens independentes, a iniciativa recusada por quatro caminhos, o observador); o tiro a 10 m (DV16,
+    24 − SP13 = 11 SDP, a AP abla 2, sem +5 nem lesão) e o Desfazer pelo cartão, que conserva o dano posterior; a granada
+    marcada numa pessoa que alcança o veículo; o autofogo, a arma branca e a Tech; o dano manual; o EMP e o supressivo.
+- **Portões:** G1, 256 arquivos sem erro; G2, nenhum erro; G3, 602/602; G4 completo, 284/284, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as nove caíram no G3, uma por vez, e os arquivos voltaram exatos: o catálogo sem o SDP (M1), a blindagem
+  sem a ablação (M2), o token ligado e pequeno (M3), o SP sem dono (M4), o veículo no rastreador (M5), o +5 no SDP (M6),
+  o Desfazer sem o ator (M7), o dano manual sem o veículo (M8) e a ficha numa parte só (M9).
+- **Próximo:** o C46, parte 2 (a ligação com o item do personagem e a migração dos veículos que já existem).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

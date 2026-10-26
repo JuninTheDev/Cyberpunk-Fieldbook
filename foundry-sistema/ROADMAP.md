@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 175). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 176). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -438,7 +438,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   vidros, os upgrades, as armas montadas, os assentos); o item na ficha do personagem continua como a posse (a frota, a
   loja da wiki, a família do Nomad, o envio "Na mesa") e aponta para o ator. Assim a wiki e a loja não mudam. O CORE
   0.92.4 e a 0.93 têm o veículo só como item. Um ciclo por parte:
-  - [~] parte 1, o ator e a ficha (sessão KouArt, com o Codex, 2026-10-25): o tipo de ator Veículo, a ficha, o token com
+  - [x] parte 1, o ator e a ficha: feito no ciclo 175 (sessão KouArt, com o Codex, 2026-10-25): o tipo de ator Veículo, a ficha, o token com
     o SDP na barra e fora da iniciativa, o ataque direto no token do veículo pelas regras do C15 (o SDP menos o SP, sem
     +5 nem lesão, sem esquiva) com o Desfazer, e o veículo de NPC a partir do catálogo;
   - [ ] parte 2, a ligação com o item: "Pôr na cena" a partir do item do personagem, o estado passando a viver no ator

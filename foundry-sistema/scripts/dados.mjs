@@ -14,6 +14,16 @@ const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
 const texto = (initial = '') => new fields.StringField({ required: true, blank: true, initial });
 const recurso = (value, max) => new fields.SchemaField({ value: inteiro(value), max: inteiro(max) });
+// CORE 0.92.4, vehicle-datamodel.js:19-44: SDP, assentos e velocidades. O ator e o item mantêm as mesmas chaves;
+// SP e ablação são os do C15, sem mudar o estado persistido dos itens existentes.
+const estadoDoVeiculo = () => ({
+  sdp: recurso(50, 50),
+  assentos: inteiro(2, { min: 0 }),
+  velocidade: new fields.SchemaField({ combate: inteiro(20, { min: 0 }), narrativa: texto() }),
+  tipo: new fields.StringField({ required: true, blank: true, initial: '', choices: Object.keys(TIPOS_DE_VEICULO) }),
+  sp: inteiro(0, { min: 0 }),
+  ablacao: inteiro(0, { min: 0 })
+});
 const custoMensal = () => new fields.SchemaField({ custo: inteiro(0, { min: 0 }), descricao: texto() });
 // A arma do cyberware e do acessório de arma (o C11; o isWeapon do cyberware e o secondaryWeapon do itemUpgrade do CORE,
 // com os campos do attackable e do loadable): montado, o item ataca pela arma ligada a ele (armas-cyberware.mjs), com
@@ -507,15 +517,8 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
-      sdp: recurso(50, 50),
-      assentos: inteiro(2, { min: 0 }),
-      velocidade: new fields.SchemaField({ combate: inteiro(20, { min: 0 }), narrativa: texto() }),
+      ...estadoDoVeiculo(),
       familia: new fields.BooleanField({ initial: false }),
-      // O tipo (o C40): terrestre, aéreo ou marítimo; vazio, pelo nome (regras-veiculos.tipoDoVeiculo). Muda a perícia de
-      // controle e as manobras.
-      tipo: new fields.StringField({ required: true, blank: true, initial: '', choices: Object.keys(TIPOS_DE_VEICULO) }),
-      sp: inteiro(0, { min: 0 }),
-      ablacao: inteiro(0, { min: 0 }),
       // Cada janela perde HP separadamente (CORE, Bulletproof Glass). O máximo fica persistido para não curar o vidro.
       janelas: new fields.TypedObjectField(new fields.SchemaField({ nome: texto('Janela'), hp: recurso(0, 0) })),
       preco: inteiro(0, { min: 0 }),
@@ -535,6 +538,18 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
     this.sdp.max = regras.somaDeUpgrades(this.sdp.max, upgrades.map(upgrade => upgrade.system.modificadores.sdp));
     this.sdp.value = Math.min(this.sdp.value, this.sdp.max);
     this.assentos = regras.somaDeUpgrades(this.assentos, upgrades.map(upgrade => upgrade.system.modificadores.assentos));
+  }
+}
+
+// C46, parte 1: presença física na cena. A posse e os upgrades continuam no item até as partes seguintes.
+export class DadosAtorVeiculo extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    return { ...estadoDoVeiculo(), notas: new fields.HTMLField({ required: true, blank: true, initial: '' }) };
+  }
+
+  prepareDerivedData() {
+    this.sdp.value = Math.max(0, Math.min(this.sdp.value, this.sdp.max));
+    this.blindagem = { max: this.sp, sp: Math.max(0, this.sp - this.ablacao) };
   }
 }
 

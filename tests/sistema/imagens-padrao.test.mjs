@@ -18,12 +18,14 @@ const tipos = {
 test('C34.3: cada tipo do manifesto tem o ícone padrão de seu equivalente no CORE 0.92.4', () => {
   const manifesto = JSON.parse(fs.readFileSync(new URL('system.json', sistema), 'utf8'));
   for (const [classe, mapa] of Object.entries(tipos)) {
-    assert.deepEqual(Object.keys(mapa).sort(), Object.keys(manifesto.documentTypes[classe]).sort());
+    // C46: o CORE só tem item de veículo; o novo ator usa o mesmo ícone local desse item.
+    assert.deepEqual([...Object.keys(mapa), ...(classe === 'Actor' ? ['veiculo'] : [])].sort(), Object.keys(manifesto.documentTypes[classe]).sort());
     for (const [tipo, tipoDoCore] of Object.entries(mapa)) {
       const nome = doCore(classe, tipoDoCore).split('/').at(-1);
       assert.equal(imagemPadrao(classe, tipo), 'systems/cpr-fieldbook/icones/padrao/' + nome);
     }
   }
+  assert.equal(imagemPadrao('Actor', 'veiculo'), imagemPadrao('Item', 'veiculo'));
 });
 
 test('C34.3: os SVGs seguem no pacote do Fieldbook sem dependência do CORE instalado nem alteração dos originais', () => {
