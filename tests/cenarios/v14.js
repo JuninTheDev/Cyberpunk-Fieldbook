@@ -18463,7 +18463,8 @@ module.exports = async ({ edge, servidores, r }) => {
           // O documento do token, sempre relido do mundo: no G4 completo, a cena (e com ela o token) troca de instância no meio
           // do passo.
           const doc = () => game.scenes.get(cena.id)?.tokens.get(criado.id) ?? criado;
-          const token = new Proxy({}, { get: (alvo, chave) => { const atual = doc(); const valor = atual[chave]; return typeof valor === 'function' ? valor.bind(atual) : valor; } });
+          // A textura lida é a gravada (_source): durante a transição (a parte 2), o Foundry põe no documento a textura animada.
+          const token = new Proxy({}, { get: (alvo, chave) => { const atual = doc(); if (chave === 'texture') return atual._source.texture; const valor = atual[chave]; return typeof valor === 'function' ? valor.bind(atual) : valor; } });
           await __esperar(() => canvas.tokens.get(token.id));
           lido.criado = { src: token.texture.src, trava: token.lockRotation };
           await arma.update({ 'system.equipada': false });
@@ -18661,6 +18662,96 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.transicoes.join('|') === '{"transition":"glitch"}|{"duration":0}'
         && info.movimentos.length >= 1 && info.movimentos.every(a => JSON.parse(a)?.duration === 0);
       return [ok, JSON.stringify({ preparo, jogadorPronto, info, doJogador })];
+    });
+
+    await r.passo('tokens dinâmicos (o C45, parte 3): o cortador abre pela janela do token dinâmico, mostra a grade, corta a folha transparente (8 × 4, a disposição da folha de exemplo) em 28 quadros WebP com os nomes padronizados, todos do mesmo tamanho, sem a faixa do rótulo, e liga o conjunto; recusa a folha com fundo e o jogador sem permissão de enviar arquivos', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const FP = foundry.applications.apps.FilePicker.implementation;
+        const pasta = 'teste-c45c';
+        try { await FP.createDirectory('data', pasta); } catch { /* já existe */ }
+        // A folha 800 × 400 (células de 100 × 100): Parado em vermelho, Caminhando em verde, Mirando em azul e as poses em
+        // amarelo, num retângulo de 40 × 60 a partir de (30, 10) (a célula do Caminhando a 0° é mais larga, de 20 a 80); a
+        // faixa do rótulo (y de 82 a 98) com um traço branco opaco em cada célula.
+        const folhaEm = async (nome, fundo) => {
+          const tela = document.createElement('canvas'); tela.width = 800; tela.height = 400;
+          const p = tela.getContext('2d');
+          if (fundo) { p.fillStyle = '#202020'; p.fillRect(0, 0, 800, 400); }
+          const cores = ['#ff0000', '#00ff00', '#0000ff', '#ffff00'];
+          for (let l = 0; l < 4; l++) for (let c = 0; c < 8; c++) {
+            if (l === 3 && c < 4) continue;
+            p.fillStyle = cores[l];
+            if (l === 1 && c === 0) p.fillRect(c * 100 + 20, l * 100 + 10, 60, 60); else p.fillRect(c * 100 + 30, l * 100 + 10, 40, 60);
+            p.fillStyle = '#ffffff'; p.fillRect(c * 100 + 10, l * 100 + 84, 80, 12);
+          }
+          const blob = await new Promise(r => tela.toBlob(r, 'image/png'));
+          await FP.upload('data', pasta, new File([blob], nome, { type: 'image/png' }), {}, { notify: false });
+          return pasta + '/' + nome;
+        };
+        const folha = await folhaEm('folha.png', false);
+        const comFundo = await folhaEm('folha-fundo.png', true);
+        const ator = await Actor.implementation.create({ name: 'Teste Cortador', type: 'personagem', ownership: { default: 0 } });
+        const janela = classe => document.querySelector('.application.' + classe);
+        const lido = {};
+        try {
+          // 1. A janela do token dinâmico tem o botão; ele fecha a janela e abre o cortador.
+          await game.system.api.tokenDinamico.abrir(ator);
+          await __esperar(() => janela('token-dinamico')?.querySelector('[data-action="cortarFolha"]'));
+          janela('token-dinamico').querySelector('[data-action="cortarFolha"]').click();
+          await __esperar(() => janela('cortador-de-folha')?.querySelector('[name="folha"]') && !janela('token-dinamico'));
+          const c = janela('cortador-de-folha');
+          lido.padrao = { nome: c.querySelector('[name="nome"]').value, pasta: c.querySelector('[name="pasta"]').value, linhas: [...c.querySelectorAll('select[name^="linha-"]')].map(s => s.value).join(),
+            poses: [...c.querySelectorAll('select[name^="pose-3-"]')].map(s => s.value).join() };
+          // 2. A folha, o nome, a pasta e a faixa do rótulo (20%); a prévia desenha.
+          c.querySelector('[name="folha"]').value = folha;
+          c.querySelector('[name="nome"]').value = 'Zed';
+          c.querySelector('[name="pasta"]').value = pasta + '/zed';
+          c.querySelector('[name="rotulo"]').value = '20';
+          c.querySelector('[name="rotulo"]').dispatchEvent(new Event('change', { bubbles: true }));
+          await __esperar(() => janela('cortador-de-folha')?.querySelector('canvas.previa')?.height > 100);
+          lido.previa = janela('cortador-de-folha').querySelector('canvas.previa').height;
+          janela('cortador-de-folha').querySelector('button[type="submit"]').click();
+          await __esperar(() => ator.getFlag('${S}', 'tokenDinamico')?.ativo && !janela('cortador-de-folha'), 200);
+          const conjunto = ator.getFlag('${S}', 'tokenDinamico');
+          lido.conjunto = { ativo: conjunto?.ativo, pasta: conjunto?.pasta, preenchidas: Object.values(conjunto?.imagens ?? {}).filter(Boolean).length, parado90: conjunto?.imagens?.['parado-90'], morto: conjunto?.imagens?.morto };
+          // 3. Os arquivos: 28, com os nomes padronizados.
+          const arquivos = (await FP.browse('data', pasta + '/zed')).files.map(f => f.split('/').pop()).sort();
+          lido.arquivos = { total: arquivos.length, primeiros: arquivos.slice(0, 2), poses: arquivos.filter(a => !/_\\d{3}\\.webp$/.test(a)) };
+          // 4. Os quadros: todos do mesmo tamanho (a caixa comum: x de 18 a 82, y de 8 a 72, com a margem de 2), sem o branco do
+          // rótulo, e a cor de cada linha no centro.
+          const ler = async nome => {
+            const imagem = document.createElement('img'); imagem.src = pasta + '/zed/' + nome + '?v=' + Date.now(); await imagem.decode();
+            const t = document.createElement('canvas'); t.width = imagem.naturalWidth; t.height = imagem.naturalHeight;
+            const p = t.getContext('2d'); p.drawImage(imagem, 0, 0);
+            const [r, g, b, a] = p.getImageData(Math.floor(t.width / 2), Math.floor(t.height / 2), 1, 1).data;
+            const baixo = [...p.getImageData(0, t.height - 1, t.width, 1).data].filter((v, i) => i % 4 === 3 && v > 8).length;
+            return { tamanho: t.width + 'x' + t.height, cor: [r > 128, g > 128, b > 128].map(Number).join(''), opaco: a > 200, baixo };
+          };
+          lido.quadros = { parado: await ler('zed_parado_090.webp'), caminhando: await ler('zed_caminhando_000.webp'), mirando: await ler('zed_mirando_270.webp'), morto: await ler('zed_morto.webp') };
+          // 5. A folha com fundo é recusada (nada é enviado).
+          lido.fundo = await game.system.api.tokenDinamico.cortarFolha({ ator, folha: comFundo, nome: 'fundo', pasta: pasta + '/fundo' });
+          return lido;
+        } finally {
+          for (const app of [...foundry.applications.instances.values()].filter(app => ['token-dinamico', 'cortador-de-folha'].some(cl => app.element?.classList.contains(cl)))) await app.close();
+          await ator.delete();
+        }
+      })()`);
+      // 6. O jogador (sem a permissão de enviar arquivos): o cortador recusa, no personagem dele.
+      const doJogador = await jogador.evaluate(`(async () => {
+        const r = await game.system.api.tokenDinamico.cortarFolha({ ator: game.user.character, folha: 'teste-c45c/folha.png', nome: 'j', pasta: 'teste-c45c/j' });
+        return { erro: r?.erro ?? null, podeEnviar: game.user.can('FILES_UPLOAD') };
+      })()`);
+      const v = info;
+      const ok = v.padrao.nome === 'teste-cortador' && v.padrao.pasta === 'tokens/teste-cortador' && v.padrao.linhas === 'parado,caminhando,mirando,poses'
+        && v.padrao.poses === ',,,,ferido-leve,ferido-grave,incapacitado,morto' && v.previa > 100
+        && v.conjunto.ativo === true && v.conjunto.pasta === 'teste-c45c/zed' && v.conjunto.preenchidas === 28
+        && v.conjunto.parado90 === 'teste-c45c/zed/zed_parado_090.webp' && v.conjunto.morto === 'teste-c45c/zed/zed_morto.webp'
+        && v.arquivos.total === 28 && v.arquivos.primeiros.join() === 'zed_caminhando_000.webp,zed_caminhando_045.webp'
+        && v.arquivos.poses.join() === 'zed_ferido-grave.webp,zed_ferido-leve.webp,zed_incapacitado.webp,zed_morto.webp'
+        && Object.values(v.quadros).every(q => q.tamanho === '64x64' && q.opaco && q.baixo === 0)
+        && v.quadros.parado.cor === '100' && v.quadros.caminhando.cor === '010' && v.quadros.mirando.cor === '001' && v.quadros.morto.cor === '110'
+        && v.fundo.erro === 'A folha tem fundo (os cantos não são transparentes): exporte com o fundo transparente, ou o token mostra o fundo.'
+        && doJogador.podeEnviar === false && doJogador.erro === 'Cortar a folha envia arquivos: precisa da permissão de upload do Foundry (o mestre, em geral).';
+      return [ok, JSON.stringify({ info, doJogador })];
     });
 
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {

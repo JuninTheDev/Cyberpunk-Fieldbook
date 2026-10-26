@@ -8679,6 +8679,28 @@ Codex (`codex exec`, numa worktree própria a partir do `c1d8b42b`), revisados e
 - **Integração:** a KouArt publicou o ciclo 177 (o C46, parte 2, o veículo como ator, com mudanças no `token-dinamico.mjs`: o veículo recusa o conjunto, a janela e o botão) no meio; o teste dela registra os ganchos do token dinâmico num ambiente sem `game.settings`, e a configuração e a classe do token passaram para um `registrarTelaDoTokenDinamico` à parte, no init. O ciclo passou de 177 para 178.
 - **Próximo:** o cortador da folha (a parte 3).
 
+### Ciclo 179 (2026-10-25): C45, parte 3, os tokens dinâmicos: o cortador da folha (sessão Junin); o C45 fecha
+
+- **Decisão do usuário (2026-10-25):** as imagens chegam como a folha inteira (como a de exemplo) e um cortador separa a
+  grade em arquivos; a folha precisa ter fundo transparente (a de exemplo tem fundo escuro e rótulos).
+- **Entrega:** `regras-cortador.mjs` (a regra pura: a disposição da folha de exemplo, `disposicaoValida`, `celulasDaGrade`
+  com a faixa do rótulo, `quadrosDaFolha` com os nomes que a janela do conjunto lê, `caixaOpaca`, `caixaComum`,
+  `temFundo`, `nomeBase`) e `cortador-de-folha.mjs` (a janela `cortador-de-folha`, aberta pelo botão "Cortar uma folha"
+  da janela do token dinâmico, com a prévia da grade, as linhas e as poses de cada coluna; o `cortarFolha`, que desenha a
+  folha num canvas, recusa a de cantos opacos, acha a caixa comum, corta cada quadro, grava em WebP pelo
+  `FilePicker.upload` e põe os quadros no conjunto pelo `salvarConjunto`). A API ganhou `abrirCortador` e `cortarFolha`.
+- **Limites:** os 5 retratos redondos da folha de exemplo (fora da grade) não entram: o retrato de cada estado continua no
+  Painel Tático. Tirar o fundo de uma folha opaca não é feito (só a recusa). Enviar arquivos pede a permissão de upload.
+- **Portões:** G1, 212 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 637/637 (4 testes novos em
+  `tests/sistema/cortador.test.mjs`); G4 completo, 291/291 em 608 s no Foundry 14.369, sem aviso nem erro do sistema, com o passo novo: uma folha 800 × 400 gerada no navegador (as
+  cores por linha, a célula do Caminhando a 0° mais larga, o traço branco do rótulo), o botão da janela do token
+  dinâmico, os valores padrão do cortador, a prévia, os 28 quadros com os nomes, todos 64 × 64 (a caixa comum com a
+  margem), opacos no centro, com a cor da linha e sem o branco do rótulo, o conjunto preenchido e ligado, a folha com
+  fundo recusada e o jogador sem a permissão de envio recusado.
+- **Mutações:** 14 caíram, restauradas pelo md5: 7 da regra pura (G3) e 7 no Foundry (G4 focado). A faixa dos acentos do `nomeBase` tinha ficado escrita com os caracteres combinantes em vez do escape `̀-ͯ` (a mutação não achava o trecho): reescrita com o escape, e a mutação caiu.
+- **No passo da parte 1:** com a transição da parte 2 (glitch), a textura preparada do token fica com a animada por um tempo, e uma leitura do passo pegou a de antes (290/291); o passo passou a ler a gravada (`_source.texture`), que é o que ele confere.
+- **O C45 está `[x]`** (as partes 1 a 3 desta sessão).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

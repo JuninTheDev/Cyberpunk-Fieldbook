@@ -422,7 +422,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [x] **C44. A régua com Andar e Correr:** feito no ciclo 173 (sessão KouArt, com um worker, 2026-10-25) (o `drag-ruler.js` do CORE), junto da DV que ela já mostra.
 
 **Pedido do usuário fora da comparação com o CORE** (2026-10-25):
-- [ ] **C45. Tokens dinâmicos:** a imagem do token muda pela direção em que ele está virado, pela arma equipada, pelo
+- [x] **C45. Tokens dinâmicos:** feito nos ciclos 176, 178 e 179 (sessão Junin, 2026-10-25): a imagem do token muda pela direção em que ele está virado, pela arma equipada, pelo
   ferimento e por caído/inconsciente, com o giro automático do Foundry 14 (`core.tokenAutoRotate`) e a imagem em pé
   (`lockRotation`). Decisões do usuário (2026-10-25), pela folha de exemplo: 8 direções em vista de cima 3/4 (Parado,
   Caminhando e Mirando, com a tabela de ângulos calibrável); armado ou não (Mirando); parado e ferido, a pose de ferido
@@ -436,7 +436,9 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [x] parte 2, o Caminhando durante o movimento, as transições e a pré-carga (ciclo 178, sessão Junin, 2026-10-25):
     a classe do token do sistema desenha o quadro de cada trecho na tela de cada um, sem gravar; a direção troca na hora e
     o estado com a transição da configuração (glitch por padrão); a pré-carga dos conjuntos;
-  - [ ] parte 3, o cortador da folha.
+  - [x] parte 3, o cortador da folha (ciclo 179, sessão Junin, 2026-10-25): a folha transparente em grade, as linhas de
+    8 direções e as de poses, a faixa do rótulo, a caixa comum, os quadros em WebP com os nomes padronizados e o conjunto
+    preenchido.
 - [ ] **C46. Veículos como atores** (pedido do usuário, 2026-10-25: o veículo com token próprio, como a mesa da wiki do
   master faz no M17). O modelo híbrido: o ator Veículo é a presença na cena (o token, a ficha, o alvo do ataque; o de
   NPC guarda o próprio estado, e o do personagem espelha o item, a parte 2); o item na ficha do personagem continua como a posse (a frota, a

@@ -321,7 +321,14 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     gravada (a do último trecho; parado e ferido, a pose de ferido). A troca pela direção é na hora; a troca pelo estado
     usa a transição da configuração "Token dinâmico: transição" (padrão: glitch; esmaecer, holograma ou nenhuma). As
     imagens dos conjuntos são pré-carregadas ao salvar, ao abrir a cena e com o token novo, para não piscar.
-  - **Ainda não:** o cortador da folha (a parte 3).
+  - **O cortador da folha** (a parte 3, ciclo 179): na janela do token dinâmico, "Cortar uma folha" abre o cortador. A
+    folha (com fundo transparente: com os cantos opacos, ele recusa) vira uma grade de colunas e linhas; cada linha é
+    Parado, Caminhando ou Mirando (as colunas são 0°, 45°... 315°, na ordem da folha) ou uma linha de poses (cada coluna
+    diz qual: Ferido leve, Ferido grave, Caído, Incapacitado, Morto, ou nenhuma); o padrão é a disposição da folha de
+    exemplo. A faixa do rótulo embaixo de cada célula fica fora (em %), a prévia mostra a grade, e todos os quadros saem
+    do mesmo tamanho (aparados pelo que não é transparente em todas as células). Cada quadro vai em WebP para a pasta,
+    com o nome padronizado, e entra no conjunto do ator (ligado, se marcado). Enviar arquivos pede a permissão de upload
+    do Foundry (o mestre, em geral). API: `game.system.api.tokenDinamico.cortarFolha({ ator, folha, nome, pasta })`.
 - **Painel Tático** (o módulo painel-tatico da mesa, dentro do sistema; o C25, ciclo 125): a barra na base da tela com o
   token controlado (ou, sem nenhum, o personagem do jogador):
   - **o retrato grande** do personagem, um PNG para cada estado de ferimento (Sem ferimentos, Levemente, Gravemente,

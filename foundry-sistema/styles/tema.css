@@ -1261,3 +1261,13 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.token-dinamico .celula button { width: 72px; height: 72px; padding: 2px; display: grid; place-items: center; border: 1px dashed var(--cp-linha, #555); background: rgba(0, 0, 0, 0.35); }
 .cpr-fieldbook.token-dinamico .celula img { max-width: 100%; max-height: 100%; object-fit: contain; border: none; }
 .cpr-fieldbook.token-dinamico footer { display: flex; justify-content: flex-end; }
+/* O cortador da folha (o C45, parte 3): a grade das linhas e a prévia. */
+.cpr-fieldbook.cortador-de-folha .cortador-corpo { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.cpr-fieldbook.cortador-de-folha .linha, .cpr-fieldbook.cortador-de-folha .linha-da-folha { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cpr-fieldbook.cortador-de-folha .linha input[type="text"] { min-width: 14rem; }
+.cpr-fieldbook.cortador-de-folha .linha input[type="number"] { width: 4.5rem; }
+.cpr-fieldbook.cortador-de-folha .poses { display: flex; flex-wrap: wrap; gap: 4px; }
+.cpr-fieldbook.cortador-de-folha .poses select { width: 7.5rem; }
+.cpr-fieldbook.cortador-de-folha canvas.previa { width: 100%; height: auto; background: repeating-conic-gradient(#2a2a2a 0 25%, #1c1c1c 0 50%) 0 0 / 16px 16px; }
+.cpr-fieldbook.cortador-de-folha .dica { font-size: 12px; opacity: 0.8; margin: 0; }
+.cpr-fieldbook.cortador-de-folha footer { display: flex; justify-content: space-between; align-items: center; }

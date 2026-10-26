@@ -12,6 +12,7 @@
 // transição da troca pelo estado (a configuração "Token dinâmico: transição") e a pré-carga das imagens.
 import { SISTEMA } from './config.mjs';
 import { estaseDe } from './cryo.mjs';
+import { abrirCortador, cortarFolha } from './cortador-de-folha.mjs';
 import { ANIMACAO_DA_DIRECAO, animacaoDaTroca, CHAVES, chaveDaImagem, conjuntoValido, DIRECOES, imagemDoToken, imagensDaPasta, imagensDoConjunto, NOMES_DAS_POSES, POSES_COM_DIRECAO, POSES_SEM_DIRECAO, TRANSICOES } from './regras-token-dinamico.mjs';
 
 export const FLAG_TOKEN_DINAMICO = 'tokenDinamico';
@@ -118,7 +119,7 @@ export class JanelaTokenDinamico extends ApplicationV2 {
     tag: 'form', classes: [SISTEMA, 'token-dinamico', 'themed', 'theme-dark'],
     position: { width: 900, height: 'auto' }, window: { icon: 'fa-solid fa-person-walking-arrow-right', resizable: true },
     form: { handler: JanelaTokenDinamico.#salvar, closeOnSubmit: true },
-    actions: { escolher: JanelaTokenDinamico.#escolher, escolherPasta: JanelaTokenDinamico.#escolherPasta, lerPasta: JanelaTokenDinamico.#lerPasta }
+    actions: { escolher: JanelaTokenDinamico.#escolher, cortarFolha: JanelaTokenDinamico.#cortarFolha, escolherPasta: JanelaTokenDinamico.#escolherPasta, lerPasta: JanelaTokenDinamico.#lerPasta }
   };
 
   constructor({ ator, ...opcoes }) {
@@ -142,7 +143,8 @@ export class JanelaTokenDinamico extends ApplicationV2 {
       <label class="linha"><input type="checkbox" name="ativo"${conjunto.ativo ? ' checked' : ''}> Ligado: a imagem do token muda pela direção, pela arma e pelo ferimento (e não gira)</label>
       <div class="linha"><label>Pasta <input type="text" name="pasta" value="${esc(conjunto.pasta)}" placeholder="tokens/personagem"></label>
         <button type="button" data-action="escolherPasta"><i class="fa-solid fa-folder-open"></i> Escolher</button>
-        <button type="button" data-action="lerPasta" data-tooltip="Preenche a grade pelos nomes: nome_parado_045.webp, nome_mirando_270.png, nome_ferido-leve.webp, nome_morto.webp"><i class="fa-solid fa-wand-magic-sparkles"></i> Ler a pasta</button></div>
+        <button type="button" data-action="lerPasta" data-tooltip="Preenche a grade pelos nomes: nome_parado_045.webp, nome_mirando_270.png, nome_ferido-leve.webp, nome_morto.webp"><i class="fa-solid fa-wand-magic-sparkles"></i> Ler a pasta</button>
+        <button type="button" data-action="cortarFolha" data-tooltip="Cortar uma folha inteira (com fundo transparente) em quadros com os nomes padronizados (a parte 3)"><i class="fa-solid fa-scissors"></i> Cortar uma folha</button></div>
       <div class="linha"><label>O 0° da folha fica no giro <select name="angulos.inicio">${DIRECOES.map(d => opcao(d, `${d}°`, conjunto.angulos.inicio)).join('')}</select></label>
         <label>Sentido <select name="angulos.sentido">${opcao('horario', 'O mesmo do Foundry', conjunto.angulos.sentido)}${opcao('antihorario', 'O contrário', conjunto.angulos.sentido)}</select></label></div>
       <p class="dica">O Foundry gira o token para onde ele anda: 0° virado para baixo (para a câmera), 90° para a esquerda, 180° para cima, 270° para a direita. Se a folha conta diferente, acerte o 0° e o sentido.</p>
@@ -171,6 +173,8 @@ export class JanelaTokenDinamico extends ApplicationV2 {
     const atual = this.element.querySelector(`input[name="imagens.${alvo.dataset.chave}"]`)?.value ?? '';
     new foundry.applications.apps.FilePicker.implementation({ type: 'image', current: atual, callback: src => this.#definir(alvo.dataset.chave, src) }).render(true);
   }
+
+  static #cortarFolha() { this.close(); return abrirCortador(this.ator); }
 
   static #escolherPasta() {
     const campo = this.element.querySelector('[name="pasta"]');
@@ -306,4 +310,4 @@ export function registrarTokenDinamico() {
   Hooks.on('renderTokenHUD', botaoNoHud);
 }
 
-export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe, preCarregar, quadroDesenhado };
+export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe, preCarregar, quadroDesenhado, abrirCortador, cortarFolha };
