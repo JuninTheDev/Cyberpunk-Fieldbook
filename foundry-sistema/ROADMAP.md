@@ -455,7 +455,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     ganham o ator quando forem postos na cena, com o estado de agora;
   - [x] parte 3, a tripulação: feito no ciclo 180 (sessão KouArt, com o Codex, 2026-10-25): embarcar, descer, o motorista, mover junto e os ocupantes protegidos pelo veículo (os
     vidros, a cobertura), como a mesa da wiki;
-  - [ ] parte 4, o resto pelo ator: as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
+  - [~] parte 4, o resto pelo ator (sessão KouArt, com um worker, 2026-10-25): as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
     C44 pelo MOVE dele.
 
 
