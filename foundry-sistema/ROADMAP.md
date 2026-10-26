@@ -411,7 +411,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
       tanque, o descanso do C36 cura no dobro.
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
-- [ ] **C42. Dice So Nice:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
+- [~] **C42. Dice So Nice** (sessão KouArt, 2026-10-26; o usuário confirmou que a mesa usa)**:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
   `dice-so-nice-preset.js`).
 - [x] **C43. Da 0.93**, um ciclo por parte (o CHANGELOG da 0.93 e o código em `fvtt-cyberpunk-red-core-dev/`):
   - [x] parte 1, as fórmulas: feito no ciclo 172 (sessão KouArt, com o Codex, 2026-10-25): os modificadores `red` e `dmg` nas fórmulas
