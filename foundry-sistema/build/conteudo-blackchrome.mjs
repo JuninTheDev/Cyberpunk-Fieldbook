@@ -30,6 +30,20 @@ const EXPLOSIVOS = ['killchip-100-micro-bomb', 'gunmart-door-cracker', 'outlet-e
 const EFEITOS_DA_MUNICAO = { 'black-chrome_ammo:grenade-arachnid': 'arachnid' };
 const SUCATA = /^dlc_black-chrome-plus:.+-junk$/;
 
+// O cromo (a parte 3): o quadro linear externo (vestido) põe o BODY em body.quadro, e não em body.valor (o HP e o Death
+// Save ficam pelo BODY sem ele; a decisão do usuário, como a wiki; os do RED também), e o Fūma Kotarō dá +2 em
+// Furtividade (o CORE só traz o BODY). As armaduras com aparência de moda ganham o estilo que parecem (o de cada Mimic
+// sai do nome; a Montage, Generic Chic ou Gang Colors, fica com o primeiro).
+const QUADROS_EXTERNOS = ['core_gear:linear-frame-sigma', 'core_gear:linear-frame-beta', 'black-chrome_gear:fuma-kotaro-linear-frame',
+  'black-chrome_gear:lf-001-swat-linear-frame', 'black-chrome_gear:vermilion-linear-frame', 'black-chrome_gear:el-f4-nt-linear-frame'];
+const FUMA = ['black-chrome_gear:fuma-kotaro-linear-frame', 'black-chrome_cyberware:implanted-fuma-kotaro-linear-frame'];
+const MODA = {
+  'black-chrome_armor:dirk-combat-jacket': 'leisurewear', 'black-chrome_armor:laser-light-street-jacket': 'urbanFlash',
+  'black-chrome_armor:montage-variable-clothing-line': 'genericChic', 'black-chrome_armor:executive-armor': 'businesswear',
+  'black-chrome_armor:corporate-island': 'businesswear'
+};
+const camel = texto => texto.replace(/-([a-z])/g, (_, letra) => letra.toUpperCase());
+
 // Corrige os itens do catálogo (no lugar). Devolve os ids corrigidos, para o build listar.
 export function corrigirBlackChrome(itens) {
   const corrigidos = [];
@@ -46,6 +60,16 @@ export function corrigirBlackChrome(itens) {
     const campos = Object.fromEntries(CAMPOS_DO_MODO.map(campo => [campo, structuredClone(base[campo])]));
     mudar(id, { combinacao: { ataca: true, modo, ...campos, pente: pente ?? base.pente.max, ...outros } });
   }
+  for (const id of QUADROS_EXTERNOS) {
+    for (const efeito of itens[id].effects) for (const mudanca of efeito.system.changes) if (mudanca.key === 'system.atributos.body.valor') mudanca.key = 'system.atributos.body.quadro';
+    corrigidos.push(id);
+  }
+  for (const id of FUMA) {
+    itens[id].effects[0].system.changes.push({ key: 'system.bonus.pericias.stealth', type: 'add', value: '2', phase: 'initial', priority: null });
+    corrigidos.push(id);
+  }
+  for (const id of Object.keys(itens).filter(id => id.startsWith('black-chrome_armor:mimic-clothing-'))) mudar(id, { moda: camel(id.split('mimic-clothing-')[1]) });
+  for (const [id, estilo] of Object.entries(MODA)) mudar(id, { moda: estilo });
   for (const [id, item] of Object.entries(itens)) {
     const efeito = EFEITOS_DA_MUNICAO[id] ?? (SUCATA.test(id) && item.type === 'municao' ? 'junk' : null);
     if (efeito) mudar(id, { efeito });

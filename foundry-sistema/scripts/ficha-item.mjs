@@ -12,6 +12,7 @@ import { TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
 import { porVeiculoNaCena } from './vinculo-veiculo.mjs';
 import { ehArmaDaCombinacao, ehArmaDoUpgrade, ehArmaMontadaEmItem, idDaOrigem } from './armas-cyberware.mjs';
 import { ligaAMao, resumoDasMudancas } from './regras-efeitos.mjs';
+import { perceberArmadura } from './black-chrome.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -42,7 +43,7 @@ function cabecalhoDoItem(item) {
   const sp = local => (s.sp?.[local]?.max ? `${local === 'cabeca' ? 'cabeça' : 'corpo'} ${s.sp[local].value}/${s.sp[local].max}` : '');
   const porTipo = {
     arma: () => [[periciaDaArma(), ehDesarmada(s.tipo) && s.danoPeloBody && item.actor && `${item.danoDaArma} pelo BODY`, s.aDistancia ? 'à distância' : 'corpo a corpo', s.instaladoEm && (item.instaladoNo?.name ?? 'Veículo ausente')], [QUALIDADES[s.qualidade] && vazada(QUALIDADES[s.qualidade]), s.instaladoEm ? cheia('MONTADA') : s.equipada && cheia('EQUIPADA')]],
-    armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE')]],
+    armadura: () => [['SP', sp('cabeca'), sp('corpo')], [s.equipada && cheia('VESTIDA'), vazada(s.penalidade ? `PENALIDADE ${s.penalidade}` : 'SEM PENALIDADE'), s.moda && vazada(`PARECE ${(ESTILOS_ROUPA[s.moda] ?? s.moda).toUpperCase()}`)]],
     municao: () => [[s.tipo, `${s.quantidade} tiros`], []],
     // A fundação: os slots usados; a opção: em qual fundação está (no cyberware de um ator).
     cyberware: () => [[TIPOS_CYBERWARE[s.tipo] ?? s.tipo, nomeDoLado(item.ladoDoCyberware), item.noMembroNatural && 'no membro natural', s.perdaHumanidade?.formula && `Humanidade ${s.perdaHumanidade.formula}`, s.fundacional ? `${item.slotsUsados} de ${s.slots} slots` : item.instaladoNo && `na ${item.instaladoNo.name}`],
@@ -87,7 +88,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade,
       atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar, rodar: FichaItem.#rodar, restaurarRez: FichaItem.#restaurarRez,
       adicionarJanela: FichaItem.#adicionarJanela, removerJanela: FichaItem.#removerJanela, ajustarVidros: FichaItem.#ajustarVidros, prepararArmaVeicular: FichaItem.#prepararArmaVeicular,
-      porVeiculoNaCena: FichaItem.#porVeiculoNaCena,
+      porVeiculoNaCena: FichaItem.#porVeiculoNaCena, perceberArmadura: FichaItem.#perceberArmadura,
       corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga
     }
   };
@@ -168,6 +169,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       ativacoes: ATIVACOES,
       tiposRoupa: comAtual(TIPOS_ROUPA, tipo === 'roupa' && fonte.tipo),
       estilosRoupa: comAtual(ESTILOS_ROUPA, tipo === 'roupa' && fonte.estilo),
+      // A aparência de moda (o C48, parte 3): o estilo e, na armadura de um ator, os testes para perceber (regras-black-chrome).
+      estilosDaModa: comAtual(ESTILOS_ROUPA, tipo === 'armadura' && fonte.moda), perceberModa: tipo === 'armadura' && Boolean(fonte.moda) && Boolean(item.actor),
       classesPrograma: comAtual(CLASSES_PROGRAMA, tipo === 'programa' && fonte.classe),
       // O Black ICE próprio do netrunner: o tipo, PER e SPD.
       blackIce: tipo === 'programa' && fonte.classe === 'blackice', classesDoIce: CLASSES_BLACK_ICE,
@@ -246,6 +249,13 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   // "Consertar" a armadura (ItemCPR.consertar): o SP volta ao máximo, e o chat diz quem consertou.
   static #consertar() {
     return this.item.consertar();
+  }
+
+  // A aparência de moda (o C48, parte 3): quem o usuário controla (ou o personagem dele) tenta perceber a armadura.
+  static #perceberArmadura(evento, alvo) {
+    const observador = canvas?.tokens?.controlled?.[0]?.actor ?? game.user.character;
+    if (!observador) return ui.notifications.warn('Selecione o token de quem observa (ou tenha um personagem) para o teste.');
+    return perceberArmadura(this.item, observador, alvo.dataset.pericia);
   }
 
   // Liga ou desliga um efeito do item (o principal da droga quando alguém a usa, por exemplo).

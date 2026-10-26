@@ -19717,6 +19717,84 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('o cromo do Black Chrome (o C48, parte 3): os cyberdedos entram no cyberbraço pela mão modular sem gastar slots (o sexto fica sem mão) e no membro natural com a mão de lá; o quadro externo recusa sem os Interface Plugs e, vestido, põe o BODY 14 sem mudar o HP nem o Death Save; o interno recusa sem BODY 8 e os enxertos; o Fūma dá +2 em Furtividade; a armadura de moda mostra o estilo e o teste de Percepção a percebe', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo(), mensagens = new Set(game.messages.map(m => m.id)), random = CONFIG.Dice.randomUniform;
+        const avisos = [], warn = ui.notifications.warn, info = ui.notifications.info;
+        ui.notifications.warn = m => { avisos.push(String(m)); }; ui.notifications.info = m => { avisos.push(String(m)); };
+        const ator = await Actor.implementation.create({ name: 'Teste Cromo', type: 'personagem', ownership: { default: 0 }, system: { atributos: { body: { valor: 6 }, will: { valor: 6 } }, pericias: { perception: { nivel: 6 } } } });
+        const criar = async (id, mudar = {}) => { const dados = foundry.utils.deepClone(cat[id]); foundry.utils.mergeObject(dados, mudar); return (await ator.createEmbeddedDocuments('Item', [dados]))[0]; };
+        const instalar = async (id, mudar = {}) => { const item = await criar(id, mudar); const n = avisos.length; await ator.instalarCyberware(item, { rolar: false }); return { item: ator.items.get(item.id), aviso: avisos.slice(n).join(' ') }; };
+        const lido = {};
+        try {
+          // 1. Os cyberdedos: o cyberbraço direito, a mão modular nele e cinco dedos; o sexto fica sem mão.
+          const { item: braco } = await instalar('core_cyberware:cyberarm', { system: { lado: 'braco-direito' } });
+          const { item: mao } = await instalar('black-chrome_cyberware:modular-finger-cyberhand', { system: { lado: 'braco-direito' } });
+          const dedos = [];
+          for (const id of ['lighter', 'flashlight', 'lockpick', 'microphone', 'ballpoint']) dedos.push((await instalar('black-chrome_cyberware:' + id + '-cyberfinger')).item);
+          const sexto = await instalar('black-chrome_cyberware:spray-paint-cyberfinger');
+          lido.dedos = { mao: mao.instaladoNo?.id === braco.id, noBraco: dedos.filter(d => d.instaladoNo?.id === braco.id).length, slots: braco.slotsUsados, sexto: { semFundacao: sexto.item.semFundacao, aviso: sexto.aviso } };
+          // No braço esquerdo, natural: a mão modular lá e um dedo do mesmo lado.
+          const { item: maoNatural } = await instalar('black-chrome_cyberware:modular-finger-cyberhand', { system: { lado: 'braco-esquerdo' } });
+          const { item: dedoNatural } = await instalar('black-chrome_cyberware:squirt-cyberfinger', { system: { lado: 'braco-esquerdo' } });
+          lido.natural = { mao: maoNatural.noMembroNatural, dedo: dedoNatural.noMembroNatural, semFundacao: dedoNatural.semFundacao };
+          // 2. O quadro externo (o Beta): sem os plugs, não liga; com dois, BODY 14, e o HP e o Death Save ficam pelo BODY 6.
+          lido.antes = { body: ator.system.atributos.body.valor, hp: ator.system.hp.max, ds: ator.system.deathSave.body };
+          const beta = await criar('core_gear:linear-frame-beta');
+          let n = avisos.length;
+          await beta.update({ 'system.uso': 'equipado' });
+          lido.semPlugs = { uso: ator.items.get(beta.id).system.uso, aviso: avisos.slice(n).join(' ') };
+          await instalar('core_cyberware:interface-plugs'); await instalar('core_cyberware:interface-plugs');
+          await ator.items.get(beta.id).update({ 'system.uso': 'equipado' });
+          lido.vestido = { uso: ator.items.get(beta.id).system.uso, body: ator.system.atributos.body.valor, hp: ator.system.hp.max, ds: ator.system.deathSave.body };
+          // O Fūma vestido (sem o Beta): +2 em Furtividade.
+          await ator.items.get(beta.id).update({ 'system.uso': 'carregando' });
+          const fuma = await criar('black-chrome_gear:fuma-kotaro-linear-frame');
+          await fuma.update({ 'system.uso': 'equipado' });
+          lido.fuma = { body: ator.system.atributos.body.valor, furtividade: ator.system.bonus.pericias.stealth };
+          await ator.items.get(fuma.id).update({ 'system.uso': 'carregando' });
+          // 3. O quadro interno (o Vermilion): com BODY 6 e sem enxertos, recusa; com BODY 8 e dois, instala e muda o HP.
+          const recusado = await instalar('black-chrome_cyberware:implanted-vermilion-linear-frame');
+          lido.interno = { recusado: !recusado.item.system.instalado, aviso: recusado.aviso };
+          await ator.update({ 'system.atributos.body.valor': 8 });
+          await instalar('core_cyberware:grafted-muscle-and-bone-lace'); await instalar('core_cyberware:grafted-muscle-and-bone-lace');
+          await ator.instalarCyberware(ator.items.get(recusado.item.id), { rolar: false });
+          lido.instalado = { instalado: ator.items.get(recusado.item.id).system.instalado, body: ator.system.atributos.body.valor, ds: ator.system.deathSave.body, hp: ator.system.hp.max };
+          // 4. A aparência de moda: a Dirk mostra o estilo na ficha, e a Percepção 8 + 6 + 5 = 19 passa da DV15.
+          const dirk = await criar('black-chrome_armor:dirk-combat-jacket', { system: { equipada: true } });
+          await dirk.sheet.render({ force: true });
+          for (let i = 0; i < 60 && !dirk.sheet.element?.querySelector('[data-action="perceberArmadura"]'); i++) await new Promise(r => setTimeout(r, 50));
+          const texto = dirk.sheet.element?.textContent ?? '';
+          lido.moda = { estilo: dirk.system.moda, etiqueta: texto.includes('PARECE ROUPA DE LAZER'), botoes: dirk.sheet.element?.querySelectorAll('[data-action="perceberArmadura"]').length ?? 0 };
+          await dirk.sheet.close();
+          const observador = await Actor.implementation.create({ name: 'Teste Observador', type: 'personagem', system: { atributos: { int: { valor: 8 } }, pericias: { perception: { nivel: 6 } } } });
+          try {
+            CONFIG.Dice.randomUniform = () => 1 - 4.5 / 10;
+            const r = await game.system.api.blackChrome.perceberArmadura(dirk, observador, 'perception');
+            const recado = game.messages.find(m => m.getFlag('${S}', 'perceberArmadura')?.observador === observador.uuid);
+            lido.percebeu = { ...r, sussurro: recado?.whisper.length > 0, texto: recado?.content.includes('percebe que Dirk Combat Jacket') };
+          } finally { CONFIG.Dice.randomUniform = random; await observador.delete(); }
+          return lido;
+        } finally {
+          ui.notifications.warn = warn; ui.notifications.info = info;
+          await ator.delete();
+          await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !mensagens.has(m.id)).map(m => m.id));
+        }
+      })()`);
+      const v = info;
+      const ok = v.dedos.mao && v.dedos.noBraco === 5 && v.dedos.slots === 1 && v.dedos.sexto.semFundacao && v.dedos.sexto.aviso.includes('entrou sem mão')
+        && v.natural.mao && v.natural.dedo && !v.natural.semFundacao
+        && v.antes.body === 6 && v.antes.hp === 40 && v.antes.ds === 6
+        && v.semPlugs.uso !== 'equipado' && v.semPlugs.aviso.includes('precisa de 2 Interface Plugs instalados (tem 0)')
+        && v.vestido.uso === 'equipado' && v.vestido.body === 14 && v.vestido.hp === 40 && v.vestido.ds === 6
+        && v.fuma.body === 12 && v.fuma.furtividade === 2
+        && v.interno.recusado && v.interno.aviso.includes('o quadro interno exige BODY 8 (tem 6)')
+        && v.instalado.instalado && v.instalado.body === 12 && v.instalado.ds === 12 && v.instalado.hp === 55
+        && v.moda.estilo === 'leisurewear' && v.moda.etiqueta && v.moda.botoes === 2
+        && v.percebeu.percebeu === true && v.percebeu.total === 19 && v.percebeu.dv === 15 && v.percebeu.sussurro && v.percebeu.texto;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

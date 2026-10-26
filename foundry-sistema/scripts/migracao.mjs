@@ -14,6 +14,7 @@
 import { carregarCatalogo } from './catalogo.mjs';
 import { SISTEMA } from './config.mjs';
 import { cabeNaFundacao, pedeFundacao } from './regras.mjs';
+import { QUADROS_EXTERNOS } from './regras-black-chrome.mjs';
 
 const doCatalogo = dados => dados.flags?.[SISTEMA]?.catalogo ?? '';
 
@@ -121,6 +122,14 @@ export const PASSOS = [
     versao: 8,
     nome: 'O acessório que é arma (C11, parte 3): a baioneta e o lança-granadas e a espingarda sob o cano ganham os dados da arma, que o catálogo passou a trazer no ciclo 135',
     item: armaDoCatalogo
+  },
+  {
+    versao: 9,
+    nome: 'O quadro linear externo (C48, parte 3; a decisão do usuário, como a wiki): o Linear Frame vestido põe o BODY sem mudar o HP nem o Death Save (o efeito passa para body.quadro)',
+    item(dados) {
+      if (dados.type !== 'equipamento' || !QUADROS_EXTERNOS[doCatalogo(dados)]) return;
+      for (const efeito of dados.effects ?? []) for (const mudanca of efeito.system?.changes ?? []) if (mudanca.key === 'system.atributos.body.valor') mudanca.key = 'system.atributos.body.quadro';
+    }
   }
 ];
 export const VERSAO_DOS_DADOS = PASSOS.at(-1)?.versao ?? 0;

@@ -9,6 +9,7 @@ import { protecoesDoVeiculo, TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
 import { scannerPreferido, tipoDeScanner } from './regras-inventario.mjs';
 import { armaduraDoLocal, armaduraMonitoradaDoLocal } from './regras-armadura.mjs';
 import { penalidadeDeDeathSave } from './tratamento.mjs';
+import { corpoComQuadro } from './regras-black-chrome.mjs';
 
 const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
@@ -128,16 +129,22 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
       // Os boosters ativos somam na habilidade de Interface deles (Eraser no Cloak, Speedy Gonzalvez na Velocidade...).
       interface: Object.fromEntries(regras.HABILIDADES_DE_INTERFACE.map(({ id }) => [id, 0]))
     };
+    // O BODY do quadro linear externo vestido (o efeito dele vai aqui; o C48, parte 3): 0, sem quadro.
+    this.atributos.body.quadro = 0;
   }
 
   // Depois dos efeitos da fase "initial": derivados com os atributos já modificados.
   prepareDerivedData() {
     const a = this.atributos;
+    // O quadro linear externo (o C48, parte 3; a decisão do usuário, como a wiki): o BODY dele vale para tudo, menos o HP e
+    // o Death Save, que ficam pelo BODY sem ele.
+    const corpo = corpoComQuadro(a.body.valor, a.body.quadro);
+    a.body.valor = corpo.valor;
     // Armadura pesada (p. 97): a maior penalidade das armaduras vestidas sai de REF, DEX e MOVE.
     const armaduras = this.parent.items.filter(item => item.type === 'armadura' && item.system.equipada && !item.system.escudo);
     this.penalidadeArmadura = armaduras.reduce((maior, item) => Math.max(maior, Math.abs(item.system.penalidade)), 0);
     for (const chave of ['ref', 'dex', 'move']) a[chave].valor = Math.max(0, a[chave].valor - this.penalidadeArmadura);
-    this.hp.max = regras.hpMaximo(a.body.valor, a.will.valor);
+    this.hp.max = regras.hpMaximo(corpo.daVida, a.will.valor);
     const instalados = this.parent.items.filter(item => item.type === 'cyberware' && item.system.instalado)
       .map(item => ({ tipo: item.system.tipo, perda: item.system.perdaHumanidade.media }));
     this.humanidade.max = regras.humanidadeMaxima(a.emp.valor, instalados);
@@ -167,7 +174,7 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     // Death Save: a penalidade de base vem das lesões que a aumentam; a outra sobe a cada sucesso.
     const lesoes = this.parent.items.filter(item => item.type === 'lesao');
     this.deathSave.base = penalidadeDeDeathSave(lesoes);
-    this.deathSave.body = a.body.valor;
+    this.deathSave.body = corpo.daVida;
     // Sem a perna, não esquiva (Perna Desmembrada).
     this.semPerna = lesoes.some(item => item.getFlag('cpr-fieldbook', 'catalogo') === 'core_critical-injuries-body:dismembered-leg' || item.name === 'Dismembered Leg');
     // SP de cada local: a maior das armaduras equipadas que cobrem o local.
@@ -317,6 +324,9 @@ export class DadosArmadura extends foundry.abstract.TypeDataModel {
       penalidade: inteiro(0),
       escudo: new fields.BooleanField({ initial: false }),
       pvEscudo: recurso(0, 0),
+      // A aparência de moda do Black Chrome (o C48, parte 3): o estilo de roupa que a armadura parece (config.ESTILOS_ROUPA),
+      // ou vazio.
+      moda: texto(),
       equipada: new fields.BooleanField({ initial: false }),
       preco: inteiro(0, { min: 0 }),
       fonte: fonte()

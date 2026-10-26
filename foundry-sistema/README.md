@@ -559,6 +559,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
       no ponto fraco do veículo, sem a blindagem e com o dano dobrado; o Door Cracker só na cobertura, sem ferir ninguém);
     - a granada **Shuriken Tornado** rola o dano para cada alvo e dobra a lesão do objeto estranho; a **Arachnid** não
       causa dano (a teia vai no cartão).
+  - **O cromo do Black Chrome** (o C48, parte 3, ciclo 189):
+    - os **cyberdedos** ficam no cyberbraço, como na wiki e na loja, mas não gastam os slots dele: exigem a Modular Finger
+      Cyberhand (até 5 dedos) ou a Enthusiast (até 8) naquele braço, ou no membro natural daquele lado com a mão de lá; o
+      dedo a mais entra sem mão, com o recado (decisão do usuário, 2026-10-26);
+    - os **quadros lineares**: o vestido (o Sigma e o Beta do RED e os quatro do Black Chrome) só liga com os Interface
+      Plugs que pede (o Sigma, 1; os outros, 2; o EL-F4-NT, nenhum) e põe o BODY sem mudar o HP nem o Death Save (como a
+      wiki; decisão do usuário); o implantado pede BODY (6 no Sigma, 8 nos outros) e os Grafted Muscle and Bone Lace (1 ou
+      2) e muda o HP; o Fūma Kotarō dá +2 em Furtividade;
+    - a **aparência de moda**: a armadura diz o estilo que parece ("PARECE ROUPA DE LAZER"), e a ficha dela tem os testes
+      de quem observa (o token selecionado ou o personagem): Percepção DV15 ou Guarda-roupa e Estilo DV13, só para o mestre.
+      API: `game.system.api.blackChrome.perceberArmadura(armadura, observador, pericia)`.
   - **Veículos:** SDP, assentos, MOVE (a velocidade de combate) e a velocidade narrativa. Os upgrades instalados somam SDP e assentos (o Chassis pesado dá +20 SDP; o Upgrade de assento, +2 assentos); como no CORE 0.93, o modificador pode ser negativo, e a soma nunca passa abaixo de 0, com o SDP de agora até o máximo (o C43, parte 2, ciclo 171). O bônus de ataque do upgrade também pode ser negativo e entra na rolagem com o sinal; o pente do carregador não soma: troca o da arma. Os da família do Nomad vêm marcados. A ficha seleciona um único veículo em uso e permite marcar quando o personagem dirige. Trocar o veículo encerra a direção; os demais ficam na frota.
     O Chassis blindado dá SP13, com ablação própria. Ao atacar o token do ocupante, escolha a pessoa, o veículo ou uma janela registrada: o dano ao SDP usa dano menos SP, sem +5 ou lesão crítica, e o veículo não esquiva. Cada janela conserva seu HP: vidro blindado tem 15 HP ou 30 com a segunda instalação. O tiro que destrói o vidro perde a sobra; a explosão que o destrói passa inteira para o ocupante. Tech carregada atravessa vidro fino sem danificá-lo; a Nekomata também atravessa o grosso. Nesse caso, a pessoa conserva sua defesa e armadura. A espessura usa o máximo original da janela. O cartão permite desfazer pela diferença.
     No upgrade instalado, **Preparar arma** cria uma única arma vinculada à instalação: metralhadora (30 balas, só Autofogo, voltada para a frente), lança-chamas ou arma branca muito pesada. Elas aparecem sob o veículo, sem ocupar mãos. Metralhadora e lança-chamas não recarregam enquanto o personagem dirige. Na ficha do veículo, adicione as janelas e use **Ajustar vidros** ao mudar os upgrades; o ajuste conserva o dano de cada janela. **Dirigir** controla a restrição de recarga. Mãos no volante, iniciativa, MOVE, manobras, orientação e condições descritivas de instalação continuam com o mestre.
@@ -675,7 +686,7 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga).
-- **As regras do cromo do Black Chrome** (o C48, parte 3): os cyberdedos na mão modular, os quadros lineares e a aparência de moda da armadura. Das armas (a parte 2), ficam com a mesa: o CDT 2 do arremesso, a munição de caça pequena, a teia da Arachnid (o agarrão), a cobertura que a granada KTech não fura, os fluidos da Weeping Reaver e as regras de cada arma que são texto (a chave biométrica das monolâminas, a segunda lesão, os sons). O efeito que não é automático fica no texto do item.
+- **O que do Black Chrome fica com a mesa:** do cromo (a parte 3), o laser de quatro ou oito cyberdedos, as armas do Fūma Kotarō, o escalar, o nadar e o saltar dos quadros e o Skate Foot do Vermilion. Das armas (a parte 2): o CDT 2 do arremesso, a munição de caça pequena, a teia da Arachnid (o agarrão), a cobertura que a granada KTech não fura, os fluidos da Weeping Reaver e as regras de cada arma que são texto (a chave biométrica das monolâminas, a segunda lesão, os sons). O efeito que não é automático fica no texto do item.
 - **Os veículos do Black Chrome** (31 no CORE) e o Acesso Nômade.
 - **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart
   melhorada desde o 112, as balas por tiro desde o 113, a Power desde o 114 e a Tech desde o 115). As regras próprias

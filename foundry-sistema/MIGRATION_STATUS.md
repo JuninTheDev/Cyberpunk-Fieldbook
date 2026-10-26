@@ -9159,6 +9159,43 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Mutações:** as 3 caíram: P1 no G3 (só o último nível) e P2 e P3 no G4 (o cortador com o `createDirectory` de um
   nível, calado; o upload sem conferir).
 
+### Ciclo 189 (2026-10-26): C48 parte 3, o cromo do Black Chrome (sessão Junin)
+
+- **Fonte:** a wiki (`system-blackchrome.js`: os cyberdedos, p. 23–26; a moda e a armadura, p. 27–35; os quadros
+  lineares, p. 51–55; as palavras-chave; e `system-catalog.js`, os quadros do RED). **Decisões do usuário (2026-10-26):**
+  o quadro linear externo (o vestido, inclusive o Sigma e o Beta do RED) segue a wiki: o BODY sobe para tudo, menos o HP e
+  o Death Save (o C31 fazia o quadro vestido subir o HP, como o CORE); os cyberdedos ficam no cyberbraço, como na wiki e
+  na loja (que só aceitam opção numa base do mesmo tipo), mas não gastam os slots dele, e a mão modular dá as vagas.
+- **Entrega:**
+  - **Os cyberdedos** (os 16 da wiki): o dedo não gasta slot do cyberbraço (`slotsNaFundacao`); entra no braço onde a
+    Modular Finger Cyberhand (5 vagas) ou a Dynalar Enthusiast (8) tem dedo livre (o par de alicate/tesoura conta 2), ou
+    fica no membro natural do lado dele, com a mão modular de lá. Sem vaga, entra sem mão, com o recado e a marca "sem
+    fundação" na ficha. O dedo padrão que vem com a mão não conta.
+  - **Os quadros lineares:** o efeito do quadro vestido passa para `body.quadro` (o build e a migração 9 dos itens dos
+    mundos), e o personagem usa esse BODY para tudo, menos o HP e o Death Save, que ficam pelo BODY sem ele
+    (`corpoComQuadro`). Ligar o quadro vestido pede os Interface Plugs instalados (o Sigma, 1; o Beta e os do Black Chrome,
+    2; o EL-F4-NT, nenhum). Instalar o implantado pede BODY (6 no Sigma, 8 nos outros) e os Grafted Muscle and Bone Lace
+    (1 ou 2), e ele muda o HP, como o cromo. O Fūma Kotarō, vestido ou implantado, dá +2 em Furtividade.
+  - **A aparência de moda:** a armadura ganha o campo `moda` (o estilo que parece, dos estilos de roupa): as 15 do
+    catálogo (a Dirk, a Laser Light, a Montage, a Executive, a Corporate Island e as 10 Mimic). A ficha mostra "PARECE
+    ...", e na armadura de um ator há os dois testes de quem observa (o token selecionado ou o personagem do usuário):
+    Percepção contra DV15 ou Guarda-roupa e Estilo contra DV13, com a rolagem e o resultado só para o mestre
+    (`black-chrome.mjs`; API `game.system.api.blackChrome.perceberArmadura`).
+- **Limites:** ficam com a mesa o laser de quatro ou oito cyberdedos, as armas do Fūma Kotarō, o escalar, o nadar e o
+  saltar dos quadros, o Skate Foot do Vermilion e os Techtools do EL-F4-NT. A wiki e a loja continuam pondo os dedos no
+  cyberbraço (a importação e a ficha que volta não mudam). Os veículos são a parte 4.
+- **Portões:** G1, 233 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 720 testes, 0 falhas (5
+  testes novos em `tests/sistema/blackchrome-cromo.test.mjs`: os 16 cyberdedos da wiki e as duas mãos; as vagas e os
+  slots; os quadros, o `body.quadro`, os plugs, o BODY e os enxertos, o Fūma; a migração 9; a aparência de moda,
+  conferida com a wiki, e as DVs; e o teste dos fluxos de rolagem conta o da moda); G4 completo, 310/310 em 609 s, com o
+  passo novo: a mão no cyberbraço e cinco dedos nele (1 slot usado), o sexto sem mão; a mão e o dedo no braço natural; o
+  Beta recusa sem os plugs e, com dois, põe o BODY 14 com o HP 40 e o Death Save 6; o Fūma dá BODY 12 e +2 em
+  Furtividade; o Vermilion implantado recusa com BODY 6 e, com BODY 8 e dois enxertos, instala (BODY 12, HP 55); a Dirk
+  mostra "PARECE ROUPA DE LAZER" e os dois testes, e a Percepção 19 a percebe, só para o mestre. No foco, 12/12.
+- **Mutações:** as 8 caíram: C1 a C4 no G3 (o dedo que gasta slot, a mão sem limite, o quadro externo no HP e, no
+  build, o quadro externo no BODY de sempre) e C5 a C8 no G4 (o dedo como opção comum do braço, o HP pelo BODY do
+  quadro, o quadro que liga sem os plugs, o dedo fora do membro natural).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

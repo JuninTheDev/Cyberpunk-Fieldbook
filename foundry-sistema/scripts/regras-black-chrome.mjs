@@ -64,3 +64,65 @@ export const falhaNaCombinacao = (texto, { emperraJunto = false } = {}) => `${te
 export const SHURIKEN_TORNADO = 'black-chrome_ammo:grenade-shuriken-tornado';
 export const danoPorAlvo = catalogo => catalogo === SHURIKEN_TORNADO;
 export const lesaoDupla = ({ efeito, catalogo }) => efeito === 'expansive' || catalogo === SHURIKEN_TORNADO;
+
+// ---------------- O cromo (o C48, parte 3) ----------------
+// Os cyberdedos (p. 23–26): cada um exige uma Modular Finger Cyberhand (até 5) ou a Dynalar Enthusiast (até 8). Decisão do
+// usuário (2026-10-26): ficam no cyberbraço, como na wiki e na loja, mas não gastam os slots dele: a mão naquele braço (ou
+// no membro natural daquele lado) dá as vagas. O dedo padrão que vem com a mão não conta; os que se compram, sim (o par de
+// alicate/tesoura, 2).
+export const MAOS_DE_DEDOS = {
+  'black-chrome_cyberware:modular-finger-cyberhand': 5,
+  'black-chrome_cyberware:dynalar-modular-finger-enthusiast-cyberhand': 8
+};
+export const ehCyberdedo = catalogo => /^black-chrome_cyberware:.+-cyberfingers?$/.test(catalogo ?? '');
+export const dedosDaMao = catalogo => MAOS_DE_DEDOS[catalogo] ?? 0;
+// Os slots que a opção gasta na fundação: o cyberdedo, nenhum.
+export const slotsNaFundacao = ({ catalogo = '', tamanho = 0 }) => (ehCyberdedo(catalogo) ? 0 : Number(tamanho) || 0);
+// O cyberdedo cabe? maos: os catálogos das mãos daquele braço; dedos: os tamanhos dos outros dedos nele.
+export function dedoCabe({ maos = [], dedos = [], tamanho = 1 }) {
+  const vagas = maos.reduce((soma, mao) => soma + dedosDaMao(mao), 0);
+  if (!vagas) return { cabe: false, motivo: 'o cyberdedo exige uma Modular Finger Cyberhand (ou a Enthusiast) naquele braço' };
+  const usados = dedos.reduce((soma, dedo) => soma + (Number(dedo) || 0), 0);
+  if (usados + (Number(tamanho) || 0) > vagas) return { cabe: false, motivo: `a mão já tem os ${vagas} cyberdedos que cabem nela` };
+  return { cabe: true, motivo: null };
+}
+
+// Os quadros lineares (p. 51–55; os do RED, system-catalog.js). O externo (vestido, um equipamento) pede Interface Plugs
+// (o Sigma, 1; o Beta e os do Black Chrome, 2; o EL-F4-NT, nenhum) e, decisão do usuário (2026-10-26), como a wiki: "o
+// BODY maior não aumenta o HP nem muda o Death Save" (o efeito vai em body.quadro, e o HP sai do BODY sem ele). O
+// interno (cyberware) pede BODY e Grafted Muscle and Bone Lace (o Sigma, BODY 6 e um; o Beta e os do Black Chrome, BODY 8
+// e dois) e muda o HP, como o cromo.
+export const QUADROS_EXTERNOS = {
+  'core_gear:linear-frame-sigma': { plugs: 1 }, 'core_gear:linear-frame-beta': { plugs: 2 },
+  'black-chrome_gear:fuma-kotaro-linear-frame': { plugs: 2 }, 'black-chrome_gear:lf-001-swat-linear-frame': { plugs: 2 },
+  'black-chrome_gear:vermilion-linear-frame': { plugs: 2 }, 'black-chrome_gear:el-f4-nt-linear-frame': { plugs: 0 }
+};
+export const QUADROS_INTERNOS = {
+  'core_cyberware:implanted-linear-frame-sigma': { body: 6, enxertos: 1 }, 'core_cyberware:implanted-linear-frame-beta': { body: 8, enxertos: 2 },
+  'black-chrome_cyberware:implanted-fuma-kotaro-linear-frame': { body: 8, enxertos: 2 },
+  'black-chrome_cyberware:implanted-lf-001-swat-linear-frame': { body: 8, enxertos: 2 },
+  'black-chrome_cyberware:implanted-vermilion-linear-frame': { body: 8, enxertos: 2 }
+};
+export const PLUGS = 'core_cyberware:interface-plugs';
+export const ENXERTO = 'core_cyberware:grafted-muscle-and-bone-lace';
+// O quadro externo veste? plugs: os Interface Plugs instalados.
+export function quadroVeste(catalogo, { plugs = 0 } = {}) {
+  const precisa = QUADROS_EXTERNOS[catalogo]?.plugs ?? 0;
+  return plugs >= precisa ? { cabe: true, motivo: null } : { cabe: false, motivo: `o quadro externo precisa de ${precisa === 1 ? 'um Interface Plugs instalado' : `${precisa} Interface Plugs instalados`} (tem ${plugs})` };
+}
+// O quadro interno instala? body: o BODY de agora; enxertos: os Grafted Muscle and Bone Lace instalados.
+export function quadroInstala(catalogo, { body = 0, enxertos = 0 } = {}) {
+  const pede = QUADROS_INTERNOS[catalogo];
+  if (!pede) return { cabe: true, motivo: null };
+  if (body < pede.body) return { cabe: false, motivo: `o quadro interno exige BODY ${pede.body} (tem ${body})` };
+  if (enxertos < pede.enxertos) return { cabe: false, motivo: `o quadro interno exige ${pede.enxertos === 1 ? 'um Grafted Muscle and Bone Lace instalado' : `${pede.enxertos} Grafted Muscle and Bone Lace instalados`} (tem ${enxertos})` };
+  return { cabe: true, motivo: null };
+}
+// O BODY de cada coisa com o quadro externo ligado: o quadro (body.quadro) vale para tudo, menos o HP e o Death Save.
+export const corpoComQuadro = (body, quadro = 0) => ({ valor: Number(quadro) > 0 ? Number(quadro) : Number(body), daVida: Number(body) });
+
+// A aparência de moda (p. 27–35; a palavra-chave): a armadura parece roupa daquele estilo, e só Guarda-roupa e Estilo DV13
+// ou Percepção DV15 percebem que é armadura.
+export const DV_DA_MODA = { 'wardrobe-style': 13, perception: 15 };
+// Passa quem tira mais que a DV (como os testes de resistência do sistema).
+export const percebeuAArmadura = ({ pericia, total }) => Number(total) > (DV_DA_MODA[pericia] ?? Infinity);

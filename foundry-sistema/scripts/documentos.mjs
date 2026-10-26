@@ -23,7 +23,7 @@ import { ehArremesso } from './arremessar.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
 import { ehArmaDaCombinacao, ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
-import { perfilDoBlackChrome } from './regras-black-chrome.mjs';
+import { dedoCabe, dedosDaMao, ehCyberdedo, ENXERTO, PLUGS, perfilDoBlackChrome, QUADROS_EXTERNOS, quadroInstala, quadroVeste, slotsNaFundacao } from './regras-black-chrome.mjs';
 import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
@@ -39,6 +39,11 @@ const botoesDaNet = ondes => ondes.map(onde => ({ onde, rotulo: ROTULOS_DA_NET[o
 
 // O cyberware como a regra do encaixe o lê (regras.cabeNaFundacao): o tipo, o id do catálogo, os slots e o tamanho.
 export const encaixeDe = item => ({ tipo: item.system.tipo, catalogo: item.getFlag(SISTEMA, 'catalogo') ?? '', slots: item.system.slots, tamanho: item.system.tamanho });
+// O cyberdedo cabe entre estes itens (o braço ou o membro natural): as mãos modulares dão as vagas, e os outros dedos as gastam.
+const vagaParaODedo = (dedo, itens) => dedoCabe({
+  maos: itens.map(item => encaixeDe(item).catalogo).filter(catalogo => dedosDaMao(catalogo)),
+  dedos: itens.filter(item => item.id !== dedo.id && ehCyberdedo(encaixeDe(item).catalogo)).map(item => item.system.tamanho), tamanho: dedo.system.tamanho
+});
 
 export class AtorCPR extends Actor {
   async rollInitiative(opcoes = {}) {
@@ -643,6 +648,10 @@ export class AtorCPR extends Actor {
   // lugar: onde foi a cirurgia (o C41; cirurgia.mjs), que a retirada usa para a DV; vazio, sem cirurgia.
   async instalarCyberware(item, { rolar = true, lugar = '' } = {}) {
     if (item.system.instalado) return null;
+    // O quadro linear interno (o C48, parte 3) exige BODY e Grafted Muscle and Bone Lace.
+    const instalados = catalogo => this.items.filter(outro => outro.type === 'cyberware' && outro.system.instalado && outro.getFlag(SISTEMA, 'catalogo') === catalogo).length;
+    const quadro = quadroInstala(item.getFlag(SISTEMA, 'catalogo'), { body: this.system.atributos.body.valor, enxertos: instalados(ENXERTO) });
+    if (!quadro.cabe) { ui.notifications.warn(`${item.name} não instala: ${quadro.motivo}.`); return null; }
     const fundacao = item.system.fundacional ? null : this.fundacaoPara(item);
     const { formula, media } = item.system.perdaHumanidade;
     let perda = media;
@@ -658,14 +667,20 @@ export class AtorCPR extends Actor {
     await this.update({ 'system.humanidade.value': Math.min(this._source.system.humanidade.value, maxAntes) - perda });
     // A peça única sem fundação do lado fica no membro natural (o C30): o recado diz onde.
     if (!fundacao && item.noMembroNatural) ui.notifications.info(`${item.name} ficou no membro natural (${nomeDoLado(item.ladoDoCyberware).toLowerCase()}).`);
+    else if (!fundacao && ehCyberdedo(encaixeDe(item).catalogo)) ui.notifications.info(`${item.name} entrou sem mão: o cyberdedo exige uma Modular Finger Cyberhand (ou a Enthusiast) com dedo livre, no cyberbraço ou no membro natural do lado dele.`);
     else if (!fundacao && !item.system.fundacional && pedeFundacao(encaixeDe(item))) ui.notifications.info(`${item.name} entrou sem fundação: nenhuma instalada tem o encaixe e o slot livre.`);
     return perda;
   }
 
   // As fundações instaladas (deste ator) em que a opção cabe (regras.cabeNaFundacao, sem contar a própria opção nos
   // slots): a ficha da opção e o "+ Opção" escolhem por elas.
+  // O cyberdedo (o C48, parte 3) não gasta os slots do braço: cabe se a mão modular dele tem dedo livre (vagaParaODedo).
   fundacoesPara(item) {
-    const cabe = fundacao => cabeNaFundacao({ fundacao: encaixeDe(fundacao), opcao: encaixeDe(item), usados: fundacao.instalados.filter(outro => outro.id !== item.id).reduce((soma, outro) => soma + outro.system.tamanho, 0) }).cabe;
+    const cabe = fundacao => {
+      const outros = fundacao.instalados.filter(outro => outro.id !== item.id);
+      if (ehCyberdedo(encaixeDe(item).catalogo)) return cabeNaFundacao({ fundacao: encaixeDe(fundacao), opcao: { ...encaixeDe(item), tamanho: 0 } }).cabe && vagaParaODedo(item, outros).cabe;
+      return cabeNaFundacao({ fundacao: encaixeDe(fundacao), opcao: encaixeDe(item), usados: outros.reduce((soma, outro) => soma + slotsNaFundacao(encaixeDe(outro)), 0) }).cabe;
+    };
     return this.items.filter(outro => outro.type === 'cyberware' && outro.system.fundacional && outro.system.instalado && outro.id !== item.id && cabe(outro));
   }
   // A fundação onde a opção entra ao instalar: a que ela já aponta, se ainda cabe; senão, a do lado dela (o C30: a opção com
@@ -734,6 +749,16 @@ export class ItemCPR extends Item {
   async _preUpdate(mudancas, opcoes, usuario) {
     if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
     const sistema = { ...this.system, ...mudancas.system };
+    // O quadro linear externo (o C48, parte 3) só se veste com os Interface Plugs que ele pede. A montagem da wiki entra como veio.
+    const catalogo = this.getFlag(SISTEMA, 'catalogo');
+    if (this.type === 'equipamento' && QUADROS_EXTERNOS[catalogo] && mudancas.system?.uso === 'equipado' && this.system.uso !== 'equipado' && this.actor && !opcoes.montagemDaWiki) {
+      const plugs = this.actor.items.filter(item => item.type === 'cyberware' && item.system.instalado && item.getFlag(SISTEMA, 'catalogo') === PLUGS).length;
+      const veste = quadroVeste(catalogo, { plugs });
+      if (!veste.cabe) {
+        ui.notifications.warn(`${this.name} não liga: ${veste.motivo}.`);
+        return false;
+      }
+    }
     // O acessório que entra numa arma (o C11, parte 4): os slots dela e um carregador por vez. A montagem que vem da wiki
     // (a importação e a migração da mesa) preserva o estado recebido, como a equipagem (o C12).
     const destino = foundry.utils.getProperty(mudancas, 'system.instaladoEm');
@@ -782,7 +807,8 @@ export class ItemCPR extends Item {
   }
 
   get slotsUsados() {
-    return this.instalados.reduce((soma, item) => soma + (this.type === 'arma' ? this.tamanhoNaArma(item) : Number(item.system.tamanho) || 0), 0);
+    // Na fundação do cyberware, o cyberdedo não gasta slot (vai na mão; regras-black-chrome.slotsNaFundacao).
+    return this.instalados.reduce((soma, item) => soma + (this.type === 'arma' ? this.tamanhoNaArma(item) : this.type === 'cyberware' ? slotsNaFundacao(encaixeDe(item)) : Number(item.system.tamanho) || 0), 0);
   }
 
   // A REZ atual do programa (regras.rezAtual); null nos outros itens.
@@ -893,6 +919,13 @@ export class ItemCPR extends Item {
   get noMembroNatural() {
     const s = this.system;
     if (this.type !== 'cyberware' || s.fundacional || !s.instalado || this.instaladoNo || !this.actor) return false;
+    // O cyberdedo (o C48, parte 3) fica no membro natural com a mão modular que está nele, naquele lado, se há dedo livre
+    // (os dedos de lá, na ordem dos itens).
+    if (ehCyberdedo(encaixeDe(this).catalogo)) {
+      const doMembro = this.actor.items.filter(outro => outro.type === 'cyberware' && outro.system.instalado && !outro.instaladoNo && outro.system.lado === s.lado && outro.system.tipo === s.tipo);
+      const antes = doMembro.slice(0, doMembro.indexOf(this)).filter(outro => ehCyberdedo(encaixeDe(outro).catalogo));
+      return Boolean(s.lado) && vagaParaODedo(this, [...doMembro.filter(outro => dedosDaMao(encaixeDe(outro).catalogo) && outro.noMembroNatural), ...antes]).cabe;
+    }
     const ladosComFundacao = this.actor.items.filter(outro => outro.type === 'cyberware' && outro.system.fundacional && outro.system.instalado && outro.system.tipo === s.tipo).map(outro => outro.ladoDoCyberware);
     const fica = item => item.type === 'cyberware' && !item.system.fundacional && item.system.instalado && !item.instaladoNo && ficaNoMembroNatural({ ...encaixeDe(item), lado: item.system.lado }, ladosComFundacao);
     return fica(this) && this.actor.items.find(outro => fica(outro) && outro.system.tipo === s.tipo && outro.system.lado === s.lado) === this;
