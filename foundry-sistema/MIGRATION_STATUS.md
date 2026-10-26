@@ -8697,7 +8697,7 @@ Codex (`codex exec`, numa worktree própria a partir do `c1d8b42b`), revisados e
   dinâmico, os valores padrão do cortador, a prévia, os 28 quadros com os nomes, todos 64 × 64 (a caixa comum com a
   margem), opacos no centro, com a cor da linha e sem o branco do rótulo, o conjunto preenchido e ligado, a folha com
   fundo recusada e o jogador sem a permissão de envio recusado.
-- **Mutações:** 14 caíram, restauradas pelo md5: 7 da regra pura (G3) e 7 no Foundry (G4 focado). A faixa dos acentos do `nomeBase` tinha ficado escrita com os caracteres combinantes em vez do escape `̀-ͯ` (a mutação não achava o trecho): reescrita com o escape, e a mutação caiu.
+- **Mutações:** 14 caíram, restauradas pelo md5: 7 da regra pura (G3) e 7 no Foundry (G4 focado). A faixa dos acentos do `nomeBase` tinha ficado escrita com os caracteres combinantes em vez do escape `\u0300-\u036f` (a mutação não achava o trecho): reescrita com o escape, e a mutação caiu.
 - **No passo da parte 1:** com a transição da parte 2 (glitch), a textura preparada do token fica com a animada por um tempo, e uma leitura do passo pegou a de antes (290/291); o passo passou a ler a gravada (`_source.texture`), que é o que ele confere.
 - **O C45 está `[x]`** (as partes 1 a 3 desta sessão).
 
