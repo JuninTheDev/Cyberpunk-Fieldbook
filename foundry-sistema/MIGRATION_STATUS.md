@@ -8787,7 +8787,7 @@ completo.
     40 m), com "Velocidade de combate" no rótulo, e vermelha além; o C44 da pessoa não muda.
 - **Decisões e dúvidas:**
   - **quem dispara:** o pedido sugeria o passageiro; o CORE diz "the driver" nas três armas montadas, e a wiki o diz do
-    lança-chamas: segue o CORE, e o passageiro é recusado (para o usuário confirmar);
+    lança-chamas: segue o CORE, e o passageiro é recusado (confirmado pelo usuário em 2026-10-26);
   - **a régua:** a wiki não diz quantos metros o veículo anda por turno; usa MOVE × 2 m (`:538`, `:499` e o NOS), uma
     faixa só, sem Correr (`:538` e `:501`; a mesa do master usava × 2 e × 4). A Ação de Movimento a mais do NOS e o
     histórico do turno ficam com o mestre (o veículo não é combatente, e o Foundry só guarda o histórico de quem é: cada
