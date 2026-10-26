@@ -6,6 +6,7 @@ import * as escudoHumano from './escudo-humano.mjs';
 import * as reputacao from './reputacao.mjs';
 import { registrarArvoreItens } from './arvore-itens.mjs';
 import { registrarNavegador } from './navegador.mjs';
+import { registrarDiceSoNice } from './dice-so-nice.mjs';
 import * as artesMarciais from './artes-marciais.mjs';
 import * as avanco from './avanco.mjs';
 import { registrarArmasDoCyberware, sincronizarArmaMontada } from './armas-cyberware.mjs';
@@ -93,6 +94,8 @@ Hooks.once('init', () => {
   registrarArvoreItens();
   // O navegador de itens e atores (o C43, parte 3): os botões dos diretórios, o índice e o menu dos compêndios.
   registrarNavegador();
+  // O Dice So Nice (o C42): as cores de dados do CORE, quando o módulo fica pronto.
+  registrarDiceSoNice();
   // O Painel Tático (o C25): as configurações deste navegador e a tecla H; a barra monta no ready.
   registrarPainel();
   municoes.registrarMunicoes();

@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 186). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 187). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -411,8 +411,9 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
       tanque, o descanso do C36 cura no dobro.
 
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
-- [~] **C42. Dice So Nice** (sessão KouArt, 2026-10-26; o usuário confirmou que a mesa usa)**:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
-  `dice-so-nice-preset.js`).
+- [x] **C42. Dice So Nice:** feito no ciclo 186 (sessão KouArt, 2026-10-26; o usuário confirmou que a mesa usa): os dados
+  dos cartões do sistema no DSN (cada rolagem já ia no cartão dela; faltava a Humanidade da droga de rua) e as cores do
+  preset do CORE 0.92.4 (`dice-so-nice-preset.js`), sem as faces da Q-Workshop (a permissão é do projeto do CORE).
 - [x] **C43. Da 0.93**, um ciclo por parte (o CHANGELOG da 0.93 e o código em `fvtt-cyberpunk-red-core-dev/`):
   - [x] parte 1, as fórmulas: feito no ciclo 172 (sessão KouArt, com o Codex, 2026-10-25): os modificadores `red` e `dmg` nas fórmulas
     (`/r 1d10red`, `2d6dmgab2cd10`) e o crítico configurável por arma e munição;

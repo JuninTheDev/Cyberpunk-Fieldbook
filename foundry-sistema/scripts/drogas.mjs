@@ -67,14 +67,16 @@ async function tomar(droga) {
   if (rua?.vicioForaDoEfeito && vicio && !vicio.disabled) mudancas.push({ _id: vicio.id, disabled: true });
   if (mudancas.length) await droga.updateEmbeddedDocuments('ActiveEffect', mudancas);
   let humanidade = droga.getFlag(SISTEMA, 'sobEfeito')?.humanidade ?? 0;
+  // A rolagem vai no cartão, como as outras do sistema: com o Dice So Nice (o C42), os dados aparecem.
+  let rolagem = null;
   if (rua?.humanidade && !jaSobEfeito) {
-    const roll = await new Roll(rua.humanidade).evaluate();
-    humanidade = Math.min(ator.system.humanidade.value, roll.total);
+    rolagem = await new Roll(rua.humanidade).evaluate();
+    humanidade = Math.min(ator.system.humanidade.value, rolagem.total);
     await ator.update({ 'system.humanidade.value': Math.max(0, ator.system.humanidade.value - humanidade) });
   }
   await droga.setFlag(SISTEMA, 'sobEfeito', { humanidade, fim });
   const texto = `<b>${esc(ator.name)}</b> tomou ${esc(droga.name)}${jaSobEfeito ? ': a dose estende o efeito' : primario ? `: ${esc(primario.name)}` : ''}${!jaSobEfeito && humanidade ? `, e perdeu ${humanidade} de Humanidade (volta se passar no teste)` : ''}.`;
-  return ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), ...cartao('usou', texto, { droga: droga.name, humanidade, estendeu: jaSobEfeito }) });
+  return ChatMessage.implementation.create({ speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), ...cartao('usou', texto, { droga: droga.name, humanidade, estendeu: jaSobEfeito }), ...(rolagem ? { rolls: [rolagem] } : {}) });
 }
 
 // "O efeito acabou": desliga o primário e, na droga de rua, rola o teste do efeito secundário. Passou: o Black Lace devolve

@@ -9022,6 +9022,63 @@ em comum). Com ela, o C43 está completo.
   jogador (M8), no passo do jogador.
 - **Próximo:** na Fase 7, o C42 (Dice So Nice: falta saber se a mesa usa).
 
+### Ciclo 186 (2026-10-26): o C42, o Dice So Nice (sessão KouArt)
+
+Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-26 que a mesa usa o Dice So Nice).
+
+- **As fontes:** o CORE 0.92.4, o que a mesa usava (`cyberpunk-red-core/modules/hooks/external/dice-so-nice-preset.js`:
+  no `diceSoNiceReady`, dois conjuntos de faces da Q-Workshop, "CRPQWL" e "CRPQWN", e três cores; e
+  `cyberpunk-red-core/modules/extern/cpr-dice-handler.js`: os cartões do CORE não levavam o roll, e o `showForRoll`
+  mostrava os dados à parte, pelo modo de rolagem); o CORE 0.93 (`fvtt-cyberpunk-red-core-dev/CHANGELOG.md`: as rolagens
+  passaram a ser as do Foundry, "with automatic Dice So Nice support"); os nomes no `lang/en.json` do CORE
+  (`CPR.module.dsn.*`); o `CREDITS.md` da 0.93 ("Permission to use CyberpunkRED branded dice themes are graciously
+  provided by Q-Workshop and R Talsorian Games").
+- **O que muda:**
+  - **`scripts/dice-so-nice.mjs` (novo):** no `diceSoNiceReady`, as três cores do CORE 0.92.4, com os mesmos nomes,
+    fundos, bordas, material (vidro) e modos: a do jogador (`game.user.color`), a preferida até ele escolher outra;
+    "Blood over Chrome" (`#E64539`) e "Wet Work" (`#FFF300`), no grupo "Cyberpunk RED". O init a registra
+    (`scripts/sistema.mjs`);
+  - **os cartões:** um mapa de todas as rolagens do sistema (47 lugares: o combate, as defesas, o dano do jogador e do
+    mestre, a área, as lesões, os perigos, a direção, a iniciativa, o Death Save, os testes avulsos, os tratamentos, as
+    drogas, a NET e o Neuroport, o agarrão e as Artes Marciais) achou cada rolagem já na sua própria mensagem, com o
+    `rolls`, no cliente de quem rola e na hora da rolagem, e nenhuma em duas mensagens: é o que o Dice So Nice anima
+    sozinho, como na 0.93, sem o `showForRoll` da 0.92.4. Faltava uma: a Humanidade da droga de rua (o 2d6 do Black
+    Lace), que só ia no texto do cartão: agora vai no cartão (`scripts/drogas.mjs`).
+- **Decisões e dúvidas:**
+  - **as faces da Q-Workshop ficam de fora:** a permissão é do projeto do CORE, não uma licença das imagens (como as
+    imagens de andar do SolutionMaps no C35); a 0.93 também mudou as três cores para metal, com o número preto e a fonte
+    Bruno Ace: aqui ficam as da 0.92.4, o que a mesa via;
+  - **a geração da arquitetura da NET** rola sem cartão no chat (é assim desde o C35): continua sem dados no DSN;
+  - **não testado com o módulo:** o Dice So Nice não está no Foundry de teste deste PC, e baixá-lo pede a permissão do
+    usuário; o passo do G4 confere o que o DSN usa (o gancho, com um `dice3d` de mentira, e as mensagens com o roll), não
+    a animação. A conferir na mesa: os dados aparecem para quem vê cada mensagem (o modo do mestre, o secreto e o
+    sussurro, pelas regras do próprio DSN);
+  - **o que o mapa achou e não é do DSN** (os cartões já mostram isso no chat hoje, com ou sem o módulo; ficam para o
+    usuário decidir): com "Esconder o total do ataque até a defesa", o dano de autofogo rolado pelo jogador sai público
+    com o "(×N)" (`rolagens.mjs:125`), e N é o ataque menos a defesa; a segunda chance da munição Smart melhorada, o
+    Breach, o quickhack e o ataque de programa saem públicos (`combate/socket.mjs:136`, `neuroport.mjs:174` e `:232`,
+    `netrun/estado.mjs:638`); a iniciativa e as rolagens dos inimigos da NET mostram o nome e o número
+    (`netrun/combate.mjs:57-59`, `netrun/estado.mjs:206-217`).
+- **Na primeira rodada do G4** (306/307), a checagem dos avisos pegou "Wiki: o pedido de Teste Netrunner não foi
+  entregue. Este pedido já foi resolvido.": a entrega automática dos pedidos da wiki (a cada minuto, `wiki.mjs:601-603`)
+  e a entrega de um passo do G4 pegaram o mesmo pedido ao mesmo tempo, e a que chegou depois avisou. Nada do C42 (que não
+  mexe na wiki); na mesa, o mesmo aviso falso pode aparecer se o mestre entregar um pedido no minuto da entrega
+  automática. Fica anotado para o usuário decidir.
+- **Testes:**
+  - **G3:** `dice-so-nice.test.mjs` (novo, 2 testes: as três cores lidas do `dice-so-nice-preset.js` do CORE 0.92.4,
+    os nomes do lang dele; o registro no `diceSoNiceReady`, com a cor do jogador e sem conjunto de faces);
+  - **G4:** um passo novo, depois do "o navegador de itens e atores (o C43, parte 3) no jogador": o `diceSoNiceReady`
+    com um `dice3d` de mentira (as três cores, a do mestre como a preferida, nenhum conjunto de faces); o cartão do Black
+    Lace com o roll (2d6, 4 + 3 = 7, e a Humanidade 7 a menos); o teste de perícia e o dano da arma com o roll na
+    mensagem.
+- **Portões:** G1, 219 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 704/704; G4 completo, 307/307,
+  com a checagem dos dois navegadores sem avisos ou erros de JS (a primeira rodada, 306/307, é a da corrida da wiki, acima).
+- **Mutações:** as seis caíram, uma por vez, e os arquivos voltaram exatos. No G3: a cor do jogador que deixa de ser a
+  preferida (M1, 2 testes), o Blood over Chrome com outra cor (M2, 2), o metal da 0.93 no lugar do vidro (M3) e o gancho
+  errado do DSN (M4). No G4, um G4 inteiro cada, no passo do C42: o cartão do Black Lace sem a rolagem (M5) e o init sem o
+  registro (M6).
+- **Próximo:** a Fase 7 está completa. Abertos no ROADMAP: o C28 (do usuário) e os C48 e C49 (sessão Junin).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

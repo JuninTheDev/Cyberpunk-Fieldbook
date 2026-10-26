@@ -19122,6 +19122,34 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('Dice So Nice (o C42; o dice-so-nice-preset.js do CORE 0.92.4): no diceSoNiceReady, as três cores do CORE (a do jogador como a preferida, Blood over Chrome e Wet Work), sem as faces da Q-Workshop; as rolagens vão no cartão, que é o que o DSN anima: a Humanidade do Black Lace (2d6, 4 + 3 = 7), o teste de perícia e o dano da arma', async () => {
+      // O módulo não está no Foundry de teste: o gancho dele roda com um dice3d de mentira, e o resto confere o que o DSN
+      // usa (a mensagem criada com o roll).
+      await fixar(edge, [[4, 6], [3, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const cores = [], sistemas = [];
+        Hooks.callAll('diceSoNiceReady', { addColorset: (c, modo) => cores.push([c.name, c.description, c.background, c.edge, c.material, modo]), addSystem: s => sistemas.push(s), addDicePreset: s => sistemas.push(s) });
+        const a = await Actor.implementation.create({ name: 'C42 Dados', type: 'personagem', items: [foundry.utils.deepClone(cat['core_drugs:black-lace']), foundry.utils.deepClone(cat['core_weapons:medium-pistol'])] });
+        try {
+          const antes = a.system.humanidade.value;
+          await game.system.api.drogas.usarDroga(a.items.getName('Black Lace'));
+          const cartao = game.messages.contents.at(-1);
+          const droga = { rolls: cartao.rolls.length, formula: cartao.rolls[0]?.formula, total: cartao.rolls[0]?.total, perdeu: antes - a.system.humanidade.value, nome: cartao.getFlag('${S}', 'droga')?.droga };
+          const t = await a.rolarPericia('handgun');
+          const teste = { rolls: t.mensagem?.rolls.length, mesmo: t.mensagem?.rolls[0]?.total === t.roll.total };
+          const d = await a.items.getName('Medium Pistol').rolarDano({ perguntar: false });
+          const dano = { rolls: d.mensagem?.rolls.length, mesmo: d.mensagem?.rolls[0]?.total === d.roll.total };
+          return { cores, sistemas: sistemas.length, cor: game.user.color.css, droga, teste, dano };
+        } finally { await a.delete(); }
+      })()`);
+      const ok = JSON.stringify(info.cores) === JSON.stringify([['user', '- A cor do jogador -', info.cor, '#000000', 'glass', 'preferred'], ['red', 'Blood over Chrome', '#E64539', '#000000', 'glass', 'default'], ['yellow', 'Wet Work', '#FFF300', '#000000', 'glass', 'default']])
+        && info.sistemas === 0 && /^#[0-9a-f]{6}$/.test(info.cor)
+        && info.droga.rolls === 1 && info.droga.formula === '2d6' && info.droga.total === 7 && info.droga.perdeu === 7 && info.droga.nome === 'Black Lace'
+        && info.teste.rolls === 1 && info.teste.mesmo && info.dano.rolls === 1 && info.dano.mesmo;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('tokens dinâmicos (o C45, parte 1): a janela lê a pasta pelos nomes padronizados e liga o conjunto (o token em pé, com a imagem do estado); o movimento gira o token (o giro automático do Foundry) e troca a imagem no mesmo update, com a direção mais perto quando falta; a arma equipada (Mirando), o ferimento (Ferido leve; o grave cai no leve), caído (cai no Incapacitado) e morto trocam a imagem pelo mestre; a calibração inverte o sentido; o capanga de token solto herda; desligado, volta a imagem e o giro de antes', async () => {
       const info = await edge.evaluate(`(async () => {
         const FP = foundry.applications.apps.FilePicker.implementation;
