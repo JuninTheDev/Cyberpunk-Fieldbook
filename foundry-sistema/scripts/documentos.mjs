@@ -10,7 +10,8 @@ import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
-  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao, hpDepoisDoMaximo
+  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao, hpDepoisDoMaximo,
+  classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -738,10 +739,15 @@ export class ItemCPR extends Item {
       const arma = this.actor.items.get(destino);
       if (arma?.type === 'arma') {
         const outros = arma.instalados.filter(item => item.id !== this.id);
-        const { cabe, motivo } = acessorioCabe({
-          slots: arma.system.slots, usados: outros.reduce((soma, item) => soma + (Number(item.system.tamanho) || 0), 0), tamanho: Number(sistema.tamanho) || 0,
-          carregador: Boolean(sistema.modificadores?.pente), temCarregador: outros.some(item => item.type === 'upgrade' && item.system.modificadores.pente)
-        });
+        const usados = outros.reduce((soma, item) => soma + arma.tamanhoNaArma(item), 0);
+        // O Rebuild (o C47) tem as regras dele; os outros acessórios, a dos slots e a do carregador.
+        const rebuild = classeDoRebuild(this.getFlag(SISTEMA, 'arma2077'));
+        const { cabe, motivo } = rebuild
+          ? rebuildCabe({ rebuild, arma: arma.system, usados, outroRebuild: outros.some(item => classeDoRebuild(item.getFlag(SISTEMA, 'arma2077'))), classe2077: arma.getFlag(SISTEMA, 'arma2077')?.classe ?? null })
+          : acessorioCabe({
+            slots: arma.system.slots, usados, tamanho: Number(sistema.tamanho) || 0,
+            carregador: Boolean(sistema.modificadores?.pente), temCarregador: outros.some(item => item.type === 'upgrade' && item.system.modificadores.pente)
+          });
         if (!cabe) {
           ui.notifications.warn(`${this.name} não cabe em ${arma.name}: ${motivo}.`);
           return false;
@@ -773,7 +779,7 @@ export class ItemCPR extends Item {
   }
 
   get slotsUsados() {
-    return this.instalados.reduce((soma, item) => soma + (Number(item.system.tamanho) || 0), 0);
+    return this.instalados.reduce((soma, item) => soma + (this.type === 'arma' ? this.tamanhoNaArma(item) : Number(item.system.tamanho) || 0), 0);
   }
 
   // A REZ atual do programa (regras.rezAtual); null nos outros itens.
@@ -896,9 +902,20 @@ export class ItemCPR extends Item {
     return ladoEfetivo({ lado: this.system.lado, tipo: this.system.tipo, fundacao });
   }
 
-  // A classe de 2077 da arma (Power, Tech, Smart) e o que ela pode fazer (regras.mjs, perfil2077), ou null.
+  // A classe de 2077 da arma (Power, Tech, Smart) e o que ela pode fazer (regras.mjs, perfil2077), ou null. A arma do RED
+  // com um Rebuild instalado e funcionando tem a classe dele (o C47).
   get perfil2077() {
-    return this.type === 'arma' ? perfil2077(this.getFlag(SISTEMA, 'arma2077'), this.system) : null;
+    if (this.type !== 'arma') return null;
+    const rebuild = this.rebuild;
+    return perfil2077(flagComRebuild(this.getFlag(SISTEMA, 'arma2077'), rebuild && classeDoRebuild(rebuild.getFlag(SISTEMA, 'arma2077'))), this.system);
+  }
+  // O Rebuild instalado nesta arma que funciona (o EMP para), ou null.
+  get rebuild() {
+    return this.type === 'arma' ? this.instalados.find(item => item.type === 'upgrade' && !item.inoperante && classeDoRebuild(item.getFlag(SISTEMA, 'arma2077'))) ?? null : null;
+  }
+  // Os slots que um item ocupa nesta arma: o Rebuild, 1 na arma exótica e 2 nas outras (o C47); o resto, o tamanho dele.
+  tamanhoNaArma(item) {
+    return classeDoRebuild(item.getFlag?.(SISTEMA, 'arma2077')) ? tamanhoDoRebuild(this.system) : Number(item.system.tamanho) || 0;
   }
 
   // A coronha retrátil está recolhida agora? (a flag coronhaRecolhida, que o botão da ficha troca)

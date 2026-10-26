@@ -458,7 +458,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [x] parte 4, o resto pelo ator: feito no ciclo 181 (sessão KouArt, com um worker, 2026-10-26): as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
     C44 pelo MOVE dele.
 **Pedidos do usuário de 2026-10-26** (fora da comparação com o CORE; ordem dele: C47, C48, C49):
-- [~] **C47. O Rebuild do Mission Kit** (sessão Junin, 2026-10-26) (Kit p. 31–32; `system-2077.js`, Rebuilds): as armas de
+- [x] **C47. O Rebuild do Mission Kit:** feito no ciclo 182 (sessão Junin, 2026-10-26) (Kit p. 31–32; `system-2077.js`, Rebuilds): as armas de
   2077 já seguem o Kit (o C29, ciclos 110 a 116); falta o Rebuild, o acessório de 1.000eb e 2 slots que transforma uma
   arma de fogo do RED em Power, Smart ou Tech (só um por arma; não em arma exótica, que o leva num slot só se tiver um
   livre; o Tech não serve em lança-granadas nem em lança-foguetes; 1 hora para pôr ou tirar).

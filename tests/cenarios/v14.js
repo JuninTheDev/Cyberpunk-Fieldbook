@@ -19223,6 +19223,60 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ info, doJogador })];
     });
 
+    await r.passo('o Rebuild (o C47; o Kit, p. 31–32): na pistola média do RED, o Power Rebuild entra (2 slots) e ela vira Power (ricocheteia); o segundo Rebuild, o Tech no lança-granadas, a arma exótica sem slot e a arma de 2077 recusam, com o motivo; com o EMP no Rebuild ou tirado, a arma volta a ser do RED; o Smart Rebuild a deixa Smart', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const ator = await Actor.implementation.create({ name: 'Teste Rebuild', type: 'personagem', ownership: { default: 0 } });
+        const avisos = [];
+        const warn = ui.notifications.warn;
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        const criar = async id => (await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat[id])]))[0];
+        try {
+          const pistola = await criar('core_weapons:medium-pistol');
+          const lancador = await criar('core_weapons:grenade-launcher');
+          const exotica = await criar('core_weapons:air-pistol');
+          const lexington = await criar('armas-2077:militech-m-10af-lexington');
+          const power = await criar('armas-2077:power-rebuild');
+          const tech = await criar('armas-2077:tech-rebuild');
+          const smart = await criar('armas-2077:smart-rebuild');
+          const lido = { antes: pistola.perfil2077 };
+          const pondo = async (rebuild, arma) => { const n = avisos.length; await rebuild.update({ 'system.instaladoEm': arma.id }); return { entrou: ator.items.get(rebuild.id).system.instaladoEm === arma.id, aviso: avisos.slice(n).join(' ') }; };
+          // 1. O Power Rebuild na pistola: entra, ocupa 2 dos 3 slots, e a pistola vira Power (ricocheteia).
+          lido.power = await pondo(power, pistola);
+          lido.pistola = { classe: pistola.perfil2077?.classe, ricocheteia: pistola.perfil2077?.ricocheteia, slots: pistola.slotsUsados, rebuild: pistola.rebuild?.name };
+          // 2. As recusas: o segundo Rebuild, o Tech no lança-granadas, a arma exótica sem slot, a arma de 2077.
+          lido.segundo = await pondo(tech, pistola);
+          lido.lancador = await pondo(tech, lancador);
+          lido.exotica = await pondo(smart, exotica);
+          lido.de2077 = await pondo(smart, lexington);
+          // 3. O EMP no Rebuild: a pistola volta a ser do RED; tirado o EMP, Power de novo.
+          await ator.items.get(power.id).setFlag('${S}', 'emp', { ate: 999999 });
+          lido.comEmp = { classe: pistola.perfil2077?.classe ?? null, inoperante: ator.items.get(power.id).inoperante };
+          await ator.items.get(power.id).unsetFlag('${S}', 'emp');
+          lido.semEmp = pistola.perfil2077?.classe ?? null;
+          // 4. Tirado o Rebuild, a pistola é do RED; com o Smart Rebuild, é Smart (e o Tech entra no lugar? não: um por vez).
+          await ator.items.get(power.id).update({ 'system.instaladoEm': '' });
+          lido.tirado = { classe: pistola.perfil2077?.classe ?? null, slots: pistola.slotsUsados };
+          lido.smart = await pondo(smart, pistola);
+          lido.smartClasse = { classe: pistola.perfil2077?.classe, smart: pistola.perfil2077?.smart };
+          lido.lexington = lexington.perfil2077?.classe;
+          return lido;
+        } finally {
+          ui.notifications.warn = warn;
+          await ator.delete();
+        }
+      })()`);
+      const v = info;
+      const ok = v.antes === null && v.power.entrou && !v.power.aviso && v.pistola.classe === 'power' && v.pistola.ricocheteia === true && v.pistola.slots === 2 && v.pistola.rebuild === 'Power Rebuild'
+        && !v.segundo.entrou && v.segundo.aviso === 'Tech Rebuild não cabe em Medium Pistol: só cabe um Rebuild por arma.'
+        && !v.lancador.entrou && v.lancador.aviso === 'Tech Rebuild não cabe em Grenade Launcher: o Tech Rebuild não serve em lança-granadas nem em lança-foguetes.'
+        && !v.exotica.entrou && v.exotica.aviso === 'Smart Rebuild não cabe em Air Pistol: na arma exótica, o Rebuild pede um slot livre.'
+        && !v.de2077.entrou && v.de2077.aviso.endsWith('a arma já é de 2077 e vem com o Rebuild dela.')
+        && v.comEmp.classe === null && v.comEmp.inoperante === true && v.semEmp === 'power'
+        && v.tirado.classe === null && v.tirado.slots === 0 && v.smart.entrou && v.smartClasse.classe === 'smart' && v.smartClasse.smart === true && v.lexington === 'power';
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

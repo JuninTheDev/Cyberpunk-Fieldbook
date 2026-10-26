@@ -1043,6 +1043,31 @@ export function acessorioCabe({ slots = 0, usados = 0, tamanho = 0, carregador =
   if (usados + tamanho > slots) return { cabe: false, motivo: `${usados} de ${slots} slots em uso` };
   return { cabe: true, motivo: '' };
 }
+// O Rebuild (o C47; o Kit, p. 31–32, e a wiki, system-2077.js, Rebuilds): o acessório que transforma uma arma de longo
+// alcance do RED em Power, Smart ou Tech (a flag arma2077.rebuild do catálogo). "Só um por arma"; "serve em qualquer arma
+// de longo alcance que não seja exótica" (a de 3 slots, a regra dos acessórios acima), com 2 slots; "numa arma exótica,
+// o Rebuild entra num slot só, se a arma tiver um livre"; "o Tech Rebuild não serve em lança-granadas nem em
+// lança-foguetes"; as armas de 2077 "já vêm com o Rebuild" (a classe delas). Instalado e funcionando, a arma passa a ter
+// a classe dele (flagComRebuild, no perfil2077), e as regras da classe valem como nas armas de 2077 (o C29).
+export const CLASSES_DO_REBUILD = ['power', 'smart', 'tech'];
+export const classeDoRebuild = flag => (CLASSES_DO_REBUILD.includes(flag?.rebuild) ? flag.rebuild : null);
+export const armaExotica = arma => Number(arma?.slots) < 3;
+export const tamanhoDoRebuild = arma => (armaExotica(arma) ? 1 : 2);
+const LANCADORES = ['grenadeLauncher', 'rocketLauncher'];
+export function rebuildCabe({ rebuild, arma = {}, usados = 0, outroRebuild = false, classe2077 = null }) {
+  if (!CLASSES_DO_REBUILD.includes(rebuild)) return { cabe: false, motivo: 'o Rebuild não diz a classe (Power, Smart ou Tech)' };
+  if (!arma.aDistancia) return { cabe: false, motivo: 'o Rebuild só serve em arma de longo alcance' };
+  if (classe2077) return { cabe: false, motivo: 'a arma já é de 2077 e vem com o Rebuild dela' };
+  if (outroRebuild) return { cabe: false, motivo: 'só cabe um Rebuild por arma' };
+  if (rebuild === 'tech' && LANCADORES.includes(arma.tipo)) return { cabe: false, motivo: 'o Tech Rebuild não serve em lança-granadas nem em lança-foguetes' };
+  const tamanho = tamanhoDoRebuild(arma);
+  if (usados + tamanho > (Number(arma.slots) || 0)) {
+    return { cabe: false, motivo: armaExotica(arma) ? 'na arma exótica, o Rebuild pede um slot livre' : `${usados} de ${arma.slots} slots em uso` };
+  }
+  return { cabe: true, motivo: '', tamanho };
+}
+// A flag de 2077 da arma com o Rebuild: a classe própria (a arma de 2077) manda; sem ela, a do Rebuild.
+export const flagComRebuild = (flag, rebuild) => (flag?.classe || !CLASSES_DO_REBUILD.includes(rebuild) ? flag ?? null : { ...(flag ?? {}), classe: rebuild });
 // O Smartgun Link (a wiki): "+1 nos ataques à distância", e "exige plugs de interface ou plug subdérmico" (a ligação da
 // arma Smart, ehLigacaoSmart).
 const SMARTGUN_LINK = 'core_upgrades:smartgun-link';

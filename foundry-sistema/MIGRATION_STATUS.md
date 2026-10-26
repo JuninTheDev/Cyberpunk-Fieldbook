@@ -8833,6 +8833,34 @@ completo.
 - **Próximo:** na Fase 7, o C42 (Dice So Nice: falta saber se a mesa usa) e o C43 parte 3 (o navegador de itens e o tema
   no resto do Foundry).
 
+### Ciclo 182 (2026-10-26): C47, o Rebuild do Mission Kit (sessão Junin)
+
+- **Pedido do usuário (2026-10-26):** "As armas de 2077 pelo Mission Kit". As armas e as classes já seguiam o Kit (o C29,
+  ciclos 110 a 116, sessão KouArt); a entrada do P0 só não estava marcada. Faltava o Rebuild, que o README listava em "Ainda
+  não faz".
+- **Fontes:** a wiki, `system-2077.js`, Rebuilds (o Kit, p. 31–32): o Rebuild transforma uma arma de fogo do RED em Power,
+  Smart ou Tech; 1.000eb, 2 slots de acessório, 1 hora para pôr ou tirar; só um por arma; serve em qualquer arma de longo
+  alcance que não seja exótica, e o Tech não em lança-granadas nem em lança-foguetes; numa arma exótica, um slot só, se
+  houver um livre; as armas de 2077 já vêm com o Rebuild. O catálogo já trazia os três (`armas-2077:*-rebuild`, upgrade
+  de 2 slots, com `arma2077.rebuild`).
+- **Entrega:** a regra pura (`regras.mjs`: `classeDoRebuild`, `armaExotica` pelos slots, que é a regra dos acessórios
+  da wiki, "toda arma de longo alcance não exótica tem 3 slots"; `tamanhoDoRebuild`, `rebuildCabe` e `flagComRebuild`) e,
+  no item, o `rebuild` da arma (instalado e funcionando: o EMP para), o `perfil2077` com a classe dele (a própria da arma
+  de 2077 manda), o `tamanhoNaArma` (1 na exótica) nos slots usados e na conferência ao instalar, e o `_preUpdate` que
+  recusa com o motivo. Todo o resto (o +1 da Smart, o ricochete da Power, a carga da Tech, as janelas e os cartões) lê o
+  `perfil2077` e passa a valer sozinho.
+- **Limites:** a hora para pôr ou tirar fica com o mestre (sem relógio). A arma exótica com um slot livre não existe no
+  catálogo (as exóticas do CORE têm 0), então o caso de 1 slot só tem o teste da regra pura.
+- **Portões:** G1, 219 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 684 testes, 0 falhas (3 testes novos em
+  `tests/sistema/rebuild.test.mjs`, que conferem o texto da wiki e os três Rebuilds do catálogo); G4 completo em três rodadas (300/302, 299/302 e 302/304 com dois passos de diagnóstico, que não entram), com o
+  passo novo: o Power Rebuild na pistola média (Power, ricocheteia, 2 slots), as quatro recusas com o motivo (o segundo
+  Rebuild, o Tech no lança-granadas, a Air Pistol, a Lexington), o EMP e a retirada (a pistola volta a ser do RED) e o
+  Smart Rebuild (Smart). As falhas mudaram de uma rodada para outra, todas em passos da KouArt, e cada uma passou em
+  outra rodada: o ator do veículo do jogador dono (C46.2, na 1ª e na 3ª), as chaves do Fluxo (C26, na 1ª e na 2ª; sozinho
+  e com o passo dos estados antes, 12/12 e 13/13), os estados (C26) e o tokens dinâmicos parte 2 (na 2ª). A ponta da
+  branch sem o C47 deu 301/301 numa rodada.
+- **Mutações:** as 12 caíram (R1 a R7 no G3; S1, S2, S3, S5 e S6 no G4). R4 sobreviveu na primeira rodada (faltava o caso da arma de 2 slots, que também é exótica) e caiu com ele.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
