@@ -1,0 +1,18 @@
+{{!-- O menu dos compêndios do navegador (navegador.mjs, JanelaDosCompendios; o cpr-browser-compendia-settings.hbs do
+CORE 0.93): cada compêndio de itens e de atores que pode entrar, nos grupos da pasta, com a caixa do grupo. --}}
+<div class="navegador-compendios-corpo">
+  <p class="dica">Os compêndios que o navegador de itens e o de atores listam. Os jogadores veem só os que podem ver.</p>
+  <div class="navegador-compendios-grupos">
+    {{#each grupos}}
+    <fieldset class="navegador-compendios-grupo">
+      <legend><label><input type="checkbox" class="navegador-compendios-todos" {{checked todos}}> {{nome}}</label></legend>
+      {{#each compendios}}
+      <label class="navegador-compendios-linha"><input type="checkbox" data-compendio="{{id}}" {{checked ligado}}> {{rotulo}}</label>
+      {{/each}}
+    </fieldset>
+    {{/each}}
+  </div>
+  <footer class="form-footer">
+    <button type="submit"><i class="fa-solid fa-floppy-disk" inert></i> Salvar</button>
+  </footer>
+</div>

@@ -18929,6 +18929,199 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ preparo, ligado, desligado })];
     });
 
+    // O navegador de itens e atores (o C43, parte 3): o que se espera sai do catálogo (o conteúdo dos compêndios).
+    const catalogoDoNavegador = Object.entries(require(path.join(servidores.raiz, 'foundry-sistema', 'dados', 'catalogo.json')).itens);
+    // Os prefixos do catálogo que vão para os compêndios de itens (o PACKS_DE_ITENS de build/compendios.mjs; o Black Chrome
+    // é o C48 da sessão Junin, que traz duas munições de Very Heavy Pistol).
+    const prefixosDosCompendios = ['core_', 'black-ice:', 'armas-2077:', 'cyberware-2077:', 'netrunning-2077:', 'black-chrome_', 'dlc_black-chrome-plus:'];
+    const pistolasDoCatalogo = catalogoDoNavegador.filter(([id, item]) => prefixosDosCompendios.some(prefixo => id.startsWith(prefixo)) && item.type !== 'lesao' && item.name.toLowerCase().includes('very heavy pistol'));
+    const pistolaDoCatalogo = catalogoDoNavegador.find(([id]) => id === 'core_weapons:very-heavy-pistol')[1].system;
+
+    await r.passo('o navegador de itens e atores (o C43, parte 3; o document browser do CORE 0.93): o botão no pé do diretório de Itens abre a janela, que lista em lotes o mundo e os compêndios (sem as lesões); a busca pelo nome, a origem (mundo ou compêndio) e o tipo em "só estes" filtram; a linha do compêndio diz o compêndio, o preço com a categoria e os números; o clique abre a ficha do item do compêndio; arrastar para a ficha de um personagem cria o item; o compêndio desmarcado no menu some da lista; o botão do diretório de Atores abre o de atores', async () => {
+      const anterior = await edge.evaluate(`JSON.stringify(game.settings.get('${S}', 'navegadorCompendios') ?? {})`);
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const texto = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          const ator = await Actor.implementation.create({ name: 'C43 Navegador', type: 'personagem' });
+          const doMundo = await Item.implementation.create({ name: 'C43 Very Heavy Pistol do mundo', type: 'arma', system: { preco: 250 } });
+          window.__c43 = { ator: ator.id, item: doMundo.id };
+          const lido = {};
+          // 1. Os botões no pé dos diretórios (o de Atores, só o mestre) e a janela pelo de Itens.
+          await ui.items.render({ force: true });
+          await ui.actors.render({ force: true });
+          await esperar(() => ui.items.element?.querySelector('[data-cpr-navegador="item"]') && ui.actors.element?.querySelector('[data-cpr-navegador="ator"]'));
+          lido.botoes = { itens: ui.items.element.querySelectorAll('[data-cpr-navegador="item"]').length, atores: ui.actors.element.querySelectorAll('[data-cpr-navegador="ator"]').length,
+            noPe: Boolean(ui.items.element.querySelector('.directory-footer [data-cpr-navegador="item"]')) };
+          ui.items.element.querySelector('[data-cpr-navegador="item"]').click();
+          const janela = () => document.querySelector('#${S}-navegador-item:not(.minimizing)');
+          await esperar(() => janela()?.querySelector('.navegador-linha'));
+          lido.titulo = foundry.applications.instances.get('${S}-navegador-item')?.title;
+          const linhas = () => [...janela().querySelectorAll('.navegador-linha')];
+          const lista = () => linhas().map(l => ({ nome: texto(l.querySelector('.navegador-nome-da-linha')), tipo: texto(l.querySelector('.navegador-tipo-da-linha')), origem: texto(l.querySelector('.navegador-origem-da-linha')),
+            preco: texto(l.querySelector('.navegador-preco-da-linha')), chips: [...l.querySelectorAll('.navegador-chip')].map(texto), uuid: l.dataset.uuid }));
+          const contagem = () => texto(janela().querySelector('.navegador-contagem'));
+          const completa = () => { const m = contagem().match(/Mostrando (\\d+) de (\\d+)/); return Boolean(m) && m[1] === m[2]; };
+          // Depois de mudar um filtro: a espera do nome (200 ms), o redesenho e os lotes até o fim.
+          const pronta = async (condicao = () => true) => { await new Promise(r => setTimeout(r, 400)); await esperar(() => completa() && condicao(lista())); };
+          const grupos = () => [...janela().querySelectorAll('.navegador-grupo')].map(texto);
+          // 2. A lista inteira, em lotes de 50, sem as lesões críticas.
+          await esperar(completa, 150);
+          lido.inteira = { contagem: contagem(), linhas: linhas().length, carregando: janela().querySelector('.navegador-rodape').classList.contains('carregando'), lesoes: lista().filter(l => l.tipo === 'Lesão crítica').length };
+          const buscar = async (valor, condicao) => { const campo = janela().querySelector('.navegador-nome'); campo.value = valor; campo.dispatchEvent(new Event('input', { bubbles: true })); await pronta(condicao); return lista(); };
+          // 3. A busca pelo nome: a arquitetura do compêndio (escondido dos jogadores) e as pistolas.
+          lido.arquitetura = (await buscar('Apartamento de um fixer', l => l.some(x => x.origem === 'Arquiteturas da NET'))).filter(l => l.origem !== 'Mundo').map(l => [l.nome, l.tipo, l.origem, l.chips.join()].join('|'));
+          const pistolas = await buscar('VERY heavy pistol', l => l.some(x => x.origem === 'Mundo'));
+          lido.busca = { total: pistolas.length, doCompendio: pistolas.filter(l => l.uuid.startsWith('Compendium.${S}.')).length, armas: pistolas.filter(l => l.tipo === 'Arma' && l.uuid.startsWith('Compendium.${S}.')).length,
+            mundo: pistolas.filter(l => l.origem === 'Mundo').map(l => l.nome), todas: pistolas.every(l => l.nome.toLowerCase().includes('very heavy pistol')), grupos: grupos() };
+          lido.linha = pistolas.find(l => l.nome === 'Very Heavy Pistol');
+          // 4. A origem: só os compêndios, só o mundo, qualquer.
+          const origem = janela().querySelector('.navegador-origem');
+          const porOrigem = async (valor, condicao) => { origem.value = valor; origem.dispatchEvent(new Event('change', { bubbles: true })); await pronta(condicao); return lista(); };
+          lido.soCompendio = (await porOrigem('compendio', l => l.length && l.every(x => x.origem !== 'Mundo'))).map(l => l.origem);
+          lido.soMundo = (await porOrigem('mundo', l => l.length && l.every(x => x.origem === 'Mundo'))).map(l => l.nome);
+          lido.qualquer = (await porOrigem('qualquer', l => l.some(x => x.origem !== 'Mundo') && l.some(x => x.origem === 'Mundo'))).length;
+          // 5. O tipo em "só estes" (o primeiro clique na caixa): só as armas, e a caixa abre.
+          const tristate = janela().querySelector('.navegador-caixa[data-tipo="arma"] legend .navegador-tristate');
+          tristate.click();
+          await pronta(l => l.length && l.every(x => x.tipo === 'Arma'));
+          lido.soArmas = { estado: tristate.dataset.estado, tipos: [...new Set(lista().map(l => l.tipo))], quantas: lista().length, grupos: grupos(),
+            aberta: !janela().querySelector('.navegador-caixa[data-tipo="arma"]').classList.contains('recolhida') };
+          // 6. O clique na linha abre a ficha do item do compêndio.
+          const linhaDaPistola = () => linhas().find(l => texto(l.querySelector('.navegador-nome-da-linha')) === 'Very Heavy Pistol');
+          const uuid = linhaDaPistola()?.dataset.uuid;
+          const fichaDe = () => [...foundry.applications.instances.values()].find(app => app.document?.uuid === uuid && app.rendered);
+          linhaDaPistola()?.querySelector('.navegador-abrir').click();
+          await esperar(fichaDe);
+          lido.ficha = { aberta: Boolean(fichaDe()), pack: fichaDe()?.document.pack, nome: fichaDe()?.document.name };
+          await fichaDe()?.close();
+          // 7. Arrastar a linha para a ficha do personagem: os dados de arrasto do Foundry, e a ficha cria o item.
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('equipamento', 'primary');
+          await esperar(() => ator.sheet.element?.querySelector('.tab.equipamento'));
+          const antes = ator.items.size;
+          const dados = new DataTransfer();
+          linhaDaPistola()?.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dados }));
+          lido.arrasto = JSON.parse(dados.getData('text/plain') || 'null');
+          lido.arrastavel = linhaDaPistola()?.getAttribute('draggable');
+          ator.sheet.element.querySelector('.tab.equipamento').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+          await esperar(() => ator.items.getName('Very Heavy Pistol'));
+          const criado = ator.items.getName('Very Heavy Pistol');
+          lido.drop = { criado: Boolean(criado), tipo: criado?.type, dano: criado?.system.dano, origem: criado?._stats?.compendiumSource, novos: ator.items.size - antes };
+          await ator.sheet.close();
+          // 8. O menu dos compêndios (o botão da engrenagem): o das armas desmarcado some da lista; o das lesões não está no menu.
+          janela().querySelector('[data-action="compendios"]').click();
+          const menu = () => document.querySelector('#${S}-navegador-compendios:not(.minimizing)');
+          const caixaDasArmas = () => menu()?.querySelector('input[data-compendio="${S}.armas"]');
+          await esperar(caixaDasArmas);
+          lido.menu = { armas: caixaDasArmas()?.checked, lesoes: Boolean(menu()?.querySelector('input[data-compendio="${S}.lesoes"]')), grupo: texto(caixaDasArmas()?.closest('fieldset')?.querySelector('legend')) };
+          caixaDasArmas().checked = false;
+          menu().querySelector('button[type="submit"]').click();
+          await esperar(() => !menu() && game.settings.get('${S}', 'navegadorCompendios')['${S}.armas'] === false);
+          await pronta(l => !l.some(x => x.origem === 'Armas'));
+          const ligados = game.settings.get('${S}', 'navegadorCompendios');
+          lido.desligado = { armas: ligados['${S}.armas'], municao: ligados['${S}.municao'], linhas: lista().map(l => l.nome),
+            estado: janela().querySelector('.navegador-caixa[data-tipo="arma"] legend .navegador-tristate')?.dataset.estado, busca: janela().querySelector('.navegador-nome')?.value };
+          // 9. O de atores, pelo botão do diretório de Atores.
+          ui.actors.element.querySelector('[data-cpr-navegador="ator"]').click();
+          const atores = () => document.querySelector('#${S}-navegador-ator:not(.minimizing)');
+          await esperar(() => atores()?.querySelector('.navegador-nome'));
+          const campoDoAtor = atores().querySelector('.navegador-nome');
+          campoDoAtor.value = 'C43 Navegador';
+          campoDoAtor.dispatchEvent(new Event('input', { bubbles: true }));
+          await new Promise(r => setTimeout(r, 400));
+          await esperar(() => atores().querySelectorAll('.navegador-linha').length === 1);
+          lido.atores = { titulo: foundry.applications.instances.get('${S}-navegador-ator')?.title,
+            linhas: [...atores().querySelectorAll('.navegador-linha')].map(l => ['.navegador-nome-da-linha', '.navegador-tipo-da-linha', '.navegador-origem-da-linha', '.navegador-preco-da-linha'].map(s => texto(l.querySelector(s))).join('|')),
+            semOrigem: !atores().querySelector('.navegador-origem'), semPreco: !atores().querySelector('.navegador-preco') };
+          return lido;
+        })()`);
+        // Para a conferência visual: o navegador de itens filtrado e, por cima, o de atores.
+        await edge.shot('navegador');
+        const v = info;
+        const [, mostrados, total] = (v.inteira.contagem.match(/Mostrando (\d+) de (\d+)/) ?? []).map(Number);
+        const pistola = pistolaDoCatalogo;
+        const ok = v.botoes.itens === 1 && v.botoes.atores === 1 && v.botoes.noPe && v.titulo === 'Navegador de itens'
+          && total > 50 && mostrados === total && v.inteira.linhas === total && !v.inteira.carregando && v.inteira.lesoes === 0
+          && v.arquitetura.join() === 'Apartamento de um fixer|Arquitetura da NET|Arquiteturas da NET|3 andares'
+          && v.busca.doCompendio === pistolasDoCatalogo.length && v.busca.armas === pistolasDoCatalogo.filter(([, item]) => item.type === 'arma').length
+          && v.busca.mundo.join() === 'C43 Very Heavy Pistol do mundo' && v.busca.todas && v.busca.grupos.join() === 'Arma,Munição,Upgrade'
+          && v.linha?.origem === 'Armas' && v.linha?.tipo === 'Arma' && v.linha?.preco === `${pistola.preco} eb Premium`
+          && v.linha?.chips.join() === [`Dano ${pistola.dano}`, `CDT ${pistola.cdt}`, `Pente ${pistola.pente.max}`, `Mãos ${pistola.maos}`].join()
+          && v.soCompendio.length === pistolasDoCatalogo.length && v.soMundo.join() === 'C43 Very Heavy Pistol do mundo' && v.qualquer === v.busca.total
+          && v.soArmas.estado === 'so' && v.soArmas.tipos.join() === 'Arma' && v.soArmas.quantas === v.busca.armas + 1 && v.soArmas.grupos.join() === 'Arma' && v.soArmas.aberta
+          && v.ficha.aberta && v.ficha.pack === `${S}.armas` && v.ficha.nome === 'Very Heavy Pistol'
+          && v.arrastavel === 'true' && v.arrasto?.type === 'Item' && v.arrasto?.uuid?.startsWith(`Compendium.${S}.armas.`)
+          && v.drop.criado && v.drop.tipo === 'arma' && v.drop.dano === pistola.dano && v.drop.origem === v.arrasto?.uuid && v.drop.novos === 1
+          && v.menu.armas === true && !v.menu.lesoes && v.menu.grupo === 'Cyberpunk RED — Fieldbook'
+          && v.desligado.armas === false && v.desligado.municao === true && v.desligado.linhas.join() === 'C43 Very Heavy Pistol do mundo' && v.desligado.estado === 'so' && v.desligado.busca === 'VERY heavy pistol'
+          && v.atores.titulo === 'Navegador de atores' && v.atores.linhas.join() === 'C43 Navegador|Personagem|Mundo|' && v.atores.semOrigem && v.atores.semPreco;
+        return [ok, JSON.stringify({ ...info, linha: info.linha && { ...info.linha, uuid: undefined }, soCompendio: info.soCompendio.length })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          for (const app of [...foundry.applications.instances.values()]) if (app.document?.pack === '${S}.armas') await app.close();
+          for (const id of ['${S}-navegador-item', '${S}-navegador-ator', '${S}-navegador-compendios']) await foundry.applications.instances.get(id)?.close();
+          await game.settings.set('${S}', 'navegadorCompendios', ${anterior});
+          const s = window.__c43;
+          if (s) { const ator = game.actors.get(s.ator); await ator?.sheet?.close(); await ator?.delete(); await game.items.get(s.item)?.delete(); }
+          delete window.__c43;
+          return true;
+        })()`);
+      }
+    });
+
+    await r.passo('o navegador de itens e atores (o C43, parte 3) no jogador: o botão de Itens abre o de itens, e não há o de Atores (pedir o de atores abre o de itens); ele vê o item do mundo que pode ver e os compêndios visíveis, e não o item secreto nem o compêndio das arquiteturas; a linha não se arrasta (a loja da wiki é o carrinho) e não há o menu dos compêndios', async () => {
+      let ids = [];
+      try {
+        ids = await edge.evaluate(`(async () => {
+          const visivel = await Item.implementation.create({ name: 'C43 Visível ao jogador', type: 'equipamento', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.LIMITED } });
+          const segredo = await Item.implementation.create({ name: 'C43 Segredo do mestre', type: 'equipamento', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE } });
+          return [visivel.id, segredo.id];
+        })()`);
+        const info = await jogador.evaluate(`(async () => {
+          const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const texto = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          await esperar(() => game.items.has('${ids[0]}'));
+          await ui.items.render({ force: true });
+          await ui.actors.render({ force: true });
+          await esperar(() => ui.items.element?.querySelector('[data-cpr-navegador="item"]'));
+          const lido = { botoes: { itens: ui.items.element.querySelectorAll('[data-cpr-navegador="item"]').length, atores: ui.actors.element?.querySelectorAll('[data-cpr-navegador="ator"]').length } };
+          ui.items.element.querySelector('[data-cpr-navegador="item"]').click();
+          const janela = () => document.querySelector('#${S}-navegador-item:not(.minimizing)');
+          await esperar(() => janela()?.querySelector('.navegador-linha'));
+          // Pedir o de atores (como uma macro) abre o de itens.
+          const { abrirNavegador } = await import('/systems/${S}/scripts/navegador.mjs');
+          await abrirNavegador('ator');
+          lido.modo = { ator: Boolean(document.querySelector('#${S}-navegador-ator')), item: Boolean(janela()), titulo: foundry.applications.instances.get('${S}-navegador-item')?.title };
+          const linhas = () => [...janela().querySelectorAll('.navegador-linha')];
+          const nomes = () => linhas().map(l => texto(l.querySelector('.navegador-nome-da-linha')));
+          const contagem = () => texto(janela().querySelector('.navegador-contagem'));
+          const completa = () => { const m = contagem().match(/Mostrando (\\d+) de (\\d+)/); return Boolean(m) && m[1] === m[2]; };
+          const buscar = async (valor, condicao) => { const campo = janela().querySelector('.navegador-nome'); campo.value = valor; campo.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 400)); await esperar(() => completa() && condicao(nomes())); return nomes(); };
+          lido.doMundo = await buscar('C43 ', l => l.length >= 1);
+          lido.arquitetura = await buscar('Apartamento de um fixer', l => l.length === 0);
+          lido.pistolas = (await buscar('very heavy pistol', l => l.length > 0)).length;
+          const linha = linhas().find(l => l.dataset.uuid?.startsWith('Compendium.'));
+          const dados = new DataTransfer();
+          const arrasto = new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dados });
+          linha?.dispatchEvent(arrasto);
+          lido.arrasto = { arrastavel: linha?.getAttribute('draggable'), cancelado: arrasto.defaultPrevented, dados: dados.getData('text/plain') };
+          lido.semMenu = !janela().querySelector('[data-action="compendios"]');
+          lido.gm = game.user.isGM;
+          return lido;
+        })()`);
+        const v = info;
+        const ok = !v.gm && v.botoes.itens === 1 && v.botoes.atores === 0 && !v.modo.ator && v.modo.item && v.modo.titulo === 'Navegador de itens'
+          && v.doMundo.includes('C43 Visível ao jogador') && !v.doMundo.includes('C43 Segredo do mestre')
+          && v.arquitetura.length === 0 && v.pistolas === pistolasDoCatalogo.length
+          && v.arrasto.arrastavel === 'false' && v.arrasto.cancelado && v.arrasto.dados === '' && v.semMenu;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate(`(async () => { await foundry.applications.instances.get('${S}-navegador-item')?.close(); return true; })()`).catch(() => null);
+        if (ids.length) await edge.evaluate(`(async () => { for (const id of ${JSON.stringify(ids)}) await game.items.get(id)?.delete(); return true; })()`);
+      }
+    });
+
     await r.passo('tokens dinâmicos (o C45, parte 1): a janela lê a pasta pelos nomes padronizados e liga o conjunto (o token em pé, com a imagem do estado); o movimento gira o token (o giro automático do Foundry) e troca a imagem no mesmo update, com a direção mais perto quando falta; a arma equipada (Mirando), o ferimento (Ferido leve; o grave cai no leve), caído (cai no Incapacitado) e morto trocam a imagem pelo mestre; a calibração inverte o sentido; o capanga de token solto herda; desligado, volta a imagem e o giro de antes', async () => {
       const info = await edge.evaluate(`(async () => {
         const FP = foundry.applications.apps.FilePicker.implementation;

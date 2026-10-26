@@ -37,6 +37,10 @@
     {
       "src": "styles/arvore-itens.css",
       "layer": "system"
+    },
+    {
+      "src": "styles/navegador.css",
+      "layer": "system"
     }
   ],
   "languages": [

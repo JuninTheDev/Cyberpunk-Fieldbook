@@ -5,6 +5,7 @@ import * as agarrao from './agarrao.mjs';
 import * as escudoHumano from './escudo-humano.mjs';
 import * as reputacao from './reputacao.mjs';
 import { registrarArvoreItens } from './arvore-itens.mjs';
+import { registrarNavegador } from './navegador.mjs';
 import * as artesMarciais from './artes-marciais.mjs';
 import * as avanco from './avanco.mjs';
 import { registrarArmasDoCyberware, sincronizarArmaMontada } from './armas-cyberware.mjs';
@@ -90,6 +91,8 @@ Hooks.once('init', () => {
   // O tema do sistema no resto do Foundry (o C43, parte 3), já no init, para a interface não piscar sem ele.
   aplicarTemaNoFoundry(game.settings.get(SISTEMA, 'temaNoFoundry'));
   registrarArvoreItens();
+  // O navegador de itens e atores (o C43, parte 3): os botões dos diretórios, o índice e o menu dos compêndios.
+  registrarNavegador();
   // O Painel Tático (o C25): as configurações deste navegador e a tecla H; a barra monta no ready.
   registrarPainel();
   municoes.registrarMunicoes();

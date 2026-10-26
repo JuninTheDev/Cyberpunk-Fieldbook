@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 185). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 186). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -413,13 +413,14 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 **O que seria bom ter** (do CORE 0.93 e das integrações; cada um só se a mesa quiser):
 - [ ] **C42. Dice So Nice:** os dados dos cartões do sistema no DSN e o preset do CORE (`cpr-dice-handler.js`,
   `dice-so-nice-preset.js`).
-- [ ] **C43. Da 0.93**, um ciclo por parte (o CHANGELOG da 0.93 e o código em `fvtt-cyberpunk-red-core-dev/`):
+- [x] **C43. Da 0.93**, um ciclo por parte (o CHANGELOG da 0.93 e o código em `fvtt-cyberpunk-red-core-dev/`):
   - [x] parte 1, as fórmulas: feito no ciclo 172 (sessão KouArt, com o Codex, 2026-10-25): os modificadores `red` e `dmg` nas fórmulas
     (`/r 1d10red`, `2d6dmgab2cd10`) e o crítico configurável por arma e munição;
   - [x] parte 2, a mesa (ciclo 171, sessão Junin, 2026-10-25): o "Marcador de turno" do mundo, com os quatro do CORE 0.93
     e o do Foundry; os upgrades com modificador negativo no ataque, no SDP e nos assentos (nunca abaixo de 0);
-  - [~] parte 3, as janelas (sessão KouArt, 2026-10-26): o tema do sistema no resto do Foundry, feito no ciclo 184 (a
-    configuração do CORE, ligada por padrão); falta o navegador de itens e atores (a loja da wiki já é o carrinho).
+  - [x] parte 3, as janelas: feito nos ciclos 184 e 185 (sessão KouArt, 2026-10-26; o 185 com um worker): o tema do
+    sistema no resto do Foundry (a configuração do CORE, ligada por padrão) e o navegador de itens e atores (sem o
+    carrinho: a loja da wiki já é o carrinho).
 - [x] **C44. A régua com Andar e Correr:** feito no ciclo 173 (sessão KouArt, com um worker, 2026-10-25) (o `drag-ruler.js` do CORE), junto da DV que ela já mostra.
 
 **Pedido do usuário fora da comparação com o CORE** (2026-10-25):

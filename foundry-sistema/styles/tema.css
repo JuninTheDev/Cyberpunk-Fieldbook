@@ -8,7 +8,7 @@
 @font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
 
 /* A paleta vale também no <html> quando o tema do sistema vai para o resto do Foundry (tema-foundry.css). */
-.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .cpr-fieldbook.janela-defesa, .cpr-fieldbook.net-config, .cpr-fieldbook.janela-net, .chat-message.cprf-mensagem, html[data-cprf-tema-foundry] {
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .cpr-fieldbook.janela-defesa, .cpr-fieldbook.net-config, .cpr-fieldbook.janela-net, .cpr-fieldbook.navegador, .cpr-fieldbook.navegador-compendios, .chat-message.cprf-mensagem, html[data-cprf-tema-foundry] {
   --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
   --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
   --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
@@ -16,11 +16,11 @@
 }
 
 /* ---------- Janela ---------- */
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net) .window-header {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net, .navegador, .navegador-compendios) .window-header {
   background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); color: var(--cp-amarelo);
   font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
 }
-.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net) .window-content {
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net, .navegador, .navegador-compendios) .window-content {
   background-color: var(--cp-fundo);
   background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
   color: var(--cp-texto); font-family: var(--cp-titulo); font-weight: 500; font-size: 15px;

@@ -115,3 +115,15 @@ export function registrarConfiguracoes() {
     scope: 'client', config: true, type: Boolean, default: false
   });
 }
+
+// Os compêndios do navegador de itens e atores (o C43, parte 3; o browserCompendiaMenu e o browserActiveCompendia do
+// CORE 0.93, settings.js:124-148): o menu, só do mestre, com a janela que escolhe os compêndios que entram, e o registro
+// escondido do mundo ({ id do compêndio: false } para os desmarcados; por padrão, todos entram). O navegador.mjs chama
+// no init, com a janela e o que fazer ao mudar (refazer o índice e redesenhar os navegadores abertos).
+export function registrarCompendiosDoNavegador(janela, aoMudar) {
+  game.settings.registerMenu(SISTEMA, 'navegadorCompendiosMenu', {
+    name: 'Compêndios do navegador', label: 'Escolher os compêndios', icon: 'fa-solid fa-book-open', type: janela, restricted: true,
+    hint: 'Os compêndios de itens e de atores que o navegador lista (o botão no pé dos diretórios de Itens e de Atores). Por padrão, todos; os jogadores veem só os que podem ver.'
+  });
+  game.settings.register(SISTEMA, 'navegadorCompendios', { scope: 'world', config: false, type: Object, default: {}, onChange: aoMudar });
+}

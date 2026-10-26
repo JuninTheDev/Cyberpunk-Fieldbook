@@ -8951,6 +8951,77 @@ própria: é o ciclo 185.
 - **Próximo:** o ciclo 185, o navegador de itens e atores (a outra metade da parte 3, com o worker) e, na Fase 7, o C42 (Dice So
   Nice: falta saber se a mesa usa).
 
+### Ciclo 185 (2026-10-26): o C43, parte 3, o navegador de itens e atores (sessão KouArt, com um worker)
+
+Commit anterior: `f225d5d8` (o ciclo 184, o tema no resto do Foundry, a outra metade da parte 3). O código e os testes
+saíram de um worker (`workers:artesao`), numa worktree própria a partir do `02a16196`, revisados e integrados aqui pelo
+patch, com dois conflitos resolvidos à mão: a lista de janelas do topo do `tema.css` (as do navegador junto do
+`html[data-cprf-tema-foundry]` do 184) e os passos do G4 (os do tema e os do navegador depois do mesmo passo, com o fecho
+em comum). Com ela, o C43 está completo.
+
+- **A fonte:** o CORE 0.93 (`fvtt-cyberpunk-red-core-dev/CHANGELOG.md:25`, "a document browser for items and actors:
+  search and filter the world and enabled compendia in one window, then click to open or drag to copy onto a sheet"; a
+  janela em `src/modules/apps/browser/cpr-document-browser.js`, o índice em `cpr-browser-index.js`, os números da linha
+  em `src/modules/item/item-chips.js`, os filtros por tipo no `CPR.browserFilters` de `src/modules/system/config.js:956`,
+  o menu dos compêndios em `src/modules/apps/settings/cpr-browser-compendia-settings.js` e `settings.js:124-148`, os
+  botões em `src/modules/hooks/foundry/ui/directory-browser-buttons.js:19-43`).
+- **O que muda:**
+  - **`scripts/regras-navegador.mjs` (novo, sem Foundry):** os filtros (o nome, o preço mínimo e máximo, a origem, o
+    tipo e os filtros de cada tipo do `CPR.browserFilters` que têm campo no nosso modelo: a arma pelo tipo, a CDT, o
+    autofogo, os dados do dano, o ocultável e as mãos; a munição pelo efeito e pela variedade (o "type" do CORE é o nosso
+    `efeito`, e o "variety", o nosso `tipo`); o cyberware pelo tipo, a fundação, o endurecido e a arma do cyberware; a
+    roupa pelo tipo e o estilo; a armadura pelo local e pelo SP; o cyberdeck pelos slots; a droga, de rua ou
+    farmacêutica, pelo preço; o programa pela classe; o upgrade por onde instala), o tristate do CORE (incluídos, só
+    estes, excluídos) com a promoção do tipo pelo filtro de dentro, a ordem (os tipos na ordem do `system.json`, o nome;
+    os upgrades por onde instalam), os lotes de 50 com o cabeçalho do grupo, os números de cada linha e os campos que o
+    índice pede ao compêndio;
+  - **`scripts/navegador.mjs` (novo):** o índice da sessão (os itens do mundo que o usuário vê e o `getIndex({ fields })`
+    dos compêndios ligados e visíveis, sem carregar os documentos; o `fromUuid` só ao abrir ou arrastar), mantido pelos
+    ganchos de criar, mudar e apagar e refeito pelo botão de atualizar e pela configuração; a janela `Navegador` (a busca,
+    os filtros e a lista, uma parte cada); o menu "Compêndios do navegador", só do mestre; os botões no pé dos diretórios
+    (Itens para todos, Atores só para o mestre);
+  - **`templates/navegador/*.hbs`**, **`styles/navegador.css`** (registrado no `system.json`) e a lista de janelas do
+    tema no `tema.css`; o registro escondido `navegadorCompendios` (do mundo: `{ id: false }` para os desmarcados) em
+    `configuracoes.mjs`, numa função à parte (`registrarCompendiosDoNavegador`), chamada pelo `navegador.mjs` no init.
+- **Decisões e dúvidas:**
+  - **fora, como pedia o ROADMAP:** o carrinho do jogador (a loja da wiki já é o carrinho);
+  - **só o mestre arrasta**, como no CORE (`cpr-document-browser.js:308-310` e `:1537-1549`): o jogador abre a ficha e
+    compra pela loja; para o jogador arrastar, basta trocar o `podeArrastar`;
+  - **as lesões críticas** ficam de fora (o tipo e o compêndio), como no CORE (`config.js:1097` e `:1105-1118`);
+  - **o `ignoredByBrowser`** do CORE (a migração 043) esconde dez itens "Achievements & Loot Boxes", que o nosso
+    catálogo não tem: não foi adaptado;
+  - **filtros do CORE que ficaram de fora:** a categoria de preço e a qualidade (fáceis de pôr: o `categoriaDoPreco` já
+    existe), a marca (o modelo não tem), o livro-fonte (o nosso é um só, não uma lista) e o dano que a munição substitui
+    (não existe aqui);
+  - **diferenças na linha:** o nome do compêndio no lugar do "Compêndio / livro" do CORE; os tipos de arma e de munição
+    com o valor do catálogo ("vHeavyPistol"), como a ficha do item mostra hoje (o sistema não tem rótulos para eles);
+    Slots com o total; sem a árvore dos instalados, a descrição na dica e os botões no diretório de compêndios.
+- **Na integração:** os passos do G4 contavam as Very Heavy Pistols do catálogo só pelo prefixo `core_`; o C48 da
+  sessão Junin (os compêndios do Black Chrome, no ciclo 183) traz mais duas munições com esse nome, que o navegador
+  também lista: a conta passou a usar os prefixos dos compêndios de itens (o `PACKS_DE_ITENS` de
+  `build/compendios.mjs`).
+- **Testes:**
+  - **G3:** `navegador.test.mjs` (novo, 11 testes: o lote, o ciclo do tristate, os tipos de fora e o `CPR.browserFilters`
+    lidos do CORE e comparados tipo a tipo e filtro a filtro; para cada item do catálogo, os números e os filtros com só
+    os campos do índice iguais aos do item inteiro, e nenhum campo pedido que é o começo de outro; os casos dos testes do
+    CORE: o "só estes", a promoção que volta, o "só estes" do clique que fica, a ordem dos upgrades, o preço, a origem, o
+    SP da armadura sem o 0 do local que ela não usa, os lotes; um elemento raiz por parte; o registro do menu);
+  - **G4:** dois passos novos, depois do "o tema no resto do Foundry (o C43, parte 3)": no mestre, o botão no pé do
+    diretório, a lista sem as lesões, a arquitetura do compêndio, a busca "very heavy pistol" (as 13 do catálogo e a do
+    mundo), a origem, o tipo em "só estes", a linha com "Armas", o preço e os números, o clique que abre a ficha do
+    compêndio, o arrasto que cria o item no personagem (com o `compendiumSource`), as Armas desmarcadas no menu que somem e
+    o navegador de atores; no navegador do jogador, sem o botão de Atores (pedir o de atores abre o de itens), o item do
+    mundo com permissão Limitada, sem o compêndio de arquiteturas, sem arrastar e sem o menu.
+- **Portões:** G1, 217 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 702/702; G4 completo, 306/306,
+  com a checagem dos dois navegadores sem avisos ou erros de JS (na primeira rodada também, 306/306). O passo do mestre
+  ganhou a captura `tests/.saida/v14-navegador.png` (o de atores por cima do de itens).
+- **Mutações:** as oito caíram, uma por vez, e os arquivos voltaram exatos. No G3: a promoção do tipo que não volta (M1,
+  2 testes), o índice do compêndio sem a CDT (M2), o SP 0 do local que a armadura não usa na faixa (M3), o cabeçalho
+  repetido no lote seguinte (M4) e o jogador que arrasta (M5, 2 testes). No G4, um G4 inteiro cada: o compêndio
+  desmarcado que continua na lista (M6) e o mestre que não arrasta (M7), no passo do mestre; o botão de Atores para o
+  jogador (M8), no passo do jogador.
+- **Próximo:** na Fase 7, o C42 (Dice So Nice: falta saber se a mesa usa).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
