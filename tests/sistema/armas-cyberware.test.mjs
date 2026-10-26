@@ -79,7 +79,7 @@ test('A arma do cyberware: os dados de arma dele, sem mãos, montada nele (o ins
   const arma = dadosDaArmaMontada(wolvers);
   assert.equal(arma.name, 'Wolvers');
   assert.equal(arma.type, 'arma');
-  assert.equal(arma.img, 'icons/svg/sword.svg');
+  assert.equal(arma.img, 'systems/cpr-fieldbook/icones/neon/arma.svg');
   assert.deepEqual([arma.system.tipo, arma.system.pericia, arma.system.dano, arma.system.cdt, arma.system.aDistancia, arma.system.ignorarArmadura], ['heavyMelee', 'melee-weapon', '3d6', 2, false, 50]);
   assert.deepEqual(arma.system.pente, { value: 0, max: 0 });
   assert.deepEqual([arma.system.maos, arma.system.equipada, arma.system.slots, arma.system.instaladoEm], [0, false, 0, 'cyber1']);
@@ -87,7 +87,7 @@ test('A arma do cyberware: os dados de arma dele, sem mãos, montada nele (o ins
   assert.ok(ehArmaDoCyberware(arma));
   assert.equal(ehArmaDoCyberware(doCatalogo('core_weapons:heavy-pistol')), false);
   const pistola = dadosDaArmaMontada(doCatalogo('core_cyberware:popup-ranged-weapon', 'cyber2'));
-  assert.equal(pistola.img, 'icons/svg/target.svg');
+  assert.equal(pistola.img, 'systems/cpr-fieldbook/icones/neon/arma.svg');
   assert.deepEqual(pistola.system.pente, { value: 0, max: 12 });
   // A lista de munições é uma cópia: mudar a da arma não muda a do cyberware.
   pistola.system.municoes.push('heavyPistol');

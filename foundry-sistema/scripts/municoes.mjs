@@ -7,6 +7,7 @@ import { lesaoCritica } from './lesoes.mjs';
 import { MUNICAO_SEM_DANO, municaoPoeFogo, RESISTENCIAS_MUNICAO, vulneraveisAoEmp } from './regras.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import { testar } from './rolagens.mjs';
+import { iconeDoEfeito } from './regras-icones.mjs';
 
 export const STATUS_FOGO = STATUS_EM_CHAMAS;
 const esc = texto => foundry.utils.escapeHTML(String(texto));
@@ -109,7 +110,7 @@ export async function aplicarMunicaoSemDano(ctx, linhas) {
         await ator.toggleStatusEffect('prone', { active: true });
         estado.caido = ator.effects.find(e => e.statuses.has('prone'))?.id;
       }
-      estado.efeitos.push(await efeitoTemporario(ator, marca(ctx.pedido.id, 'sono'), { name: 'Sonífera: inconsciente', img: 'icons/svg/sleep.svg', statuses: ['unconscious'] }));
+      estado.efeitos.push(await efeitoTemporario(ator, marca(ctx.pedido.id, 'sono'), { name: 'Sonífera: inconsciente', img: iconeDoEfeito('sono'), statuses: ['unconscious'] }));
       linha.notas.push('Inconsciente por 1 minuto; dano ou uma Ação de outra pessoa acorda.');
     } else if (tipo === 'flashbang' || tipo === 'teargas') {
       if (tipo === 'teargas' || !protegeOlhos) await lesaoTemporaria(ctx, linha, 'core_critical-injuries-head:damaged-eye');
@@ -128,7 +129,7 @@ export async function incendiar(ctx, linha) {
   const estado = registro(ctx, linha);
   estado.efeito = 'incendiary';
   if (!ator.statuses.has(STATUS_FOGO)) {
-    estado.efeitos.push(await efeitoTemporario(ator, marca(ctx.pedido.id, 'fogo', false), { name: 'Em chamas', img: 'icons/svg/fire.svg', statuses: [STATUS_FOGO] }));
+    estado.efeitos.push(await efeitoTemporario(ator, marca(ctx.pedido.id, 'fogo', false), { name: 'Em chamas', img: iconeDoEfeito('fogo'), statuses: [STATUS_FOGO] }));
   }
   linha.notas.push('Em chamas: 2 HP no fim de cada turno. Uma Ação apaga; não acumula.');
 }

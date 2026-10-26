@@ -15,6 +15,7 @@ import { carregarCatalogo } from './catalogo.mjs';
 import { SISTEMA } from './config.mjs';
 import { cabeNaFundacao, pedeFundacao } from './regras.mjs';
 import { QUADROS_EXTERNOS } from './regras-black-chrome.mjs';
+import { iconeDoEstado, iconeNeon, imagemNova } from './regras-icones.mjs';
 
 const doCatalogo = dados => dados.flags?.[SISTEMA]?.catalogo ?? '';
 
@@ -44,6 +45,15 @@ function armaDoCatalogo(dados, { catalogo }) {
   if (!['cyberware', 'upgrade'].includes(dados.type) || !arma?.ataca || dados.flags?.[SISTEMA]?.armaMigrada) return;
   dados.system.arma = structuredClone(arma);
   dados.flags[SISTEMA].armaMigrada = true;
+}
+
+// O efeito de um estado no token (o statuses dele, de um id só) com a imagem de antes ganha o ícone neon do estado (o C49).
+function iconesDosEstados(dados) {
+  for (const efeito of dados.effects ?? []) {
+    const [estado, ...outros] = efeito.statuses ?? [];
+    const icone = !outros.length && iconeDoEstado(estado);
+    if (icone && !String(efeito.img ?? '').includes('/icones/neon/')) efeito.img = icone;
+  }
 }
 
 export const PASSOS = [
@@ -129,6 +139,20 @@ export const PASSOS = [
     item(dados) {
       if (dados.type !== 'equipamento' || !QUADROS_EXTERNOS[doCatalogo(dados)]) return;
       for (const efeito of dados.effects ?? []) for (const mudanca of efeito.system?.changes ?? []) if (mudanca.key === 'system.atributos.body.valor') mudanca.key = 'system.atributos.body.quadro';
+    }
+  },
+  {
+    versao: 10,
+    nome: 'Os ícones neon do sistema (C49, parte 1): o item do catálogo e o documento em branco com a imagem padrão antiga ganham a nova, e os estados no token, o ícone neon (a imagem que o mestre escolheu fica)',
+    ator(dados) {
+      const nova = imagemNova({ documento: 'Actor', tipo: dados.type, img: dados.img });
+      if (nova) dados.img = nova;
+      iconesDosEstados(dados);
+    },
+    item(dados) {
+      const nova = imagemNova({ documento: 'Item', tipo: dados.type, img: dados.img, catalogo: doCatalogo(dados) });
+      if (nova) dados.img = nova;
+      for (const efeito of dados.effects ?? []) if (efeito.img === 'icons/svg/upgrade.svg' && doCatalogo(dados)) efeito.img = iconeNeon('efeito');
     }
   }
 ];

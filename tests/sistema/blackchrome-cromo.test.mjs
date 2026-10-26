@@ -65,7 +65,7 @@ test('Quadros lineares: o externo põe o BODY no body.quadro (sem mudar o HP nem
 });
 
 test('Quadros lineares: a migração 9 leva o quadro externo dos mundos para o body.quadro, e só ele', () => {
-  assert.equal(VERSAO_DOS_DADOS, 9);
+  assert.ok(VERSAO_DOS_DADOS >= 9);
   const passo = PASSOS.find(p => p.versao === 9);
   const item = (catalogoId, type) => ({ type, flags: { 'cpr-fieldbook': { catalogo: catalogoId } }, effects: [{ system: { changes: [{ key: 'system.atributos.body.valor', type: 'override', value: '12' }] } }] });
   const sigma = item('core_gear:linear-frame-sigma', 'equipamento');

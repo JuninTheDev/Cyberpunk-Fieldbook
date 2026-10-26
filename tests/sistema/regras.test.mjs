@@ -1153,7 +1153,7 @@ test('Black ICE próprio do netrunner (wiki, "Black ICE": "Black ICE próprio oc
   assert.deepEqual(Object.keys(catalogo).filter(id => id.startsWith('black-ice:')), BLACK_ICE.map(ice => `black-ice:${ice.id}`));
   for (const ice of BLACK_ICE) {
     const p = catalogo[`black-ice:${ice.id}`];
-    assert.deepEqual([p.type, p.name, p.img], ['programa', ice.nome, 'icons/svg/ice-aura.svg'], ice.nome);
+    assert.deepEqual([p.type, p.name, p.img], ['programa', ice.nome, 'systems/cpr-fieldbook/icones/neon/blackice.svg'], ice.nome);
     const s = p.system;
     assert.deepEqual(
       [s.classe, s.tipoDeIce, s.per, s.spd, s.atk, s.def, s.rez, s.dano.padrao, s.dano.blackIce, s.preco, s.tamanho, s.descricao],
@@ -1228,7 +1228,7 @@ test('Arquiteturas da NET do compêndio (o documento da campanha na wiki, lido c
     ].join('\n'));
     const campanha = arquiteturasDaCampanha(temporaria);
     assert.deepEqual(campanha.map(a => a.name), ['Em linha', 'Com ramo']);
-    for (const a of campanha) assert.deepEqual([a.type, a.img, a.flags['cpr-fieldbook'].campanha], ['arquitetura', 'icons/svg/tower.svg', 'morana'], a.name);
+    for (const a of campanha) assert.deepEqual([a.type, a.img, a.flags['cpr-fieldbook'].campanha], ['arquitetura', 'systems/cpr-fieldbook/icones/neon/arquitetura.svg', 'morana'], a.name);
     const ler = nome => arquitetura.lerArquitetura(campanha.find(a => a.name === nome).system);
     // Em linha: os 6 andares (o Raven no 2, o Hellhound no 5, o arquivo DV 12 no 6) e o que tem no 1.
     const linha = ler('Em linha');

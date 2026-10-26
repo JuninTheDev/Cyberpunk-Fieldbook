@@ -11003,7 +11003,7 @@ module.exports = async ({ edge, servidores, r }) => {
         })()`);
         const { naNet: n, hellhound: h, sword: w } = info;
         const ok = n.detalhe === 'Black ICE · Anti-pessoal · PER 6 · SPD 6 · ATK 6 · DEF 2 · no Cyberdeck' && n.rez === 'REZ 20/20' && n.ativar === 'Inativo'
-          && n.deck.startsWith('3/7 slots') && info.slots === 3 && info.img === 'icons/svg/ice-aura.svg' && info.origem === 'black-ice:hellhound'
+          && n.deck.startsWith('3/7 slots') && info.slots === 3 && info.img === 'systems/' + S + '/icones/neon/blackice.svg' && info.origem === 'black-ice:hellhound'
           && h.join() === 'blackice,antipersonnel,6,6,2' && w[0] === 'antiprogramattacker' && w.slice(1, 4).every(valor => valor === null);
         return [ok, JSON.stringify(info)];
       } finally {
@@ -13589,7 +13589,7 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       return conferirAtorVeiculo({ helicoptero: [ficha.helicoptero, [60, 60, 4, 40, '200 MPH / 322 KPH', 'aereo', true]],
         compacto: [ficha.compacto, [50, 50, 4, 20, '100 MPH / 161 KPH', 'terrestre', true]],
-        padrao: [ficha.padrao, 'systems/' + S + '/icones/padrao/Default_Vehicle.svg'], ablou: [ficha.ablou, true], consertou: [ficha.consertou, true],
+        padrao: [ficha.padrao, 'systems/' + S + '/icones/neon/veiculo.svg'], ablou: [ficha.ablou, true], consertou: [ficha.consertou, true],
         token: [ficha.token, [false, 2, 2, 'sdp', 50, 50, true]], independentes: [ficha.independentes, [41, 50, 50]],
         iniciativa: [ficha.iniciativa, { pelaFicha: 1, peloToken: 1, peloRastreador: 1, peloCombatente: 1, entrou: 0, legado: null, recados: true }],
         observador: [observador, { gm: false, dono: false, editavel: false, visivel: true, editaveis: 0, botoes: 0, sp: 13, ablacao: 0 }] },
@@ -19835,6 +19835,33 @@ module.exports = async ({ edge, servidores, r }) => {
         && v.grundy.familia === true && !v.grundy.aviso
         && v.paladin.familia === false && v.paladin.aviso.includes('o Acesso Nômade do veículo é 8, e o Moto (o Rank de Nomad) é 5')
         && v.jetboy.familia === false && v.jetboy.aviso.includes('o veículo não tem Acesso Nômade') && v.roadbike.familia === true;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('os ícones neon (o C49, parte 1): todo estado do token (os do Foundry e os do sistema) e o derrotado do combate com o ícone neon, que o Foundry carrega como textura; o estado ligado no token leva o ícone; o item e o ator em branco e o item do compêndio com o ícone do tipo', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const neon = src => String(src).startsWith('systems/${S}/icones/neon/');
+        const estados = CONFIG.statusEffects.map(e => [e.id, e.img]);
+        const ator = await Actor.implementation.create({ name: 'Teste Ícones', type: 'personagem' });
+        const item = await Item.implementation.create({ name: 'Teste Ícone', type: 'droga' });
+        try {
+          await ator.toggleStatusEffect('prone', { active: true });
+          await ator.toggleStatusEffect('${S}-suprimido', { active: true });
+          const efeitos = ator.effects.map(e => [[...e.statuses][0], e.img]).sort();
+          const texturas = [];
+          for (const src of ['systems/${S}/icones/neon/caido.svg', 'systems/${S}/icones/neon/arma.svg', CONFIG.controlIcons.defeated]) {
+            const t = await foundry.canvas.loadTexture(src).catch(() => null);
+            texturas.push(Boolean(t?.width));
+          }
+          const doCompendio = (await game.packs.get('${S}.black-chrome-armas').getDocuments()).find(i => i.type === 'arma');
+          return { total: estados.length, foraDoNeon: estados.filter(([, img]) => !neon(img)), derrotado: CONFIG.controlIcons.defeated, efeitos, texturas,
+            ator: ator.img, token: ator.prototypeToken.texture.src, item: item.img, compendio: doCompendio?.img, efeitoNovo: neon(doCompendio?.effects.contents[0]?.img ?? 'systems/${S}/icones/neon/x') };
+        } finally { await ator.delete(); await item.delete(); }
+      })()`);
+      const v = info, base = 'systems/' + S + '/icones/neon/';
+      const ok = v.total >= 43 && !v.foraDoNeon.length && v.derrotado === base + 'morto.svg' && v.texturas.every(Boolean)
+        && JSON.stringify(v.efeitos) === JSON.stringify([[S + '-suprimido', base + 'suprimido.svg'], ['prone', base + 'caido.svg']])
+        && v.ator === base + 'personagem.svg' && v.token === base + 'personagem.svg' && v.item === base + 'droga.svg' && v.compendio === base + 'arma.svg';
       return [ok, JSON.stringify(info)];
     });
 

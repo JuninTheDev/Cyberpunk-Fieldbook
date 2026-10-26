@@ -43,9 +43,16 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
 - **Itens instalados no diretório (C34.3, ciclo 160):** a seta do item expande sua montagem, com os filhos e netos;
   clicar no nome abre a ficha. A expansão fica guardada por usuário. Busca, pastas e permissões continuam valendo,
   e montar ou desmontar atualiza a árvore. Só apresenta os vínculos `instaladoEm`: não move itens nem muda pastas.
-- **Imagens padrão por tipo (C34.3, ciclo 160):** os cinco tipos de ator e treze de item usam os ícones locais do
-  CORE 0.92.4, inclusive o item em branco da ficha. Imagens explícitas, cópias e texturas próprias são preservadas;
-  o CORE não precisa estar instalado. Origem e licença estão em `icones/padrao/ORIGEM.md`.
+- **Imagens padrão por tipo (C34.3, ciclo 160; neon desde o C49, ciclo 191):** os seis tipos de ator e treze de item
+  usam os ícones neon do sistema (`icones/neon`), inclusive o item em branco da ficha e os itens do catálogo e dos
+  compêndios. Imagens explícitas, cópias e texturas próprias são preservadas. Os ícones do CORE 0.92.4 de antes ficam em
+  `icones/padrao` (origem e licença em `icones/padrao/ORIGEM.md`) para os documentos antigos, que a migração 10 troca.
+- **Os ícones neon (C49, parte 1, ciclo 191; decisão do usuário, 2026-10-26):** traço fino em ciano, vermelho e amarelo,
+  com brilho, num fundo escuro de canto cortado. Os 34 estados do Foundry e os do sistema (suprimido, em cobertura,
+  agarrando, agarrado, em chamas, conectado à NET, sem ar, eletrocutado, radiação) no token, o derrotado do rastreador de
+  combate e os efeitos que o sistema cria (a estase, a Sonífera, o fogo, as penalidades). O desenho de cada um está em
+  `build/icones.mjs` (`node build/icones.mjs` refaz os SVGs). A migração 10 troca a imagem padrão antiga, a genérica do
+  Foundry nos itens do catálogo e o ícone dos estados já ligados; a imagem que o mestre escolheu fica.
 
 - **Criação de itens na ficha (C34.2, ciclo 158):** a configuração do mundo **Jogadores podem criar itens**, desligada
   por padrão como no CORE, permite ao dono criar itens em branco nas fichas de personagem e capanga. O mestre pode
@@ -699,7 +706,7 @@ E a do navegador de cada um:
   na flag `arma2077`.
 - **A mão e o BODY do cyberware que é arma do Kit** (decisão do usuário, 2026-10-19): a mão do braço que não segura nada com a Mantis Blade ou o Projectile Launch System para fora e o BODY 11 da Gorilla Arm ficam com o mestre.
 - **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.
-- **Interface:** ícones próprios (hoje, os genéricos do Foundry).
+- **Interface:** os botões do HUD e da ficha com os ícones neon (o C49, parte 2; hoje, os do Font Awesome).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
 
 ## Instalar

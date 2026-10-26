@@ -5,10 +5,11 @@ module.exports = async function imagensPadrao(r, edge) {
     const info = await edge.evaluate(`(async () => {
       const atores = [], itens = [];
       const porTipo = {
-        ator: { personagem: 'Default_CPR_Mystery_Man.svg', capanga: 'Default_Mook.svg', conteiner: 'Default_Container.svg', blackice: 'default-blackice.svg', demonio: 'default-demon.svg' },
-        item: { arma: 'Default_Weapon.svg', armadura: 'Default_Armor.svg', municao: 'Default_Ammo.svg', cyberware: 'Default_Cyberware.svg', lesao: 'Default_Critical_Injury.svg', equipamento: 'Default_Gear.svg', roupa: 'Default_Clothing.svg', droga: 'Default_Gear.svg', cyberdeck: 'Default_Cyberdeck.svg', programa: 'Default_Program.svg', upgrade: 'Default_Gear.svg', veiculo: 'Default_Vehicle.svg', arquitetura: 'Default_Net_Architecture.svg' }
+        ator: { personagem: 'personagem.svg', capanga: 'capanga.svg', conteiner: 'conteiner.svg', blackice: 'blackice.svg', demonio: 'demonio.svg' },
+        item: { arma: 'arma.svg', armadura: 'armadura.svg', municao: 'municao.svg', cyberware: 'cyberware.svg', lesao: 'lesao.svg', equipamento: 'equipamento.svg', roupa: 'roupa.svg', droga: 'droga.svg', cyberdeck: 'cyberdeck.svg', programa: 'programa.svg', upgrade: 'upgrade.svg', veiculo: 'veiculo.svg', arquitetura: 'arquitetura.svg' }
       };
-      const caminho = nome => 'systems/cpr-fieldbook/icones/padrao/' + nome;
+      // Os ícones neon do C49 (decisão do usuário, 2026-10-26); até o ciclo 190, os do CORE (icones/padrao).
+      const caminho = nome => 'systems/cpr-fieldbook/icones/neon/' + nome;
       const criarAtor = async dados => { const a = await Actor.implementation.create(dados); atores.push(a); return a; };
       const criarItem = async dados => { const i = await Item.implementation.create(dados); itens.push(i); return i; };
       const retrato = ator => [ator.img, ator.prototypeToken.texture.src];
@@ -61,17 +62,17 @@ module.exports = async function imagensPadrao(r, edge) {
       }
     })()`);
     const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-    const mook = 'systems/cpr-fieldbook/icones/padrao/Default_Mook.svg';
+    const mook = 'systems/cpr-fieldbook/icones/neon/capanga.svg';
     const ok = info.padraoAtores.length === 5 && info.padraoAtores.every(a => igual(a.retrato, [a.esperado, a.esperado]))
       && info.padraoItens.length === 13 && info.padraoItens.every(i => i.img === i.esperado)
       && info.embutidos.length === 13 && info.embutidos.every(i => i.img === i.esperado)
       && igual(info.custom, ['icons/svg/shield.svg', 'icons/svg/shield.svg']) && igual(info.copia, info.custom)
       && igual(info.generico, ['icons/svg/mystery-man.svg', 'icons/svg/mystery-man.svg'])
       && igual(info.textura, [mook, 'icons/svg/shield.svg']) && igual(info.texturaGenerica, [mook, mook])
-      && igual(info.aninhados, ['systems/cpr-fieldbook/icones/padrao/Default_Weapon.svg', 'icons/svg/shield.svg', 'icons/svg/item-bag.svg'])
+      && igual(info.aninhados, ['systems/cpr-fieldbook/icones/neon/arma.svg', 'icons/svg/shield.svg', 'icons/svg/item-bag.svg'])
       && igual(info.itensPreservados, ['icons/svg/shield.svg', 'icons/svg/item-bag.svg', 'icons/svg/shield.svg', 'icons/svg/item-bag.svg'])
-      && info.vazio === 'systems/cpr-fieldbook/icones/padrao/Default_Weapon.svg'
-      && info.quantidadeArquivos === 16 && info.servidos.length === 16 && info.servidos.every(Boolean);
+      && info.vazio === 'systems/cpr-fieldbook/icones/neon/arma.svg'
+      && info.quantidadeArquivos === 18 && info.servidos.length === 18 && info.servidos.every(Boolean);
     return [ok, JSON.stringify(info)];
   });
 };

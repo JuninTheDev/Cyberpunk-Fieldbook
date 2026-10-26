@@ -12,6 +12,7 @@
 // ela (a flag armaDaCombinacao), com o próprio pente e a própria munição, pronta com a arma equipada.
 import { SISTEMA } from './config.mjs';
 import { penteComCarregador, sobraDoPente } from './regras.mjs';
+import { iconeNeon } from './regras-icones.mjs';
 
 export const FLAG_DA_ARMA = 'armaDoCyberware';
 export const FLAG_DO_UPGRADE = 'armaDoUpgrade';
@@ -36,7 +37,7 @@ export function dadosDaArmaMontada(item) {
   if (!flag || !arma?.ataca || (combinacao && ehArmaMontadaEmItem(item))) return null;
   const id = item.id ?? item._id ?? '';
   return {
-    name: combinacao ? `${item.name} (${arma.modo || 'outro modo'})` : item.name, type: 'arma', img: arma.aDistancia ? 'icons/svg/target.svg' : 'icons/svg/sword.svg',
+    name: combinacao ? `${item.name} (${arma.modo || 'outro modo'})` : item.name, type: 'arma', img: iconeNeon('arma'),
     system: { ...Object.fromEntries(CAMPOS.map(campo => [campo, structuredClone(arma[campo])])), pente: { value: 0, max: arma.pente }, maos: 0, slots: 0, equipada: false, instaladoEm: id },
     flags: { [SISTEMA]: { [flag]: id } }
   };

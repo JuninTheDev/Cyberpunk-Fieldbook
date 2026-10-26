@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import { converter2077 } from './conteudo-2077.mjs';
 import { corrigirBlackChrome } from './conteudo-blackchrome.mjs';
+import { iconeNeon } from '../scripts/regras-icones.mjs';
 
 const VERSAO = 'v0.92.4';
 const PROJETO = 'cyberpunk-red-team%2Ffvtt-cyberpunk-red-core';
@@ -165,7 +166,7 @@ function netDaWiki() {
 function programaDeBlackIce(ice) {
   const id = `black-ice:${ice.id}`;
   return {
-    name: ice.nome, type: 'programa', img: 'icons/svg/ice-aura.svg',
+    name: ice.nome, type: 'programa', img: iconeNeon('blackice'),
     system: {
       descricao: `<p>${ice.efeito}</p>`, classe: 'blackice', tipoDeIce: ice.classe, per: ice.per, spd: ice.spd, atk: ice.atk, def: ice.def, rez: ice.rez,
       dano: { padrao: ice.dano || '0', blackIce: '0' }, tamanho: 2, instaladoEm: '', preco: ice.custo, fonte: { livro: 'Core', pagina: 204 }
@@ -299,7 +300,7 @@ function converterEfeitos(doc, camel, foraDoMapa, nomes) {
         const alvo = chaveSituacional(c.key, camel, nomes);
         if (!alvo) { foraDoMapa.push(`${doc.name}: ${c.key} (situacional)`); return; }
         situacionais.push({
-          name: `${alvo.alvo} (situacional)`, img: 'icons/svg/upgrade.svg', type: 'base', transfer: true, disabled: false, description: efeito.description || '',
+          name: `${alvo.alvo} (situacional)`, img: iconeNeon('efeito'), type: 'base', transfer: true, disabled: false, description: efeito.description || '',
           system: { changes: [{ key: alvo.key, type: MODOS[c.mode] || 'add', value: String(c.value), phase: 'initial', priority: null }], situacional: { sim: true, ligadoPorPadrao: Boolean(situacional[i].onByDefault), alvo: alvo.alvo } }
         });
         return;
@@ -309,7 +310,7 @@ function converterEfeitos(doc, camel, foraDoMapa, nomes) {
       const valor = chave.endsWith('supressaoDeDor') ? 'true' : String(c.value);
       changes.push({ key: chave, type: MODOS[c.mode] || 'add', value: valor, phase: 'initial', priority: null });
     });
-    const sempre = { name: efeito.name, img: 'icons/svg/upgrade.svg', type: 'base', system: { changes }, disabled: Boolean(efeito.disabled), transfer: true, description: efeito.description || '' };
+    const sempre = { name: efeito.name, img: iconeNeon('efeito'), type: 'base', system: { changes }, disabled: Boolean(efeito.disabled), transfer: true, description: efeito.description || '' };
     return [...(changes.length ? [sempre] : []), ...situacionais];
   });
 }
@@ -317,7 +318,7 @@ function converterEfeitos(doc, camel, foraDoMapa, nomes) {
 // ---------------- Itens ----------------
 function arma(doc, s) {
   return {
-    name: doc.name, type: 'arma', img: s.isRanged ? 'icons/svg/target.svg' : 'icons/svg/sword.svg',
+    name: doc.name, type: 'arma', img: iconeNeon('arma'),
     system: {
       descricao: s.description?.value || '', tipo: s.weaponType || '', pericia: slug(s.weaponSkill || ''), dano: s.damage || '1d6', cdt: Number(s.rof) || 1,
       pente: { value: 0, max: Number(s.magazine?.max) || 0 }, municoes: s.ammoVariety || [], aDistancia: Boolean(s.isRanged), maos: Number(s.handsReq) || 1,
@@ -331,7 +332,7 @@ function arma(doc, s) {
 function armadura(doc, s) {
   const local = (sim, l) => sim ? { value: Math.max(0, (Number(l?.sp) || 0) - (Number(l?.ablation) || 0)), max: Number(l?.sp) || 0 } : { value: 0, max: 0 };
   return {
-    name: doc.name, type: 'armadura', img: 'icons/svg/shield.svg',
+    name: doc.name, type: 'armadura', img: iconeNeon('armadura'),
     system: {
       descricao: s.description?.value || '', sp: { cabeca: local(s.isHeadLocation, s.headLocation), corpo: local(s.isBodyLocation, s.bodyLocation) },
       penalidade: Number(s.penalty) || 0, escudo: Boolean(s.isShield), pvEscudo: { value: Number(s.shieldHitPoints?.value) || 0, max: Number(s.shieldHitPoints?.max) || 0 },
@@ -343,7 +344,7 @@ function armadura(doc, s) {
 // 50, a de caça pequena em 100 e as de arma própria (a rede, o ácido) em 1.
 function municao(doc, s) {
   return {
-    name: doc.name, type: 'municao', img: 'icons/svg/barrel.svg',
+    name: doc.name, type: 'municao', img: iconeNeon('municao'),
     system: { descricao: s.description?.value || '', tipo: s.variety || '', efeito: s.type || 'basic', quantidade: Number(s.amount) || 0, lote: Number(s.amount) || 0, ablacao: Number(s.ablationValue ?? 1), preco: Number(s.price?.market) || 0, fonte: fonteDo(s) }
   };
 }
@@ -360,7 +361,7 @@ function armaMontada(doc, s, ataca) {
 function cyberware(doc, s) {
   const fundacional = Boolean(s.isFoundational);
   return {
-    name: doc.name, type: 'cyberware', img: 'icons/svg/clockwork.svg',
+    name: doc.name, type: 'cyberware', img: iconeNeon('cyberware'),
     system: {
       descricao: s.description?.value || '', tipo: s.type || '', fundacional, tamanho: Number(s.size) || 0,
       slots: fundacional ? (SLOTS_DA_WIKI[doc.name] ?? (Number(s.installedItems?.slots) || 0)) : 0, instaladoEm: '',
@@ -373,7 +374,7 @@ function cyberware(doc, s) {
 // serve aquela perícia).
 function lesao(doc, s) {
   return {
-    name: doc.name, type: 'lesao', img: 'icons/svg/blood.svg',
+    name: doc.name, type: 'lesao', img: iconeNeon('lesao'),
     system: {
       descricao: s.description?.value || '', local: s.location === 'head' ? 'cabeca' : 'corpo', aumentaDeathSave: Boolean(s.deathSaveIncrease),
       paliativo: { primeirosSocorros: Number(s.quickFix?.dvFirstAid) || 0, paramedico: Number(s.quickFix?.dvParamedic) || 0 },
@@ -387,7 +388,7 @@ function lesao(doc, s) {
 const ATIVACAO_DO_CORE = { carried: 'carregando', equipped: 'equipado' };
 function equipamento(doc, s) {
   return {
-    name: doc.name, type: 'equipamento', img: 'icons/svg/item-bag.svg',
+    name: doc.name, type: 'equipamento', img: iconeNeon('equipamento'),
     system: {
       descricao: s.description?.value || '', quantidade: Number(s.amount) || 1, uso: 'carregando', ativacao: ATIVACAO_DO_CORE[s.usage] || 'manual',
       eletronico: Boolean(s.isElectronic), ocultavel: Boolean(s.concealable?.concealable), preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
@@ -396,7 +397,7 @@ function equipamento(doc, s) {
 }
 function roupa(doc, s) {
   return {
-    name: doc.name, type: 'roupa', img: 'icons/svg/cowled.svg',
+    name: doc.name, type: 'roupa', img: iconeNeon('roupa'),
     system: {
       descricao: s.description?.value || '', quantidade: Number(s.amount) || 1, uso: 'equipado', tipo: s.type || '', estilo: s.style || '',
       preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
@@ -406,7 +407,7 @@ function roupa(doc, s) {
 // Droga: "consumed" é o nome do efeito principal ("None" quando não tem).
 function droga(doc, s) {
   return {
-    name: doc.name, type: 'droga', img: 'icons/svg/pill.svg',
+    name: doc.name, type: 'droga', img: iconeNeon('droga'),
     system: {
       descricao: s.description?.value || '', quantidade: Number(s.amount) || 1, uso: 'carregando', consumo: s.consumed && s.consumed !== 'None' ? s.consumed : '',
       preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
@@ -416,7 +417,7 @@ function droga(doc, s) {
 // NET: o cyberdeck (os slots) e o programa (ATK, DEF, REZ, o dano e o tamanho no deck).
 function cyberdeck(doc, s) {
   return {
-    name: doc.name, type: 'cyberdeck', img: 'icons/svg/net.svg',
+    name: doc.name, type: 'cyberdeck', img: iconeNeon('cyberdeck'),
     system: {
       descricao: s.description?.value || '', slots: Number(s.installedItems?.slots) || 0, qualidade: s.quality || 'standard', uso: 'carregando',
       preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
@@ -425,7 +426,7 @@ function cyberdeck(doc, s) {
 }
 function programa(doc, s) {
   return {
-    name: doc.name, type: 'programa', img: 'icons/svg/lightning.svg',
+    name: doc.name, type: 'programa', img: iconeNeon('programa'),
     system: {
       descricao: s.description?.value || '', classe: s.class || '', atk: Number(s.atk) || 0, def: Number(s.def) || 0, rez: Number(s.rez?.max ?? s.rez) || 0,
       dano: { padrao: String(s.damage?.standard ?? '0'), blackIce: String(s.damage?.blackIce ?? '0') }, tamanho: Number(s.size ?? 1), instaladoEm: '',
@@ -445,7 +446,7 @@ function upgrade(doc, s, foraDoMapa) {
     return [nosso, m && !m.isSituational ? Number(m.value) || 0 : 0];
   }));
   return {
-    name: doc.name, type: 'upgrade', img: 'icons/svg/upgrade.svg',
+    name: doc.name, type: 'upgrade', img: iconeNeon('upgrade'),
     system: {
       descricao: s.description?.value || '', alvo: ALVO_DO_CORE[s.type] || 'arma', tamanho: Number(s.size) || 0, instaladoEm: '', modificadores,
       ...armaMontada(doc, s, s.modifiers?.secondaryWeapon?.configured), preco: Number(s.price?.market) || 0, fonte: fonteDo(s)
@@ -455,7 +456,7 @@ function upgrade(doc, s, foraDoMapa) {
 // Veículo: SDP, assentos e a velocidade (a de combate, que a wiki chama de MOVE, e a narrativa).
 function veiculo(doc, s) {
   return {
-    name: doc.name, type: 'veiculo', img: 'icons/svg/wingfoot.svg',
+    name: doc.name, type: 'veiculo', img: iconeNeon('veiculo'),
     system: {
       descricao: s.description?.value || '', sdp: { value: Number(s.sdp) || 0, max: Number(s.sdp) || 0 }, assentos: Number(s.seats) || 0,
       velocidade: { combate: Number(s.speedCombat) || 0, narrativa: s.speedNarrative || '' }, familia: false, preco: Number(s.price?.market) || 0, fonte: fonteDo(s)

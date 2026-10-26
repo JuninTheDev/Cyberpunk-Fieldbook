@@ -2,10 +2,11 @@
 // token, posto pelo mestre) e um anel ciano pulsando em volta, desenhado em cada cliente pela flag da conexão do token.
 import { SISTEMA } from '../config.mjs';
 import { FLAG_CONEXAO, ICONE_CONECTADO, STATUS_CONECTADO, STATUS_EM_CHAMAS } from './constantes.mjs';
+import { iconeDoEstado } from '../regras-icones.mjs';
 
 export function registrarStatusDaNet() {
   if (!CONFIG.statusEffects.some(efeito => efeito.id === STATUS_CONECTADO)) CONFIG.statusEffects.push({ id: STATUS_CONECTADO, name: 'Conectado à NET', img: ICONE_CONECTADO });
-  if (!CONFIG.statusEffects.some(efeito => efeito.id === STATUS_EM_CHAMAS)) CONFIG.statusEffects.push({ id: STATUS_EM_CHAMAS, name: 'Em chamas', img: 'icons/svg/fire.svg' });
+  if (!CONFIG.statusEffects.some(efeito => efeito.id === STATUS_EM_CHAMAS)) CONFIG.statusEffects.push({ id: STATUS_EM_CHAMAS, name: 'Em chamas', img: iconeDoEstado(STATUS_EM_CHAMAS) });
 }
 
 const aneis = new Set();

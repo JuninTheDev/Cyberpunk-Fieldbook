@@ -7,8 +7,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { BLACK_ICE } from '../scripts/gerado.mjs';
+import { iconeNeon } from '../scripts/regras-icones.mjs';
 
-export const IMAGEM = 'icons/svg/tower.svg';
+export const IMAGEM = iconeNeon('arquitetura');
 const CONTEUDOS = { senha: 'senha', arquivo: 'arquivo', 'nó de controle': 'controle' };
 const IDS_DE_ICE = BLACK_ICE.map(ice => ice.id);
 const escapar = texto => String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

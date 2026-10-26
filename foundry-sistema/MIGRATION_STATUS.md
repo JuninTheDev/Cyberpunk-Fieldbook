@@ -9227,6 +9227,40 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   Rank e, no build, todo veículo terrestre) e V5 a V7 no G4 (o veículo que aceita qualquer upgrade, a frota sem o
   Acesso, o veículo sem os vidros de fábrica).
 
+### Ciclo 191 (2026-10-26): C49 parte 1, os ícones neon dos estados e das imagens padrão (sessão Junin)
+
+- **Pedido e decisão do usuário (2026-10-26):** ícones próprios no lugar dos genéricos do Foundry, para os estados no
+  token, os botões do HUD e da ficha e as imagens padrão dos itens, no estilo neon de 2077 (traço fino em ciano, vermelho
+  e amarelo, com brilho, como o NetWire da wiki). Esta é a parte dos estados e das imagens padrão; os botões são a parte 2.
+- **Entrega:**
+  - **O conjunto neon:** `build/icones.mjs` desenha cada ícone em traços simples (64 × 64) e o põe num molde comum: o
+    fundo escuro (`#0b0b10`) com o canto cortado, a moldura e o traço na cor do grupo (ciano, vermelho ou amarelo, as do
+    tema), o acento na outra cor e o brilho. São 62 SVGs em `icones/neon` (`node build/icones.mjs` refaz).
+  - **Os estados no token:** os 34 do Foundry 14 e os 9 do sistema (suprimido, em cobertura, agarrando, agarrado, em
+    chamas, conectado à NET, sem ar, eletrocutado, radiação) têm o ícone neon, pelo id (`regras-icones.mjs`;
+    `icones.mjs` troca no setup e no ready, e os do sistema já se registram com ele), e o derrotado do rastreador de
+    combate também. Os efeitos que o sistema cria (a estase, a Sonífera, o fogo, as penalidades da NET e do Neuroport, o
+    efeito novo da ficha) levam o ícone deles.
+  - **As imagens padrão:** o ator e o item em branco (o getDefaultArtwork) usam o ícone neon do tipo, no lugar dos do CORE
+    do C34.3 (que ficam em `icones/padrao` para os documentos antigos); o build põe o ícone do tipo nos itens do
+    catálogo (e o do Black ICE nos programas dele), nos efeitos deles, nos personagens de exemplo e nas arquiteturas.
+  - **A migração 10:** o documento com a imagem padrão do CORE de antes e o item do catálogo com a genérica do Foundry
+    que o build punha ganham o ícone neon; o efeito de um estado no token (de um id só) com outra imagem, o do estado. A
+    imagem que o mestre escolheu fica.
+- **Limites:** os retratos (o mystery-man de quem não tem imagem própria fica como fallback neon), a ficha da arquitetura
+  e o d10 das macros são da parte 2, com os botões.
+- **Portões:** G1, 238 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 728 testes, 0 falhas (4
+  testes novos em `tests/sistema/icones.test.mjs`: os SVGs iguais aos do gerador e só nas cores do tema; os 34 estados
+  do Foundry e os 9 do sistema; o catálogo sem os genéricos; a migração 10. O teste do C34.3 passa a conferir os ícones
+  neon e a troca dos antigos; os da arma do cyberware, do Black ICE e das arquiteturas, o ícone novo); G4 completo,
+  312/312 em 670 s (a primeira rodada, 310/312, achou o C34.3 e o C34.1 da sessão KouArt ainda esperando a imagem antiga da arma em branco e do efeito novo; a segunda não abriu o mundo de teste, falha do ambiente), com o passo novo: os 43 estados e o derrotado com o ícone neon, que o Foundry carrega como textura; o
+  Caído e o Suprimido ligados levam o ícone; o ator, o token e o item em branco e a arma do compêndio com o ícone do
+  tipo. O passo do C34.3 (`tests/lib/c34-imagens.js`), o do C34.1 (`tests/lib/c34-ficha.js`, o efeito novo) e os do veículo e do Black ICE esperam os ícones neon. No foco,
+  12/12.
+- **Mutações:** as 6 caíram: I1 a I3 no G3 (o Caído sem ícone, a migração sem os estados e, no build, a munição com a
+  imagem genérica) e I4 a I6 no G4 (os estados do Foundry com os ícones dele, o documento em branco sem a imagem neon,
+  o derrotado com o ícone do Foundry).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

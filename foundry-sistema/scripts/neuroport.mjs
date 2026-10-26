@@ -37,6 +37,7 @@ import {
 } from './regras.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import { netrunnerDo, paredeNoMeio } from './netrun/regras-da-net.mjs';
+import { iconeDoEfeito } from './regras-icones.mjs';
 
 const CANAL = `system.${SISTEMA}`;
 const FLAG = 'neuroport';
@@ -415,7 +416,7 @@ async function efeitoDoQuickhack(id, item, alvo, falante) {
   if (regra.move) {
     const quanto = /^\d+$/.test(regra.move) ? Number(regra.move) : await rolar(regra.move, `MOVE −${regra.move}`);
     await ActiveEffect.implementation.create({
-      name: `${item.name}: MOVE −${quanto}`, img: 'icons/svg/downgrade.svg', ...duracao, flags: { [SISTEMA]: { quickhack: id } },
+      name: `${item.name}: MOVE −${quanto}`, img: iconeDoEfeito('penalidade'), ...duracao, flags: { [SISTEMA]: { quickhack: id } },
       system: { changes: [{ key: 'system.atributos.move.valor', type: 'add', value: String(-quanto), phase: 'initial', priority: null }] }
     }, { parent: alvo.actor });
     return { move: quanto, texto: `O MOVE de ${alvo.name} cai ${quanto} por 60 segundos (20 rodadas). Com MOVE 0, ele não faz Ação de Movimento.` };

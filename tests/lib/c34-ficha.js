@@ -174,7 +174,7 @@ module.exports = async function fichaC34(r, edge, jogador) {
       const ok = aba.linhas.valendo === 'Adrenalina=VALENDO=LA,Leitura=VALENDO=' && aba.linhas.situacional === 'Escuta=SITUACIONAL: LIGADO NA JANELA='
         && aba.linhas.parado === 'Foco=DESLIGADO=L,Reflexo=FORA DE USO: VALE INSTALADO='
         && aba.origens.join('|') === 'C34 Efeitos|Inalador C34 · Equipamento, vale ligado à mão|Implante C34 · Cyberware, vale instalado' && aba.percepcao === 2
-        && botoes.ligou === 'valendo,true,2' && botoes.desligou === 'parado,0' && botoes.criado === 'true,icons/svg/aura.svg,valendo,sem mudanças'
+        && botoes.ligou === 'valendo,true,2' && botoes.desligou === 'parado,0' && botoes.criado === 'true,systems/cpr-fieldbook/icones/neon/efeito.svg,valendo,sem mudanças'
         && botoes.apagou && botoes.efeitos === 1
         && morte.antes === '0,false' && morte.subiu === '2,true' && morte.zerou === '0,false'
         && recolher.antes === 'Inalador C34,Medidor C34,Sensor C34' && recolher.equipamento === 'Medidor C34|false|false'

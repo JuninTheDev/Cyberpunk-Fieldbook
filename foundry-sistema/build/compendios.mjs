@@ -12,6 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { arquiteturasDaCampanha, EXEMPLOS as ARQUITETURAS_DE_EXEMPLO } from './arquiteturas.mjs';
+import { iconeNeon } from '../scripts/regras-icones.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifesto = JSON.parse(fs.readFileSync(path.join(raiz, 'system.json'), 'utf8'));
@@ -80,14 +81,14 @@ function personagem(nome, { atributos, pericias, role = null, humanidade = 50, i
   const a = atributos;
   const hp = 10 + 5 * Math.ceil((a.body + a.will) / 2);
   return {
-    _id, _key: `!actors!${_id}`, name: nome, type: 'personagem', img: 'icons/svg/mystery-man.svg',
+    _id, _key: `!actors!${_id}`, name: nome, type: 'personagem', img: iconeNeon('personagem'),
     system: {
       atributos: Object.fromEntries(Object.entries(a).map(([chave, valor]) => [chave, { valor }])),
       hp: { value: hp, max: hp }, humanidade: { value: humanidade, max: a.emp * 10 }, sorte: { value: a.luck, max: a.luck },
       pericias: Object.fromEntries(Object.entries(pericias).map(([id, nivel]) => [id, { nivel, familia: '', nome: '' }])),
       role: role ?? { nome: '', rank: 4, habilidades: {} }, dinheiro: 500, notas: '<p>Personagem de exemplo do sistema, para testar o combate.</p>'
     },
-    prototypeToken: { name: nome, actorLink: true, bar1: { attribute: 'hp' }, sight: { enabled: true }, texture: { src: 'icons/svg/mystery-man.svg' } },
+    prototypeToken: { name: nome, actorLink: true, bar1: { attribute: 'hp' }, sight: { enabled: true }, texture: { src: iconeNeon('personagem') } },
     items: docs, effects: [], folder: null, sort: 0, ownership: { default: 0 }, flags: {}, _stats: estatisticas
   };
 }

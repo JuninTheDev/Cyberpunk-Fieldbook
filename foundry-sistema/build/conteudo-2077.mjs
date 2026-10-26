@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { iconeNeon } from '../scripts/regras-icones.mjs';
 
 const KIT = 'Cyberpunk Edgerunners Mission Kit';
 const SUPLEMENTO = 'Cyberpunk 2077 (suplemento de fã)';
@@ -145,7 +146,7 @@ function arma(raw, grupo) {
   for (const chave of REGRAS) if (regras[chave] !== undefined) arma2077[chave] = regras[chave];
   const proprio = proprioNoSistema(arma2077);
   return {
-    name: raw.name, type: 'arma', img: 'icons/svg/target.svg',
+    name: raw.name, type: 'arma', img: iconeNeon('arma'),
     system: {
       descricao: `<p><b>${raw.kind}</b> · qualidade ${raw.quality} · ${ORIGENS[arma2077.origem]}</p>${paragrafo(raw.text)}${paragrafo(recursos, 'Recursos')}${paragrafo(REGRA_DA_CLASSE[classe], 'Classe')}`
         + `${paragrafo(`${NESTE_SISTEMA[classe]}${proprio ? ` ${proprio}` : ''} ${SO_COM_O_MESTRE}`, 'Neste sistema')}`
@@ -170,7 +171,7 @@ const REBUILDS = [
 ];
 function rebuilds() {
   return REBUILDS.map(([nome, classe, texto]) => ({
-    name: nome, type: 'upgrade', img: 'icons/svg/upgrade.svg',
+    name: nome, type: 'upgrade', img: iconeNeon('upgrade'),
     system: {
       descricao: `<p><b>Rebuild</b> · 2 slots · 1.000eb (Muito Caro) · 1 hora para instalar ou tirar · só um por arma</p>${paragrafo(texto)}${paragrafo(REGRA_DA_CLASSE[classe], 'Classe')}`
         + `<p>Numa arma exótica, o Rebuild entra num slot só, se a arma tiver um livre.</p>${KIT_SEM_AUTOMACAO}${fonteNaWiki(KIT, 31)}`,
@@ -241,7 +242,7 @@ function cyberware(raw, grupo) {
   const kit = raw.origem === 'kit';
   const [livro, pagina] = kit ? [KIT, PAGINA_DO_KIT[grupo] || 36] : [SUPLEMENTO, PAGINA_DO_CYBERWARE[grupo]];
   return {
-    name: raw.name, type: 'cyberware', img: 'icons/svg/clockwork.svg',
+    name: raw.name, type: 'cyberware', img: iconeNeon('cyberware'),
     system: {
       descricao: `<p><b>${raw.category}</b> · instalação: ${raw.install} · Humanidade ${raw.humanity} · ${raw.cost} · ${kit ? 'Mission Kit' : 'suplemento de fã'}</p>${paragrafo(raw.text)}${paragrafo(raw.tip, 'Na mesa')}${fonteNaWiki(livro, pagina)}`,
       tipo, fundacional, tamanho: fundacional ? 0 : /ocupa dois slots/i.test(texto) ? 2 : 1, slots: fundacional ? (SLOTS_2077[raw.name] ?? 0) : 0, instaladoEm: '', perdaHumanidade: perdaDeHumanidade(raw.humanity),
@@ -257,7 +258,7 @@ const doCartao = (cartao, rotulo) => (cartao.stats.find(([nome]) => nome === rot
 // A droga do Mission Kit (Kit p. 31). Os efeitos são de Humanidade e o mestre os resolve: a droga não tem efeito na ficha.
 const IMMUNOBLOCKERS = '<p><b>Droga do Mission Kit</b> · 100eb (Premium) a dose · não vicia</p><p><b>Efeito primário:</b> recupera 2d6 de Humanidade, sem passar da Humanidade máxima que a terapia permite. Dura um mês, mas pode acabar antes, num momento estressante (o mestre decide).</p><p><b>Efeito secundário (DV21):</b> perde a Humanidade ganha com a droga, e alucinações dão −2 em todo teste por 60 segundos (20 rodadas). Se nesse tempo não injetar 2 doses de Immunoblockers (uma Ação), perde 4d6 de Humanidade no fim dos 60 segundos (sem mexer na máxima). Abaixo de 0: ciberpsicose extrema, e o mestre pode dar +2 em todo teste até a Humanidade voltar a ser positiva.</p>';
 const immunoblockers = () => ({
-  name: 'Immunoblockers', type: 'droga', img: 'icons/svg/pill.svg',
+  name: 'Immunoblockers', type: 'droga', img: iconeNeon('droga'),
   system: { descricao: IMMUNOBLOCKERS + fonteNaWiki(KIT, 31), quantidade: 1, uso: 'carregando', consumo: '', preco: 100, fonte: fonte(KIT, 31) }
 });
 
@@ -268,7 +269,7 @@ const QUALIDADE_DO_DECK = { Excelente: 'excellent', Padrão: 'standard', Ruim: '
 // do suplemento não valem (a wiki, como o foundry-2077/build/net.mjs).
 function deck({ maker, model, quality, slots, cost, text }) {
   return {
-    name: `${maker} ${model}`, type: 'cyberdeck', img: 'icons/svg/net.svg',
+    name: `${maker} ${model}`, type: 'cyberdeck', img: iconeNeon('cyberdeck'),
     system: {
       descricao: `<p><b>Cyberdeck com marca</b> · qualidade ${String(quality).toLowerCase()} · ${slots} slots · ${cost}</p><p><i>${text}</i></p>`
         + '<p>É um cyberdeck do RED da qualidade dele: o modelo, do suplemento de fã, é só a aparência. A RAM, o cooling e a especialidade do suplemento não valem. Todo deck também vem na versão para a Neuroport Cyberdeck Port, pelo mesmo preço, que não aceita hardware (Kit p. 37).</p>'
@@ -287,7 +288,7 @@ function quickhack(cartao) {
   const [livro, pagina] = kit ? [KIT, 16] : [SUPLEMENTO, 17];
   const alerta = !/não o alerta/.test(String(cartao.text)) && doCartao(cartao, 'Alerta o alvo') !== 'não';
   return {
-    name: cartao.name, type: 'programa', img: 'icons/svg/lightning.svg',
+    name: cartao.name, type: 'programa', img: iconeNeon('programa'),
     system: {
       descricao: `<p><b>${cartao.tag}</b> · ${detalhes(cartao)}</p>${paragrafo(cartao.text)}${cartao.extra || ''}${paragrafo(cartao.tip, 'Na mesa')}${fonteNaWiki(livro, pagina)}`,
       classe: 'quickhack', atk: 0, def: 0, rez: 0, ram: 0, dano: { padrao: '0', blackIce: '0' }, tamanho: 1, instaladoEm: '', preco: 0, fonte: fonte(livro, pagina)

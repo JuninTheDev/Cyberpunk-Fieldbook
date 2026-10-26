@@ -25,14 +25,15 @@ import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import * as R from './regras-perigos.mjs';
 import * as RV from './regras-veiculos.mjs';
 import { tokenDaPessoa, veiculoDaTripulacao, veiculoDirigidoPor } from './tripulacao.mjs';
+import { iconeDoEstado } from './regras-icones.mjs';
 
 export const STATUS_SEM_AR = 'cprf-sem-ar';
 export const STATUS_ELETROCUTADO = 'cprf-eletrocutado';
 export const STATUS_RADIACAO = 'cprf-radiacao';
 const ESTADOS = [
-  { id: STATUS_SEM_AR, name: 'Sem ar', img: 'icons/svg/waterfall.svg' },
-  { id: STATUS_ELETROCUTADO, name: 'Eletrocutado', img: 'icons/svg/lightning.svg' },
-  { id: STATUS_RADIACAO, name: 'Na radiação', img: 'icons/svg/radiation.svg' }
+  { id: STATUS_SEM_AR, name: 'Sem ar', img: iconeDoEstado(STATUS_SEM_AR) },
+  { id: STATUS_ELETROCUTADO, name: 'Eletrocutado', img: iconeDoEstado(STATUS_ELETROCUTADO) },
+  { id: STATUS_RADIACAO, name: 'Na radiação', img: iconeDoEstado(STATUS_RADIACAO) }
 ];
 // O botão do cartão que tira cada estado.
 const SAIDA = { [STATUS_SEM_AR]: 'Respirou', [STATUS_ELETROCUTADO]: 'Afastou-se', [STATUS_RADIACAO]: 'Saiu da zona' };

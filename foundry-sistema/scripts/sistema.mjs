@@ -16,7 +16,7 @@ import { levarItem, pegarDoConteiner, registrarConteiner } from './conteiner.mjs
 import * as drogas from './drogas.mjs';
 import * as estados from './estados.mjs';
 import * as estabilizacao from './estabilizar.mjs';
-import { caminho, SISTEMA, STATUS_AGARRAO } from './config.mjs';
+import { SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { registrarConfiguracoes } from './configuracoes.mjs';
 import { aplicarMarcadorDeTurno } from './marcador-de-turno.mjs';
 import { aplicarTemaNoFoundry } from './tema-foundry.mjs';
@@ -59,6 +59,8 @@ import * as vinculoVeiculo from './vinculo-veiculo.mjs';
 import * as tripulacao from './tripulacao.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
 import { perceberArmadura } from './black-chrome.mjs';
+import { aplicarIconesDosEstados } from './icones.mjs';
+import { iconeDoEstado } from './regras-icones.mjs';
 
 Hooks.once('init', () => {
   CONFIG.Actor.documentClass = AtorCPR;
@@ -82,10 +84,10 @@ Hooks.once('init', () => {
     arquitetura: DadosArquitetura
   });
   CONFIG.ActiveEffect.dataModels.base = DadosEfeito;
-  CONFIG.statusEffects.push({ id: combate.STATUS_SUPRIMIDO, name: 'Suprimido', img: caminho('icones/suprimido.svg') });
-  CONFIG.statusEffects.push({ id: combate.STATUS_COBERTURA, name: 'Em cobertura', img: 'icons/svg/shield.svg' });
-  CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrando, name: 'Agarrando', img: 'icons/svg/combat.svg' });
-  CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrado, name: 'Agarrado', img: 'icons/svg/net.svg' });
+  CONFIG.statusEffects.push({ id: combate.STATUS_SUPRIMIDO, name: 'Suprimido', img: iconeDoEstado(combate.STATUS_SUPRIMIDO) });
+  CONFIG.statusEffects.push({ id: combate.STATUS_COBERTURA, name: 'Em cobertura', img: iconeDoEstado(combate.STATUS_COBERTURA) });
+  CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrando, name: 'Agarrando', img: iconeDoEstado(STATUS_AGARRAO.agarrando) });
+  CONFIG.statusEffects.push({ id: STATUS_AGARRAO.agarrado, name: 'Agarrado', img: iconeDoEstado(STATUS_AGARRAO.agarrado) });
   registrarCritico();
   registrarConfiguracoes();
   // O marcador de turno escolhido (o C43, parte 2), depois de registrado, como o CORE 0.93 no init.
@@ -147,7 +149,9 @@ Hooks.once('init', () => {
   game.system.api.tripulacao = tripulacao;
 });
 
+Hooks.once('setup', aplicarIconesDosEstados);
 Hooks.once('ready', () => {
+  aplicarIconesDosEstados();
   combate.registrarCombate();
   agarrao.registrarAgarrao();
   artesMarciais.registrarArtesMarciais();

@@ -11,6 +11,7 @@ import { rolarDano, testar } from '../rolagens.mjs';
 import { escudoHumanoDe } from '../escudo-humano.mjs';
 import { CANAL, precisaRolar, souOMestreAtivo } from './apoio.mjs';
 import { resolver } from './modos.mjs';
+import { iconeNeon } from '../regras-icones.mjs';
 
 // ---------------- Pedidos pelo socket (com resposta) ----------------
 // O mestre pede algo a um jogador (a defesa, o dano, o Death Save) e espera; passou o tempo, segue sem a resposta.
@@ -151,7 +152,7 @@ export async function perguntarDefesa(pacote, { id = null, mestre = false } = {}
     const humano = pacote.opcoes.includes('escudoHumano') ? await escudoHumanoDe(ator, { cena: alvo.parent }) : null;
     resposta = await JanelaDeDefesa.perguntar({
       ...pacote, mestre, arma: arma?.name ?? pacote.rotulo, tempo: mestre ? 0 : Number(config('tempo')) || 0,
-      atacante: { nome: pacote.atacante, img: pacote.imgAtq || 'icons/svg/mystery-man.svg' }, alvo: { nome: alvo.name, img: alvo.texture?.src || ator.img },
+      atacante: { nome: pacote.atacante, img: pacote.imgAtq || iconeNeon('personagem') }, alvo: { nome: alvo.name, img: alvo.texture?.src || ator.img },
       esquiva: R.contaDaDefesa(ator.partesDaPericia('evasion').partes), concentracao: R.contaDaDefesa(ator.partesDaPericia('concentration').partes),
       briga: R.contaDaDefesa(ator.partesDaPericia('brawling').partes), vontade: R.contaDaDefesa(ator.partesDoAtributo('will')),
       interface: R.contaDaDefesa(ator.partesDaInterface(INTERFACE_DA_DEFESA.interface[0])),

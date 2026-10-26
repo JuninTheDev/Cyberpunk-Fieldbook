@@ -4,6 +4,7 @@
 import { SISTEMA } from '../config.mjs';
 import { estiloAtual } from './estilo.mjs';
 import { ESTADO_DO_FERIMENTO, ESTADOS, NOMES_DOS_ESTADOS, normalizarRetrato, imagemDoEstado, efeitoDoRetrato, modoDoRetrato, estadoDoRetrato } from './logica.mjs';
+import { iconeNeon } from '../regras-icones.mjs';
 
 const { ApplicationV2 } = foundry.applications.api;
 const lerFormulario = form => new foundry.applications.ux.FormDataExtended(form).object;
@@ -16,7 +17,7 @@ export function estadoDo(actor) {
   return estadoDoRetrato({ estado: ESTADO_DO_FERIMENTO[actor?.system?.ferimento?.chave], morto });
 }
 
-const reservaDo = (actor, token) => actor?.img || token?.texture?.src || 'icons/svg/mystery-man.svg';
+const reservaDo = (actor, token) => actor?.img || token?.texture?.src || iconeNeon('personagem');
 
 // Tudo o que o painel precisa para desenhar o retrato agora.
 export function vistaDoRetrato(actor, token, efeitos = 'semImagem', retrato = retratoDo(actor), estado = estadoDo(actor)) {

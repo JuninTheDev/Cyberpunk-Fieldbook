@@ -2,6 +2,7 @@
 // estado público da arquitetura), do Token (a conexão; o inimigo no combate) e do ator do inimigo, o status do token
 // conectado e o ponto de acesso novo.
 import { caminho } from '../config.mjs';
+import { iconeNeon } from '../regras-icones.mjs';
 
 export const FLAG_PONTO = 'pontoDeAcesso';
 export const FLAG_ESTADO = 'netrun';
@@ -13,7 +14,8 @@ export const FLAG_MODELO = 'modeloDaNet';
 export const STATUS_CONECTADO = 'cprf-conectado-na-net';
 // O fogo do Hellhound (a wiki: "deck e roupa pegam fogo (2 no HP por turno)"), até uma Ação Carnal apagar.
 export const STATUS_EM_CHAMAS = 'cprf-em-chamas';
-export const ICONE_CONECTADO = caminho('icones/conectado.svg');
+// O ícone neon do C49 (o antigo, icones/conectado.svg, fica no pacote).
+export const ICONE_CONECTADO = iconeNeon('conectado');
 export const IMAGEM_DO_TERMINAL = caminho('icones/terminal.svg');
 
 // O ponto de acesso novo: o nome, a arquitetura (o uuid do item), o DV (vazio: o da arquitetura), o alcance em metros

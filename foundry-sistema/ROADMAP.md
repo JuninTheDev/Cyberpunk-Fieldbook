@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 191). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 192). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -486,6 +486,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 - [~] **C49. Ícones próprios** (sessão Junin, 2026-10-26; depois do C48): os estados no token (os do sistema e os do
   Foundry), os botões do HUD e da ficha e as imagens padrão dos itens, no estilo neon de 2077 (traço fino em ciano,
   vermelho e amarelo, com brilho; decisão do usuário).
+  - [x] Parte 1, os estados no token e as imagens padrão: feita no ciclo 191 (sessão Junin, 2026-10-26).
+  - [ ] Parte 2, os botões do HUD e da ficha.
 
 
 
@@ -538,7 +540,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   máximo, e a Humanidade volta pela terapia) e o CORE (`uninstallCyberware` só recalcula o máximo). (Ciclo 31)
 - [x] **O master na branch** (Mission Kit, Black Chrome, visual novo): o build quebrava no grupo `neuroport` do Kit, e
   os testes de regra caíam para 29 de 31. Agora o conversor de 2077 segue o Kit. (Ciclo 31)
-- [ ] **As armas de 2077 pelo Mission Kit** (adiado pelo usuário em 2026-10-12; fora do plano de paridade) (desvio de regra desde a integração da revisão, ciclos 31 e 32): a wiki
+- [x] **As armas de 2077 pelo Mission Kit** (feito no C29, ciclos 110 a 116, e o Rebuild no C47, ciclo 182; adiado pelo usuário em 2026-10-12; fora do plano de paridade) (desvio de regra desde a integração da revisão, ciclos 31 e 32): a wiki
   trocou as regras do suplemento de fã pelas do Kit, e os modos dos ciclos 17 e 18 ainda seguem o suplemento:
   - os modos de cada classe: a Power (+5 na lesão crítica e o Ricochete a −4, −2 com o Ballistic Coprocessor), a Smart
     (+1, e só dispara conectada pelo Personal Link ou pelo Subdermal Grip) e a Tech (Carregar gasta a Ação de Movimento;
@@ -795,7 +797,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [ ] Tradução para inglês (hoje, o arquivo `en` aponta para o português).
 - [x] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura): ciclo 150 (com o Codex), nas fichas do
   personagem, do capanga e do item; as outras janelas ficam como estavam.
-- [ ] Ícones próprios no lugar dos genéricos do Foundry.
+- [~] Ícones próprios no lugar dos genéricos do Foundry: o C49 (os estados e as imagens padrão no ciclo 191).
 - [ ] Conveniências do CORE: (→ C26) a régua que mostra o DV da arma pela distância e o DV no HUD do token (o ataque já calcula
   o DV sozinho); "Hardened" (Danger Gal Dossier p. 150, fora da wiki: só se a mesa quiser).
 

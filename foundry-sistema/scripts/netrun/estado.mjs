@@ -22,6 +22,7 @@ import {
 import { copiarArquivo } from './arquivos.mjs';
 import { acionar as acionarLigacao, devolver, ligacoesDo } from './ligacoes.mjs';
 import { erro } from './socket.mjs';
+import { iconeDoEfeito } from '../regras-icones.mjs';
 
 const LOG_MAX = 60;
 
@@ -321,7 +322,7 @@ async function aplicarEfeito(ctx, corredor, ice) {
     const rotulos = efeito.penalidade.map(chave => ROTULO_DO_ATRIBUTO[chave]).join(', ').replace(/, ([^,]*)$/, ' e $1');
     const valor = await cartaoDeDano(nome, `${nome}: −1d6 em ${rotulos} por 1 hora`, '1d6');
     await ator.createEmbeddedDocuments('ActiveEffect', [{
-      name: `${nome} (−${valor} em ${rotulos}, 1 hora)`, img: 'icons/svg/downgrade.svg', type: 'base',
+      name: `${nome} (−${valor} em ${rotulos}, 1 hora)`, img: iconeDoEfeito('penalidade'), type: 'base',
       system: { changes: efeito.penalidade.map(chave => ({ key: `system.atributos.${chave}.valor`, type: 'add', value: String(-valor), phase: 'initial', priority: null })) },
       duration: { value: 1, units: 'hours' }, start: { time: game.time.worldTime }, flags: { [SISTEMA]: { efeitoDaNet: ice.ice } }
     }]);

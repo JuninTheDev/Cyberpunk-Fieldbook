@@ -41,6 +41,7 @@ import { porVeiculoNaCena } from './vinculo-veiculo.mjs';
 import { armaDaCombinacao, armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 import { alternarItemFavorito, alternarPericiaFavorita, arrastoDaPericia, FLAG_FAVORITAS, FLAG_FAVORITO, listaCurta, perguntarLocalMirado } from './macros.mjs';
 import { ESTADOS_MENTAIS, estadoMental, fazerTerapia, TRACOS_DE_HARE } from './terapia.mjs';
+import { iconeDoEfeito } from './regras-icones.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -897,7 +898,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // cpr-actor.js:1675-1686, com o "New Effect" em português).
   static async #criarEfeito() {
     if (!this.isEditable) return null;
-    const [criado] = await this.actor.createEmbeddedDocuments('ActiveEffect', [{ name: 'Efeito novo', img: 'icons/svg/aura.svg', type: 'base', origin: this.actor.uuid, disabled: false }]);
+    const [criado] = await this.actor.createEmbeddedDocuments('ActiveEffect', [{ name: 'Efeito novo', img: iconeDoEfeito('novo'), type: 'base', origin: this.actor.uuid, disabled: false }]);
     return criado?.sheet.render(true) ?? null;
   }
   // O nome do efeito abre a ficha dele (a do Foundry 14).

@@ -7,6 +7,7 @@
 // efeito. Sem relógio: a semana do Cryopump fica no texto.
 import { SISTEMA } from './config.mjs';
 import { capacidadeDoCryopump, cargasDoCryopump, coberturaDaEstase, COBERTURA_DA_ESTASE, dispositivoCryo, DV_DO_CRYOTANK, estaseDeuCerto, estaseProtege, NOME_DO_DISPOSITIVO, planoDaEstase, pontosDeCriossistemas, RECARGA_DO_CRYOPUMP } from './regras-cryo.mjs';
+import { iconeDoEfeito } from './regras-icones.mjs';
 
 export const FLAG_ESTASE = 'estase';
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
@@ -105,7 +106,7 @@ async function executarEstase(paciente) {
     await item.setFlag(SISTEMA, 'cargas', plano.cargasDepois);
   }
   await paciente.createEmbeddedDocuments('ActiveEffect', [{
-    name: `Em estase (${NOME_DO_DISPOSITIVO[tipo]})`, img: 'icons/svg/frozen.svg',
+    name: `Em estase (${NOME_DO_DISPOSITIVO[tipo]})`, img: iconeDoEfeito('estase'),
     flags: { [SISTEMA]: { [FLAG_ESTASE]: { tipo, hp: plano.hp, max: plano.hp, dispositivo: item.uuid, medico: medico.name } } }
   }]);
   const como = plano.rola ? ` (Tecnologia Médica ${dados.total} contra DV${DV_DO_CRYOTANK})`
