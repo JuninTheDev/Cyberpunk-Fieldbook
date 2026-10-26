@@ -9053,9 +9053,12 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     usuário; o passo do G4 confere o que o DSN usa (o gancho, com um `dice3d` de mentira, e as mensagens com o roll), não
     a animação. A conferir na mesa: os dados aparecem para quem vê cada mensagem (o modo do mestre, o secreto e o
     sussurro, pelas regras do próprio DSN);
-  - **o que o mapa achou e não é do DSN** (os cartões já mostram isso no chat hoje, com ou sem o módulo; ficam para o
-    usuário decidir): com "Esconder o total do ataque até a defesa", o dano de autofogo rolado pelo jogador sai público
-    com o "(×N)" (`rolagens.mjs:125`), e N é o ataque menos a defesa; a segunda chance da munição Smart melhorada, o
+  - **o que o mapa achou e não é do DSN** (os cartões já mostram isso no chat hoje, com ou sem o módulo): o "(×N)" do
+    dano de autofogo rolado pelo jogador sai público com "Esconder o total do ataque até a defesa" ligado
+    (`rolagens.mjs:125`), e N é o ataque menos a defesa. Parecia revelar o total escondido; conferido depois, a pedido do
+    usuário, não revela: o dano só é rolado depois das defesas de todos os alvos (`combate/modos.mjs:563` e `:582-584`),
+    e o cartão do ataque fica público logo em seguida (`:116-118`); a segunda chance da munição Smart melhorada também
+    vem depois da defesa daquele alvo e contra ela (`:282-292`). Nada mudou no código. Ficam para o usuário decidir: o
     Breach, o quickhack e o ataque de programa saem públicos (`combate/socket.mjs:136`, `neuroport.mjs:174` e `:232`,
     `netrun/estado.mjs:638`); a iniciativa e as rolagens dos inimigos da NET mostram o nome e o número
     (`netrun/combate.mjs:57-59`, `netrun/estado.mjs:206-217`).
