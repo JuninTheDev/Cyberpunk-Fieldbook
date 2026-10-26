@@ -18547,6 +18547,122 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('tokens dinâmicos (o C45, parte 2): a classe do token do sistema; a pré-carga das imagens; durante o movimento, o Caminhando de cada trecho desenhado na tela (no mestre e no jogador), sem gravar, e no fim a imagem gravada de volta; armado, o Mirando andando; a troca pela direção sem transição e a do estado com a da configuração (glitch, ou nenhuma)', async () => {
+      // A cena sem visão de token: o jogador vê o token do mestre e desenha o movimento dele.
+      const preparo = await edge.evaluate(`(async () => {
+        const FP = foundry.applications.apps.FilePicker.implementation;
+        const pasta = 'teste-c45b';
+        try { await FP.createDirectory('data', pasta); } catch { /* já existe */ }
+        const nomes = ['ana_parado_000.svg', 'ana_parado_090.svg', 'ana_parado_180.svg', 'ana_parado_270.svg', 'ana_caminhando_090.svg', 'ana_caminhando_180.svg', 'ana_mirando_270.svg', 'ana_ferido-leve.svg'];
+        for (const [i, nome] of nomes.entries()) {
+          const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="hsl(' + (i * 45) + ',70%,45%)"/></svg>';
+          await FP.upload('data', pasta, new File([svg], nome, { type: 'image/svg+xml' }), {}, { notify: false });
+        }
+        const ator = await Actor.implementation.create({ name: 'Teste Caminhando', type: 'personagem', ownership: { default: 2 } });
+        const [arma] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone((await game.system.api.wiki.carregarCatalogo())['core_weapons:medium-pistol'])]);
+        await arma.update({ 'system.equipada': false });
+        const imagens = Object.fromEntries(nomes.map(nome => [nome.slice(4, -4).replace(/_(\\d+)$/, (m, a) => '-' + Number(a)), pasta + '/' + nome]));
+        await game.system.api.tokenDinamico.salvarConjunto(ator, { ativo: true, pasta, imagens });
+        const cena = await Scene.implementation.create({ name: 'C45 Caminhando', active: false, width: 2000, height: 1400, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+        window.__c45b = { ator: ator.id, arma: arma.id, cena: cena.id, anterior: canvas.scene?.id, transicao: game.settings.get('${S}', 'transicaoDoToken') };
+        await cena.activate();
+        await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        const [token] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 1000, y: 800 })).toObject()]);
+        await __esperar(() => canvas.tokens.get(token.id));
+        window.__c45b.token = token.id;
+        return { classe: CONFIG.Token.objectClass.name, instancia: canvas.tokens.get(token.id) instanceof CONFIG.Token.objectClass, imagens: Object.keys(imagens).sort().join() };
+      })()`);
+      // O jogador desenha a cena nova e registra, a cada quadro do canvas, o que o sistema desenhou no token.
+      const idsDoMestre = await edge.evaluate('({ cena: window.__c45b.cena, token: window.__c45b.token })');
+      const jogadorPronto = await jogador.evaluate(`(async () => {
+        for (let i = 0; i < 100 && !(canvas.ready && canvas.scene?.id === '${idsDoMestre.cena}' && canvas.tokens.get('${idsDoMestre.token}')); i++) await new Promise(r => setTimeout(r, 100));
+        window.__c45bQuadros = [];
+        // A cada atualização da animação do token (o Caminhando é desenhado ali), o quadro desenhado.
+        const original = CONFIG.Token.objectClass.prototype._onAnimationUpdate;
+        window.__c45bOriginal = original;
+        CONFIG.Token.objectClass.prototype._onAnimationUpdate = function (...args) { original.apply(this, args); if (this.document?.id === '${idsDoMestre.token}') { const q = game.system.api.tokenDinamico.quadroDesenhado(this); if (q && window.__c45bQuadros.at(-1) !== q) window.__c45bQuadros.push(q); } };
+        return Boolean(canvas.tokens.get('${idsDoMestre.token}'));
+      })()`);
+      const info = await edge.evaluate(`(async () => {
+        const d = window.__c45b;
+        const cena = game.scenes.get(d.cena);
+        const ator = game.actors.get(d.ator);
+        const doc = () => game.scenes.get(d.cena)?.tokens.get(d.token);
+        const objeto = () => canvas.tokens.get(d.token);
+        const img = nome => 'teste-c45b/ana_' + nome + '.svg';
+        const lido = {};
+        const opcoes = [];
+        const gancho = Hooks.on('updateToken', (t, m, o) => { if (t.id === d.token) opcoes.push({ textura: foundry.utils.getProperty(m, 'texture.src') ?? null, animacao: JSON.stringify(o.animation ?? null), movimento: ('x' in m) || ('y' in m) }); });
+        const cache = src => Boolean(foundry.canvas.TextureLoader.loader.getCache(src));
+        // O que o mestre desenhou, a cada quadro do canvas, e a textura do token no fim.
+        let quadros = [];
+        const original = CONFIG.Token.objectClass.prototype._onAnimationUpdate;
+        CONFIG.Token.objectClass.prototype._onAnimationUpdate = function (...args) { original.apply(this, args); if (this.document?.id === d.token) { const q = game.system.api.tokenDinamico.quadroDesenhado(this); if (q && quadros.at(-1) !== q) quadros.push(q); } };
+        const andar = async waypoints => {
+          quadros = [];
+          await doc().move(waypoints, { autoRotate: true, constrainOptions: { ignoreWalls: true, ignoreCost: true } });
+          await __esperar(() => !objeto()?.animationContexts?.size, 150);
+          await __esperar(() => !game.system.api.tokenDinamico.quadroDesenhado(objeto()), 50);
+          await new Promise(r => setTimeout(r, 300));
+          const base = objeto()?.texture?.baseTexture;
+          return { quadros: [...quadros], fim: doc().texture.src, desenhoDoFim: base === foundry.canvas.TextureLoader.loader.getCache(doc().texture.src), desenhado: game.system.api.tokenDinamico.quadroDesenhado(objeto()) };
+        };
+        try {
+          // 1. A pré-carga: as 8 imagens no cache (o salvar e a cena carregam).
+          await __esperar(() => ['parado_000', 'caminhando_180', 'mirando_270', 'ferido-leve'].every(n => cache(img(n))), 50);
+          lido.cache = ['parado_000', 'parado_090', 'parado_180', 'parado_270', 'caminhando_090', 'caminhando_180', 'mirando_270', 'ferido-leve'].every(n => cache(img(n)));
+          // 2. Andar 2 para a esquerda e 2 para cima: o Caminhando a 90 e depois a 180; no fim, o Parado a 180, gravado, e o
+          // desenho dele de volta.
+          const x = doc().x, y = doc().y;
+          lido.andar = await andar([{ x: x - 200, y }, { x: x - 200, y: y - 200 }]);
+          // 3. Armado, andando para a direita: o Mirando a 270 durante e no fim (sem Caminhando).
+          await ator.items.get(d.arma).update({ 'system.equipada': true });
+          // Virado para cima (180), sem o Mirando a 180: o mais perto, o 270.
+          await __esperar(() => doc().texture.src === img('mirando_270'));
+          lido.armadoAndando = await andar([{ x: doc().x + 300, y: doc().y }]);
+          await ator.items.get(d.arma).update({ 'system.equipada': false });
+          await __esperar(() => doc().texture.src === img('parado_270'));
+          // 4. As transições: a do estado (o ferimento, pelo mestre) com a configuração; "nenhuma" troca na hora.
+          // Os updates do movimento (com a troca da imagem): sem transição.
+          lido.movimentos = opcoes.filter(o => o.movimento && o.textura).map(o => o.animacao);
+          opcoes.length = 0;
+          await ator.update({ 'system.hp.value': ator.system.hp.max - 1 });
+          await __esperar(() => doc().texture.src === img('ferido-leve'));
+          // Ferido, andando para a esquerda: o Caminhando a 90 durante; a imagem gravada não muda (a pose de ferido), e no fim
+          // ela volta a ser desenhada.
+          lido.feridoAndando = await andar([{ x: doc().x - 200, y: doc().y }]);
+          await game.settings.set('${S}', 'transicaoDoToken', 'nenhuma');
+          await ator.update({ 'system.hp.value': ator.system.hp.max });
+          await __esperar(() => doc().texture.src === img('parado_270'));
+          lido.transicoes = opcoes.filter(o => o.textura).map(o => o.animacao);
+          return lido;
+        } finally {
+          CONFIG.Token.objectClass.prototype._onAnimationUpdate = original;
+          Hooks.off('updateToken', gancho);
+          await game.settings.set('${S}', 'transicaoDoToken', d.transicao);
+        }
+      })()`);
+      // O que o jogador desenhou no primeiro movimento (o ticker dele), e a limpeza.
+      const doJogador = await jogador.evaluate(`(() => { CONFIG.Token.objectClass.prototype._onAnimationUpdate = window.__c45bOriginal; return window.__c45bQuadros; })()`);
+      await edge.evaluate(`(async () => {
+        const d = window.__c45b;
+        if (d.anterior && game.scenes.has(d.anterior)) await game.scenes.get(d.anterior).activate();
+        await game.scenes.get(d.cena)?.delete();
+        await game.actors.get(d.ator)?.delete();
+        delete window.__c45b;
+        return true;
+      })()`);
+      const img = nome => `teste-c45b/ana_${nome}.svg`;
+      const ok = preparo.classe === 'TokenCPR' && preparo.instancia && jogadorPronto && info.cache
+        && info.andar.quadros.join() === [img('caminhando_090'), img('caminhando_180')].join() && info.andar.fim === img('parado_180') && info.andar.desenhoDoFim && info.andar.desenhado === null
+        && info.armadoAndando.quadros.join() === img('mirando_270') && info.armadoAndando.fim === img('mirando_270')
+        && info.feridoAndando.quadros.join() === img('caminhando_090') && info.feridoAndando.fim === img('ferido-leve') && info.feridoAndando.desenhoDoFim && info.feridoAndando.desenhado === null
+        && doJogador.slice(0, 2).join() === [img('caminhando_090'), img('caminhando_180')].join()
+        && info.transicoes.join('|') === '{"transition":"glitch"}|{"duration":0}'
+        && info.movimentos.length >= 1 && info.movimentos.every(a => JSON.parse(a)?.duration === 0);
+      return [ok, JSON.stringify({ preparo, jogadorPronto, info, doJogador })];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

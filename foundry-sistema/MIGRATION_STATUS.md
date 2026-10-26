@@ -8647,6 +8647,38 @@ Codex (`codex exec`, numa worktree própria a partir do `c1d8b42b`), revisados e
   ator apagado que não desliga o item, M8); a M6 caiu também no G4.
 - **Próximo:** o C46, parte 3 (a tripulação: embarcar, descer, o motorista e mover junto).
 
+### Ciclo 178 (2026-10-25): C45, parte 2, os tokens dinâmicos: o Caminhando no movimento, as transições e a pré-carga (sessão Junin)
+
+- **Decisões do usuário (2026-10-25):** o Caminhando só durante o movimento, na tela de cada um, sem gravar; andando ou
+  mirando, as 8 direções.
+- **O Foundry 14 (no código, 14.369):** na animação do movimento com o giro automático, o `Token` anima o `rotation`
+  trecho a trecho (`#onUpdateAnimation`, o `animate({rotation})` encadeado por trecho, mesmo com o `lockRotation`), e o
+  `Token#_animate` põe os valores animados no próprio documento (`mergeObject(this.document, #animationData)`, linha 2379)
+  e chama o `_onAnimationUpdate` a cada quadro. **Isso explica o achado do ciclo 176:** a textura de uma transição que não
+  acabou fica no `texture.src` preparado; com o Edge sem janela, que atrasa as animações, o token parecia gravado e não
+  preparado.
+- **Entrega:** a classe do token do sistema (`classeDoToken`, sobre o `CONFIG.Token.objectClass`) só acrescenta ao
+  `_onAnimationUpdate` o quadro do movimento: a imagem da pose com `andando` (o Caminhando; armado, o Mirando) na
+  direção do giro daquele quadro, trocando só o desenho (`texture` e `mesh.texture`, quando o quadro muda) e, quando a
+  promessa do movimento acaba, o `redraw` com a imagem gravada. O `preUpdateToken` grava a troca pela direção sem
+  transição (`animation.duration` 0); o `gravarNoToken` usa a configuração do mundo "Token dinâmico: transição" (glitch,
+  esmaecer, holograma ou nenhuma). A pré-carga (`TextureLoader.loader.load`) das imagens dos conjuntos ligados ao salvar
+  (o conjunto em si), no `canvasReady` e no `createToken`. Regras puras novas: `TRANSICOES`, `animacaoDaTroca`,
+  `ANIMACAO_DA_DIRECAO`, `imagensDoConjunto`.
+- **Limites:** o quadro do Caminhando é um só por direção (sem a animação de passos); a pose de ferido, parado, volta no
+  fim do movimento. O vídeo (webm) como quadro não foi testado.
+- **Portões:** G1, 209 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 633/633 (1 teste novo em
+  `tests/sistema/token-dinamico.test.mjs`); G4 completo da árvore integrada, 290/290 em 605 s no Foundry 14.369, sem aviso nem erro do sistema (uma rodada antes deu 289/290: o passo "veículo ator (C46.2), jogador dono" da KouArt, sem o ator do veículo; passou na rodada seguinte, sem mudança), com o passo novo: a classe, a pré-carga, dois trechos
+  (o Caminhando a 90 e depois a 180) no mestre e no jogador (gravados pela atualização da animação nos dois navegadores),
+  a imagem gravada de volta no fim, o Mirando andando armado, a troca da direção sem transição e a do estado com glitch e
+  com nenhuma.
+- **Mutações:** 11 de 12 caíram, restauradas pelo md5: 4 da regra pura (G3) e 7 no Foundry (G4 focado). Sobreviveu o "não volta ao gravado" (o redraw do sistema no fim do movimento): o próprio Foundry redesenha o token no fim da animação do movimento (a última atualização da animação leva a textura), também no movimento ferido em que a imagem gravada não muda, que entrou no passo para isso; o redraw do sistema fica como garantia.
+- **No caminho:** o primeiro jeito de ver o quadro no teste (o ticker do canvas) perdia o primeiro trecho no mestre, com
+  o Edge sem janela; a atualização da animação, não. A pré-carga ao salvar passava pelos tokens do ator, que ainda não
+  existiam: passou a carregar o conjunto em si.
+- **Integração:** a KouArt publicou o ciclo 177 (o C46, parte 2, o veículo como ator, com mudanças no `token-dinamico.mjs`: o veículo recusa o conjunto, a janela e o botão) no meio; o teste dela registra os ganchos do token dinâmico num ambiente sem `game.settings`, e a configuração e a classe do token passaram para um `registrarTelaDoTokenDinamico` à parte, no init. O ciclo passou de 177 para 178.
+- **Próximo:** o cortador da folha (a parte 3).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

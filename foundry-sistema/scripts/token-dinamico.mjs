@@ -1,4 +1,4 @@
-// Os tokens dinâmicos (o C45, parte 1; as regras em regras-token-dinamico.mjs): o conjunto de imagens fica no ator
+// Os tokens dinâmicos (o C45, partes 1 e 2; as regras em regras-token-dinamico.mjs): o conjunto de imagens fica no ator
 // (flags.cpr-fieldbook.tokenDinamico) e vale para todos os tokens dele (o capanga de token solto herda). A imagem escolhida
 // vai para o token (texture.src), e todos veem a mesma:
 // - no movimento e no giro: no mesmo update (o preUpdateToken), com o giro novo que o Foundry 14 pôs nele (o
@@ -8,10 +8,11 @@
 // - no token novo na cena (o preCreateToken).
 // Com o conjunto ligado, a imagem não gira (lockRotation); desligado, o token volta à imagem de antes (a base) e ao giro de
 // antes. O botão "Token dinâmico" do HUD do token (o dono) abre a janela: a pasta (ler os nomes padronizados), a grade das
-// imagens e a calibração dos ângulos da folha.
+// imagens e a calibração dos ângulos da folha. A parte 2: o Caminhando desenhado na tela de cada um durante o movimento, a
+// transição da troca pelo estado (a configuração "Token dinâmico: transição") e a pré-carga das imagens.
 import { SISTEMA } from './config.mjs';
 import { estaseDe } from './cryo.mjs';
-import { CHAVES, chaveDaImagem, conjuntoValido, DIRECOES, imagemDoToken, imagensDaPasta, NOMES_DAS_POSES, POSES_COM_DIRECAO, POSES_SEM_DIRECAO } from './regras-token-dinamico.mjs';
+import { ANIMACAO_DA_DIRECAO, animacaoDaTroca, CHAVES, chaveDaImagem, conjuntoValido, DIRECOES, imagemDoToken, imagensDaPasta, imagensDoConjunto, NOMES_DAS_POSES, POSES_COM_DIRECAO, POSES_SEM_DIRECAO, TRANSICOES } from './regras-token-dinamico.mjs';
 
 export const FLAG_TOKEN_DINAMICO = 'tokenDinamico';
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
@@ -45,11 +46,12 @@ const tokensDo = ator => {
   return [...new Map(vivos.map(token => [token.uuid, token])).values()];
 };
 
-// Grava no token e confere: no G4 completo (2026-10-25), o Foundry 14 gravou a textura (o _source) sem refazer o campo
-// preparado (texture.src ficou com a de antes, sem efeito nem override no ator); o reset refaz, e o token na tela é
-// redesenhado.
+// Grava no token, com a transição escolhida na configuração (a parte 2), e confere: durante uma animação, o Foundry 14 põe
+// os valores animados no próprio documento (o Token#_animate faz o mergeObject do #animationData nele), e a textura de uma
+// transição que não acabou fica no texture.src preparado (visto no G4 completo, com o Edge sem janela, que atrasa as
+// animações); o reset refaz pelo gravado, e o token na tela é redesenhado.
 async function gravarNoToken(token, dados) {
-  await token.update(dados);
+  await token.update(dados, { animation: animacaoDaTroca(game.settings.get(SISTEMA, 'transicaoDoToken')) });
   if (token.texture.src === token._source.texture.src) return;
   token.reset();
   await token.object?.draw?.();
@@ -61,7 +63,7 @@ export async function aplicarNoAtor(ator) {
   const mudados = [];
   for (const token of tokensDo(ator)) {
     const src = imagemPara(token);
-    if (!src || src === token.texture.src || !token.canUserModify(game.user, 'update')) continue;
+    if (!src || src === token._source.texture.src || !token.canUserModify(game.user, 'update')) continue;
     await gravarNoToken(token, { 'texture.src': src });
     mudados.push(token);
   }
@@ -94,6 +96,7 @@ export async function salvarConjunto(ator, dados) {
   const travaAntes = antes ? Boolean(ator.getFlag(SISTEMA, FLAG_TOKEN_DINAMICO)?.travaAntes) : Boolean(ator.prototypeToken.lockRotation);
   const novo = { ...conjuntoValido({ ...dados, base }), travaAntes };
   await ator.update({ [`flags.${SISTEMA}.${FLAG_TOKEN_DINAMICO}`]: novo, 'prototypeToken.lockRotation': novo.ativo ? true : travaAntes, 'prototypeToken.texture.src': novo.ativo ? (imagemDoToken(novo, estadoDoAtor(ator), 0)?.src || base) : base });
+  if (novo.ativo) await preCarregar([], [novo]);
   for (const token of tokensDo(ator)) {
     if (!token.canUserModify(game.user, 'update')) continue;
     await gravarNoToken(token, novo.ativo ? { lockRotation: true, 'texture.src': imagemPara(token) || base } : { lockRotation: travaAntes, 'texture.src': base });
@@ -215,12 +218,81 @@ function botaoNoHud(app, elemento) {
   coluna.append(botao);
 }
 
+// ---------------- A parte 2: o Caminhando na tela, a pré-carga e a transição ----------------
+// O Caminhando: durante a animação do movimento, cada computador desenha o quadro da direção em que o token anda naquele
+// trecho (o giro que o Foundry anima por trecho, no próprio documento, mesmo com o lockRotation), sem gravar nada; armado,
+// o Mirando (a pose manda, como no estado). Acabou o movimento, o token é redesenhado com a imagem gravada. Troca o
+// desenho só quando o quadro muda (o getTexture cria uma textura nova a cada chamada).
+const quadros = new WeakMap();
+const andando = new WeakSet();
+export const quadroDesenhado = token => quadros.get(token) ?? null;
+
+function desenhar(token, src) {
+  if (!src || quadros.get(token) === src || !token.mesh) return;
+  const textura = foundry.canvas.getTexture(src);
+  if (!textura) { foundry.canvas.loadTexture(src).catch(() => null); return; }
+  quadros.set(token, src);
+  token.texture = textura;
+  token.mesh.texture = textura;
+  token.renderFlags.set({ refreshMesh: true, refreshSize: true });
+}
+
+function quadroDoMovimento(token) {
+  const documento = token.document;
+  const conjunto = ativoEm(documento?.actor);
+  if (!conjunto || token.destroyed) return;
+  desenhar(token, imagemDoToken(conjunto, { ...estadoDoAtor(documento.actor), andando: true }, documento.rotation)?.src);
+  if (andando.has(token)) return;
+  andando.add(token);
+  Promise.resolve(token.movementAnimationPromise).catch(() => null).finally(() => {
+    andando.delete(token);
+    if (!quadros.has(token)) return;
+    quadros.delete(token);
+    if (!token.destroyed) token.renderFlags.set({ redraw: true });
+  });
+}
+
+// A classe do token do sistema: só acrescenta o Caminhando à atualização de cada quadro da animação.
+export function classeDoToken(Base) {
+  return class TokenCPR extends Base {
+    _onAnimationUpdate(mudancas, contexto) {
+      super._onAnimationUpdate(mudancas, contexto);
+      if (contexto?.name === this.movementAnimationName) quadroDoMovimento(this);
+    }
+  };
+}
+
+// A pré-carga: as imagens dos conjuntos ligados (os dos tokens dados e os conjuntos dados), para a troca (e o Caminhando)
+// não piscar.
+export async function preCarregar(tokens, conjuntos = []) {
+  const fontes = new Set();
+  for (const conjunto of [...(tokens ?? []).map(token => ativoEm(token?.actor)), ...conjuntos]) {
+    if (conjunto?.ativo) for (const src of imagensDoConjunto(conjunto)) fontes.add(src);
+  }
+  if (fontes.size) await foundry.canvas.TextureLoader.loader.load([...fontes], { displayProgress: false });
+  return [...fontes];
+}
+
+// A configuração da transição e a classe do token (no init, à parte dos ganchos: os testes do G3 registram só os ganchos).
+export function registrarTelaDoTokenDinamico() {
+  game.settings.register(SISTEMA, 'transicaoDoToken', {
+    name: 'Token dinâmico: transição', hint: 'Como a imagem do token dinâmico troca quando o estado muda (a arma, o ferimento, caído, morto). A troca pela direção é sempre na hora.',
+    scope: 'world', config: true, type: String, choices: TRANSICOES, default: 'glitch'
+  });
+  CONFIG.Token.objectClass = classeDoToken(CONFIG.Token.objectClass);
+}
+
 export function registrarTokenDinamico() {
+  Hooks.on('canvasReady', tela => { preCarregar(tela.scene?.tokens).catch(erro => console.warn(`${SISTEMA} | token dinâmico`, erro)); });
+  Hooks.on('createToken', token => { preCarregar([token]).catch(() => null); });
   // O giro do movimento (ou à mão) troca a imagem no mesmo update.
-  Hooks.on('preUpdateToken', (token, mudancas) => {
+  // A troca pela direção é na hora (o movimento já anima o token, e o Caminhando é desenhado por cima).
+  Hooks.on('preUpdateToken', (token, mudancas, opcoes) => {
     if (!('rotation' in mudancas) || foundry.utils.hasProperty(mudancas, 'texture.src')) return;
     const src = imagemPara(token, mudancas.rotation);
-    if (src && src !== token.texture.src) foundry.utils.setProperty(mudancas, 'texture.src', src);
+    if (!src || src === token._source.texture.src) return;
+    foundry.utils.setProperty(mudancas, 'texture.src', src);
+    opcoes.animation = { ...(opcoes.animation ?? {}), ...ANIMACAO_DA_DIRECAO };
   });
   // O token novo na cena já nasce com a imagem certa e em pé.
   Hooks.on('preCreateToken', (token, dados) => {
@@ -234,4 +306,4 @@ export function registrarTokenDinamico() {
   Hooks.on('renderTokenHUD', botaoNoHud);
 }
 
-export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe };
+export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe, preCarregar, quadroDesenhado };

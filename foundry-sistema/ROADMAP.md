@@ -433,7 +433,9 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [x] parte 1, o conjunto de imagens, a escolha da imagem e a gravação no token (ciclo 176, sessão Junin, 2026-10-25):
     a janela no HUD do token (a pasta pelos nomes padronizados, a grade e a calibração), a pose pelo estado com os recuos,
     a imagem no mesmo update do movimento e pelo mestre quando o ator muda; o capanga de token solto herda;
-  - [ ] parte 2, o Caminhando durante o movimento, as transições e a pré-carga;
+  - [x] parte 2, o Caminhando durante o movimento, as transições e a pré-carga (ciclo 178, sessão Junin, 2026-10-25):
+    a classe do token do sistema desenha o quadro de cada trecho na tela de cada um, sem gravar; a direção troca na hora e
+    o estado com a transição da configuração (glitch por padrão); a pré-carga dos conjuntos;
   - [ ] parte 3, o cortador da folha.
 - [ ] **C46. Veículos como atores** (pedido do usuário, 2026-10-25: o veículo com token próprio, como a mesa da wiki do
   master faz no M17). O modelo híbrido: o ator Veículo é a presença na cena (o token, a ficha, o alvo do ataque; o de

@@ -316,8 +316,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     o que muda no ator (o HP, a arma, os estados) troca pelo mestre ativo (sem mestre, por quem mudou). O capanga de token
     solto herda o conjunto do ator. Desligado, o token volta à imagem e ao giro de antes. O retrato da wiki, com o
     conjunto ligado, vira a imagem de antes (a base).
-  - **Ainda não:** o Caminhando durante o movimento, as transições e a pré-carga (a parte 2) e o cortador da folha (a
-    parte 3). Num movimento com vários pontos, vale a direção do último trecho.
+  - **O movimento** (a parte 2, ciclo 178): enquanto o token anda, cada computador desenha o Caminhando da direção de cada
+    trecho (armado, o Mirando), pelo giro que o Foundry anima trecho a trecho, sem gravar nada; no fim, volta a imagem
+    gravada (a do último trecho; parado e ferido, a pose de ferido). A troca pela direção é na hora; a troca pelo estado
+    usa a transição da configuração "Token dinâmico: transição" (padrão: glitch; esmaecer, holograma ou nenhuma). As
+    imagens dos conjuntos são pré-carregadas ao salvar, ao abrir a cena e com o token novo, para não piscar.
+  - **Ainda não:** o cortador da folha (a parte 3).
 - **Painel Tático** (o módulo painel-tatico da mesa, dentro do sistema; o C25, ciclo 125): a barra na base da tela com o
   token controlado (ou, sem nenhum, o personagem do jogador):
   - **o retrato grande** do personagem, um PNG para cada estado de ferimento (Sem ferimentos, Levemente, Gravemente,

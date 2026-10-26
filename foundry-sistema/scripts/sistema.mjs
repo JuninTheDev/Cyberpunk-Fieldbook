@@ -128,6 +128,7 @@ Hooks.once('init', () => {
   estabilizacao.registrarEstabilizar();
   game.system.api.estabilizacao = estabilizacao;
   // Os tokens dinâmicos (o C45): a imagem do token pela direção e pelo estado, o botão do HUD e a janela do conjunto.
+  tokenDinamico.registrarTelaDoTokenDinamico();
   tokenDinamico.registrarTokenDinamico();
   game.system.api.tokenDinamico = tokenDinamico.API;
   game.system.api.vinculoVeiculo = vinculoVeiculo;

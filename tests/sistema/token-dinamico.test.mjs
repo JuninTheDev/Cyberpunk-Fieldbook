@@ -4,7 +4,7 @@
 // Uso: node --test "tests/sistema/*.test.mjs"
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CHAVES, chaveDoArquivo, conjuntoValido, direcaoDaArte, imagemDoToken, imagensDaPasta, poseDoToken } from '../../foundry-sistema/scripts/regras-token-dinamico.mjs';
+import { ANIMACAO_DA_DIRECAO, animacaoDaTroca, CHAVES, chaveDoArquivo, conjuntoValido, direcaoDaArte, imagemDoToken, imagensDaPasta, imagensDoConjunto, poseDoToken, TRANSICOES } from '../../foundry-sistema/scripts/regras-token-dinamico.mjs';
 
 test('Token dinâmico: a pose pelo estado, na ordem das decisões (morto, incapacitado, caído, mirando, caminhando, ferido, parado)', () => {
   assert.equal(poseDoToken({}), 'parado');
@@ -82,4 +82,19 @@ test('Token dinâmico: o conjunto guardado é sempre completo e com a calibraç�
   assert.equal(c.imagens.lixo, undefined);
   assert.equal(Object.keys(c.imagens).length, CHAVES.length);
   assert.deepEqual(conjuntoValido({ angulos: { inicio: '270', sentido: 'antihorario' } }).angulos, { inicio: 270, sentido: 'antihorario' });
+});
+
+test('Token dinâmico (a parte 2): a transição da troca pelo estado, a da direção na hora, e as imagens da pré-carga', () => {
+  assert.deepEqual(animacaoDaTroca('glitch'), { transition: 'glitch' });
+  assert.deepEqual(animacaoDaTroca('hologram'), { transition: 'hologram' });
+  assert.deepEqual(animacaoDaTroca('fade'), { transition: 'fade' });
+  assert.deepEqual(animacaoDaTroca('nenhuma'), { duration: 0 });
+  // Uma escolha que não existe mais volta ao padrão (glitch).
+  assert.deepEqual(animacaoDaTroca('antiga'), { transition: 'glitch' });
+  assert.deepEqual(Object.keys(TRANSICOES), ['glitch', 'fade', 'hologram', 'nenhuma']);
+  assert.deepEqual(ANIMACAO_DA_DIRECAO, { duration: 0 });
+  // A pré-carga: as imagens do conjunto, sem vazias e sem repetir.
+  const c = conjuntoValido({ imagens: { 'parado-0': 'a.webp', 'parado-90': 'a.webp', 'caminhando-90': 'b.webp', morto: ' c.webp ', 'mirando-0': '' } });
+  assert.deepEqual(imagensDoConjunto(c), ['a.webp', 'b.webp', 'c.webp']);
+  assert.deepEqual(imagensDoConjunto(null), []);
 });

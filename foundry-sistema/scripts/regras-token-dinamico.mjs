@@ -110,3 +110,12 @@ export function conjuntoValido(dados = {}) {
   const sentido = dados?.angulos?.sentido === 'antihorario' ? 'antihorario' : 'horario';
   return { ativo: Boolean(dados?.ativo), pasta: String(dados?.pasta ?? '').trim(), base: String(dados?.base ?? '').trim(), angulos: { inicio, sentido }, imagens };
 }
+
+// A transição da troca de imagem pelo estado (a parte 2): os filtros do Foundry 14 (o TextureTransitionFilter); "nenhuma"
+// troca na hora. A troca pela direção é sempre na hora (o movimento já anima o token).
+export const TRANSICOES = { glitch: 'Glitch', fade: 'Esmaecer', hologram: 'Holograma', nenhuma: 'Nenhuma (troca na hora)' };
+export const animacaoDaTroca = escolha => (escolha === 'nenhuma' ? { duration: 0 } : { transition: Object.hasOwn(TRANSICOES, escolha) ? escolha : 'glitch' });
+export const ANIMACAO_DA_DIRECAO = { duration: 0 };
+
+// As imagens do conjunto, sem repetir (a pré-carga, para a troca não piscar).
+export const imagensDoConjunto = conjunto => [...new Set(CHAVES.map(chave => imagem(conjunto?.imagens, chave)).filter(Boolean))];
