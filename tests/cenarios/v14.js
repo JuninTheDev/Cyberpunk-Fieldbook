@@ -19277,6 +19277,52 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('o Black Chrome (o C48, parte 1): os três compêndios (82, 42 e 55 itens); o personagem da wiki com itens do Black Chrome entra inteiro, sem aviso; o pedido do Black Chrome (o ChipVault e 50 balas sucata, 110eb) é entregue', async () => {
+      const { personagem } = await api('/api/personagens', 'POST', {
+        nome: 'Teste Black Chrome', apelido: 'C48', resultado: {
+          stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 6 }, derivados: { hp: 40 }, humanidade: { atual: 60 }, dinheiro: { saldo: 2000 },
+          pericias: [], veiculos: [],
+          itens: [
+            { uid: 'bc:0', id: 'black-chrome_weapons:gunmart-special', nome: 'GunMart Special', qtd: 1 }, { uid: 'bc:1', id: 'dlc_black-chrome-plus:heavy-pistol-junk', nome: 'Munição sucata', qtd: 50 },
+            { uid: 'bc:2', id: 'black-chrome_cyberware:modular-finger-cyberhand', nome: 'Mão modular', qtd: 1 }, { uid: 'bc:3', id: 'black-chrome_armor:dirk-combat-jacket', nome: 'Dirk', qtd: 1 },
+            { uid: 'bc:4', id: 'black-chrome_clothing:masetto-holo-wear', nome: 'Masetto', qtd: 1 }
+          ]
+        }
+      });
+      // O endereço da wiki de teste (o passo da importação o põe; aqui também, para o passo valer sozinho).
+      await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)}).then(() => true)`);
+      const info = await edge.evaluate(`(async () => {
+        const tamanhos = [];
+        for (const nome of ['black-chrome-armas', 'black-chrome-cyberware', 'black-chrome-equipamento']) tamanhos.push((await game.packs.get('${S}.' + nome)?.getIndex())?.size ?? null);
+        const { ator, notas } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(personagem.id)}, '');
+        try {
+          const itens = ator.items.map(i => [i.type, i.name, i.system.quantidade ?? 1].join(':')).sort();
+          return { tamanhos, notas, itens, dinheiro: ator.system.dinheiro };
+        } catch (erro) { return { tamanhos, notas, erro: erro.message }; }
+      })()`);
+      const { pedido } = await api(`/api/personagens/${personagem.id}/pedidos`, 'POST', { itens: [{ id: 'black-chrome_gear:chipvault-by-secsystems', qtd: 1 }, { id: 'dlc_black-chrome-plus:heavy-pistol-junk', qtd: 50 }] });
+      await api(`/api/personagens/${personagem.id}/pedidos/${pedido.id}/aprovar`, 'POST', {});
+      const entrega = await edge.evaluate(`(async () => {
+        const a = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === ${JSON.stringify(personagem.id)});
+        const info = ui.notifications.info, warn = ui.notifications.warn;
+        ui.notifications.info = () => {}; ui.notifications.warn = () => {};
+        try { await game.system.api.wiki.entregarPedidos(); } finally { ui.notifications.info = info; ui.notifications.warn = warn; }
+        const sucata = a.items.filter(i => i.name === 'Heavy Pistol (Junk)');
+        const lido = {
+          dinheiro: a.system.dinheiro, chipvault: a.items.filter(i => i.name === 'ChipVault by SecSystems').length, sucata: sucata.map(i => i.system.quantidade),
+          // O lote de 50 do pacote do CORE: a unidade sai por 10 / 50.
+          unidade: sucata.map(i => game.system.api.regras.precoDaUnidade('municao', i.system))
+        };
+        await a.delete();
+        return lido;
+      })()`);
+      const status = (await api(`/api/personagens/${personagem.id}`)).personagem.pedidos.find(p => p.id === pedido.id)?.status;
+      const ok = info.tamanhos.join() === '82,42,55' && !info.erro && !info.notas.some(n => /ainda não existe/.test(n))
+        && info.itens.join(' | ') === 'arma:GunMart Special:1 | armadura:Dirk Combat Jacket:1 | cyberware:Modular Finger Cyberhand:1 | municao:Heavy Pistol (Junk):50 | roupa:Masetto Holo-Wear:1'
+        && entrega.dinheiro === info.dinheiro - 110 && entrega.chipvault === 1 && entrega.sucata.reduce((a, b) => a + b, 0) === 100 && entrega.unidade.length && entrega.unidade.every(u => u === 0.2) && status === 'entregue';
+      return [ok, JSON.stringify({ info, entrega, status })];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

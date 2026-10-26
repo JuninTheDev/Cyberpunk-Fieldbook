@@ -3,8 +3,9 @@
 // Uso: node build/conteudo.mjs
 // Na primeira vez baixa os compêndios-fonte (YAML) da tag do GitLab para .cache/; o js-yaml vem da CDN (sem npm).
 // Saída:
-//   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"), e os Black ICE da tabela
-//                        da wiki como programas ("black-ice:hellhound");
+//   dados/catalogo.json  os itens, pelo mesmo id da loja da wiki ("core_weapons:assault-rifle"; os do Black Chrome,
+//                        "black-chrome_weapons:..." e "dlc_black-chrome-plus:..."), e os Black ICE da tabela da wiki
+//                        como programas ("black-ice:hellhound");
 //   scripts/gerado.mjs   as perícias (com os nomes em português da wiki), as tabelas de DV, as Roles de 2077 com as
 //                        habilidades (do criador de personagens da wiki), os Black ICE e demônios (das regras da wiki)
 //                        e as tabelas de andares da NET (do CORE).
@@ -337,10 +338,12 @@ function armadura(doc, s) {
     }
   };
 }
+// O lote é o pacote do CORE, e o preço é o dele: 10 balas, 1 granada, 8 baterias; no Black Chrome, a munição sucata em
+// 50, a de caça pequena em 100 e as de arma própria (a rede, o ácido) em 1.
 function municao(doc, s) {
   return {
     name: doc.name, type: 'municao', img: 'icons/svg/barrel.svg',
-    system: { descricao: s.description?.value || '', tipo: s.variety || '', efeito: s.type || 'basic', quantidade: Number(s.amount) || 0, ablacao: Number(s.ablationValue ?? 1), preco: Number(s.price?.market) || 0, fonte: fonteDo(s) }
+    system: { descricao: s.description?.value || '', tipo: s.variety || '', efeito: s.type || 'basic', quantidade: Number(s.amount) || 0, lote: Number(s.amount) || 0, ablacao: Number(s.ablationValue ?? 1), preco: Number(s.price?.market) || 0, fonte: fonteDo(s) }
   };
 }
 // Os slots de opção das fundações pela wiki (system-catalog.js), onde ela diz; nas outras, os do CORE (installedItems).
@@ -473,7 +476,12 @@ const CONVERSORES = {
   'core/weapons': arma, 'core/armor': armadura, 'core/ammo': municao, 'core/cyberware': cyberware,
   'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao,
   'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga, 'core/programs': programa, 'core/upgrades': upgrade,
-  'core/vehicles': veiculo
+  'core/vehicles': veiculo,
+  // O Black Chrome (o C48): os pacotes do livro e o Black Chrome Plus (o DLC grátis, com tipos misturados). Os veículos
+  // ficam para a parte deles (o tipo de cada um e o Acesso Nômade).
+  'black-chrome/weapons': arma, 'black-chrome/armor': armadura, 'black-chrome/ammo': municao, 'black-chrome/cyberware': cyberware,
+  'black-chrome/gear': doPackDeEquipamento, 'black-chrome/clothing': roupa, 'black-chrome/upgrades': upgrade,
+  'dlc/black-chrome-plus': (doc, s) => ({ weapon: arma, armor: armadura, ammo: municao, gear: equipamento, drug: droga })[doc.type]?.(doc, s) ?? null
 };
 
 // Tabelas de Lesão Crítica (2d6): faixas [mín, máx, id do item no catálogo], uma do corpo e uma da cabeça.
@@ -525,7 +533,7 @@ async function main() {
   const semTipo = [];
   const contagem = {};
   for (const [pack, converter] of Object.entries(CONVERSORES)) {
-    const curto = `core_${pack.split('/')[1]}`;
+    const curto = pack.replace('/', '_');
     for (const doc of lerPack(yaml, pack)) {
       const item = converter(doc, doc.system || {}, foraDoMapa);
       if (!item) { semTipo.push(`${doc.name} (${doc.type})`); continue; }

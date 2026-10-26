@@ -8861,6 +8861,36 @@ completo.
   branch sem o C47 deu 301/301 numa rodada.
 - **Mutações:** as 12 caíram (R1 a R7 no G3; S1, S2, S3, S5 e S6 no G4). R4 sobreviveu na primeira rodada (faltava o caso da arma de 2 slots, que também é exótica) e caiu com ele.
 
+### Ciclo 183 (2026-10-26): C48 parte 1, os itens do Black Chrome (sessão Junin)
+
+- **Pedido do usuário (2026-10-26):** "Os 176 itens do Black Chrome como conteúdo de compêndio", com as regras novas
+  (decisão do usuário: os itens e as regras, um ciclo por parte). Até aqui, o importador e os pedidos avisavam ("ainda
+  não existe neste sistema") e não entregavam.
+- **Fontes:** os pacotes do CORE 0.92.4 (`black-chrome/*` e `dlc/black-chrome-plus`, a mesma tag e o mesmo commit
+  conferido do build), a loja da wiki (`loja-catalogo.js`: os 176 com a etiqueta `blackchrome` e o id do CORE) e as
+  páginas da wiki (`system-blackchrome.js`).
+- **Entrega:** o build (`build/conteudo.mjs`) lê os pacotes do Black Chrome com os conversores de sempre (o Black Chrome
+  Plus, de tipos misturados, pelo tipo de cada documento), e o id curto sai do caminho do pacote (`black-chrome_weapons:`,
+  `dlc_black-chrome-plus:`), que é o da loja: os 176 batem sem mapa. São 179 itens (os três fora da loja: os outros dois
+  modos da ModFire e as pedras da funda). Três compêndios novos, na pasta do sistema: Armas do Black Chrome (82, com a
+  munição e os acessórios), Cyberware do Black Chrome (42) e Moda e equipamento do Black Chrome (55). A munição ganhou o
+  `lote` (o pacote do CORE), e o preço da unidade sai dele: a sucata em 50, a caça pequena em 100, a rede e o ácido em 1;
+  a sem lote, de antes, segue pela variedade. Os cinco cyberwares do Black Chrome que são arma (a espingarda e o
+  lança-redes embutidos, três cyberdedos) trazem a arma, como os do CORE.
+- **Limites:** as regras próprias ficam para as partes 2 e 3 (a Combinação, o dano direto no HP, a sucata, a Pepper
+  Shaker, os cyberdedos, os quadros lineares), e os 31 veículos para a 4 (o tipo de cada um não vem do CORE). Até lá,
+  o efeito que não é automático fica no texto do item. A droga do Black Chrome Plus não tem a duração das do CORE.
+- **Portões:** G1, 259 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 687 testes, 0 falhas (3 testes novos em
+  `tests/sistema/blackchrome.test.mjs`: a contagem por pacote, os 176 da loja, os compêndios e o manifesto, o lote; e os
+  testes da loja inteira e das armas do cyberware passam a contar com o Black Chrome); G4 completo, 303/303 em 629 s, com o passo
+  novo: os três compêndios com 82, 42 e 55; o personagem da wiki com itens do Black Chrome importado sem aviso; o pedido
+  do ChipVault e de 50 balas sucata entregue, com 110eb e a unidade a 0,2eb. Na primeira rodada (302/303), o passo novo
+  falhou pela ordem esperada da lista ("arma:" vem antes de "armadura:"); corrigida, e com o endereço da wiki posto no
+  próprio passo para valer sozinho, 12/12 focado e 303/303 completo.
+- **Mutações:** as 8 caíram: B1 a B7 no G3 (o preço sem o lote, o lote de 1 na munição sem lote, o Black Chrome Plus, a droga e o
+  Black Chrome no compêndio de armas do livro, o compêndio fora da pasta e sem caminho) e S1 no G4 (o lote fora do modelo
+  de dados: a sucata entregue sai a 1eb a unidade).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

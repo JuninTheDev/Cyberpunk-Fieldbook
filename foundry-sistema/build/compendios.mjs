@@ -42,13 +42,20 @@ function documentoDeItem(id, { ator = null, mudar = null } = {}) {
 // Cada compêndio de itens: a origem (o prefixo do id no catálogo, ou uma lista deles) e os tipos que entram nele. O
 // conteúdo de 2077 fica nos compêndios dele: as armas com os Rebuilds e a munição Smart melhorada do Mission Kit, e o
 // cyberware com a droga do Kit (Immunoblockers), como no cpr-2077. Os Black ICE da tabela da wiki (o Black ICE próprio do
-// netrunner) entram no de Netrunning.
-const PACKS_DE_ITENS = {
+// netrunner) entram no de Netrunning. O Black Chrome (o C48, com o Black Chrome Plus) fica em três, como as páginas da
+// wiki: armas (com a munição e os acessórios), cyberware, e moda e equipamento.
+const BLACK_CHROME = ['black-chrome_', 'dlc_black-chrome-plus:'];
+export const PACKS_DE_ITENS = {
   armas: ['core_', ['arma']], armaduras: ['core_', ['armadura']], municao: ['core_', ['municao']], cyberware: ['core_', ['cyberware']],
   equipamento: ['core_', ['equipamento']], roupas: ['core_', ['roupa']], drogas: ['core_', ['droga']], netrunning: [['core_', 'black-ice:'], ['cyberdeck', 'programa']],
   upgrades: ['core_', ['upgrade']], veiculos: ['core_', ['veiculo']], lesoes: ['core_', ['lesao']],
-  'armas-2077': ['armas-2077:', ['arma', 'municao', 'upgrade']], 'cyberware-2077': ['cyberware-2077:', ['cyberware', 'droga']], 'netrunning-2077': ['netrunning-2077:', ['cyberdeck', 'programa']]
+  'armas-2077': ['armas-2077:', ['arma', 'municao', 'upgrade']], 'cyberware-2077': ['cyberware-2077:', ['cyberware', 'droga']], 'netrunning-2077': ['netrunning-2077:', ['cyberdeck', 'programa']],
+  'black-chrome-armas': [BLACK_CHROME, ['arma', 'municao', 'upgrade']], 'black-chrome-cyberware': [BLACK_CHROME, ['cyberware']],
+  'black-chrome-equipamento': [BLACK_CHROME, ['armadura', 'roupa', 'equipamento', 'droga']]
 };
+// Os ids do catálogo que entram em cada compêndio de itens.
+export const idsDosPacks = () => Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, [prefixo, tipos]]) => [nome,
+  Object.entries(catalogo).filter(([id, item]) => [prefixo].flat().some(p => id.startsWith(p)) && tipos.includes(item.type)).map(([id]) => id)]));
 
 // ---------------- Personagens de exemplo ----------------
 // Armas com o pente cheio da munição da ficha (a quantidade de munição na lista é o que sobra), armaduras vestidas e
@@ -130,7 +137,7 @@ function fvtt(args) {
 
 export function gerar() {
   const fonte = fs.mkdtempSync(path.join(os.tmpdir(), 'cpr-fieldbook-packs-'));
-  const packs = Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, [prefixo, tipos]]) => [nome, Object.entries(catalogo).filter(([id, item]) => [prefixo].flat().some(p => id.startsWith(p)) && tipos.includes(item.type)).map(([id]) => documentoDeItem(id))]));
+  const packs = Object.fromEntries(Object.entries(idsDosPacks()).map(([nome, ids]) => [nome, ids.map(id => documentoDeItem(id))]));
   packs.exemplos = EXEMPLOS;
   packs.arquiteturas = [...arquiteturasDaCampanha(path.join(raiz, '..')), ...ARQUITETURAS_DE_EXEMPLO].map(documentoDeArquitetura);
   fs.rmSync(packsDir, { recursive: true, force: true });

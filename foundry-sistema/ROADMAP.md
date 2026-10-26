@@ -12,8 +12,9 @@ de compêndio; entram só as partes do sistema.
 - **Fontes:** o código do CORE 0.92.4 que a mesa usa (`cyberpunk-red-core/modules` no master) e a comparação do ciclo 22.
 - **As listas P0 a P4** mais abaixo ficam como histórico. Os itens abertos delas apontam para os deste plano (→ Cn).
 - **Fora deste plano:**
-  - o conteúdo dos compêndios do CORE: Black Chrome, DLCs, NPCs, arquiteturas e macros (as funções do sistema para eles,
-    como o capanga, a arquitetura e as macros, estão no plano: C2, C7, C8 e C20);
+  - o conteúdo dos compêndios do CORE: DLCs, NPCs, arquiteturas e macros (as funções do sistema para eles, como o
+    capanga, a arquitetura e as macros, estão no plano: C2, C7, C8 e C20);
+  - (voltou ao plano) o Black Chrome: entra no plano desde 2026-10-26 (pedido do usuário), o C48;
   - (voltou ao plano) as armas de 2077 pelo Mission Kit: adiadas pelo usuário em 2026-10-12, entram no plano desde
     2026-10-17 (decisão do usuário, com a "regra só na mesa" da wiki): o C29, parte das armas de 2077.
 
@@ -466,6 +467,15 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   (convertidos do CORE, `black-chrome_*` e `dlc_black-chrome-plus`), a importação e os pedidos entregando, e as regras
   novas que eles pedem (dano direto no HP, Combinação, cyberdedos, Linear Frames...), um ciclo por parte. Decisão do
   usuário: os itens e as regras.
+  - [x] Parte 1, os itens: feita no ciclo 183 (sessão Junin, 2026-10-26): os 179 itens dos pacotes do CORE no
+    catálogo (os 176 da loja e três fora dela), três compêndios (armas, cyberware, moda e equipamento), a importação
+    e os pedidos entregando, e o lote da munição (a sucata em 50, a caça pequena em 100).
+  - [ ] Parte 2, as armas: a Combinação (um modo por arma, sem gastar Ação; emperrar num não emperra o outro), o dano
+    direto no HP, as de arremesso que dividem o SP e as de CDT 2, a munição sucata (−1d6 em quem tem SP 1 ou mais), a
+    Pepper Shaker (só autofogo e supressivo, 6 balas) e os explosivos.
+  - [ ] Parte 3, o cromo: os cyberdedos na mão modular (5 e 8 dedos), os quadros lineares (internos e externos) e a
+    aparência de moda da armadura (Guarda-roupa e Estilo DV13, Percepção DV15).
+  - [ ] Parte 4, os veículos: os 31 do CORE com o tipo de cada um, o "não aceita o upgrade" e o Acesso Nômade.
 - [~] **C49. Ícones próprios** (sessão Junin, 2026-10-26; depois do C48): os estados no token (os do sistema e os do
   Foundry), os botões do HUD e da ficha e as imagens padrão dos itens, no estilo neon de 2077 (traço fino em ciano,
   vermelho e amarelo, com brilho; decisão do usuário).
@@ -606,10 +616,9 @@ No fim de tudo, uma sessão de teste com a mesa.
   - o endereço da wiki deduzido de `mesa.<domínio>`, como o cpr-2077;
   - só o ator ligado ao personagem entrega pedidos e manda a ficha (a wiki recusa o "ator antigo");
   - o pacote das cenas: as cenas, os diários e as playlists do mundo do Foundry 12 num módulo, com os arquivos.
-- [ ] **Black Chrome** (conteúdo: fora do plano de paridade) (bloqueador da migração para quem tiver os itens): os 176 itens da loja.
-  - Converter dos compêndios do CORE (`black-chrome_*` e `dlc_black-chrome-plus`): armas com Combinação, cyberdedos, Linear Frames, moda, equipamento e veículos.
-  - Mais as regras novas (dano direto no HP, Combinação).
-  - Hoje o importador e os pedidos avisam e não entregam.
+- [~] **Black Chrome** (conteúdo: fora do plano de paridade): os 176 itens da loja. Agora é o C48 (pedido do usuário de
+  2026-10-26), em partes: os itens entram desde o ciclo 183 (a importação e os pedidos entregam); as regras e os
+  veículos são as partes 2 a 4.
 - [x] **Inventário:** (C16, ciclo 124) usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da
@@ -769,7 +778,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [x] **NPCs:** (→ C2 e C7, feitos nos ciclos 36 e 37 e 43 a 46) ficha de capanga (mook), Black ICE e demônios como atores.
 - [ ] **Ferramentas do mestre:** (→ C24 e C25) o Painel Tático dentro do sistema (feito no ciclo 125); o contêiner do CORE (loja, saque e esconderijo, com
   o registro das trocas).
-- [ ] **Conteúdo fora do livro básico:** (conteúdo: fora do plano de paridade) o Black Chrome e os DLCs do CORE 0.92.4, as tabelas de arquitetura da NET e as
+- [ ] **Conteúdo fora do livro básico:** (conteúdo: fora do plano de paridade) os DLCs do CORE 0.92.4 (o Black Chrome é o C48), as tabelas de arquitetura da NET e as
   macros e cenas do CORE. A loja da wiki não vende esses itens; se o mestre deu algum no Foundry 12, a migração avisa
   item a item. Converter o que a mesa usar.
 

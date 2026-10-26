@@ -301,6 +301,39 @@
       }
     },
     {
+      "name": "black-chrome-armas",
+      "label": "Armas do Black Chrome",
+      "path": "packs/black-chrome-armas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "black-chrome-cyberware",
+      "label": "Cyberware do Black Chrome",
+      "path": "packs/black-chrome-cyberware",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "black-chrome-equipamento",
+      "label": "Moda e equipamento do Black Chrome",
+      "path": "packs/black-chrome-equipamento",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
       "name": "lesoes",
       "label": "Lesões críticas",
       "path": "packs/lesoes",
@@ -353,6 +386,9 @@
         "armas-2077",
         "cyberware-2077",
         "netrunning-2077",
+        "black-chrome-armas",
+        "black-chrome-cyberware",
+        "black-chrome-equipamento",
         "lesoes",
         "exemplos",
         "arquiteturas"

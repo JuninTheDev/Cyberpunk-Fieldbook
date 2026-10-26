@@ -327,6 +327,8 @@ export class DadosMunicao extends foundry.abstract.TypeDataModel {
       tipo: texto(),
       efeito: texto('basic'),
       quantidade: inteiro(0, { min: 0 }),
+      // O pacote em que o preço vale (o C48; 0 = o da variedade, regras.precoDaUnidade).
+      lote: inteiro(0, { min: 0 }),
       ablacao: inteiro(1, { min: 0 }),
       // CORE 0.93, ammo-datamodel.js:60-86: só a munição que pede substitui o crítico da arma.
       critico: new fields.SchemaField({

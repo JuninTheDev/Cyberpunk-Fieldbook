@@ -231,8 +231,9 @@ test('Catálogo: todo item da loja da wiki dos tipos que o sistema tem (armas, a
 });
 
 // Armas exóticas sem dano no CORE: o efeito delas é especial (a Shrieker dá lesão no ouvido; a Air Pistol dispara tinta
-// ou ácido) e não é automático nem no CORE.
-const SEM_DANO = ['core_weapons:air-pistol', 'core_weapons:microwaver', 'core_weapons:shrieker'];
+// ou ácido) e não é automático nem no CORE. A Pepper Shaker do Black Chrome só faz autofogo (o dano dele, 2d6 × o que
+// passou), e o CORE a traz com dano 0; o "só autofogo, 6 balas" é regra do C48.
+const SEM_DANO = ['core_weapons:air-pistol', 'core_weapons:microwaver', 'core_weapons:shrieker', 'black-chrome_weapons:federated-arms-pepper-shaker'];
 test('Catálogo: a ablação da munição segue a tabela de munição da wiki (perfurante 2; borracha, biotoxina e venenosa 0)', () => {
   // As linhas da tabela "Munição" de system-catalog.js: o tipo e o que ele faz.
   const texto = fs.readFileSync(path.join(raiz, 'system-catalog.js'), 'utf8');
@@ -424,10 +425,9 @@ test('Catálogo de 2077: todo item que a loja da wiki vende existe, com os núme
   }
 });
 
-test('Loja inteira: o que a loja da wiki vende e o sistema ainda não tem é só o Black Chrome (pendente no ROADMAP)', () => {
-  const faltam = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => !catalogo[item.id]);
-  const foraDoBlackChrome = faltam.filter(item => !Array.from(item.tags || []).includes('blackchrome')).map(item => item.id);
-  assert.deepEqual(foraDoBlackChrome, [], 'itens fora do Black Chrome que o importador recusaria');
+test('Loja inteira: tudo o que a loja da wiki vende existe no sistema, o Black Chrome também (o C48)', () => {
+  const faltam = Array.from(daWiki('loja-catalogo.js', 'shopCatalog').itens).filter(item => !catalogo[item.id]).map(item => item.id);
+  assert.deepEqual(faltam, [], 'itens que o importador e os pedidos recusariam');
 });
 
 test('Mission Kit: o Neuroport é base, os Rebuilds ocupam 2 slots, a munição Smart melhorada é Smart e os quickhacks do Kit não se compram', () => {

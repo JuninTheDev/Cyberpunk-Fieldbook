@@ -423,9 +423,10 @@ export const parteValida = (quantidade, pilha) => Number.isInteger(quantidade) &
 export const parteSugerida = pilha => Math.ceil(pilha / 2);
 // O preço de uma unidade no contêiner: a munição tem o preço por lote, como na loja da wiki ("Preço por 10"; a granada
 // e o foguete, "por unidade"; a bateria, "por 8"). O CORE divide por 10 toda munição que não é granada nem foguete (RED
-// p. 344); a bateria fica pela wiki. O resto, o preço do item.
+// p. 344); a bateria fica pela wiki. A munição com o lote dela (o pacote do CORE: a sucata do Black Chrome em 50, a de
+// caça pequena em 100) divide por ele; a sem lote (de antes do C48), pela variedade. O resto, o preço do item.
 export const LOTE_DA_MUNICAO = { grenade: 1, rocket: 1, battery: 8 };
-export const precoDaUnidade = (tipo, { preco = 0, tipo: variedade = '' } = {}) => (tipo === 'municao' ? Number(preco) / (LOTE_DA_MUNICAO[variedade] ?? 10) : Number(preco));
+export const precoDaUnidade = (tipo, { preco = 0, tipo: variedade = '', lote = 0 } = {}) => (tipo === 'municao' ? Number(preco) / (Number(lote) || (LOTE_DA_MUNICAO[variedade] ?? 10)) : Number(preco));
 // O número em eb, como a wiki escreve (1.000; 6,25).
 const emEb = valor => (Math.round(valor * 100) / 100).toLocaleString('pt-BR');
 // A categoria do preço (RED p. 385, como a wiki resume no glossário): a maior faixa até o preço. Abaixo de 10eb não há

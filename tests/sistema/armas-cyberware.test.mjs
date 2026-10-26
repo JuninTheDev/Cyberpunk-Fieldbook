@@ -12,12 +12,18 @@ const doCatalogo = (id, _id = 'cyber1') => ({ ...structuredClone(catalogo[id]), 
 // CORE 0.92.4, os packs core/cyberware: os doze com isWeapon, e os campos do attackable e do loadable de cada um.
 const resumo = id => { const a = catalogo[id].system.arma; return [a.tipo, a.pericia, a.dano, a.cdt, a.aDistancia, a.pente, a.ignorarArmadura, a.ocultavel].join(' '); };
 
-test('Catálogo: os doze cyberwares que são arma no CORE e os quatro do Kit trazem a arma (o tipo, a perícia, o dano, o CDT, o pente); nenhum outro', () => {
+test('Catálogo: os doze cyberwares que são arma no CORE, os cinco do Black Chrome e os quatro do Kit trazem a arma (o tipo, a perícia, o dano, o CDT, o pente); nenhum outro', () => {
   const comArma = Object.entries(catalogo).filter(([, item]) => item.type === 'cyberware' && item.system.arma?.ataca).map(([id]) => id).sort();
   assert.deepEqual(comArma, [
+    ...['dartgun-cyberfinger', 'one-shot-special-cyberfinger', 'popup-net-launcher', 'popup-shotgun', 'wirecutter-scissors-cyberfingers'].map(nome => `black-chrome_cyberware:${nome}`),
     ...['big-knucks', 'cybersnake', 'dartgun', 'popup-grenade-launcher', 'popup-melee-weapon', 'popup-ranged-weapon', 'rippers', 'scratchers', 'slice-n-dice', 'talon-foot', 'vampyres', 'wolvers'].map(nome => `core_cyberware:${nome}`),
     ...['gorilla-arm', 'mantis-blade', 'monowire', 'projectile-launch-system'].map(nome => `cyberware-2077:${nome}`)
   ]);
+  // Do Black Chrome (a wiki, system-blackchrome.js): a espingarda embutida com 2 tiros no pente; o One Shot Special, uma
+  // pistola pesada exótica de 1 tiro; os cyberdedos alicate/tesoura, uma arma branca leve.
+  assert.equal(resumo('black-chrome_cyberware:popup-shotgun'), 'shotgun shoulder-arms 5d6 1 true 2 0 false');
+  assert.equal(resumo('black-chrome_cyberware:one-shot-special-cyberfinger'), 'heavyPistol handgun 3d6 2 true 1 0 true');
+  assert.equal(resumo('black-chrome_cyberware:wirecutter-scissors-cyberfingers'), 'lightMelee melee-weapon 1d6 2 false 0 50 true');
   // Wolvers (p. 366): arma branca pesada, 3d6, ROF 2; a arma branca ignora metade do SP (o ignoreArmorPercent do CORE).
   assert.equal(resumo('core_cyberware:wolvers'), 'heavyMelee melee-weapon 3d6 2 false 0 50 false');
   // Big Knucks: arma branca média pela Briga, como o CORE.
