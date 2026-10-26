@@ -457,6 +457,19 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     vidros, a cobertura), como a mesa da wiki;
   - [x] parte 4, o resto pelo ator: feito no ciclo 181 (sessão KouArt, com um worker, 2026-10-26): as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
     C44 pelo MOVE dele.
+**Pedidos do usuário de 2026-10-26** (fora da comparação com o CORE; ordem dele: C47, C48, C49):
+- [~] **C47. O Rebuild do Mission Kit** (sessão Junin, 2026-10-26) (Kit p. 31–32; `system-2077.js`, Rebuilds): as armas de
+  2077 já seguem o Kit (o C29, ciclos 110 a 116); falta o Rebuild, o acessório de 1.000eb e 2 slots que transforma uma
+  arma de fogo do RED em Power, Smart ou Tech (só um por arma; não em arma exótica, que o leva num slot só se tiver um
+  livre; o Tech não serve em lança-granadas nem em lança-foguetes; 1 hora para pôr ou tirar).
+- [~] **C48. O Black Chrome no sistema** (sessão Junin, 2026-10-26; depois do C47): os 176 itens da loja nos compêndios
+  (convertidos do CORE, `black-chrome_*` e `dlc_black-chrome-plus`), a importação e os pedidos entregando, e as regras
+  novas que eles pedem (dano direto no HP, Combinação, cyberdedos, Linear Frames...), um ciclo por parte. Decisão do
+  usuário: os itens e as regras.
+- [~] **C49. Ícones próprios** (sessão Junin, 2026-10-26; depois do C48): os estados no token (os do sistema e os do
+  Foundry), os botões do HUD e da ficha e as imagens padrão dos itens, no estilo neon de 2077 (traço fino em ciano,
+  vermelho e amarelo, com brilho; decisão do usuário).
+
 
 
 **Pronto, para cada item:**
