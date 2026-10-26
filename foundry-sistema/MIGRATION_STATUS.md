@@ -9137,6 +9137,28 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   build, a Pepper Shaker sem dano) e S1 a S4 no G4 (o ataque sem o 1d6 da sucata, o cartão sem a regra do explosivo, o
   modo que ataca com a arma guardada, o autofogo da Pepper Shaker com 10 balas).
 
+### Ciclo 188 (2026-10-26): o conserto da pasta do cortador dos tokens dinâmicos (o C45, parte 3; sessão Junin)
+
+- **O relato do usuário (2026-10-26, no servidor):** o cortador da folha do Qyan ligou o token dinâmico, mas o console
+  mostrava 404 em todos os quadros (`tokens/qyan/qyan_parado_090.webp`...) e o Foundry dizia "Target directory
+  /srv/foundry14/data/Data/tokens/qyan does not exist".
+- **A causa:** o cortador criava a pasta com um `createDirectory` só, e o do Foundry 14 não cria a pasta-mãe: sem
+  `tokens` nos dados do servidor, "tokens/qyan" falhava, e o `catch` tratava como "a pasta já existe". Cada upload
+  seguinte respondia com o erro (o `upload` devolve `false`), e o cortador não conferia: punha no conjunto do ator os 28
+  caminhos que não existiam. O G4 do C45 não pegou porque criava a pasta-mãe (`teste-c45c`) antes.
+- **O conserto:** `scripts/pastas.mjs` (`niveisDaPasta` e `garantirPasta`) cria cada nível, do de fora para o de dentro,
+  e só dá erro se a pasta continuar faltando. O cortador avisa se não conseguir a pasta e confere cada upload: se o
+  Foundry não gravar um quadro, avisa ("O Foundry não gravou ... : o conjunto do token não mudou.") e o conjunto fica como
+  estava. O retrato da wiki (`wiki-retrato.mjs`), que tinha o mesmo `garantirPasta` de um nível, passa a usar este.
+- **No servidor, até a instalação:** criar a pasta `tokens/qyan` (pelo navegador de arquivos do Foundry, ou no
+  servidor) e cortar a folha de novo.
+- **Portões:** G1, 231 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 715 testes, 0 falhas (1 teste novo
+  em `tests/sistema/cortador.test.mjs`: os níveis da pasta); G4 completo, 309/309 em 687 s, com o passo novo: numa pasta de
+  dois níveis novos (a mãe não existia), o cortador grava os 28 quadros e liga o conjunto; com o upload falhando, avisa
+  e o conjunto não muda. No foco, 13/13.
+- **Mutações:** as 3 caíram: P1 no G3 (só o último nível) e P2 e P3 no G4 (o cortador com o `createDirectory` de um
+  nível, calado; o upload sem conferir).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -19488,6 +19488,34 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ info, doJogador })];
     });
 
+    await r.passo('tokens dinâmicos (o C45, parte 3, conserto do ciclo 188): o cortador cria a pasta nível por nível (a pasta-mãe também não existia, como "tokens/qyan" no servidor) e grava os 28 quadros; se o Foundry não gravar um quadro, avisa e o conjunto não muda', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const FP = foundry.applications.apps.FilePicker.implementation;
+        const mae = 'teste-c45d-' + foundry.utils.randomID(6).toLowerCase();
+        const existe = async pasta => { try { await FP.browse('data', pasta); return true; } catch { return false; } };
+        const ator = await Actor.implementation.create({ name: 'Teste Pastas', type: 'personagem', ownership: { default: 0 } });
+        const upload = FP.upload;
+        try {
+          const antes = { mae: await existe(mae) };
+          // A folha do passo anterior (teste-c45c/folha.png), numa pasta de dois níveis novos.
+          const feito = await game.system.api.tokenDinamico.cortarFolha({ ator, folha: 'teste-c45c/folha.png', nome: 'Qyan', pasta: mae + '/qyan' });
+          const arquivos = (await existe(mae + '/qyan')) ? (await FP.browse('data', mae + '/qyan')).files.length : 0;
+          const conjunto = ator.getFlag('${S}', 'tokenDinamico');
+          // O upload que falha (o Foundry devolve false): o cortador para e o conjunto fica como estava.
+          FP.upload = async () => false;
+          const falhou = await game.system.api.tokenDinamico.cortarFolha({ ator, folha: 'teste-c45c/folha.png', nome: 'Outro', pasta: mae + '/outro' });
+          FP.upload = upload;
+          const depois = ator.getFlag('${S}', 'tokenDinamico');
+          return { antes, erro: feito.erro ?? null, quadros: feito.quadros, arquivos, ativo: conjunto?.ativo, parado90: conjunto?.imagens?.['parado-90'],
+            falhou: falhou.erro ?? null, igual: JSON.stringify(depois) === JSON.stringify(conjunto), mae };
+        } finally { FP.upload = upload; await ator.delete(); }
+      })()`);
+      const v = info;
+      const ok = v.antes.mae === false && v.erro === null && v.quadros === 28 && v.arquivos === 28 && v.ativo === true && v.parado90 === `${v.mae}/qyan/qyan_parado_090.webp`
+        && v.falhou === `O Foundry não gravou outro_parado_000.webp em ${v.mae}/outro: o conjunto do token não mudou.` && v.igual;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('o Rebuild (o C47; o Kit, p. 31–32): na pistola média do RED, o Power Rebuild entra (2 slots) e ela vira Power (ricocheteia); o segundo Rebuild, o Tech no lança-granadas, a arma exótica sem slot e a arma de 2077 recusam, com o motivo; com o EMP no Rebuild ou tirado, a arma volta a ser do RED; o Smart Rebuild a deixa Smart', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();

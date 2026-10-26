@@ -7,6 +7,7 @@ import { SISTEMA } from './config.mjs';
 import { caixaComum, caixaOpaca, celulasDaGrade, DISPOSICAO_PADRAO, disposicaoValida, nomeBase, quadrosDaFolha, temFundo, TIPOS_DE_LINHA } from './regras-cortador.mjs';
 import { NOMES_DAS_POSES, POSES_SEM_DIRECAO } from './regras-token-dinamico.mjs';
 import { conjuntoDe, salvarConjunto } from './token-dinamico.mjs';
+import { garantirPasta } from './pastas.mjs';
 
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const { ApplicationV2 } = foundry.applications.api;
@@ -51,7 +52,8 @@ export async function cortarFolha({ ator, folha, nome, pasta, disposicao = DISPO
   const usadas = quadros.map(celulaDe);
   const caixa = caixaComum(caixas, { largura: Math.min(...usadas.map(c => c.largura)), altura: Math.min(...usadas.map(c => c.altura)) });
   const FP = foundry.applications.apps.FilePicker.implementation;
-  try { await FP.createDirectory('data', pasta, {}); } catch { /* a pasta já existe */ }
+  // Cada nível da pasta (o Foundry não cria a pasta-mãe: "tokens/qyan" sem "tokens" falhava calado).
+  try { await garantirPasta(pasta); } catch (erro) { return { erro: `Não consegui preparar a pasta ${pasta}: ${erro.message}.` }; }
   const imagens = {};
   for (const quadro of quadros) {
     const c = celulaDe(quadro);
@@ -60,7 +62,9 @@ export async function cortarFolha({ ator, folha, nome, pasta, disposicao = DISPO
     saida.height = caixa.altura;
     saida.getContext('2d').drawImage(tela, c.x + caixa.x, c.y + caixa.y, caixa.largura, caixa.altura, 0, 0, caixa.largura, caixa.altura);
     const blob = await new Promise(resolver => saida.toBlob(resolver, 'image/webp', 0.92));
-    await FP.upload('data', pasta, new File([blob], quadro.arquivo, { type: 'image/webp' }), {}, { notify: false });
+    const gravado = await FP.upload('data', pasta, new File([blob], quadro.arquivo, { type: 'image/webp' }), {}, { notify: false });
+    // Sem o arquivo gravado, o conjunto não muda: o token não aponta para imagens que não existem.
+    if (!gravado?.path) return { erro: `O Foundry não gravou ${quadro.arquivo} em ${pasta}: o conjunto do token não mudou.` };
     imagens[quadro.chave] = `${pasta}/${quadro.arquivo}`;
   }
   const antes = conjuntoDe(ator) ?? {};

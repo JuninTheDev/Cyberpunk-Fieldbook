@@ -1,6 +1,8 @@
 // O retrato da wiki, como foundry-2077/scripts/wiki.mjs: portraitOf, copyPortrait e applyPortrait. A imagem enviada
 // entra na pasta do mundo para todos a verem; um link HTTPS sem CORS pode ficar como link direto de imagem.
 // api-personagens.js, rota extra === 'retrato': a imagem enviada usa api/personagens/<id>/retrato?v=<data>.
+import { garantirPasta } from './pastas.mjs';
+
 const HTTPS = /^https:\/\/[^\s"'<>]+$/;
 const CAMINHO_DA_WIKI = /^\/?api\/personagens\/[a-zA-Z0-9_-]+\/retrato(?:\?[^\s"'<>]*)?$/;
 const EXTENSOES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' };
@@ -24,10 +26,6 @@ export function requisicaoDoRetrato(fonte, enderecoWiki) {
 }
 
 const SeletorDeArquivo = () => foundry.applications.apps.FilePicker.implementation;
-
-async function garantirPasta(pasta) {
-  try { await SeletorDeArquivo().browse('data', pasta); } catch { await SeletorDeArquivo().createDirectory('data', pasta); }
-}
 
 export async function copiarRetrato(doc, fonte, enderecoWiki) {
   const { url, opcoes } = requisicaoDoRetrato(fonte, enderecoWiki);

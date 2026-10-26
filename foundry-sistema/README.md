@@ -328,7 +328,9 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     exemplo. A faixa do rótulo embaixo de cada célula fica fora (em %), a prévia mostra a grade, e todos os quadros saem
     do mesmo tamanho (aparados pelo que não é transparente em todas as células). Cada quadro vai em WebP para a pasta,
     com o nome padronizado, e entra no conjunto do ator (ligado, se marcado). Enviar arquivos pede a permissão de upload
-    do Foundry (o mestre, em geral). API: `game.system.api.tokenDinamico.cortarFolha({ ator, folha, nome, pasta })`.
+    do Foundry (o mestre, em geral). A pasta é criada nível por nível ("tokens/qyan" num mundo sem "tokens" também; o
+    conserto do ciclo 188), e, se o Foundry não gravar um quadro, o cortador avisa e o conjunto do ator não muda. API:
+    `game.system.api.tokenDinamico.cortarFolha({ ator, folha, nome, pasta })`.
 - **Painel Tático** (o módulo painel-tatico da mesa, dentro do sistema; o C25, ciclo 125): a barra na base da tela com o
   token controlado (ou, sem nenhum, o personagem do jogador):
   - **o retrato grande** do personagem, um PNG para cada estado de ferimento (Sem ferimentos, Levemente, Gravemente,

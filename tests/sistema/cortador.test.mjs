@@ -3,6 +3,7 @@
 // quadros (os que a janela do conjunto lê), a caixa do que não é transparente e a caixa comum, e a folha com fundo.
 // Uso: node --test "tests/sistema/*.test.mjs"
 import assert from 'node:assert/strict';
+import { niveisDaPasta } from '../../foundry-sistema/scripts/pastas.mjs';
 import test from 'node:test';
 import { caixaComum, caixaOpaca, celulasDaGrade, DISPOSICAO_PADRAO, disposicaoValida, nomeBase, quadrosDaFolha, temFundo } from '../../foundry-sistema/scripts/regras-cortador.mjs';
 import { chaveDoArquivo } from '../../foundry-sistema/scripts/regras-token-dinamico.mjs';
@@ -59,4 +60,11 @@ test('Cortador: a caixa do que não é transparente, a comum (com margem, dentro
   assert.equal(temFundo([255, 255, 255, 255]), true);
   assert.equal(temFundo([255, 0, 255, 255]), false);
   assert.equal(temFundo([]), false);
+});
+
+test('cortador: a pasta é criada nível por nível (o Foundry não cria a pasta-mãe)', () => {
+  assert.deepEqual(niveisDaPasta('tokens/qyan'), ['tokens', 'tokens/qyan']);
+  assert.deepEqual(niveisDaPasta('/tokens//qyan/ '), ['tokens', 'tokens/qyan']);
+  assert.deepEqual(niveisDaPasta('worlds/mundo/retratos-wiki'), ['worlds', 'worlds/mundo', 'worlds/mundo/retratos-wiki']);
+  assert.deepEqual(niveisDaPasta(''), []);
 });
