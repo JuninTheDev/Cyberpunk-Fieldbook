@@ -5,13 +5,15 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { CORES, DESENHOS, svgDoIcone } from '../../foundry-sistema/build/icones.mjs';
+import { CORES, cssDosGlifos, DESENHOS, FA_PARA_GLIFO, GLIFOS, svgDoGlifoNomeado, svgDoIcone } from '../../foundry-sistema/build/icones.mjs';
 import * as I from '../../foundry-sistema/scripts/regras-icones.mjs';
 import { PASSOS } from '../../foundry-sistema/scripts/migracao.mjs';
 
 const sistema = new URL('../../foundry-sistema/', import.meta.url);
 const { itens: catalogo } = JSON.parse(fs.readFileSync(new URL('dados/catalogo.json', sistema), 'utf8'));
 const arquivo = src => new URL(src.replace('systems/cpr-fieldbook/', ''), sistema);
+// O git pode trocar o fim de linha na cópia (o autocrlf): as comparações são pelo conteúdo.
+const semCr = texto => texto.split(String.fromCharCode(13)).join('');
 // Os estados do Foundry 14.369 (client/config.mjs, CONFIG.statusEffects).
 const DO_FOUNDRY = ['dead', 'unconscious', 'sleep', 'stun', 'prone', 'restrain', 'paralysis', 'fly', 'blind', 'deaf', 'silence', 'fear', 'burning', 'frozen',
   'shock', 'corrode', 'bleeding', 'disease', 'poison', 'curse', 'regen', 'degen', 'hover', 'burrow', 'upgrade', 'downgrade', 'invisible', 'target', 'eye', 'bless',
@@ -21,7 +23,7 @@ test('Ícones: cada desenho tem o SVG em icones/neon igual ao do gerador, só na
   const nomes = Object.keys(DESENHOS);
   assert.ok(nomes.length >= 60);
   for (const nome of nomes) {
-    const svg = fs.readFileSync(new URL(`icones/neon/${nome}.svg`, sistema), 'utf8');
+    const svg = semCr(fs.readFileSync(new URL(`icones/neon/${nome}.svg`, sistema), 'utf8'));
     assert.equal(svg, svgDoIcone(nome), `${nome}: rode node build/icones.mjs`);
     const cores = new Set(svg.match(/#[0-9a-f]{6}/gi).map(cor => cor.toLowerCase()));
     for (const cor of cores) assert.ok([...Object.values(CORES), '#0b0b10'].includes(cor), `${nome}: ${cor}`);
@@ -78,4 +80,21 @@ test('Ícones: a migração 10 troca a imagem padrão antiga e a genérica do ca
   ] };
   passo.ator(ator);
   assert.deepEqual([ator.img, ...ator.effects.map(e => e.img)], [I.iconeNeon('personagem'), I.iconeNeon('caido'), I.iconeNeon('suprimido'), 'worlds/mesa/efeito.webp', 'icons/svg/daze.svg']);
+});
+
+test('Glifos dos botões (o C49, parte 2): os SVGs e o styles/icones.css iguais aos do gerador, no manifesto; cada classe do mapa usada pelo sistema e cada glifo usado', () => {
+  const ler = caminho => semCr(fs.readFileSync(new URL(caminho, sistema), 'utf8'));
+  for (const nome of Object.keys(GLIFOS)) assert.equal(ler(`icones/neon/glifos/${nome}.svg`), svgDoGlifoNomeado(nome), `${nome}: rode node build/icones.mjs`);
+  assert.equal(ler('styles/icones.css'), cssDosGlifos());
+  const manifesto = JSON.parse(ler('system.json'));
+  assert.ok(manifesto.styles.some(estilo => estilo.src === 'styles/icones.css'));
+  // O código e os modelos do sistema: cada classe do mapa aparece em algum (senão, o glifo sobra).
+  const textos = [];
+  const andar = pasta => { for (const nome of fs.readdirSync(new URL(pasta, sistema))) { const caminho = `${pasta}${nome}`; if (fs.statSync(new URL(caminho, sistema)).isDirectory()) andar(`${caminho}/`); else if (/\.(mjs|hbs)$/.test(nome)) textos.push(ler(caminho)); } };
+  andar('scripts/'); andar('templates/');
+  const tudo = textos.join('\n');
+  for (const classe of Object.keys(FA_PARA_GLIFO)) assert.match(tudo, new RegExp(`['" ]${classe}['" ]`), classe);
+  assert.deepEqual([...new Set(Object.values(FA_PARA_GLIFO))].sort(), Object.keys(GLIFOS).sort());
+  // Os botões do HUD do sistema: o do perigo, o da régua, o do token dinâmico, o do scanner e os da tripulação.
+  for (const classe of ['fa-triangle-exclamation', 'fa-bullseye', 'fa-person-walking-arrow-right', 'fa-satellite-dish', 'fa-right-to-bracket', 'fa-right-from-bracket', 'fa-car', 'fa-car-burst', 'fa-crosshairs']) assert.ok(FA_PARA_GLIFO[classe], classe);
 });

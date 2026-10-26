@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 192). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 193). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -483,11 +483,11 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     da armadura (Guarda-roupa e Estilo DV13, Percepção DV15).
   - [x] Parte 4, os veículos: feita no ciclo 190 (sessão Junin, 2026-10-26): os 31 do CORE num compêndio, com o tipo
     de cada um, o chassi blindado e os vidros de fábrica, o "não aceita o upgrade" e o Acesso Nômade na frota da família.
-- [~] **C49. Ícones próprios** (sessão Junin, 2026-10-26; depois do C48): os estados no token (os do sistema e os do
+- [x] **C49. Ícones próprios:** feito nos ciclos 191 e 192 (sessão Junin, 2026-10-26; depois do C48): os estados no token (os do sistema e os do
   Foundry), os botões do HUD e da ficha e as imagens padrão dos itens, no estilo neon de 2077 (traço fino em ciano,
   vermelho e amarelo, com brilho; decisão do usuário).
   - [x] Parte 1, os estados no token e as imagens padrão: feita no ciclo 191 (sessão Junin, 2026-10-26).
-  - [ ] Parte 2, os botões do HUD e da ficha.
+  - [x] Parte 2, os botões do HUD e da ficha: feita no ciclo 192 (sessão Junin, 2026-10-26).
 
 
 
@@ -797,7 +797,7 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [ ] Tradução para inglês (hoje, o arquivo `en` aponta para o português).
 - [x] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura): ciclo 150 (com o Codex), nas fichas do
   personagem, do capanga e do item; as outras janelas ficam como estavam.
-- [~] Ícones próprios no lugar dos genéricos do Foundry: o C49 (os estados e as imagens padrão no ciclo 191).
+- [x] Ícones próprios no lugar dos genéricos do Foundry: o C49 (os estados e as imagens padrão no ciclo 191, os botões no 192).
 - [ ] Conveniências do CORE: (→ C26) a régua que mostra o DV da arma pela distância e o DV no HUD do token (o ataque já calcula
   o DV sozinho); "Hardened" (Danger Gal Dossier p. 150, fora da wiki: só se a mesa quiser).
 

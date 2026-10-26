@@ -1,0 +1,293 @@
+/* Gerado por build/icones.mjs (o C49, parte 2): os glifos neon no lugar dos do Font Awesome nos botões do sistema. Não edite à mão. */
+.cpr-fieldbook i[class*="fa-"],
+#token-hud .control-icon[class*="cpr-fieldbook-"] i[class*="fa-"],
+#token-hud .dv-table-selector i[class*="fa-"] { filter: drop-shadow(0 0 2px currentColor); }
+#token-hud .control-icon[class*="cpr-fieldbook-"] i, #token-hud .dv-table-selector i { color: #02d7f2; }
+.cpr-fieldbook i.fa-dice-d10::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-dice-d10::before,
+#token-hud .dv-table-selector i.fa-dice-d10::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/d10.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/d10.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-dice::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-dice::before,
+#token-hud .dv-table-selector i.fa-dice::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/dados.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/dados.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-dice-d20::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-dice-d20::before,
+#token-hud .dv-table-selector i.fa-dice-d20::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/dados.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/dados.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-crosshairs::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-crosshairs::before,
+#token-hud .dv-table-selector i.fa-crosshairs::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/atacar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/atacar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-location-crosshairs::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-location-crosshairs::before,
+#token-hud .dv-table-selector i.fa-location-crosshairs::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/mira.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/mira.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-bullseye::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-bullseye::before,
+#token-hud .dv-table-selector i.fa-bullseye::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/regua.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/regua.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-rotate::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-rotate::before,
+#token-hud .dv-table-selector i.fa-rotate::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/recarregar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/recarregar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-heart-pulse::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-heart-pulse::before,
+#token-hud .dv-table-selector i.fa-heart-pulse::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/vida.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/vida.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-network-wired::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-network-wired::before,
+#token-hud .dv-table-selector i.fa-network-wired::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/net.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/net.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-star::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-star::before,
+#token-hud .dv-table-selector i.fa-star::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/favorito.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/favorito.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-plug::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-plug::before,
+#token-hud .dv-table-selector i.fa-plug::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/plugar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/plugar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-plug-circle-xmark::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-plug-circle-xmark::before,
+#token-hud .dv-table-selector i.fa-plug-circle-xmark::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/desplugar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/desplugar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-screwdriver-wrench::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-screwdriver-wrench::before,
+#token-hud .dv-table-selector i.fa-screwdriver-wrench::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/consertar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/consertar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-hand-fist::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-hand-fist::before,
+#token-hud .dv-table-selector i.fa-hand-fist::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/briga.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/briga.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-fire::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-fire::before,
+#token-hud .dv-table-selector i.fa-fire::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/fogo.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/fogo.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-biohazard::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-biohazard::before,
+#token-hud .dv-table-selector i.fa-biohazard::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/risco.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/risco.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-microchip::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-microchip::before,
+#token-hud .dv-table-selector i.fa-microchip::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/chip.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/chip.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-coins::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-coins::before,
+#token-hud .dv-table-selector i.fa-coins::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/eddies.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/eddies.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-skull-crossbones::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-skull-crossbones::before,
+#token-hud .dv-table-selector i.fa-skull-crossbones::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/letal.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/letal.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-bolt::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-bolt::before,
+#token-hud .dv-table-selector i.fa-bolt::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/raio.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/raio.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-eject::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-eject::before,
+#token-hud .dv-table-selector i.fa-eject::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/ejetar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/ejetar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-user-astronaut::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-user-astronaut::before,
+#token-hud .dv-table-selector i.fa-user-astronaut::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/netrunner.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/netrunner.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-route::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-route::before,
+#token-hud .dv-table-selector i.fa-route::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/rota.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/rota.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-hourglass-half::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-hourglass-half::before,
+#token-hud .dv-table-selector i.fa-hourglass-half::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/ampulheta.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/ampulheta.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-power-off::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-power-off::before,
+#token-hud .dv-table-selector i.fa-power-off::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/desligar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/desligar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-book-open::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-book-open::before,
+#token-hud .dv-table-selector i.fa-book-open::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/livro.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/livro.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-image-portrait::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-image-portrait::before,
+#token-hud .dv-table-selector i.fa-image-portrait::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/retrato.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/retrato.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-scissors::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-scissors::before,
+#token-hud .dv-table-selector i.fa-scissors::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/tesoura.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/tesoura.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-address-book::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-address-book::before,
+#token-hud .dv-table-selector i.fa-address-book::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/contatos.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/contatos.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-boxes-stacked::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-boxes-stacked::before,
+#token-hud .dv-table-selector i.fa-boxes-stacked::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/caixas.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/caixas.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-briefcase::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-briefcase::before,
+#token-hud .dv-table-selector i.fa-briefcase::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/maleta.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/maleta.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-database::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-database::before,
+#token-hud .dv-table-selector i.fa-database::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/banco.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/banco.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-water::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-water::before,
+#token-hud .dv-table-selector i.fa-water::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/agua.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/agua.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-users::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-users::before,
+#token-hud .dv-table-selector i.fa-users::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/grupo.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/grupo.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-user::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-user::before,
+#token-hud .dv-table-selector i.fa-user::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/pessoa.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/pessoa.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-id-badge::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-id-badge::before,
+#token-hud .dv-table-selector i.fa-id-badge::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/cracha.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/cracha.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-map::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-map::before,
+#token-hud .dv-table-selector i.fa-map::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/mapa.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/mapa.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-eye::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-eye::before,
+#token-hud .dv-table-selector i.fa-eye::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/olhar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/olhar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-magnifying-glass::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-magnifying-glass::before,
+#token-hud .dv-table-selector i.fa-magnifying-glass::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/busca.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/busca.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-link::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-link::before,
+#token-hud .dv-table-selector i.fa-link::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/ligar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/ligar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-wand-magic-sparkles::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-wand-magic-sparkles::before,
+#token-hud .dv-table-selector i.fa-wand-magic-sparkles::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/auto.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/auto.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-triangle-exclamation::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-triangle-exclamation::before,
+#token-hud .dv-table-selector i.fa-triangle-exclamation::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/perigo.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/perigo.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-person-walking-arrow-right::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-person-walking-arrow-right::before,
+#token-hud .dv-table-selector i.fa-person-walking-arrow-right::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/tokenDinamico.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/tokenDinamico.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-satellite-dish::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-satellite-dish::before,
+#token-hud .dv-table-selector i.fa-satellite-dish::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/scanner.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/scanner.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-right-to-bracket::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-right-to-bracket::before,
+#token-hud .dv-table-selector i.fa-right-to-bracket::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/entrar.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/entrar.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-right-from-bracket::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-right-from-bracket::before,
+#token-hud .dv-table-selector i.fa-right-from-bracket::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/descer.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/descer.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-car::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-car::before,
+#token-hud .dv-table-selector i.fa-car::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/dirigir.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/dirigir.svg") center / contain no-repeat;
+}
+.cpr-fieldbook i.fa-car-burst::before,
+#token-hud .control-icon[class*="cpr-fieldbook-"] i.fa-car-burst::before,
+#token-hud .dv-table-selector i.fa-car-burst::before {
+  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;
+  -webkit-mask: url("../icones/neon/glifos/manobra.svg") center / contain no-repeat; mask: url("../icones/neon/glifos/manobra.svg") center / contain no-repeat;
+}

@@ -9261,6 +9261,31 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   imagem genérica) e I4 a I6 no G4 (os estados do Foundry com os ícones dele, o documento em branco sem a imagem neon,
   o derrotado com o ícone do Foundry).
 
+### Ciclo 192 (2026-10-26): C49 parte 2, os glifos neon dos botões (sessão Junin)
+
+- **Pedido e decisão do usuário (2026-10-26):** a parte dos botões do HUD e da ficha do C49 (o neon de 2077).
+- **Entrega:**
+  - **Os glifos:** `build/icones.mjs` desenha 47 glifos no mesmo traço dos ícones da parte 1, sem o fundo, numa cor só
+    (`icones/neon/glifos`), e gera `styles/icones.css` (no manifesto): para cada uma das 48 classes do Font Awesome de
+    ação do jogo que o sistema usa (rolar, os dados, atacar, mirar, recarregar, a vida, a NET, o favorito, plugar,
+    consertar, a briga, o fogo, o chip, os eddies, o netrunner, a rota, o livro, o retrato, cortar, o mapa, buscar...), o
+    glifo neon entra no lugar do do FA pela máscara CSS, na cor do botão (a do tema), com o brilho (drop-shadow).
+  - **Onde vale:** nos elementos do sistema (a classe `cpr-fieldbook`: as fichas, os cartões, as janelas) e nos botões
+    que o sistema põe no HUD do token (o perigo, a régua de DV, o token dinâmico, o scanner da NET, os da tripulação),
+    que ficam ciano. Os botões do Foundry e dos módulos não mudam.
+  - **Os genéricos de interface** (fechar, mais, menos, setas, salvar, a lixeira...) ficam com o glifo do FA, só com o
+    brilho: a parte de ícones próprios é a das ações.
+- **Limites:** a cena da arquitetura da NET continua com as imagens de andar dela (são peças de mapa tingidas pela cor
+  do andar), e a macro de perícia com o d10 do Foundry.
+- **Portões:** G1, 238 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 729 testes, 0 falhas (1
+  teste novo em `tests/sistema/icones.test.mjs`: os SVGs dos glifos e o CSS iguais aos do gerador, o CSS no manifesto,
+  cada classe do mapa usada pelo sistema e cada glifo usado; e as comparações dos SVGs passam a ignorar o fim de linha,
+  que o git troca na cópia de outro PC); G4 completo, 313/313 em 707 s, com o passo novo: a estrela do favorito na ficha do
+  personagem com o glifo neon e o brilho; o botão do perigo no HUD com o glifo dele, ciano; o fechar com o glifo do FA;
+  os 47 glifos servidos. No foco, 12/12.
+- **Mutações:** as 3 caíram: G1 e G2 no G3 (a estrela sem o glifo, o CSS fora do gerador) e G3 no G4 (o manifesto sem
+  o CSS).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

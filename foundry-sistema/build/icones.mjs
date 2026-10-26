@@ -87,6 +87,89 @@ export const DESENHOS = {
   arquitetura: { cor: 'vermelho', tracos: [C(32, 14, 4), C(20, 34, 4), C(44, 34, 4), C(32, 50, 4), 'M30 17l-8 14M34 17l8 14M22 37l8 10M42 37l-8 10M24 34h16'], acento: [] }
 };
 
+// Os glifos dos botões (a parte 2): o mesmo traço, sem o fundo, numa cor só, para a máscara CSS (styles/icones.css) pôr
+// no lugar do glifo do Font Awesome nos botões do sistema: a ficha, os cartões, as janelas e os botões do HUD. A cor é a
+// do botão (o tema) e o brilho é o drop-shadow; os ícones genéricos de interface (fechar, mais, setas) ficam com o FA.
+const DADO = 'M32 10l19 11v22L32 54 13 43V21z';
+export const GLIFOS = {
+  d10: { tracos: ['M32 8l20 18-20 30-20-30z', 'M12 26l20 6 20-6M32 32v24'] },
+  dados: { tracos: [DADO, 'M13 21l19 11 19-11M32 32v22'], cheios: [C(32, 21, 3), C(22, 38, 3), C(42, 38, 3)] },
+  atacar: { tracos: [C(32, 32, 15), 'M32 8v14M32 42v14M8 32h14M42 32h14'] },
+  mira: { tracos: [C(32, 32, 18), C(32, 32, 7), 'M32 6v8M32 50v8M6 32h8M50 32h8'] },
+  regua: { tracos: [C(32, 32, 20), C(32, 32, 12)], cheios: [C(32, 32, 4)] },
+  recarregar: { tracos: ['M48 22a18 18 0 1 0 2 16', 'M48 10v12H36'] },
+  vida: { tracos: [CORACAO, 'M14 32h10l4-6 5 12 4-6h13'] },
+  net: { tracos: [C(14, 32, 5), C(50, 16, 5), C(50, 48, 5), 'M19 32h12l14-14M31 32l14 14'] },
+  favorito: { tracos: ['M32 10l6 14 15 1-12 10 4 15-13-8-13 8 4-15-12-10 15-1z'] },
+  plugar: { tracos: ['M24 10v12M40 10v12M18 22h28v10a14 14 0 0 1-28 0z', 'M32 46v10'] },
+  desplugar: { tracos: ['M24 10v10M40 10v10M18 20h28v8a14 14 0 0 1-28 0z', 'M32 42v6', 'M42 46l10 10M52 46L42 56'] },
+  consertar: { tracos: ['M40 10a12 12 0 0 0-11 16L12 43a5 5 0 0 0 7 7l17-17a12 12 0 0 0 16-11l-7 4-7-4v-8z'] },
+  briga: { tracos: ['M18 30V20a4 4 0 0 1 8 0v8M26 26v-8a4 4 0 0 1 8 0v8M34 26v-6a4 4 0 0 1 8 0v8M42 28a4 4 0 0 1 8 0v8c0 10-7 18-17 18c-8 0-15-6-15-14V32a4 4 0 0 1 8 0'] },
+  fogo: { tracos: [CHAMA] },
+  risco: { tracos: [C(26, 27, 9), C(38, 27, 9), C(32, 39, 9)], cheios: [C(32, 31, 3)] },
+  chip: { tracos: ['M20 20h24v24H20z', 'M26 20v-7M32 20v-7M38 20v-7M26 44v7M32 44v7M38 44v7M20 26h-7M20 38h-7M44 26h7M44 38h7'] },
+  eddies: { tracos: [C(32, 32, 20), 'M38 22c-2-2-4-3-7-3c-4 0-7 2-7 6c0 8 15 5 15 13c0 4-3 6-8 6c-3 0-6-1-8-3M32 14v6M32 44v6'] },
+  letal: { tracos: ['M20 28c0-9 5-14 12-14s12 5 12 14c0 4-2 7-4 8v5H24v-5c-2-1-4-4-4-8z', 'M12 46l40 10M12 56l40-10'], cheios: [C(27, 28, 3), C(37, 28, 3)] },
+  raio: { tracos: [RAIO] },
+  ejetar: { tracos: ['M32 12l18 22H14z', 'M14 44h36v8H14z'] },
+  netrunner: { tracos: [C(32, 24, 10), 'M14 54c2-10 9-16 18-16s16 6 18 16', 'M22 22h20v6H22z'] },
+  rota: { tracos: [C(16, 46, 5), C(48, 18, 5), 'M21 46h14a8 8 0 0 0 0-16h-6a8 8 0 0 1 0-16h14'] },
+  ampulheta: { tracos: ['M18 10h28M18 54h28M22 10c0 12 10 14 10 22s-10 10-10 22M42 10c0 12-10 14-10 22s10 10 10 22'] },
+  desligar: { tracos: ['M22 18a18 18 0 1 0 20 0', 'M32 10v20'] },
+  livro: { tracos: ['M32 18c-6-4-14-5-20-4v34c6-1 14 0 20 4c6-4 14-5 20-4V14c-6-1-14 0-20 4z', 'M32 18v34'] },
+  retrato: { tracos: ['M14 10h36v44H14z', C(32, 28, 7), 'M20 50c2-7 6-11 12-11s10 4 12 11'] },
+  tesoura: { tracos: [C(18, 46, 7), C(46, 46, 7), 'M23 41L46 10M41 41L18 10'] },
+  contatos: { tracos: ['M16 10h32v44H16z', C(32, 27, 6), 'M22 46c1-6 5-9 10-9s9 3 10 9', 'M12 18h4M12 32h4M12 46h4'] },
+  caixas: { tracos: ['M12 34h18v20H12zM34 34h18v20H34zM23 12h18v20H23z'] },
+  maleta: { tracos: ['M10 22h44v30H10z', 'M24 22v-8h16v8', 'M10 34h44'] },
+  banco: { tracos: ['M14 16c0-4 8-6 18-6s18 2 18 6v32c0 4-8 6-18 6s-18-2-18-6z', 'M14 16c0 4 8 6 18 6s18-2 18-6M14 32c0 4 8 6 18 6s18-2 18-6'] },
+  agua: { tracos: ['M8 26c6-6 10-6 16 0s10 6 16 0 10-6 16 0M8 40c6-6 10-6 16 0s10 6 16 0 10-6 16 0'] },
+  grupo: { tracos: [C(24, 24, 7), C(42, 26, 6), 'M10 52c1-9 7-14 14-14s13 5 14 14M38 40c8 0 13 5 16 12'] },
+  pessoa: { tracos: [C(32, 22, 9), 'M14 54c2-11 9-17 18-17s16 6 18 17'] },
+  cracha: { tracos: ['M14 14h36v40H14z', 'M26 8h12v10H26z', C(32, 32, 6), 'M22 48c1-5 5-8 10-8s9 3 10 8'] },
+  mapa: { tracos: ['M10 16l14-6 16 6 14-6v38l-14 6-16-6-14 6z', 'M24 10v38M40 16v38'] },
+  olhar: { tracos: [OLHO, C(32, 32, 7)] },
+  busca: { tracos: [C(28, 28, 14), 'M38 38l14 14'] },
+  ligar: { tracos: ['M26 38l12-12', 'M30 20l5-5a9 9 0 0 1 13 13l-5 5M34 44l-5 5a9 9 0 0 1-13-13l5-5'] },
+  auto: { tracos: ['M12 52l30-30', 'M44 8v8M40 12h8M52 22v6M49 25h6M30 10v4M28 12h4'] },
+  perigo: { tracos: ['M32 10l22 40H10z', 'M32 24v14'], cheios: [C(32, 44, 2.5)] },
+  tokenDinamico: { tracos: [C(26, 14, 5), 'M26 19l-4 14 8 6v14M22 33l-6 12M26 22l10 6', 'M40 36h14M48 30l6 6-6 6'] },
+  scanner: { tracos: ['M14 50L50 14', 'M18 18a24 24 0 0 0 28 28', C(46, 18, 4), 'M26 46l-8 8h20'] },
+  entrar: { tracos: ['M36 10h14v44H36', 'M10 32h28M28 22l10 10-10 10'] },
+  descer: { tracos: ['M28 10H14v44h14', 'M24 32h28M42 22l10 10-10 10'] },
+  dirigir: { tracos: [C(32, 32, 20), C(32, 32, 5), 'M12 32h15M37 32h15M32 37v15'] },
+  manobra: { tracos: ['M10 40v-8l6-10h24l6 10v8z', C(18, 44, 4), C(38, 44, 4), 'M46 12l4 8M54 18l-6 4M40 10l2 8'] }
+};
+// O glifo de cada classe do Font Awesome nos botões do sistema.
+export const FA_PARA_GLIFO = {
+  'fa-dice-d10': 'd10', 'fa-dice': 'dados', 'fa-dice-d20': 'dados', 'fa-crosshairs': 'atacar', 'fa-location-crosshairs': 'mira', 'fa-bullseye': 'regua',
+  'fa-rotate': 'recarregar', 'fa-heart-pulse': 'vida', 'fa-network-wired': 'net', 'fa-star': 'favorito', 'fa-plug': 'plugar', 'fa-plug-circle-xmark': 'desplugar',
+  'fa-screwdriver-wrench': 'consertar', 'fa-hand-fist': 'briga', 'fa-fire': 'fogo', 'fa-biohazard': 'risco', 'fa-microchip': 'chip', 'fa-coins': 'eddies',
+  'fa-skull-crossbones': 'letal', 'fa-bolt': 'raio', 'fa-eject': 'ejetar', 'fa-user-astronaut': 'netrunner', 'fa-route': 'rota', 'fa-hourglass-half': 'ampulheta',
+  'fa-power-off': 'desligar', 'fa-book-open': 'livro', 'fa-image-portrait': 'retrato', 'fa-scissors': 'tesoura', 'fa-address-book': 'contatos',
+  'fa-boxes-stacked': 'caixas', 'fa-briefcase': 'maleta', 'fa-database': 'banco', 'fa-water': 'agua', 'fa-users': 'grupo', 'fa-user': 'pessoa',
+  'fa-id-badge': 'cracha', 'fa-map': 'mapa', 'fa-eye': 'olhar', 'fa-magnifying-glass': 'busca', 'fa-link': 'ligar', 'fa-wand-magic-sparkles': 'auto',
+  'fa-triangle-exclamation': 'perigo', 'fa-person-walking-arrow-right': 'tokenDinamico', 'fa-satellite-dish': 'scanner', 'fa-right-to-bracket': 'entrar',
+  'fa-right-from-bracket': 'descer', 'fa-car': 'dirigir', 'fa-car-burst': 'manobra'
+};
+const svgDoGlifo = ({ tracos = [], cheios = [] }) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">${tracos.map(d => `<path d="${d}" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`).join('')}${cheios.map(d => `<path d="${d}" fill="#000"/>`).join('')}</svg>
+`;
+export const svgDoGlifoNomeado = nome => svgDoGlifo(GLIFOS[nome]);
+// Onde o glifo vale: os botões do sistema (a ficha, os cartões e as janelas, com a classe do sistema) e os do HUD do token
+// que o sistema põe (o prefixo da classe) e o da régua de DV.
+const ONDE = ['.cpr-fieldbook', '#token-hud .control-icon[class*="cpr-fieldbook-"]', '#token-hud .dv-table-selector'];
+export function cssDosGlifos() {
+  const em = classe => ONDE.map(onde => `${onde} i.${classe}::before`).join(',\n');
+  const glifo = nome => `url("../icones/neon/glifos/${nome}.svg") center / contain no-repeat`;
+  return [
+    '/* Gerado por build/icones.mjs (o C49, parte 2): os glifos neon no lugar dos do Font Awesome nos botões do sistema. Não edite à mão. */',
+    `${ONDE.map(onde => `${onde} i[class*="fa-"]`).join(',\n')} { filter: drop-shadow(0 0 2px currentColor); }`,
+    '#token-hud .control-icon[class*="cpr-fieldbook-"] i, #token-hud .dv-table-selector i { color: #02d7f2; }',
+    ...Object.entries(FA_PARA_GLIFO).map(([classe, nome]) => `${em(classe)} {\n  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;\n  -webkit-mask: ${glifo(nome)}; mask: ${glifo(nome)};\n}`),
+    ''
+  ].join('\n');
+}
+
 const molde = ({ cor, tracos = [], cheios = [], acento = [], tracejado = false }) => {
   const principal = CORES[cor];
   const outra = cor === 'amarelo' ? CORES.vermelho : CORES.amarelo;
@@ -106,5 +189,9 @@ function main() {
   fs.mkdirSync(pasta, { recursive: true });
   for (const nome of Object.keys(DESENHOS)) fs.writeFileSync(path.join(pasta, `${nome}.svg`), svgDoIcone(nome));
   console.log(`Ícones: ${Object.keys(DESENHOS).length} em icones/neon`);
+  fs.mkdirSync(path.join(pasta, 'glifos'), { recursive: true });
+  for (const nome of Object.keys(GLIFOS)) fs.writeFileSync(path.join(pasta, 'glifos', `${nome}.svg`), svgDoGlifoNomeado(nome));
+  fs.writeFileSync(path.join(raiz, 'styles', 'icones.css'), cssDosGlifos());
+  console.log(`Glifos: ${Object.keys(GLIFOS).length} em icones/neon/glifos, ${Object.keys(FA_PARA_GLIFO).length} classes em styles/icones.css`);
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

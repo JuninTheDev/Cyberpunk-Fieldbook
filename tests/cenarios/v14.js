@@ -19865,6 +19865,40 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('os glifos neon dos botões (o C49, parte 2): na ficha do personagem, a estrela do favorito troca o glifo do Font Awesome pelo neon (a máscara, na cor do botão, com o brilho); no HUD do token, o botão do sistema fica ciano com o glifo dele; os genéricos de interface ficam com o Font Awesome; todo glifo é servido', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const glifo = elemento => getComputedStyle(elemento, '::before').maskImage || getComputedStyle(elemento, '::before').webkitMaskImage || '';
+        const ator = await Actor.implementation.create({ name: 'Teste Glifos', type: 'personagem' });
+        try {
+          await ator.sheet.render({ force: true });
+          for (let i = 0; i < 60 && !ator.sheet.element?.querySelector('i.fa-star'); i++) await new Promise(r => setTimeout(r, 50));
+          const ficha = ator.sheet.element;
+          const estrela = ficha?.querySelector('i.fa-star');
+          const lido = { ficha: { estrela: glifo(estrela), brilho: estrela ? getComputedStyle(estrela).filter : '' } };
+          // Um botão do HUD como o do sistema (o do perigo), no #token-hud do Foundry, e um genérico (o fechar).
+          const hud = document.getElementById('token-hud') ?? Object.assign(document.body.appendChild(document.createElement('div')), { id: 'token-hud' });
+          const botao = Object.assign(document.createElement('button'), { className: 'control-icon ${S}-perigo', innerHTML: '<i class="fa-solid fa-triangle-exclamation"></i>' });
+          const generico = Object.assign(document.createElement('span'), { className: '${S}', innerHTML: '<i class="fa-solid fa-xmark"></i>' });
+          hud.append(botao); document.body.append(generico);
+          const iHud = botao.querySelector('i');
+          lido.hud = { glifo: glifo(iHud), cor: getComputedStyle(iHud).color };
+          lido.generico = glifo(generico.querySelector('i'));
+          botao.remove(); generico.remove();
+          // Todo glifo da folha de estilo é servido.
+          const css = await (await fetch('systems/${S}/styles/icones.css')).text();
+          const folha = [...document.querySelectorAll('link[rel="stylesheet"], style')].some(e => (e.href || e.textContent || '').includes('icones.css')) || [...document.styleSheets].some(f => (f.href ?? '').includes('icones.css'));
+          const urls = [...new Set([...css.matchAll(/glifos\\/([a-zA-Z0-9]+)\\.svg/g)].map(m => m[1]))];
+          const servidos = await Promise.all(urls.map(async nome => (await fetch('systems/${S}/icones/neon/glifos/' + nome + '.svg')).ok));
+          return { ...lido, folha: Boolean(folha), glifos: urls.length, servidos: servidos.filter(Boolean).length };
+        } finally { await ator.sheet?.close(); await ator.delete(); }
+      })()`);
+      const v = info;
+      const ok = v.ficha.estrela.includes('glifos/favorito.svg') && v.ficha.brilho.includes('drop-shadow')
+        && v.hud.glifo.includes('glifos/perigo.svg') && v.hud.cor === 'rgb(2, 215, 242)' && (v.generico === 'none' || v.generico === '')
+        && v.folha && v.glifos === 47 && v.servidos === 47;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

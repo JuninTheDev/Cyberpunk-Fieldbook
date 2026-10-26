@@ -53,6 +53,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   combate e os efeitos que o sistema cria (a estase, a Sonífera, o fogo, as penalidades). O desenho de cada um está em
   `build/icones.mjs` (`node build/icones.mjs` refaz os SVGs). A migração 10 troca a imagem padrão antiga, a genérica do
   Foundry nos itens do catálogo e o ícone dos estados já ligados; a imagem que o mestre escolheu fica.
+- **Os glifos neon dos botões (C49, parte 2, ciclo 192):** nos botões do sistema (as fichas, os cartões e as janelas) e
+  nos que ele põe no HUD do token (o perigo, a régua de DV, o token dinâmico, o scanner da NET e os da tripulação), 47
+  glifos próprios no lugar dos do Font Awesome, para 48 ações (rolar, atacar, recarregar, a NET, o favorito, consertar,
+  plugar...): a máscara CSS (`styles/icones.css`, gerado por `build/icones.mjs`) na cor do botão, com o brilho. Os botões
+  do sistema no HUD ficam ciano. Os ícones genéricos de interface (fechar, mais, setas) ficam com o Font Awesome, só com
+  o brilho. A cena da arquitetura da NET continua com as imagens de andar dela.
 
 - **Criação de itens na ficha (C34.2, ciclo 158):** a configuração do mundo **Jogadores podem criar itens**, desligada
   por padrão como no CORE, permite ao dono criar itens em branco nas fichas de personagem e capanga. O mestre pode
@@ -706,7 +712,6 @@ E a do navegador de cada um:
   na flag `arma2077`.
 - **A mão e o BODY do cyberware que é arma do Kit** (decisão do usuário, 2026-10-19): a mão do braço que não segura nada com a Mantis Blade ou o Projectile Launch System para fora e o BODY 11 da Gorilla Arm ficam com o mestre.
 - **Os opcionais de Role da wiki** (o Investigator do Lawman, o desconto do clã do Nomad): ficam com o mestre.
-- **Interface:** os botões do HUD e da ficha com os ícones neon (o C49, parte 2; hoje, os do Font Awesome).
 - **Regras de lesão que não são números:** o Crânio rachado (×3 na cabeça) e o dano de novo das Costelas quebradas. Por enquanto, estão só no texto da lesão.
 
 ## Instalar

@@ -31,6 +31,10 @@
       "layer": "system"
     },
     {
+      "src": "styles/icones.css",
+      "layer": "system"
+    },
+    {
       "src": "styles/painel-tatico.css",
       "layer": "system"
     },
