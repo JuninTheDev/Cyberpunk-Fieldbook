@@ -449,7 +449,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     armas montadas, que a wiki, a loja e o C15 já usam), e o ator ligado é o espelho dele na cena: o dano no token do
     veículo e a ficha do ator gravam no item, e o item atualiza o ator. Sem passo de migração: os veículos que já existem
     ganham o ator quando forem postos na cena, com o estado de agora;
-  - [ ] parte 3, a tripulação: embarcar, descer, o motorista, mover junto e os ocupantes protegidos pelo veículo (os
+  - [~] parte 3, a tripulação (sessão KouArt, com o Codex, 2026-10-25): embarcar, descer, o motorista, mover junto e os ocupantes protegidos pelo veículo (os
     vidros, a cobertura), como a mesa da wiki;
   - [ ] parte 4, o resto pelo ator: as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
     C44 pelo MOVE dele.
