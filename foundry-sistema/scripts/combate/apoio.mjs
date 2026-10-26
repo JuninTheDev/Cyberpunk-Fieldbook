@@ -3,6 +3,7 @@
 import { SISTEMA } from '../config.mjs';
 import * as R from '../regras.mjs';
 import { techAtravessaVidro } from '../regras-veiculos.mjs';
+import { protecaoDoOcupante, veiculoDaTripulacao } from '../tripulacao.mjs';
 
 export const CANAL = `system.${SISTEMA}`;
 export const STATUS_SUPRIMIDO = `${SISTEMA}-suprimido`;
@@ -53,9 +54,9 @@ export function conferirDestinos(alvos, destinos, { modo, local } = {}) {
   }
   for (const [uuid, destino] of Object.entries(destinos)) {
     const token = alvos.find(alvo => alvo.uuid === uuid);
-    const veiculo = token?.actor.items.get(destino?.veiculo);
+    const veiculo = veiculoDoDestino(token, destino);
     if (!token || !['veiculo', 'vidro'].includes(destino?.tipo) || veiculo?.type !== 'veiculo'
-      || (destino.tipo === 'vidro' && !Object.hasOwn(veiculo.system.janelas, destino.janela))) {
+      || (destino.tipo === 'vidro' && !Object.hasOwn(veiculo.system.janelas ?? {}, destino.janela))) {
       ui.notifications.warn('O veículo ou vidro escolhido não está mais na ficha do alvo. Escolha o destino novamente.');
       return false;
     }
@@ -68,7 +69,17 @@ export function conferirDestinos(alvos, destinos, { modo, local } = {}) {
 export function destinoVeicular(ctx, token) {
   if (token.actor?.type === 'veiculo') return { tipo: 'veiculo', item: token.actor };
   const destino = ctx.pedido.destinos?.[token.uuid];
-  return destino ? { ...destino, item: token.actor.items.get(destino.veiculo) } : null;
+  return destino ? { ...destino, item: veiculoDoDestino(token, destino) } : null;
+}
+
+// O token e o item escolhidos precisam continuar sendo os de dentro depois da janela de ataque.
+function veiculoDoDestino(token, destino) {
+  const dentro = veiculoDaTripulacao(token);
+  if (dentro) {
+    const veiculo = protecaoDoOcupante(token);
+    return destino?.tokenVeiculo === dentro.id && destino.veiculo === veiculo?.id ? veiculo : null;
+  }
+  return destino?.tokenVeiculo ? null : token?.actor.items.get(destino?.veiculo);
 }
 
 // Vidro destruído ou atravessado pela carga Tech não substitui a defesa da pessoa. A espessura é a original (max).

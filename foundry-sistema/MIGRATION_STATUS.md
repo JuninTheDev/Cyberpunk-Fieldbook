@@ -8701,6 +8701,61 @@ Codex (`codex exec`, numa worktree própria a partir do `c1d8b42b`), revisados e
 - **No passo da parte 1:** com a transição da parte 2 (glitch), a textura preparada do token fica com a animada por um tempo, e uma leitura do passo pegou a de antes (290/291); o passo passou a ler a gravada (`_source.texture`), que é o que ele confere.
 - **O C45 está `[x]`** (as partes 1 a 3 desta sessão).
 
+### Ciclo 180 (2026-10-25): o C46, parte 3, a tripulação do veículo (sessão KouArt, com o Codex)
+
+Commit anterior: `518f716f` (o registro do ciclo 179, o C45 parte 3, da sessão Junin). O código e os testes saíram do
+Codex (`codex exec`, numa worktree própria a partir do `104ee361`), revisados e integrados aqui pelo patch. O Codex parou
+no limite de uso do plano depois de terminar o código e os testes e antes do relatório: a revisão, as mutações e esta
+documentação foram feitas aqui, a partir do código.
+
+- **A referência:** a mesa da wiki do master, o M17 (`Tabletop/mesa-api.js:691-706` e `:1302-1345`: embarcar, o primeiro
+  dirige, assumir, descer pelos quatro lados e depois as diagonais; `Tabletop/mesa.js:1346-1358`: a metade do tamanho e
+  por cima). O CORE não tem tripulação.
+- **O que muda:**
+  - **`scripts/regras-tripulacao.mjs` (novo, sem Foundry):** `motivoEmbarque` (só personagem e capanga, o dono, o veículo
+    visível, não estar em outro, os assentos, até 2 quadrados da borda; o mestre de longe), `ordemMotorista` (o primeiro
+    dirige; assumir só troca a ordem), `posicaoEmbarcada` (no centro do veículo, metade do tamanho, por cima) e
+    `posicoesDeSaida` (os quatro lados e depois as diagonais);
+  - **`scripts/tripulacao.mjs` (novo):** a tripulação no token do veículo (a ordem) e a marca no token de quem embarcou
+    (com o tamanho e a ordem originais); embarcar, descer e dirigir pelo mestre ativo, com o pedido do jogador pelo socket
+    (relido quando chega à fila: o dono, a cena ativa, o veículo visível pela visão do jogador, sem usar a do mestre); o
+    arrasto para cima do veículo embarca, e o do ocupante para fora desce; só o motorista move o veículo, e o mestre leva
+    os ocupantes junto, sem custo de MOVE; a saída confere as paredes da cena do veículo e os outros tokens; apagar o
+    token do veículo desembarca todos, e apagar o de um ocupante o tira da tripulação; copiar tokens não leva a
+    tripulação nem o tamanho reduzido; os botões Entrar, Dirigir e Descer no HUD; o motorista do próprio veículo ligado (a
+    parte 2) seleciona o item e liga o "Dirigindo" do C40, e descer ou passar a direção desliga; o motorista de um NPC ganha
+    o controle do token, sem mudar a propriedade;
+  - **o ataque** (`scripts/combate/apoio.mjs`, `modos.mjs`, `cartao.mjs`, `combate.mjs`): o tiro em quem está dentro
+    oferece a escolha do C15 com o veículo em que ele está (o token e, no ligado, o item com as janelas), mesmo com outro
+    veículo em uso; o destino é relido depois da janela de ataque.
+- **Na integração:** o ajudante comum dos cinco passos do G4 devolvia `{ ...ids }` de dentro do código que roda no
+  navegador, onde `ids` não existe ("ReferenceError: ids is not defined" nos cinco); ele passou a devolver só os ids novos,
+  juntados do lado do Node.
+- **Dúvidas:** a direção pelo ator (a direção sob pressão, as manobras e a batida do motorista de um veículo que não é o
+  dele), as armas pelo assento e a régua pelo MOVE do veículo ficam para a parte 4; o jogador pode embarcar num veículo de
+  NPC ou de outro dono que ele vê (a decisão desta parte; o M17 também deixa).
+- **Testes:**
+  - **G3:** `tripulacao.test.mjs` (a conta pura), `tripulacao-aplicacao.test.mjs` (17, o código de verdade com
+    documentos de mentira: os embarques concorrentes, mover o carro, descer, o C40, apagar o token, o socket e o pedido
+    relido, as cópias, o veículo oculto, a disposição secreta, a cena que deixou de ser ativa, o arrasto, o controle do
+    motorista, as paredes da cena do veículo, a visão do jogador) e `tripulacao-combate.test.mjs` (o tiro no ocupante);
+  - **G4:** cinco passos novos, depois dos do C46 parte 2: embarcar e o motorista (dois pelo arrasto num NPC de 2
+    assentos, o terceiro recusado pelo HUD, o Dirigir, a iniciativa e o C45 no ocupante menor); o jogador no NPC (a
+    distância da origem, o veículo oculto, entrar sem ser dono, dirigir e arrastar o carro pelo mestre, levando o
+    capanga); mover e descer (os dois juntos, a parede, o ocupante que não anda sozinho, descer pelo arrasto e pelo HUD,
+    com o tamanho, a ordem e a altura de volta); o próprio ligado e o C40 (o Dirigindo ao embarcar primeiro, ao passar e
+    devolver a direção e ao descer); a proteção e a exclusão (o tiro no passageiro com o veículo dele e a janela, o SDP do
+    item ligado e o Desfazer, apagar o token com a tripulação ao lado).
+- **Portões:** G1 e G2 sem erro; G3, 666/666; G4 completo, 295/295, com a checagem dos dois navegadores sem avisos ou erros
+  de JS. Depois de juntar os ciclos 178 e 179 da sessão Junin (o C45 partes 2 e 3), na árvore juntada:
+  G1, 271 arquivos; G2, nenhum erro; G3, 670/670; G4, 296/296.
+- **Mutações:** as oito caíram no G3, uma por vez, e os arquivos voltaram exatos (um a mais que os assentos, M1; embarcar
+  de 4 quadrados, M2; o Dirigir que não troca, M3; o ocupante no tamanho dele, M4; mover o veículo sem a tripulação, M5; o
+  ocupante que anda sozinho, M6; apagar o veículo sem tirar quem está dentro, M7; o tiro no ocupante sem o veículo dele,
+  M8); a M5 e a M7 caíram também no G4.
+- **Próximo:** o C46, parte 4 (as armas pelo assento, a direção, as manobras e a batida pelo ator, e a régua pelo MOVE do
+  veículo).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

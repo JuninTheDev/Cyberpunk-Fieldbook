@@ -16,6 +16,7 @@ import { ehArremesso, podeArremessar } from './arremessar.mjs';
 import { CANAL, combateDe, conferirArmaVeicular, conferirDestinos, distancia, esc, tokenNaCena } from './combate/apoio.mjs';
 import { resolver } from './combate/modos.mjs';
 import { naFila } from './combate/socket.mjs';
+import { protecaoDoOcupante, veiculoDaTripulacao } from './tripulacao.mjs';
 
 // A porta pública permanece aqui, inclusive para game.system.api.combate.
 export { STATUS_SUPRIMIDO, STATUS_COBERTURA, souOMestreAtivo, tokenNaCena, centroDe, distancia, jogadorDe, combateDe } from './combate/apoio.mjs';
@@ -30,17 +31,18 @@ async function perguntarDestinos(alvos, modo) {
   const destinos = {};
   if (modo === 'supressivo') return destinos;
   for (const token of alvos) {
-    const veiculo = token.actor.veiculoAtivo;
+    const veiculo = protecaoDoOcupante(token);
     if (!veiculo) continue;
-    const vidros = Object.entries(veiculo.system.janelas).map(([id, vidro]) => `<option value="vidro:${esc(id)}">Pessoa atrás de ${esc(vidro.nome)} (${vidro.hp.value} HP)</option>`).join('');
+    const vidros = Object.entries(veiculo.system.janelas ?? {}).map(([id, vidro]) => `<option value="vidro:${esc(id)}">Pessoa atrás de ${esc(vidro.nome)} (${vidro.hp.value} HP)</option>`).join('');
     const escolha = await DialogV2.wait({
       window: { title: `${token.name}: destino do ataque` }, classes: [SISTEMA, 'destino-veicular'],
       content: `<p>Escolha o que o ataque atinge. O mestre confere a posição e se o vidro cobre a pessoa.</p><label>Destino <select name="destino"><option value="pessoa" selected>Pessoa: ${esc(token.name)}</option><option value="veiculo">Veículo: ${esc(veiculo.name)}</option>${vidros}</select></label>`,
       buttons: [{ action: 'confirmar', label: 'Confirmar destino', default: true, callback: (evento, botao) => botao.form.elements.destino.value }], rejectClose: false
     }).catch(() => null);
     if (!escolha) return null;
-    if (escolha === 'veiculo') destinos[token.uuid] = { tipo: 'veiculo', veiculo: veiculo.id };
-    else if (escolha.startsWith('vidro:')) destinos[token.uuid] = { tipo: 'vidro', veiculo: veiculo.id, janela: escolha.slice(6) };
+    const dentro = veiculoDaTripulacao(token), origem = dentro ? { tokenVeiculo: dentro.id } : {};
+    if (escolha === 'veiculo') destinos[token.uuid] = { tipo: 'veiculo', veiculo: veiculo.id, ...origem };
+    else if (escolha.startsWith('vidro:')) destinos[token.uuid] = { tipo: 'vidro', veiculo: veiculo.id, janela: escolha.slice(6), ...origem };
     else if (escolha !== 'pessoa') return null;
   }
   return destinos;

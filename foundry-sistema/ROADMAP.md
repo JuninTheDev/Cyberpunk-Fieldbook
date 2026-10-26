@@ -27,7 +27,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 178). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 181). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -453,7 +453,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     armas montadas, que a wiki, a loja e o C15 já usam), e o ator ligado é o espelho dele na cena: o dano no token do
     veículo e a ficha do ator gravam no item, e o item atualiza o ator. Sem passo de migração: os veículos que já existem
     ganham o ator quando forem postos na cena, com o estado de agora;
-  - [~] parte 3, a tripulação (sessão KouArt, com o Codex, 2026-10-25): embarcar, descer, o motorista, mover junto e os ocupantes protegidos pelo veículo (os
+  - [x] parte 3, a tripulação: feito no ciclo 180 (sessão KouArt, com o Codex, 2026-10-25): embarcar, descer, o motorista, mover junto e os ocupantes protegidos pelo veículo (os
     vidros, a cobertura), como a mesa da wiki;
   - [ ] parte 4, o resto pelo ator: as armas pelo assento, a direção, as manobras e a batida pelo veículo, e a régua do
     C44 pelo MOVE dele.

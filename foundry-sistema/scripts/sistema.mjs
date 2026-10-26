@@ -53,6 +53,7 @@ import * as tokenDinamico from './token-dinamico.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
 import * as vinculoVeiculo from './vinculo-veiculo.mjs';
+import * as tripulacao from './tripulacao.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
 
 Hooks.once('init', () => {
@@ -109,6 +110,7 @@ Hooks.once('init', () => {
   registrarIceRezzado();
   // O veículo do personagem: só o item grava o estado, e o mestre mantém o espelho e o token ligado.
   vinculoVeiculo.registrarVinculoVeiculo();
+  tripulacao.registrarTripulacao();
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
   registrarConteiner();
   estados.registrarEstados();
@@ -132,6 +134,7 @@ Hooks.once('init', () => {
   tokenDinamico.registrarTokenDinamico();
   game.system.api.tokenDinamico = tokenDinamico.API;
   game.system.api.vinculoVeiculo = vinculoVeiculo;
+  game.system.api.tripulacao = tripulacao;
 });
 
 Hooks.once('ready', () => {

@@ -96,7 +96,8 @@ export async function desfazer(mensagem) {
     if (!ator) continue;
     if (item.veicular) {
       const veiculo = await fromUuid(item.veicular.veiculo);
-      if (veiculo?.type === 'veiculo' && (veiculo === ator || veiculo.actor?.uuid === ator.uuid)) {
+      const receptor = item.veicular.ator ?? ator.uuid;
+      if (veiculo?.type === 'veiculo' && (veiculo.uuid === receptor || veiculo.actor?.uuid === receptor)) {
         if (item.veicular.tipo === 'vidro') await veiculo.desfazerDanoNoVidro(item.veicular);
         else if (item.veicular.tipo === 'veiculo') await veiculo.desfazerDanoVeicular(item.veicular);
       }

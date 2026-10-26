@@ -404,19 +404,19 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
     const recebido = await destino.item.receberDanoVeicular({ dano: dano.total,
       ignorarPct: ctx.pedido?.carga ? Math.max(Number(ignorarPct) || 0, R.CARGA_TECH.ignorarPct) : ignorarPct,
       ignorarAbaixo: ctx.arma?.system.ignorarAbaixo, ablacao: dano.ablacao ?? municao?.system.ablacao ?? 1 });
-    if (recebido) linha.veicular = { tipo: 'veiculo', ...recebido };
+    if (recebido) linha.veicular = { tipo: 'veiculo', ...recebido, ator: destino.item.actor?.uuid ?? destino.item.uuid };
     return;
   }
   if (destino?.tipo === 'vidro') {
     const vidro = destino.item.system.janelas[destino.janela];
     if (techAtravessaVidro({ carga: ctx.pedido.carga, grossa: ctx.arma.getFlag(SISTEMA, 'arma2077')?.cargaGrossa, max: vidro.hp.max })) {
-      linha.veicular = { tipo: 'vidro', veiculo: destino.item.uuid, janela: destino.janela, nome: `${destino.item.name}: ${vidro.nome}`,
+      linha.veicular = { tipo: 'vidro', veiculo: destino.item.uuid, ator: destino.item.actor?.uuid ?? destino.item.uuid, janela: destino.janela, nome: `${destino.item.name}: ${vidro.nome}`,
         antes: vidro.hp.value, depois: vidro.hp.value, perdeu: 0, passou: true, atravessado: true };
       linha.notas.push('A carga Tech atravessou o vidro sem tirar HP da cobertura; a pessoa conserva a defesa e a armadura.');
     } else {
       const recebido = await destino.item.receberDanoNoVidro({ janela: destino.janela, dano: dano.total, explosivo: ctx.modo === 'explosivo' });
       if (!recebido) return;
-      linha.veicular = { tipo: 'vidro', ...recebido };
+      linha.veicular = { tipo: 'vidro', ...recebido, ator: destino.item.actor?.uuid ?? destino.item.uuid };
       if (!recebido.passou) return;
       linha.notas.push(recebido.antes > 0 ? 'A explosão destruiu o vidro: o dano total alcança a pessoa.' : 'O vidro está sem HP: não protege a pessoa.');
     }

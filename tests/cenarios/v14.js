@@ -13904,6 +13904,218 @@ module.exports = async ({ edge, servidores, r }) => {
       { copia: info.copiou, crossover: info.crossover.semVinculo, max: info.atualizou.par[0][1], ator: info.apagouAtor.desligou, item: info.apagouItem.npc, dona: info.apagouDona.npc });
     }));
 
+    // C46.3: a tripulação do M17 (master:Tabletop/README.md:104-109; mesa-api.js:692-706, 1302-1345).
+    // O token do veículo guarda a ordem; o ocupante continua na iniciativa e o C45 continua cuidando só da textura.
+    const comTripulacao = async teste => comVeiculoLigado(async ids => {
+      try {
+        const criados = await edge.evaluate(`(async () => {
+          const f = window.__c46b, c = window.__c46c = { f, api: game.system.api.tripulacao, combates: [] };
+          c.cena = () => game.scenes.get(f.cena.id); c.doc = id => c.cena()?.tokens.get(id);
+          const dono = game.users.getName('Jogador').id;
+          c.pessoa = await f.criar({ name: 'C46.3 Passageira', type: 'personagem', ownership: { default: 0, [dono]: 3 }, system: { atributos: { ref: { valor: 6 }, body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 } } });
+          c.capanga = await f.criar({ name: 'C46.3 Capanga', type: 'capanga', system: { atributos: { ref: { valor: 6 }, body: { valor: 6 }, will: { valor: 6 } }, hp: { value: 40 } } });
+          c.modelo = await f.criar({ name: 'C46.3 Carro NPC', type: 'veiculo', ownership: { default: 0 }, system: { sdp: { value: 50, max: 50 }, sp: 13, assentos: 2 } });
+          const criarToken = async (ator, dados) => (await c.cena().createEmbeddedDocuments('Token', [(await ator.getTokenDocument(dados)).toObject()]))[0].id;
+          c.idPessoa = await criarToken(c.pessoa, { x: 700, y: 300, actorLink: true, width: 1, height: 1, sort: 17, elevation: 3 });
+          c.idCapanga = await criarToken(c.capanga, { x: 700, y: 500, actorLink: false, width: 1.4, height: 1.2, sort: 19, elevation: 5 });
+          c.idVeiculo = await criarToken(c.modelo, { x: 900, y: 300, actorLink: false, width: 2, height: 2, sort: 7, elevation: 2 });
+          c.p1 = () => c.doc(c.idPessoa); c.p2 = () => c.doc(c.idCapanga); c.veiculo = () => c.doc(c.idVeiculo);
+          c.terceiro = () => c.doc(f.ocupante.id);
+          c.dados = token => token._source ?? token;
+          c.forma = token => { const t = c.dados(token); return [t.width, t.height, t.sort, t.elevation]; };
+          c.originais = [c.forma(c.p1()), c.forma(c.p2())];
+          c.marca = token => token.getFlag('${S}', 'embarcado');
+          c.ordem = token => token.getFlag('${S}', 'tripulacao') ?? [];
+          c.centro = token => { const t = c.dados(token); return [t.x + t.width * 50, t.y + t.height * 50]; };
+          c.dentro = (token, veiculo) => c.marca(token)?.veiculoId === veiculo.id && JSON.stringify(c.centro(token)) === JSON.stringify(c.centro(veiculo)) && c.dados(token).sort > c.dados(veiculo).sort && c.dados(token).elevation === c.dados(veiculo).elevation;
+          c.fora = (token, veiculo) => { const t = c.dados(token), v = c.dados(veiculo); return t.x >= v.x + v.width * 100 || t.y >= v.y + v.height * 100 || t.x + t.width * 100 <= v.x || t.y + t.height * 100 <= v.y; };
+          c.botao = async (token, acao) => {
+            await f.esperar(() => canvas.tokens.get(token.id)); await canvas.hud.token.bind(canvas.tokens.get(token.id));
+            const seletor = '.${S}-' + acao; await f.esperar(() => canvas.hud.token.element?.querySelector(seletor));
+            const botao = canvas.hud.token.element?.querySelector(seletor); if (!botao) throw new Error('C46.3: botão ' + acao + ' não apareceu no HUD.');
+            botao.click(); await c.api.esperarTripulacao();
+          };
+          c.embarcarDois = async () => {
+            await c.api.arrastar(c.p1(), { x: c.veiculo().x, y: c.veiculo().y }); await c.api.esperarTripulacao();
+            await c.api.arrastar(c.p2(), { x: c.veiculo().x, y: c.veiculo().y }); await c.api.esperarTripulacao();
+          };
+          await f.esperar(() => canvas.tokens.get(c.idPessoa) && canvas.tokens.get(c.idCapanga) && canvas.tokens.get(c.idVeiculo));
+          return { pessoa: c.idPessoa, capanga: c.idCapanga, veiculo: c.idVeiculo };
+        })()`);
+        return await teste({ ...ids, ...criados });
+      } finally {
+        await edge.evaluate(`(async () => {
+          const c = window.__c46c; if (!c) return true;
+          try { await c.api?.esperarTripulacao(); }
+          finally { try { for (const combate of c.combates) if (game.combats.has(combate.id)) await combate.delete(); } finally { delete window.__c46c; } } return true;
+        })()`);
+      }
+    });
+
+    await r.passo('veículo ator (C46.3), embarcar e motorista: personagem e capanga solto entram pelo arrasto num NPC de 2 assentos; o terceiro pelo Entrar do HUD é recusado; o primeiro dirige e Dirigir troca, mantendo a iniciativa e a textura dinâmica do ocupante menor', async () => comTripulacao(async () => {
+      const info = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f;
+        await game.system.api.tokenDinamico.salvarConjunto(c.pessoa, { ativo: true, imagens: { 'parado-0': 'icons/svg/mystery-man.svg', 'ferido-leve': 'icons/svg/skull.svg' } });
+        const textura = c.p1().texture.src;
+        const combate = await Combat.implementation.create({ scene: c.cena().id, active: false }); c.combates.push(combate);
+        await combate.createEmbeddedDocuments('Combatant', [{ actorId: c.pessoa.id, tokenId: c.idPessoa, sceneId: c.cena().id, initiative: 21 }]);
+        const combatente = combate.combatants.find(cb => cb.tokenId === c.idPessoa);
+        await c.embarcarDois();
+        const entrou = { ordem: JSON.stringify(c.ordem(c.veiculo())) === JSON.stringify([c.idPessoa, c.idCapanga]), dentro: [c.dentro(c.p1(), c.veiculo()), c.dentro(c.p2(), c.veiculo())],
+          menor: [c.p1().width, c.p1().height, c.p2().width, c.p2().height], textura: c.p1().texture.src === textura, soltos: [c.veiculo().actorLink, c.p2().actorLink],
+          iniciativa: [combate.combatants.size, combate.combatants.get(combatente.id)?.tokenId === c.idPessoa, combate.combatants.get(combatente.id)?.initiative] };
+        const terceiroAntes = [c.terceiro().x, c.terceiro().y, ...c.forma(c.terceiro())], avisos = [];
+        canvas.tokens.releaseAll(); canvas.tokens.get(c.terceiro().id)?.control({ releaseOthers: true });
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        let cheio;
+        try {
+          await c.botao(c.veiculo(), 'entrar');
+          cheio = { recusou: !c.marca(c.terceiro()), ordem: JSON.stringify(c.ordem(c.veiculo())) === JSON.stringify([c.idPessoa, c.idCapanga]),
+            intacto: JSON.stringify(terceiroAntes) === JSON.stringify([c.terceiro().x, c.terceiro().y, ...c.forma(c.terceiro())]), aviso: avisos.length === 1 && /assento|cheio|lotado/i.test(avisos[0]) };
+        } finally { delete ui.notifications.warn; }
+        await c.botao(c.p2(), 'dirigir');
+        await f.esperar(() => c.ordem(c.veiculo())[0] === c.idCapanga);
+        await c.pessoa.update({ 'system.hp.value': c.pessoa.system.hp.max - 1 });
+        await f.esperar(() => c.p1().texture.src === 'icons/svg/skull.svg');
+        return { entrou, cheio, trocou: JSON.stringify(c.ordem(c.veiculo())) === JSON.stringify([c.idCapanga, c.idPessoa]),
+          c45: [c.p1().texture.src, c.p1().width, c.p1().height, c.dentro(c.p1(), c.veiculo()), c.p1().lockRotation],
+          npc: [c.pessoa.system.dirigindo, c.p2().actor.system.dirigindo] };
+      })()`);
+      return conferirAtorVeiculo({ entrou: [info.entrou, { ordem: true, dentro: [true, true], menor: [0.5, 0.5, 0.7, 0.6], textura: true, soltos: [false, false], iniciativa: [1, true, 21] }],
+        cheio: [info.cheio, { recusou: true, ordem: true, intacto: true, aviso: true }], trocou: [info.trocou, true],
+        c45: [info.c45, ['icons/svg/skull.svg', 0.5, 0.5, true, true]], npc: [info.npc, [false, false]] },
+      { entrou: info.entrou.dentro, cheio: info.cheio.recusou, trocou: info.trocou, c45: info.c45.slice(1) });
+    }));
+
+    await r.passo('veículo ator (C46.3), jogador no NPC: o arrasto não burla a distância da origem e o veículo oculto é recusado; perto e visível, entra sem possuir o veículo, torna-se motorista e arrasta o carro pelo mestre, levando o capanga', async () => comTripulacao(async ids => {
+      await edge.evaluate(`(async () => { const c = window.__c46c; await c.p1().update({ x: 100, y: 900 }, { animate: false }); return true; })()`);
+      const longe = await jogador.evaluate(`(async () => {
+        const esperar = window.__c46bEsperar, cena = game.scenes.get('${ids.cena}');
+        await esperar(() => canvas.ready && canvas.scene?.id === cena.id && canvas.tokens.get('${ids.pessoa}') && canvas.tokens.get('${ids.veiculo}') && cena.tokens.get('${ids.pessoa}')._source.x === 100);
+        const token = cena.tokens.get('${ids.pessoa}'), veiculo = cena.tokens.get('${ids.veiculo}'), avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        try {
+          const r = await game.system.api.tripulacao.arrastar(token, { x: veiculo._source.x, y: veiculo._source.y });
+          return { recusou: r === null, semMarca: !token.getFlag('${S}', 'embarcado'), origem: [token._source.x, token._source.y], aviso: avisos.length === 1 && /perto/i.test(avisos[0]) };
+        } finally { delete ui.notifications.warn; }
+      })()`);
+      await edge.evaluate(`(async () => { const c = window.__c46c; await c.p1().update({ x: 700, y: 300 }, { animate: false }); await c.veiculo().update({ hidden: true }); return true; })()`);
+      const oculto = await jogador.evaluate(`(async () => {
+        const cena = game.scenes.get('${ids.cena}'), token = cena.tokens.get('${ids.pessoa}'), veiculo = cena.tokens.get('${ids.veiculo}'), avisos = [];
+        await window.__c46bEsperar(() => veiculo.hidden && token._source.x === 700);
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        try {
+          const r = await game.system.api.tripulacao.embarcar(token, veiculo);
+          return { recusou: r === null, semMarca: !token.getFlag('${S}', 'embarcado'), aviso: avisos.length === 1 && /vê|visível/i.test(avisos[0]) };
+        } finally { delete ui.notifications.warn; }
+      })()`);
+      await edge.evaluate(`(async () => { await window.__c46c.veiculo().update({ hidden: false }); return true; })()`);
+      const entrou = await jogador.evaluate(`(async () => {
+        const cena = game.scenes.get('${ids.cena}'), token = () => cena.tokens.get('${ids.pessoa}'), veiculo = () => cena.tokens.get('${ids.veiculo}');
+        await window.__c46bEsperar(() => !veiculo().hidden && canvas.tokens.get('${ids.veiculo}')?.isVisible);
+        const dono = veiculo().actor.isOwner, visivel = veiculo().object?.isVisible;
+        const r = await game.system.api.tripulacao.arrastar(token(), { x: veiculo()._source.x, y: veiculo()._source.y });
+        await window.__c46bEsperar(() => token().getFlag('${S}', 'embarcado')?.veiculoId === veiculo().id && veiculo().getFlag('${S}', 'tripulacao')?.[0] === token().id);
+        return { dono, visivel, entrou: Boolean(r), marca: token().getFlag('${S}', 'embarcado')?.veiculoId === veiculo().id, motorista: veiculo().getFlag('${S}', 'tripulacao')?.[0] === token().id };
+      })()`);
+      await edge.evaluate(`(async () => { const c = window.__c46c; await c.api.arrastar(c.p2(), { x: c.dados(c.veiculo()).x, y: c.dados(c.veiculo()).y }); await c.api.esperarTripulacao(); return true; })()`);
+      const moveu = await jogador.evaluate(`(async () => {
+        const cena = game.scenes.get('${ids.cena}'), veiculo = () => cena.tokens.get('${ids.veiculo}'), api = game.system.api.tripulacao;
+        await window.__c46bEsperar(() => cena.tokens.get('${ids.capanga}')?.getFlag('${S}', 'embarcado')?.veiculoId === veiculo().id);
+        const r = await api.arrastar(veiculo(), { x: 1100, y: 500 }); await api.esperarTripulacao();
+        const centro = t => [t._source.x + t._source.width * 50, t._source.y + t._source.height * 50];
+        await window.__c46bEsperar(() => veiculo()._source.x === 1100 && veiculo()._source.y === 500 && ['${ids.pessoa}', '${ids.capanga}'].every(id => JSON.stringify(centro(cena.tokens.get(id))) === JSON.stringify(centro(veiculo()))));
+        return { moveu: Boolean(r), carro: [veiculo()._source.x, veiculo()._source.y], juntos: ['${ids.pessoa}', '${ids.capanga}'].map(id => JSON.stringify(centro(cena.tokens.get(id))) === JSON.stringify(centro(veiculo()))) };
+      })()`);
+      const mestre = await edge.evaluate(`(async () => { const c = window.__c46c; await c.api.esperarTripulacao(); return { carro: [c.dados(c.veiculo()).x, c.dados(c.veiculo()).y], juntos: [c.dentro(c.p1(), c.veiculo()), c.dentro(c.p2(), c.veiculo())] }; })()`);
+      return conferirAtorVeiculo({ longe: [longe, { recusou: true, semMarca: true, origem: [100, 900], aviso: true }], oculto: [oculto, { recusou: true, semMarca: true, aviso: true }],
+        entrou: [entrou, { dono: false, visivel: true, entrou: true, marca: true, motorista: true }], moveu: [moveu, { moveu: true, carro: [1100, 500], juntos: [true, true] }],
+        mestre: [mestre, { carro: [1100, 500], juntos: [true, true] }] },
+      { longe: longe.recusou, oculto: oculto.recusou, entrou: entrou.marca, jogador: moveu.carro, mestre: mestre.carro });
+    }));
+
+    await r.passo('veículo ator (C46.3), mover e descer: mover o carro leva os dois e a parede segura o veículo; o ocupante não anda sozinho para longe; descer pelo arrasto perto e pelo HUD restaura tamanho, ordem e altura em lugares separados ao lado', async () => comTripulacao(async () => {
+      const info = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f; await c.embarcarDois();
+        await c.veiculo().move({ x: 1100, y: 500, elevation: 8 }, { animate: false, autoRotate: false, constrainOptions: { ignoreWalls: false, ignoreCost: true } });
+        await c.api.esperarTripulacao();
+        const moveu = { carro: [c.dados(c.veiculo()).x, c.dados(c.veiculo()).y, c.dados(c.veiculo()).elevation], juntos: [c.dentro(c.p1(), c.veiculo()), c.dentro(c.p2(), c.veiculo())] };
+        await c.cena().createEmbeddedDocuments('Wall', [{ c: [1500, 0, 1500, 1100] }]);
+        await c.veiculo().move({ x: 1700, y: 500 }, { animate: false, autoRotate: false, constrainOptions: { ignoreWalls: false, ignoreCost: true } });
+        await c.api.esperarTripulacao();
+        const parede = { segurou: c.centro(c.veiculo())[0] < 1500, juntos: [c.dentro(c.p1(), c.veiculo()), c.dentro(c.p2(), c.veiculo())] };
+        const antes = [c.dados(c.p1()).x, c.dados(c.p1()).y], avisos = []; ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        let sozinho;
+        try {
+          await c.p1().update({ x: 100, y: 100 }); await c.api.esperarTripulacao();
+          sozinho = { ficou: JSON.stringify([c.dados(c.p1()).x, c.dados(c.p1()).y]) === JSON.stringify(antes), dentro: c.dentro(c.p1(), c.veiculo()), aviso: avisos.length === 1 && /perto|descer|veículo/i.test(avisos[0]) };
+        } finally { delete ui.notifications.warn; }
+        await c.api.arrastar(c.p1(), { x: c.dados(c.veiculo()).x - 100, y: c.dados(c.veiculo()).y }); await c.api.esperarTripulacao();
+        const arrasto = { saiu: !c.marca(c.p1()), forma: c.forma(c.p1()), fora: c.fora(c.p1(), c.veiculo()), motorista: JSON.stringify(c.ordem(c.veiculo())) === JSON.stringify([c.idCapanga]) };
+        await c.botao(c.p2(), 'descer'); await f.esperar(() => !c.marca(c.p2()));
+        return { moveu, parede, sozinho, arrasto, hud: { saiu: !c.marca(c.p2()), forma: c.forma(c.p2()), fora: c.fora(c.p2(), c.veiculo()),
+          vazio: c.ordem(c.veiculo()).length === 0, separados: c.fora(c.p1(), c.p2()) } };
+      })()`);
+      return conferirAtorVeiculo({ moveu: [info.moveu, { carro: [1100, 500, 8], juntos: [true, true] }], parede: [info.parede, { segurou: true, juntos: [true, true] }],
+        sozinho: [info.sozinho, { ficou: true, dentro: true, aviso: true }], arrasto: [info.arrasto, { saiu: true, forma: [1, 1, 17, 3], fora: true, motorista: true }],
+        hud: [info.hud, { saiu: true, forma: [1.4, 1.2, 19, 5], fora: true, vazio: true, separados: true }] },
+      { juntos: info.moveu.juntos, parede: info.parede.segurou, sozinho: info.sozinho.ficou, arrasto: info.arrasto.saiu, hud: info.hud.saiu });
+    }));
+
+    await r.passo('veículo ator (C46.3), o próprio ligado e o C40: a proprietária que embarca primeiro seleciona o item e liga Dirigindo; outro ocupante assumir desliga a proprietária, devolver a direção liga, e descer desliga sem alterar o espelho', async () => comTripulacao(async () => {
+      const info = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, criado = await f.api.porVeiculoNaCena(f.item); f.registrar();
+        const token = () => c.doc(criado.tokenId), foto = () => [f.dono.system.veiculo === f.item.id, f.dono.system.dirigindo, f.item.system.sdp.value, f.ator().system.sdp.value];
+        await f.dono.usarVeiculo('');
+        await c.api.embarcar(c.terceiro(), token()); await c.api.esperarTripulacao(); const primeiro = foto();
+        await c.api.embarcar(c.p1(), token()); await c.api.dirigir(c.p1()); await c.api.esperarTripulacao();
+        const trocou = { dona: foto(), outro: c.pessoa.system.dirigindo, motorista: c.ordem(token())[0] === c.idPessoa };
+        await c.api.dirigir(c.terceiro()); await c.api.esperarTripulacao(); const voltou = foto();
+        await c.api.descer(c.terceiro()); await c.api.esperarTripulacao();
+        return { primeiro, trocou, voltou, desceu: { dona: foto(), saiu: !c.marca(c.terceiro()), motorista: c.ordem(token())[0] === c.idPessoa, dentro: c.dentro(c.p1(), token()) } };
+      })()`);
+      return conferirAtorVeiculo({ primeiro: [info.primeiro, [true, true, 43, 43]], trocou: [info.trocou, { dona: [true, false, 43, 43], outro: false, motorista: true }],
+        voltou: [info.voltou, [true, true, 43, 43]], desceu: [info.desceu, { dona: [true, false, 43, 43], saiu: true, motorista: true, dentro: true }] },
+      { primeiro: info.primeiro.slice(0, 2), trocou: info.trocou.dona.slice(0, 2), desceu: info.desceu.dona.slice(0, 2) });
+    }));
+
+    await r.passo('veículo ator (C46.3), proteção e exclusão: tiro no passageiro oferece pessoa, veículo e janela do carro em que está, mesmo com outro veículo em uso; o SDP do item ligado recebe e Desfazer devolve; apagar o token deixa a tripulação ao lado, no tamanho original', async () => comTripulacao(async () => {
+      await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, criado = await f.api.porVeiculoNaCena(f.item); f.registrar(); c.idLigado = criado.tokenId;
+        const proprio = f.pegar('core_vehicles:roadbike'); proprio.name = 'C46.3 Moto própria fora da cena';
+        const item = (await c.pessoa.createEmbeddedDocuments('Item', [proprio]))[0]; c.idProprio = item.id; await c.pessoa.usarVeiculo(item.id);
+        c.sdpProprio = item.system.sdp.value;
+        await c.api.embarcar(c.p1(), c.doc(c.idLigado)); await c.api.embarcar(c.p2(), c.doc(c.idLigado)); await c.api.esperarTripulacao();
+        await c.doc(c.idLigado).update({ x: 550, y: 250 }, { animate: false }); await c.api.esperarTripulacao(); return true;
+      })()`);
+      await fixar(edge, [[9, 10], [6, 6], [6, 6], [4, 6], [4, 6], [4, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const c = window.__c46c, f = c.f, ataque = f.rifle.atacar({ alvo: c.p1() });
+        const janela = () => document.querySelector('.application.dialog.destino-veicular:not(.minimizing)');
+        await f.esperar(() => janela()?.querySelector('[name="destino"]'));
+        const campo = janela()?.querySelector('[name="destino"]'); if (!campo) throw new Error('C46.3: a escolha do destino no passageiro não abriu.');
+        const opcoes = [...campo.options].map(o => ({ valor: o.value, texto: o.textContent }));
+        const escolha = { pessoa: opcoes.some(o => o.valor === 'pessoa'), veiculo: opcoes.some(o => o.valor === 'veiculo'), vidro: opcoes.some(o => o.valor.includes(f.janela)),
+          certo: janela().textContent.includes(f.item.name), errado: janela().textContent.includes('C46.3 Moto própria fora da cena') };
+        campo.value = 'veiculo'; janela().querySelector('[data-action="confirmar"]').click();
+        const r = await ataque, l = r?.linhas[0]; await f.esperar(() => f.item.system.sdp.value === f.ator().system.sdp.value);
+        const tiro = { par: f.par(), hp: c.pessoa.system.hp.value, proprio: c.pessoa.items.get(c.idProprio).system.sdp.value === c.sdpProprio,
+          selecionado: c.pessoa.system.veiculo === c.idProprio, vidro: f.item.system.janelas[f.janela].hp.value,
+          dano: [l?.veicular?.perdeu, l?.veicular?.spEfetivo, l?.veicular?.ablado], humano: Boolean(l?.dano), fila: window.__fila.length };
+        const desfez = await game.system.api.combate.desfazer(f.cartao(r)); await f.esperar(() => f.item.system.sdp.value === 43 && f.ator().system.sdp.value === 43);
+        const token = c.doc(c.idLigado), posicao = { x: c.dados(token).x, y: c.dados(token).y, width: c.dados(token).width, height: c.dados(token).height };
+        await token.delete(); await c.api.esperarTripulacao();
+        return { escolha, tiro, desfez, voltou: f.par(), apagou: { sumiu: !c.doc(c.idLigado), marcas: [!c.marca(c.p1()), !c.marca(c.p2())],
+          formas: [c.forma(c.p1()), c.forma(c.p2())], fora: [c.fora(c.p1(), posicao), c.fora(c.p2(), posicao)], separados: c.fora(c.p1(), c.p2()),
+          perto: [c.p1(), c.p2()].every(t => Math.hypot(c.centro(t)[0] - (posicao.x + 100), c.centro(t)[1] - (posicao.y + 100)) <= 400), ator: Boolean(f.ator()) } };
+      })()`);
+      return conferirAtorVeiculo({ escolha: [info.escolha, { pessoa: true, veiculo: true, vidro: true, certo: true, errado: false }],
+        tiro: [info.tiro, { par: [[32, 50, 11, 2], [32, 50, 11, 2]], hp: 40, proprio: true, selecionado: true, vidro: 12, dano: [11, 13, 2], humano: false, fila: 0 }],
+        desfez: [info.desfez, true], voltou: [info.voltou, [[43, 50, 13, 0], [43, 50, 13, 0]]],
+        apagou: [info.apagou, { sumiu: true, marcas: [true, true], formas: [[1, 1, 17, 3], [1.4, 1.2, 19, 5]], fora: [true, true], separados: true, perto: true, ator: true }] },
+      { escolha: info.escolha, sdp: info.tiro.par[0][0], desfez: info.desfez, apagou: info.apagou.marcas });
+    }));
+
     await r.passo('veículos (C15), carga Tech e vidro: atravessa o fino sem tirar HP da cobertura, conserva armadura e esquiva da pessoa; vidro grosso com 5 de 30 HP ainda barra a Tech comum, e a Nekomata carregada o atravessa', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
