@@ -8587,8 +8587,8 @@ integrados aqui pelo patch.
 - **Integração:** a KouArt publicou os ciclos 173 (o C44), 174 (o C35) e 175 (o C46, parte 1, o veículo como ator) no
   meio; o ciclo passou de 173 para 176, com um conflito de acréscimo no MIGRATION_STATUS (as duas versões).
 - **Portões:** G1, 205 arquivos com sintaxe válida depois da integração; G2, ESLint 10.12.0 sem erros; G3, 607/607 (5 testes
-  novos em `tests/sistema/token-dinamico.test.mjs`); G4 completo antes da integração, 278/278 em 586 s (o da árvore
-  integrada vai num commit de registro) no Foundry 14.369, sem aviso nem erro do sistema, com o passo novo: a pasta com imagens de teste (enviadas
+  novos em `tests/sistema/token-dinamico.test.mjs`); G4 completo antes da integração, 278/278 em 586 s ; o da árvore
+  integrada (3ace7e33), 285/285 em 624 s, sem aviso nem erro do sistema no Foundry 14.369, sem aviso nem erro do sistema, com o passo novo: a pasta com imagens de teste (enviadas
   pelo `FilePicker.upload`), "Ler a pasta" (10 das 29), ligar, o token novo em pé, o movimento em quatro direções (a
   diagonal sem imagem cai no 0), a arma (Mirando a 270), o ferimento (leve, e o grave no leve), parado e ferido depois de
   andar, caído e estase (Incapacitado), morto, a calibração no sentido contrário, o capanga de token solto e desligar.
