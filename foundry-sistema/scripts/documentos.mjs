@@ -26,6 +26,7 @@ import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
 import { danoNaEstase, desfazerDanoNaEstase } from './cryo.mjs';
+import { gravarNoItemDoVeiculo, limparVinculosCopiados } from './vinculo-veiculo.mjs';
 
 // Os botões do mestre no cartão do dano da NET (net.mjs, aplicarDanoDeNet).
 const ROTULOS_DA_NET = { cerebro: 'No cérebro dos alvos', programa: 'Num programa do alvo', rez: 'Na REZ do Black ICE ou demônio alvo' };
@@ -78,6 +79,7 @@ export class AtorCPR extends Actor {
   // contêiner) e as permissões do tipo.
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
+    limparVinculosCopiados(this, opcoes);
     const token = { bar1: { attribute: 'hp' }, sight: { enabled: true },
       ...(!Object.hasOwn(dados.prototypeToken ?? {}, 'bar2') ? { bar2: { attribute: 'spMonitorado.corpo' } } : {}) };
     if (this.type === 'personagem') this.updateSource({ prototypeToken: { actorLink: true, ...token } });
@@ -96,6 +98,7 @@ export class AtorCPR extends Actor {
   // setContainerType do CORE), e o dinheiro também tem o extrato.
   async _preUpdate(mudancas, opcoes, usuario) {
     if ((await super._preUpdate(mudancas, opcoes, usuario)) === false) return false;
+    if (!(await gravarNoItemDoVeiculo(this, mudancas, opcoes, usuario))) return false;
     // A ciberpsicose (o C21; terapia.mjs): o estado mental de antes, para o aviso quando a Humanidade ou a EMP o pioram.
     if (['personagem', 'capanga'].includes(this.type) && ['system.humanidade.value', 'system.atributos.emp.valor'].some(campo => foundry.utils.hasProperty(mudancas, campo))) {
       opcoes.cprfEstadoMental = estadoMental(this.system.humanidade.value, this.system.atributos.emp.valor);
@@ -703,6 +706,7 @@ export class ItemCPR extends Item {
 
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
+    limparVinculosCopiados(this, opcoes);
     if (this.type === 'arma' && this.system.instaladoEm) this.updateSource({ 'system.equipada': false });
   }
   // O EMP não desinstala nem guarda o item. A fundação parada leva suas opções; os estados originais ficam intactos.

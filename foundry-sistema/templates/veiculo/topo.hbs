@@ -3,6 +3,7 @@
   <div class="identidade">
     <p class="linha-id"><span>VEÍCULO://</span><span class="modelo">{{#if naCena}}ESTE TOKEN{{else}}MODELO DOS TOKENS{{/if}}</span></p>
     <div class="nome-linha"><input class="nome" type="text" name="name" value="{{nomeNaFicha}}" aria-label="Nome do veículo" {{#unless editavel}}disabled{{/unless}}></div>
+    {{#if donoDoVeiculo}}<p class="dono-do-veiculo">Veículo de {{#if donoDoVeiculo.podeAbrir}}<a data-action="abrirDono" role="button" tabindex="0" data-tooltip="Abrir a ficha do personagem">{{donoDoVeiculo.nome}}</a>{{else}}{{donoDoVeiculo.nome}}{{/if}}</p>{{/if}}
     <div class="indicadores">
       <label class="indicador hp corte"><span class="valor"><input type="number" name="system.sdp.value" value="{{sistema.sdp.value}}" min="0" aria-label="SDP atual" {{#unless editavel}}disabled{{/unless}}></span><i>SDP ATUAL</i></label>
       <label class="indicador corte"><span class="valor"><input type="number" name="system.sdp.max" value="{{sistema.sdp.max}}" min="0" aria-label="SDP máximo" {{#unless editavel}}disabled{{/unless}}></span><i>SDP MÁXIMO</i></label>

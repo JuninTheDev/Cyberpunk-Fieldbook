@@ -18,7 +18,7 @@ const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
 const { ApplicationV2 } = foundry.applications.api;
 
 export const conjuntoDe = ator => { const dados = ator?.getFlag?.(SISTEMA, FLAG_TOKEN_DINAMICO); return dados ? conjuntoValido(dados) : null; };
-const ativoEm = ator => { const conjunto = conjuntoDe(ator); return conjunto?.ativo ? conjunto : null; };
+const ativoEm = ator => { const conjunto = ator?.type === 'veiculo' ? null : conjuntoDe(ator); return conjunto?.ativo ? conjunto : null; };
 
 // O estado do ator que muda a pose.
 export function estadoDoAtor(ator) {
@@ -88,6 +88,7 @@ const atorDe = documento => {
 // Salva o conjunto da janela: a base (a imagem de antes) e o giro de antes ficam guardados da primeira vez; ligado, a
 // imagem não gira; desligado, volta tudo.
 export async function salvarConjunto(ator, dados) {
+  if (ator?.type === 'veiculo') return null;
   const antes = conjuntoDe(ator);
   const base = antes?.base || ator.prototypeToken.texture.src;
   const travaAntes = antes ? Boolean(ator.getFlag(SISTEMA, FLAG_TOKEN_DINAMICO)?.travaAntes) : Boolean(ator.prototypeToken.lockRotation);
@@ -196,7 +197,7 @@ export class JanelaTokenDinamico extends ApplicationV2 {
 }
 
 export function abrirTokenDinamico(ator) {
-  if (!ator?.isOwner) return null;
+  if (!ator?.isOwner || ator.type === 'veiculo') return null;
   return new JanelaTokenDinamico({ ator }).render({ force: true });
 }
 
@@ -204,7 +205,7 @@ export function abrirTokenDinamico(ator) {
 function botaoNoHud(app, elemento) {
   const doc = app?.document ?? app?.object?.document;
   const coluna = (elemento instanceof HTMLElement ? elemento : app?.element)?.querySelector?.('.col.left');
-  if (!doc?.actor?.isOwner || !coluna || coluna.querySelector(`.${SISTEMA}-token-dinamico`)) return;
+  if (!doc?.actor?.isOwner || doc.actor.type === 'veiculo' || !coluna || coluna.querySelector(`.${SISTEMA}-token-dinamico`)) return;
   const botao = document.createElement('button');
   botao.type = 'button';
   botao.className = `control-icon ${SISTEMA}-token-dinamico${ativoEm(doc.actor) ? ' active' : ''}`;

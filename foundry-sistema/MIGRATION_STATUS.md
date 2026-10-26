@@ -8597,6 +8597,56 @@ integrados aqui pelo patch.
 - **No caminho:** o `getDependentTokens` sem `concreteOnly` traz as cópias de prévia do token, e o update delas falha ("You
   must provide an _id..."): os tokens do ator são só os concretos.
 
+### Ciclo 177 (2026-10-25): o C46, parte 2, o veículo do personagem ligado ao ator (sessão KouArt, com o Codex)
+
+Commit anterior: `19d8c624` (o registro do ciclo 176, o C45 parte 1, da sessão Junin). O código e os testes saíram do
+Codex (`codex exec`, numa worktree própria a partir do `c1d8b42b`), revisados e integrados aqui pelo patch, sem conflito.
+
+- **A decisão de desenho** (2026-10-25, para não migrar nada; o ROADMAP, C46): o item `veiculo` na ficha do personagem
+  continua sendo o lugar do estado (o SDP, a blindagem, os vidros, os upgrades e as armas montadas, que a wiki, a loja e
+  o C15/C40 usam), e o ator Veículo ligado é o espelho dele na cena. Não há passo de migração: o veículo que já existe
+  ganha o ator quando for posto na cena. O ator de NPC (a parte 1) continua com o próprio estado.
+- **As fontes:** o CORE tem o veículo só como item (`modules/item/types/cpr-vehicle.js:7`; os campos em
+  `datamodels/item/vehicle-datamodel.js:18-39`; a soma dos upgrades em `item/mixins/cpr-upgradable.js:32-43`); a conta do
+  dano é a do C15 (`regras-veiculos.mjs:27-35`), sem mudança; o Foundry 14 (`client/documents/actor.mjs:337-373`, o token
+  na cena explícita; `client/data/client-backend.mjs:238-250` e `:500-543`, o `_preUpdate` e o `dryRun`).
+- **O que muda:**
+  - **`scripts/regras-vinculo-veiculo.mjs` (novo, sem Foundry):** os números do item para o ator (os máximos com os
+    upgrades, sem somar duas vezes), a edição dos máximos no ator devolvida à base do item (sem o bônus dos upgrades) e a
+    ligação válida só quando os dois documentos e o dono concordam;
+  - **`scripts/vinculo-veiculo.mjs` (novo):** "Pôr na cena" (o mestre ativo cria, uma vez por item, o ator ligado com os
+    donos do personagem, na pasta "Veículos dos personagens", e o token ligado perto do personagem; reaproveita o ator e
+    o token da cena; o jogador pede pelo socket do sistema, com 15 segundos de espera; sem mestre, recusa); o espelho (o
+    mestre ativo copia o estado do item para o ator e os tokens, a cada mudança do personagem e dos itens dele e na
+    entrada; as gravações no ator ligado vão primeiro ao item, pelo `_preUpdate`, com uma marca contra o laço); a cópia do
+    personagem, o arrasto do item e o crossover sem a ligação; apagar o ator desliga o item, e apagar o item ou o
+    personagem deixa o ator como NPC com o último estado;
+  - **`scripts/veiculos.mjs`:** o dano e o Desfazer no ator ligado usam o item e a mesma fila, para não perder dano
+    enquanto o espelho atualiza;
+  - **as fichas:** o botão na linha do veículo e na ficha do item; a ficha do ator ligado com o dono e o link, sem o
+    catálogo; o `token-dinamico.mjs` (o C45 parte 1) deixa o veículo fora das poses.
+- **Dúvidas:** o espelho depende do mestre ativo e se acerta na entrada dele; apagar a posse sem mestre e sem permissão
+  no espelho deixa o ator com o último estado gravado, que o mestre acerta ao entrar. A atualização da wiki com o id do
+  item preservado foi conferida pelo `item.update`; o fluxo HTTP inteiro do "Atualizar da wiki" fica para a sessão de
+  teste com a mesa.
+- **Testes:**
+  - **G3:** `vinculo-veiculo.test.mjs` (6, a conta pura) e `vinculo-veiculo-aplicacao.test.mjs` (17, o código de verdade com
+    documentos de mentira: os upgrades sem soma dupla, a edição dos máximos, as permissões, a ligação recíproca, a criação
+    concorrente, o socket, as cópias, as exclusões, o `dryRun`, o C45 e o dano com o espelho atrasado); o
+    `ator-veiculo.test.mjs` ganha 2 da ficha ligada;
+  - **G4:** quatro passos novos, depois do "veículo ator (C46.1), C14 e supressivo": Pôr na cena (os botões, os donos, a
+    pasta, o token ligado perto, de novo sem duplicar, o SP13 e o vidro, o link, fora do C45); o dano e o espelho (o tiro
+    direto, o Desfazer pelo cartão, o C15 pelo ocupante, a ablação, o conserto e a edição, lidos nos dois navegadores); o
+    jogador dono (o pedido ao mestre, sem permissão no ator no começo, e a recusa sem mestre); a ligação e as exclusões (a
+    cópia e o crossover, o item com o id preservado, o máximo 70 pelo upgrade).
+- **Portões:** G1, 263 arquivos sem erro; G2, nenhum erro; G3, 632/632; G4 completo, 289/289, com a checagem dos dois
+  navegadores sem avisos ou erros de JS.
+- **Mutações:** as oito do Codex caíram no G3, uma por vez, e os arquivos voltaram exatos (o item preparado que soma os
+  upgrades de novo, M1; a edição do máximo com o bônus na base, M2; a ligação sem o dono, M3; o dano no ator fora do item,
+  M4; a edição no ator que não grava no item, M5; o token que não se reaproveita, M6; a cópia que leva a ligação, M7; o
+  ator apagado que não desliga o item, M8); a M6 caiu também no G4.
+- **Próximo:** o C46, parte 3 (a tripulação: embarcar, descer, o motorista e mover junto).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -3,6 +3,7 @@ import { itemDoCatalogo } from './catalogo.mjs';
 import { ARMAS_VEICULARES, prepararArmaVeicular as prepararDados } from './armas-veiculos.mjs';
 import { SISTEMA } from './config.mjs';
 import { danoNoVeiculo, danoNoVidro } from './regras-veiculos.mjs';
+import { itemDoVeiculo, sincronizarVeiculo } from './vinculo-veiculo.mjs';
 
 // Um clique de cada vez por ator: preparar duas vezes não cria duas armas para o mesmo upgrade.
 const filas = new Map();
@@ -117,14 +118,26 @@ export function desfazerDanoNoVidro(veiculo, { janela, perdeu = 0 }) {
   return veiculo.update({ [`system.janelas.${janela}.hp.value`]: Math.min(vidro.hp.max, vidro.hp.value + perdeu) });
 }
 
+const estadoVeicular = veiculo => veiculo.documentName === 'Actor' ? itemDoVeiculo(veiculo) ?? veiculo : veiculo;
+
 export async function receberDanoVeicular(veiculo, dados) {
-  if (veiculo.type !== 'veiculo' || !veiculo.isOwner) return null;
-  const conta = danoNoVeiculo({ ...dados, sdp: veiculo.system.sdp.value, sp: veiculo.system.blindagem.sp });
-  await veiculo.update({ 'system.sdp.value': conta.depois, 'system.ablacao': veiculo.system.ablacao + conta.ablado });
-  return { veiculo: veiculo.uuid, nome: veiculo.name, ...conta };
+  const item = estadoVeicular(veiculo);
+  if (veiculo.type !== 'veiculo' || !veiculo.isOwner || !item.isOwner) return null;
+  // C46.2: o espelho pode ainda estar chegando do socket. A conta e a fila usam sempre o item, também pelo ocupante.
+  return naFila(item, async () => {
+    const conta = danoNoVeiculo({ ...dados, sdp: item.system.sdp.value, sp: item.system.blindagem.sp });
+    await item.update({ 'system.sdp.value': conta.depois, 'system.ablacao': item.system.ablacao + conta.ablado });
+    if (item !== veiculo) await sincronizarVeiculo(veiculo);
+    return { veiculo: veiculo.uuid, nome: item.name, ...conta };
+  });
 }
 
 export function desfazerDanoVeicular(veiculo, { perdeu = 0, ablado = 0 }) {
-  if (veiculo.type !== 'veiculo' || !veiculo.isOwner) return null;
-  return veiculo.update({ 'system.sdp.value': veiculo.system.sdp.value + perdeu, 'system.ablacao': Math.max(0, veiculo.system.ablacao - ablado) });
+  const item = estadoVeicular(veiculo);
+  if (veiculo.type !== 'veiculo' || !veiculo.isOwner || !item.isOwner) return null;
+  return naFila(item, async () => {
+    const resultado = await item.update({ 'system.sdp.value': item.system.sdp.value + perdeu, 'system.ablacao': Math.max(0, item.system.ablacao - ablado) });
+    if (item !== veiculo) await sincronizarVeiculo(veiculo);
+    return resultado;
+  });
 }

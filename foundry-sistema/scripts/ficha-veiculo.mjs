@@ -4,6 +4,7 @@ import { carregarCatalogo, itemDoCatalogo } from './catalogo.mjs';
 import { caminho, SISTEMA } from './config.mjs';
 import { dadosDoVeiculoDoCatalogo } from './regras-ator-veiculo.mjs';
 import { TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
+import { itemDoVeiculo } from './vinculo-veiculo.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -13,7 +14,7 @@ export class FichaVeiculo extends HandlebarsApplicationMixin(ActorSheetV2) {
     classes: [SISTEMA, 'ficha-personagem', 'ficha-capanga', 'ficha-veiculo', 'themed', 'theme-dark'],
     position: { width: 720, height: 680 }, window: { resizable: true },
     form: { submitOnChange: true },
-    actions: { escolherVeiculo: FichaVeiculo.escolherVeiculo, ablarChassis: FichaVeiculo.ablarChassis, consertarChassis: FichaVeiculo.consertarChassis }
+    actions: { escolherVeiculo: FichaVeiculo.escolherVeiculo, ablarChassis: FichaVeiculo.ablarChassis, consertarChassis: FichaVeiculo.consertarChassis, abrirDono: FichaVeiculo.abrirDono }
   };
 
   // Uma parte por elemento raiz (o Foundry 14 exige um só por parte), como a ficha do capanga.
@@ -26,10 +27,13 @@ export class FichaVeiculo extends HandlebarsApplicationMixin(ActorSheetV2) {
   async _prepareContext(opcoes) {
     const contexto = await super._prepareContext(opcoes);
     const ator = this.actor;
-    const catalogo = this.isEditable ? await carregarCatalogo() : {};
+    const item = itemDoVeiculo(ator);
+    const dono = item?.parent;
+    const catalogo = this.isEditable && !item ? await carregarCatalogo() : {};
     return Object.assign(contexto, {
       ator, sistema: ator.system, fonte: ator._source.system, editavel: this.isEditable, versao: game.system.version,
       naCena: ator.isToken, nomeNaFicha: this.token?.name ?? ator.name, tipos: TIPOS_DE_VEICULO,
+      vinculado: Boolean(item), donoDoVeiculo: dono ? { nome: dono.name, podeAbrir: dono.visible } : null,
       modelos: Object.fromEntries(Object.entries(catalogo).filter(([, item]) => item.type === 'veiculo')
         .sort(([, a], [, b]) => a.name.localeCompare(b.name, 'pt-BR')).map(([id, item]) => [id, item.name])),
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(ator.system.notas, { relativeTo: ator, secrets: ator.isOwner })
@@ -59,7 +63,7 @@ export class FichaVeiculo extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   static async escolherVeiculo() {
-    if (!this.isEditable || !this.actor.isOwner) return;
+    if (!this.isEditable || !this.actor.isOwner || itemDoVeiculo(this.actor)) return;
     const ator = this.actor;
     const seletor = this.element.querySelector('[name="catalogoVeiculo"]');
     const id = seletor?.value;
@@ -67,14 +71,20 @@ export class FichaVeiculo extends HandlebarsApplicationMixin(ActorSheetV2) {
     const dados = dadosDoVeiculoDoCatalogo(await itemDoCatalogo(id));
     const atual = await fromUuid(ator.uuid);
     // A ficha pode ter perdido a permissão ou mudado a seleção durante a leitura do catálogo.
-    if (!dados || !this.isEditable || !ator.isOwner || this.actor !== ator || seletor.value !== id || atual !== ator) return;
+    if (!dados || !this.isEditable || !ator.isOwner || this.actor !== ator || seletor.value !== id || atual !== ator || itemDoVeiculo(ator)) return;
     if (this.token) await this.token.update({ name: dados.name });
     return ator.update(dados);
   }
 
+  // Um link também funciona na ficha só de leitura: o Foundry desliga os botões do formulário (document-sheet.mjs:217-218).
+  static abrirDono() {
+    const dono = itemDoVeiculo(this.actor)?.parent;
+    return dono?.visible ? dono.sheet.render({ force: true }) : null;
+  }
+
   static ablarChassis() {
     if (!this.isEditable || !this.actor.isOwner) return;
-    const s = this.actor.system;
+    const s = (itemDoVeiculo(this.actor) ?? this.actor).system;
     return this.actor.update({ 'system.ablacao': s.ablacao + Math.min(1, s.blindagem.sp) });
   }
 

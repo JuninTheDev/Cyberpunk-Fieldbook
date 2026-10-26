@@ -9,6 +9,7 @@ import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { TIPOS_DE_VEICULO } from './regras-veiculos.mjs';
+import { porVeiculoNaCena } from './vinculo-veiculo.mjs';
 import { ehArmaDoUpgrade, ehArmaMontadaEmItem, idDaOrigem } from './armas-cyberware.mjs';
 import { ligaAMao, resumoDasMudancas } from './regras-efeitos.mjs';
 
@@ -86,6 +87,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     actions: { alternarEfeito: FichaItem.#alternarEfeito, consertar: FichaItem.#consertar, usar: FichaItem.#usar, rolarHumanidade: FichaItem.#rolarHumanidade,
       atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar, rodar: FichaItem.#rodar, restaurarRez: FichaItem.#restaurarRez,
       adicionarJanela: FichaItem.#adicionarJanela, removerJanela: FichaItem.#removerJanela, ajustarVidros: FichaItem.#ajustarVidros, prepararArmaVeicular: FichaItem.#prepararArmaVeicular,
+      porVeiculoNaCena: FichaItem.#porVeiculoNaCena,
       corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga
     }
   };
@@ -136,6 +138,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
         ? (tipo === 'upgrade' ? 'Na arma: ataca pela aba Combate, com ela equipada.' : 'Instalado: ataca pela aba Combate.') : '',
       prepararArma: tipo === 'upgrade' && item.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, item.getFlag(SISTEMA, 'catalogo')),
       janelas: tipo === 'veiculo' ? Object.entries(fonte.janelas).map(([id, janela]) => ({ id, ...janela })) : [],
+      podePorVeiculoNaCena: this.isEditable && tipo === 'veiculo' && item.parent?.type === 'personagem' && !item.parent.isToken,
       // O tipo do veículo (o C40): "Pelo nome" é o vazio.
       tiposDeVeiculo: comAtual(TIPOS_DE_VEICULO, tipo === 'veiculo' && fonte.tipo),
       drogaDeAtor: tipo === 'droga' && Boolean(item.actor) ? { sobEfeito: Boolean(item.getFlag(SISTEMA, 'sobEfeito')), viciado: Boolean(item.getFlag(SISTEMA, 'viciado')) } : null,
@@ -207,6 +210,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static #removerJanela(evento, alvo) { return this.item.removerJanela(alvo.dataset.janelaId); }
   static #ajustarVidros() { return this.item.ajustarVidros(); }
   static #prepararArmaVeicular() { return this.item.prepararArmaVeicular(); }
+  static #porVeiculoNaCena() {
+    const item = this.item;
+    return this.isEditable && item.isOwner && item.type === 'veiculo' && item.parent?.type === 'personagem' && !item.parent.isToken ? porVeiculoNaCena(item) : null;
+  }
   // "−1" no SP de um local da armadura (o "Ablate" das maquetes): sem passar de 0 (o modelo não tem o mínimo); o
   // "Consertar" devolve.
   static #ablar(evento, alvo) {

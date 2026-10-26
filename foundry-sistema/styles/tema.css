@@ -484,6 +484,8 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.ficha-veiculo .campos-veiculo input[type="number"] { width: 8ch; }
 .cpr-fieldbook.ficha-veiculo .notas prose-mirror { min-height: 8rem; }
 .cpr-fieldbook.ficha-veiculo .retrato:not([data-action]) { cursor: default; }
+.cpr-fieldbook.ficha-veiculo .dono-do-veiculo { margin: 0 0 8px; color: var(--cp-fraco); font: 400 12px/1.4 var(--cp-dados); }
+.cpr-fieldbook.ficha-veiculo .dono-do-veiculo a { color: var(--cp-ciano); }
 
 /* ---------- Black ICE e demônio (os atores da NET): uma página só, no visual da ficha do personagem ---------- */
 .cpr-fieldbook.ficha-net .window-content { overflow-y: auto; }

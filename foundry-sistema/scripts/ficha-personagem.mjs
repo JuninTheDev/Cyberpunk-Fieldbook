@@ -37,6 +37,7 @@ import { alcanceDoJackIn, bonusDeRole, custoMensalDeMoradia, periciaPropria, DAN
 import { netrunnerDo, temPortaDoDeck } from './netrun/regras-da-net.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
 import { manobra } from './direcao.mjs';
+import { porVeiculoNaCena } from './vinculo-veiculo.mjs';
 import { armaDoAcessorio, armaMontadaPronta, ehArmaDoCyberware, ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 import { alternarItemFavorito, alternarPericiaFavorita, arrastoDaPericia, FLAG_FAVORITAS, FLAG_FAVORITO, listaCurta, perguntarLocalMirado } from './macros.mjs';
 import { ESTADOS_MENTAIS, estadoMental, fazerTerapia, TRACOS_DE_HARE } from './terapia.mjs';
@@ -151,6 +152,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       trocarMunicao: FichaPersonagem.#trocarMunicao,
       descarregar: FichaPersonagem.#descarregar,
       usarVeiculo: FichaPersonagem.#usarVeiculo,
+      porVeiculoNaCena: FichaPersonagem.#porVeiculoNaCena,
       dirigirVeiculo: FichaPersonagem.#dirigirVeiculo,
       manobra: FichaPersonagem.#manobra,
       prepararArmaVeicular: FichaPersonagem.#prepararArmaVeicular,
@@ -513,6 +515,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
         armas: todasAsArmas.filter(arma => arma.system.instaladoEm === v.id).map(linhaArma),
         detalhe: [`SDP ${v.system.sdp.value}/${v.system.sdp.max}`, `SP ${v.system.blindagem.sp}/${v.system.blindagem.max}`, `${v.system.assentos} assentos`, `MOVE ${v.system.velocidade.combate}`, v.system.familia ? 'da família' : '', v.instalados.filter(i => i.type === 'upgrade').map(i => i.name).join(', ')].filter(Boolean).join(' · ')
       })),
+      podePorVeiculoNaCena: this.isEditable && ator.type === 'personagem' && !ator.isToken,
       upgrades: itens('upgrade').map(u => ({
         id: u.id, nome: u.name, img: u.img,
         prepararArma: u.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, u.getFlag(SISTEMA, 'catalogo')),
@@ -740,6 +743,11 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #usarVeiculo(evento, alvo) {
     const item = this.#item(alvo);
     return item && this.actor.usarVeiculo(this.actor.veiculoAtivo?.id === item.id ? '' : item.id);
+  }
+  // O item continua guardando o estado; o mestre põe o espelho dele na cena (C46, decisão do usuário).
+  static #porVeiculoNaCena(evento, alvo) {
+    const item = this.#item(alvo);
+    return this.isEditable && this.actor.isOwner && this.actor.type === 'personagem' && !this.actor.isToken && item?.type === 'veiculo' ? porVeiculoNaCena(item) : null;
   }
   static #dirigirVeiculo() { return this.actor.dirigirVeiculo(!this.actor.system.dirigindo); }
   // A manobra de quem dirige (o C40, direcao.mjs): a janela das manobras do tipo do veículo e a rolagem.

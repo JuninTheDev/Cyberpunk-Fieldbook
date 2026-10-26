@@ -87,7 +87,7 @@ function ficha(ambiente = {}) {
   const fonte = ler('../../foundry-sistema/scripts/ficha-veiculo.mjs').replace(/^import .+;\r?\n/gm, '').replace('export class', 'class');
   return runInNewContext(`${fonte}\nFichaVeiculo`, {
     foundry: { applications: { api: { HandlebarsApplicationMixin: Base => Base }, sheets: { ActorSheetV2: class {} } } },
-    SISTEMA: 'cpr-fieldbook', caminho: String, dadosDoVeiculoDoCatalogo, ...ambiente
+    SISTEMA: 'cpr-fieldbook', caminho: String, dadosDoVeiculoDoCatalogo, itemDoVeiculo: () => null, ...ambiente
   });
 }
 
@@ -106,6 +106,39 @@ test('C46 ficha: catálogo só aplica o veículo escolhido, mantém notas e rel�
   const Trocada = ficha({ itemDoCatalogo: async () => { selecao.value = 'outro'; return catalogo[id]; }, fromUuid: async () => ator });
   await Trocada.escolherVeiculo.call(contexto);
   assert.equal(gravados.length, 1);
+});
+
+test('C46 ficha: o veículo ligado recusa o catálogo, inclusive se o vínculo chegar durante a leitura', async () => {
+  const id = 'core_vehicles:helicopter', gravados = [];
+  let ligado = true, leituras = 0;
+  const ator = { uuid: 'Actor.carro', isOwner: true, update: async dados => gravados.push(dados) };
+  const Ficha = ficha({
+    itemDoVeiculo: () => ligado ? {} : null,
+    itemDoCatalogo: async () => { leituras++; ligado = true; return catalogo[id]; },
+    fromUuid: async () => ator
+  });
+  const contexto = { isEditable: true, actor: ator, element: { querySelector: () => ({ value: id }) } };
+  await Ficha.escolherVeiculo.call(contexto);
+  assert.equal(leituras, 0);
+  ligado = false;
+  await Ficha.escolherVeiculo.call(contexto);
+  assert.equal(leituras, 1);
+  assert.deepEqual(gravados, []);
+});
+
+test('C46 ficha: abrir o dono relê o vínculo e a visibilidade, também na ficha só de leitura', () => {
+  const abertos = [];
+  const dono = { visible: true, sheet: { render: opcoes => abertos.push(normal(opcoes)) } };
+  let item = { parent: dono };
+  const Ficha = ficha({ itemDoVeiculo: () => item });
+  const contexto = { actor: {}, isEditable: false };
+  Ficha.abrirDono.call(contexto);
+  assert.deepEqual(abertos, [{ force: true }]);
+  dono.visible = false;
+  assert.equal(Ficha.abrirDono.call(contexto), null);
+  item = null;
+  assert.equal(Ficha.abrirDono.call(contexto), null);
+  assert.equal(abertos.length, 1);
 });
 
 test('C46 ficha: −1 e Consertar respeitam o zero e a permissão, inclusive com ablação maior que o SP máximo', async () => {

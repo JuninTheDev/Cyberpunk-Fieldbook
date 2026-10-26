@@ -1,9 +1,11 @@
 <div class="corpo-capanga">
   {{#if editavel}}
+  {{#unless vinculado}}
   <section class="painel corte">
     <div class="titulo">CATÁLOGO<span>VEÍCULOS DO SISTEMA</span></div>
     <div class="campos-veiculo"><label>Veículo do catálogo<select name="catalogoVeiculo"><option value="">Escolha um veículo</option>{{selectOptions modelos}}</select></label><button type="button" data-action="escolherVeiculo">Usar os números do catálogo</button></div>
   </section>
+  {{/unless}}
   {{/if}}
   <section class="painel corte">
     <div class="titulo">VEÍCULO<span>QUEM AGE É O MOTORISTA</span></div>

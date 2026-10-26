@@ -52,6 +52,7 @@ import * as cryo from './cryo.mjs';
 import * as tokenDinamico from './token-dinamico.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
+import * as vinculoVeiculo from './vinculo-veiculo.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
 
 Hooks.once('init', () => {
@@ -106,6 +107,8 @@ Hooks.once('init', () => {
   registrarAvisosDaWiki({ listar: wiki.personagensDaWiki, abrir: abrirJanelaDaWiki });
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
   registrarIceRezzado();
+  // O veículo do personagem: só o item grava o estado, e o mestre mantém o espelho e o token ligado.
+  vinculoVeiculo.registrarVinculoVeiculo();
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
   registrarConteiner();
   estados.registrarEstados();
@@ -127,6 +130,7 @@ Hooks.once('init', () => {
   // Os tokens dinâmicos (o C45): a imagem do token pela direção e pelo estado, o botão do HUD e a janela do conjunto.
   tokenDinamico.registrarTokenDinamico();
   game.system.api.tokenDinamico = tokenDinamico.API;
+  game.system.api.vinculoVeiculo = vinculoVeiculo;
 });
 
 Hooks.once('ready', () => {

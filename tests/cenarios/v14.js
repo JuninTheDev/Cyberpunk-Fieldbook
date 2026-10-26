@@ -13683,6 +13683,227 @@ module.exports = async ({ edge, servidores, r }) => {
       { semDano: semDano.estado, supressivo: supressivo.nulo, balas: supressivo.balas });
     }));
 
+    // C46.2: o item continua guardando SDP, chassis, janelas e montagem; o ator é sua presença ligada na cena.
+    // A conta é a do C15 acima; o vínculo, a pasta e a conservação como NPC seguem a decisão do usuário de 2026-10-25.
+    const comVeiculoLigado = async teste => {
+      const antesDoJogador = await jogador.evaluate(`({ cena: canvas.scene?.id, aplicativos: [...foundry.applications.instances.keys()] })`);
+      try {
+        const ids = await edge.evaluate(`(async () => {
+          const f = window.__c46b = { atores: [], ligados: [], antes: {
+            cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, alvos: [...game.user.targets].map(t => t.id),
+            mensagens: game.messages.map(m => m.id), aplicativos: [...foundry.applications.instances.keys()], pastas: game.folders.map(p => p.id),
+            random: CONFIG.Dice.randomUniform, fila: window.__fila,
+            ajustes: Object.fromEntries(['ativo', 'area', 'dano', 'defesaDosNpcs', 'lesaoCritica', 'rolarDireto', 'animacoes', 'resultado'].map(k => [k, game.settings.get('${S}', k)]))
+          } };
+          f.esperar = async condicao => { for (let i = 0; i < 120 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return Boolean(condicao()); };
+          f.api = await import('/systems/${S}/scripts/vinculo-veiculo.mjs');
+          f.cat = await game.system.api.wiki.carregarCatalogo();
+          f.pegar = id => foundry.utils.deepClone(f.cat[id]);
+          f.criar = async dados => { const ator = await Actor.implementation.create(dados); f.atores.push(ator.id); return ator; };
+          for (const [k, v] of Object.entries({ ativo: true, area: false, dano: 'automatico', defesaDosNpcs: 'automatica', lesaoCritica: 'ficha', rolarDireto: true, animacoes: 'nao', resultado: 'publico' })) await game.settings.set('${S}', k, v);
+          f.dono = await f.criar({ name: 'C46.2 Proprietária', type: 'personagem', ownership: { default: 0, [game.users.getName('Jogador').id]: 3 }, system: { hp: { value: 40 }, atributos: { ref: { valor: 6 }, body: { valor: 6 }, will: { valor: 6 } } } });
+          const carro = f.pegar('core_vehicles:compact-groundcar'); carro._id = foundry.utils.randomID(); carro.name = 'C46.2 Carro da proprietária'; carro.system.sdp.value = 43;
+          const chassis = f.pegar('core_upgrades:armored-chassis'), vidro = f.pegar('core_upgrades:bulletproof-glass');
+          chassis.system.instaladoEm = carro._id; vidro.system.instaladoEm = carro._id;
+          await f.dono.createEmbeddedDocuments('Item', [carro, chassis, vidro], { keepId: true });
+          f.item = f.dono.items.get(carro._id); f.janela = await f.item.adicionarJanela('Para-brisa');
+          await f.item.update({ ['system.janelas.' + f.janela + '.hp.value']: 12 }); await f.dono.usarVeiculo(f.item.id);
+          f.atiradora = await f.criar({ name: 'C46.2 Atiradora', type: 'personagem', system: { atributos: { ref: { valor: 8 } }, pericias: { 'shoulder-arms': { nivel: 6 } } } });
+          const rifle = f.pegar('core_weapons:assault-rifle'), ap = f.pegar('core_ammo:rifle-armor-piercing'); ap.system.quantidade = 100;
+          await f.atiradora.createEmbeddedDocuments('Item', [rifle, ap]); f.rifle = f.atiradora.items.find(i => i.type === 'arma');
+          await f.rifle.update({ 'system.carregada': f.atiradora.items.find(i => i.type === 'municao').id }); await f.rifle.recarregar();
+          f.cena = await Scene.implementation.create({ name: 'C46.2 Item e token ligados', active: false, width: 2000, height: 1200, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+          await f.cena.activate(); await f.esperar(() => canvas.ready && canvas.scene?.id === f.cena.id);
+          for (const [ator, x] of [[f.atiradora, 100], [f.dono, 500]]) await f.cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 300, actorLink: true })).toObject()]);
+          f.ocupante = f.cena.tokens.find(t => t.actorId === f.dono.id);
+          f.ator = () => game.actors.get(f.item.getFlag('${S}', 'veiculoAtor'));
+          f.registrar = () => { const ator = f.ator(); if (ator && !f.ligados.includes(ator.id)) f.ligados.push(ator.id); return ator; };
+          f.foto = documento => [documento.system.sdp.value, documento.system.sdp.max, documento.system.blindagem.sp, documento.system.ablacao];
+          f.par = () => [f.foto(f.item), f.foto(f.ator())];
+          f.cartao = resultado => game.messages.find(m => m.getFlag('${S}', 'ataque')?.id === resultado?.id);
+          return { dono: f.dono.id, item: f.item.id, cena: f.cena.id };
+        })()`);
+        await jogador.evaluate(`(async () => {
+          window.__c46bEsperar = async condicao => { for (let i = 0; i < 120 && !condicao(); i++) await new Promise(r => setTimeout(r, 50)); return Boolean(condicao()); };
+          await window.__c46bEsperar(() => game.scenes.has('${ids.cena}') && game.actors.get('${ids.dono}')?.items.has('${ids.item}'));
+          await game.scenes.get('${ids.cena}').view(); return true;
+        })()`);
+        return await teste(ids);
+      } finally {
+        await jogador.evaluate(`(async () => {
+          for (const [id, app] of foundry.applications.instances) if (!${JSON.stringify(antesDoJogador.aplicativos)}.includes(id)) await app.close();
+          delete window.__c46bEsperar; return true;
+        })()`).catch(() => null);
+        await edge.evaluate(`(async () => {
+          const f = window.__c46b; if (!f) return true;
+          try {
+            for (const [id, app] of foundry.applications.instances) if (!f.antes.aplicativos.includes(id)) await app.close();
+            await canvas.hud.token?.close?.();
+            for (const a of game.actors) if (a.getFlag('${S}', 'veiculoItem')?.atorId === f.dono?.id && !f.ligados.includes(a.id)) f.ligados.push(a.id);
+            await f.cena?.delete();
+            for (const id of f.ligados) {
+              if (game.actors.has(id)) await game.actors.get(id).delete();
+              await f.esperar(() => f.atores.every(atorId => !game.actors.get(atorId)?.items.some(item => item.getFlag('${S}', 'veiculoAtor') === id)));
+            }
+            for (const id of f.atores) if (game.actors.has(id)) await game.actors.get(id).delete();
+            for (const p of game.folders.filter(p => !f.antes.pastas.includes(p.id) && p.type === 'Actor' && p.name === 'Veículos dos personagens')) if (!game.actors.some(a => a.folder?.id === p.id)) await p.delete();
+            await ChatMessage.implementation.deleteDocuments(game.messages.filter(m => !f.antes.mensagens.includes(m.id)).map(m => m.id));
+            for (const [k, v] of Object.entries(f.antes.ajustes)) await game.settings.set('${S}', k, v);
+            if (game.scenes.has(f.antes.ativa)) await game.scenes.get(f.antes.ativa).activate();
+            if (game.scenes.has(f.antes.cena)) { await game.scenes.get(f.antes.cena).view(); await f.esperar(() => canvas.ready && canvas.scene?.id === f.antes.cena); }
+            canvas.tokens.setTargets(f.antes.alvos);
+          } finally { CONFIG.Dice.randomUniform = f.antes.random; window.__fila = f.antes.fila; delete window.__c46b; }
+          return true;
+        })()`);
+        await jogador.evaluate(`(async () => { const cena = game.scenes.get(${JSON.stringify(antesDoJogador.cena ?? null)}); if (cena) await cena.view(); return true; })()`).catch(() => null);
+      }
+    };
+
+    await r.passo('veículo ator (C46.2), Pôr na cena: a linha do Equipamento cria um ator por item, com os donos, a pasta e o token ligado perto da proprietária; o botão da ficha do item reaproveita sem duplicar; chassis SP13, vidro e números do item, sem catálogo no espelho e com o link da proprietária', async () => comVeiculoLigado(async () => {
+      const info = await edge.evaluate(`(async () => {
+        const f = window.__c46b;
+        await f.dono.sheet.render({ force: true }); f.dono.sheet.changeTab('equipamento', 'primary');
+        const seletor = '[data-item-id="' + f.item.id + '"] [data-action="porVeiculoNaCena"]';
+        await f.esperar(() => f.dono.sheet.element?.querySelector(seletor)); const pelaLinha = Boolean(f.dono.sheet.element?.querySelector(seletor));
+        f.dono.sheet.element?.querySelector(seletor)?.click(); await f.esperar(() => f.ator() && f.cena.tokens.some(t => t.actorId === f.ator().id));
+        const a = f.registrar(), t = f.cena.tokens.find(t => t.actorId === a?.id); if (!a || !t) return { pelaLinha, criou: false };
+        const barra = t.getBarAttribute('bar1'), dono = game.users.getName('Jogador');
+        await f.esperar(() => canvas.tokens.get(t.id)); await canvas.hud.token.bind(canvas.tokens.get(t.id));
+        await f.esperar(() => canvas.hud.token.element?.querySelector('.col.left'));
+        const c45 = { hud: Boolean(canvas.hud.token.element?.querySelector('.col.left')), botao: Boolean(canvas.hud.token.element?.querySelector('.${S}-token-dinamico')),
+          recusouAbrir: await game.system.api.tokenDinamico.abrir(a) === null, recusouSalvar: await game.system.api.tokenDinamico.salvarConjunto(a, { ativo: true, imagens: {} }) === null,
+          semConjunto: !a.getFlag('${S}', 'tokenDinamico') };
+        await canvas.hud.token.close();
+        const inicial = { tipo: a.type, nomes: a.name === f.item.name, imagem: a.img === f.item.img, par: f.par(),
+          numeros: [a.system.assentos, a.system.velocidade.combate, a.system.velocidade.narrativa, a.system.tipo],
+          reciproco: JSON.stringify(a.getFlag('${S}', 'veiculoItem')) === JSON.stringify({ atorId: f.dono.id, itemId: f.item.id }),
+          posse: a.ownership[dono.id], pasta: a.folder?.name, token: [t.actorLink, t.width, t.height, barra?.attribute, barra?.value, barra?.max],
+          perto: Math.hypot(t.x - f.ocupante.x, t.y - f.ocupante.y) <= 400,
+          separado: t.x >= f.ocupante.x + f.ocupante.width * 100 || t.y >= f.ocupante.y + f.ocupante.height * 100 || t.x + t.width * 100 <= f.ocupante.x || t.y + t.height * 100 <= f.ocupante.y,
+          vidro: [f.item.system.janelas[f.janela].hp.value, f.item.system.janelas[f.janela].hp.max], instalados: f.item.instalados.length };
+        await f.item.sheet.render({ force: true }); await f.esperar(() => f.item.sheet.element?.querySelector('[data-action="porVeiculoNaCena"]'));
+        const peloItem = Boolean(f.item.sheet.element?.querySelector('[data-action="porVeiculoNaCena"]'));
+        f.item.sheet.element?.querySelector('[data-action="porVeiculoNaCena"]')?.click();
+        await f.api.porVeiculoNaCena(f.item);
+        await a.sheet.render({ force: true }); await f.esperar(() => a.sheet.element?.querySelector('[data-action="abrirDono"]'));
+        const semCatalogo = !a.sheet.element?.querySelector('[name="catalogoVeiculo"], [data-action="escolherVeiculo"]');
+        const link = a.sheet.element?.querySelector('[data-action="abrirDono"]'), identifica = a.sheet.element?.textContent.includes(f.dono.name);
+        await f.dono.sheet.close(); link?.click(); await f.esperar(() => f.dono.sheet.rendered);
+        return { pelaLinha, peloItem, criou: true, inicial, c45, semCatalogo, identifica, abriuDona: f.dono.sheet.rendered,
+          repetiu: [game.actors.filter(a => a.getFlag('${S}', 'veiculoItem')?.atorId === f.dono.id).length, f.cena.tokens.filter(t => t.actorId === a.id).length, f.item.getFlag('${S}', 'veiculoAtor') === a.id] };
+      })()`);
+      return conferirAtorVeiculo({ botoes: [[info.pelaLinha, info.peloItem, info.criou], [true, true, true]],
+        inicial: [info.inicial, { tipo: 'veiculo', nomes: true, imagem: true, par: [[43, 50, 13, 0], [43, 50, 13, 0]], numeros: [4, 20, '100 MPH / 161 KPH', 'terrestre'], reciproco: true, posse: 3, pasta: 'Veículos dos personagens', token: [true, 2, 2, 'sdp', 43, 50], perto: true, separado: true, vidro: [12, 15], instalados: 2 }],
+        c45: [info.c45, { hud: true, botao: false, recusouAbrir: true, recusouSalvar: true, semConjunto: true }],
+        ficha: [[info.semCatalogo, info.identifica, info.abriuDona], [true, true, true]], repetiu: [info.repetiu, [1, 1, true]] },
+      { criou: info.criou, par: info.inicial?.par, repetiu: info.repetiu });
+    }));
+
+    await r.passo('veículo ator (C46.2), dano e espelho: tiro direto tira 11 SDP do item e AP abla 2, Desfazer devolve; tiro no ocupante escolhendo veículo usa o mesmo item; −1 SP, Consertar e edição da ficha gravam no item, e os dois navegadores leem o mesmo SDP e SP', async () => comVeiculoLigado(async ids => {
+      const criado = await edge.evaluate(`(async () => { const f = window.__c46b, r = await f.api.porVeiculoNaCena(f.item); f.registrar(); return r; })()`);
+      await fixar(edge, [[9, 10], [6, 6], [6, 6], [4, 6], [4, 6], [4, 6]]);
+      const direto = await edge.evaluate(`(async () => {
+        const f = window.__c46b, token = f.cena.tokens.get('${criado.tokenId}'), r = await f.rifle.atacar({ alvo: token }), linha = r?.linhas[0], cartao = f.cartao(r);
+        await f.esperar(() => f.item.system.sdp.value === 32 && f.ator().system.sdp.value === 32);
+        const tiro = { par: f.par(), dano: [linha?.veicular?.perdeu, linha?.veicular?.spEfetivo, linha?.veicular?.ablado], humano: Boolean(linha?.dano), fila: window.__fila.length };
+        const seletor = '[data-message-id="' + cartao?.id + '"] [data-cprf-acao="desfazer"]'; await f.esperar(() => document.querySelector(seletor)); document.querySelector(seletor)?.click();
+        const desfez = await f.esperar(() => cartao?.getFlag('${S}', 'desfeito') && f.item.system.sdp.value === 43 && f.ator().system.sdp.value === 43);
+        return { tiro, desfez, voltou: f.par() };
+      })()`);
+      await fixar(edge, [[9, 10], [6, 6], [6, 6], [4, 6], [4, 6], [4, 6]]);
+      const ocupante = await edge.evaluate(`(async () => {
+        const f = window.__c46b, ataque = f.rifle.atacar({ alvo: f.ocupante });
+        const janela = () => document.querySelector('.application.dialog.destino-veicular:not(.minimizing)');
+        await f.esperar(() => janela()?.querySelector('[name="destino"]')); const campo = janela()?.querySelector('[name="destino"]');
+        if (!campo) throw new Error('C46.2: a escolha do destino no ocupante não abriu.'); campo.value = 'veiculo'; janela().querySelector('[data-action="confirmar"]').click();
+        const r = await ataque, l = r?.linhas[0]; await f.esperar(() => f.ator().system.sdp.value === f.item.system.sdp.value);
+        return { par: f.par(), hp: f.dono.system.hp.value, vidro: f.item.system.janelas[f.janela].hp.value, fila: window.__fila.length, dano: [l?.veicular?.perdeu, l?.veicular?.spEfetivo, l?.veicular?.ablado], atorId: f.ator().id };
+      })()`);
+      const noJogador = await jogador.evaluate(`(async () => {
+        await window.__c46bEsperar(() => game.actors.get('${ocupante.atorId}')?.system.sdp.value === 32 && game.actors.get('${ids.dono}').items.get('${ids.item}').system.sdp.value === 32);
+        const item = game.actors.get('${ids.dono}').items.get('${ids.item}'), ator = game.actors.get('${ocupante.atorId}');
+        return [item.system.sdp.value, ator?.system.sdp.value, item.system.blindagem.sp, ator?.system.blindagem.sp];
+      })()`);
+      const ficha = await edge.evaluate(`(async () => {
+        const f = window.__c46b, a = f.ator(); await a.sheet.render({ force: true }); await f.esperar(() => a.sheet.element?.querySelector('[data-action="ablarChassis"]'));
+        a.sheet.element?.querySelector('[data-action="ablarChassis"]')?.click(); await f.esperar(() => f.item.system.ablacao === 3 && a.system.ablacao === 3); const ablou = f.par();
+        await f.esperar(() => a.sheet.element?.querySelector('[data-action="consertarChassis"]')); a.sheet.element?.querySelector('[data-action="consertarChassis"]')?.click();
+        await f.esperar(() => f.item.system.ablacao === 0 && a.system.ablacao === 0); const consertou = f.par();
+        await f.esperar(() => a.sheet.element?.querySelector('[name="system.sdp.value"]')); const campo = a.sheet.element?.querySelector('[name="system.sdp.value"]');
+        if (!campo) throw new Error('C46.2: o campo SDP não apareceu.'); campo.value = '29'; campo.dispatchEvent(new Event('change', { bubbles: true }));
+        await f.esperar(() => f.item.system.sdp.value === 29 && a.system.sdp.value === 29); return { ablou, consertou, editou: f.par() };
+      })()`);
+      return conferirAtorVeiculo({ direto: [direto, { tiro: { par: [[32, 50, 11, 2], [32, 50, 11, 2]], dano: [11, 13, 2], humano: false, fila: 0 }, desfez: true, voltou: [[43, 50, 13, 0], [43, 50, 13, 0]] }],
+        ocupante: [[ocupante.par, ocupante.hp, ocupante.vidro, ocupante.fila, ocupante.dano], [[[32, 50, 11, 2], [32, 50, 11, 2]], 40, 12, 0, [11, 13, 2]]], jogador: [noJogador, [32, 32, 11, 11]],
+        ficha: [ficha, { ablou: [[32, 50, 10, 3], [32, 50, 10, 3]], consertou: [[32, 50, 13, 0], [32, 50, 13, 0]], editou: [[29, 50, 13, 0], [29, 50, 13, 0]] }] },
+      { direto: direto.tiro.par, desfez: direto.desfez, ocupante: ocupante.par, jogador: noJogador, ficha: ficha.editou });
+    }));
+
+    await r.passo('veículo ator (C46.2), jogador dono: o botão pede ao mestre a criação do ator e token ligados, sem criar atores diretamente; mudar o item atualiza o espelho mesmo sem permissão no ator; sem mestre ativo o pedido avisa e não cria', async () => comVeiculoLigado(async ids => {
+      const pedido = await jogador.evaluate(`(async () => {
+        const p = game.actors.get('${ids.dono}'), item = p.items.get('${ids.item}'); await item.sheet.render({ force: true });
+        await window.__c46bEsperar(() => item.sheet.element?.querySelector('[data-action="porVeiculoNaCena"]')); const botao = item.sheet.element?.querySelector('[data-action="porVeiculoNaCena"]'); botao?.click();
+        await window.__c46bEsperar(() => item.getFlag('${S}', 'veiculoAtor') && canvas.scene.tokens.some(t => t.actorId === item.getFlag('${S}', 'veiculoAtor')));
+        const id = item.getFlag('${S}', 'veiculoAtor'), a = game.actors.get(id), token = canvas.scene.tokens.find(t => t.actorId === id);
+        return { botao: Boolean(botao), gm: game.user.isGM, dono: item.isOwner, atorId: id, tipo: a?.type, link: token?.actorLink, posse: a?.isOwner, quantidade: canvas.scene.tokens.filter(t => t.actorId === id).length };
+      })()`);
+      await edge.evaluate(`(async () => { const f = window.__c46b; f.registrar(); await f.ator().update({ ownership: { default: 0, [game.users.getName('Jogador').id]: 0 } }, { cprfEspelhoVeiculo: true }); return true; })()`);
+      const semPermissao = await jogador.evaluate(`(async () => {
+        const item = game.actors.get('${ids.dono}').items.get('${ids.item}'), a = game.actors.get('${pedido.atorId}'); await window.__c46bEsperar(() => !a.isOwner);
+        const donoAtorAntes = a.isOwner;
+        await item.update({ 'system.sdp.value': 38 }); await window.__c46bEsperar(() => a.system.sdp.value === 38);
+        return { donoItem: item.isOwner, donoAtorAntes, sdp: [item.system.sdp.value, a.system.sdp.value] };
+      })()`);
+      const mestre = await edge.evaluate(`(async () => { const f = window.__c46b; await f.esperar(() => f.ator().system.sdp.value === 38); return { par: f.par(), atores: game.actors.filter(a => a.getFlag('${S}', 'veiculoItem')?.atorId === f.dono.id).length, tokens: f.cena.tokens.filter(t => t.actorId === f.ator().id).length }; })()`);
+      const semAtor = await edge.evaluate(`(async () => { const f = window.__c46b, dados = f.pegar('core_vehicles:roadbike'); return (await f.dono.createEmbeddedDocuments('Item', [dados]))[0].id; })()`);
+      const semMestre = await jogador.evaluate(`(async () => {
+        await window.__c46bEsperar(() => game.actors.get('${ids.dono}').items.has('${semAtor}'));
+        const item = game.actors.get('${ids.dono}').items.get('${semAtor}'), avisos = [], antes = [game.actors.size, canvas.scene.tokens.size];
+        Object.defineProperty(game.users, 'activeGM', { value: null, configurable: true }); ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); return null; };
+        try { const api = await import('/systems/${S}/scripts/vinculo-veiculo.mjs'), r = await api.porVeiculoNaCena(item); return { nulo: r == null, aviso: avisos.length === 1 && /mestre/i.test(avisos[0]), igual: JSON.stringify(antes) === JSON.stringify([game.actors.size, canvas.scene.tokens.size]) }; }
+        finally { delete game.users.activeGM; delete ui.notifications.warn; }
+      })()`);
+      return conferirAtorVeiculo({ pedido: [[pedido.botao, pedido.gm, pedido.dono, pedido.tipo, pedido.link, pedido.posse, pedido.quantidade], [true, false, true, 'veiculo', true, true, 1]],
+        semPermissao: [semPermissao, { donoItem: true, donoAtorAntes: false, sdp: [38, 38] }], mestre: [mestre, { par: [[38, 50, 13, 0], [38, 50, 13, 0]], atores: 1, tokens: 1 }], semMestre: [semMestre, { nulo: true, aviso: true, igual: true }] },
+      { pediu: pedido.tipo, jogador: semPermissao.sdp, mestre: mestre.par, semMestre });
+    }));
+
+    await r.passo('veículo ator (C46.2), vínculo e exclusão: cópia e crossover da proprietária não herdam o ator; atualizar o mesmo item e instalar chassis pesado atualizam o espelho; apagar ator limpa o item; apagar item ou proprietária conserva o último estado como NPC e avisa ao mestre', async () => comVeiculoLigado(async () => {
+      const info = await edge.evaluate(`(async () => {
+        const f = window.__c46b; await f.api.porVeiculoNaCena(f.item); const original = f.registrar();
+        const dados = f.dono.toObject(); delete dados._id; dados.name = 'C46.2 Cópia da proprietária'; const copia = await f.criar(dados);
+        const itemCopiado = copia.items.find(i => i.type === 'veiculo');
+        const copiou = { semVinculo: !itemCopiado.getFlag('${S}', 'veiculoAtor'), original: f.api.itemDoVeiculo(original)?.uuid === f.item.uuid };
+        const { prepararAtorTransferido } = await import('/systems/${S}/scripts/wiki-campanha.mjs');
+        const transferencia = { de: 'c46b-origem', para: 'c46b-destino', ator: { type: 'character', flags: { '${S}': { crossover: { geracao: 14, ator: f.dono.toObject() } } } } };
+        const doc = { id: 'c46b-personagem', versao: 2, campanha: 'c46b-destino', foundry14: { campanha: 'c46b-origem' } };
+        const dadosTransferidos = prepararAtorTransferido(transferencia, doc, game.user.id, { id: 'c46b-destino' }, '2026-10-25T12:00:00Z'); dadosTransferidos.name = 'C46.2 Crossover da proprietária';
+        const transferido = await f.criar(dadosTransferidos), itemTransferido = transferido.items.get(f.item.id);
+        const crossover = { idConservado: Boolean(itemTransferido), semVinculo: Boolean(itemTransferido && !itemTransferido.getFlag('${S}', 'veiculoAtor')), donoNovo: transferido.ownership[game.user.id] === 3 && !transferido.ownership[game.users.getName('Jogador').id], original: f.api.itemDoVeiculo(original)?.uuid === f.item.uuid };
+        await f.api.porVeiculoNaCena(itemCopiado); const atorDaCopia = game.actors.get(itemCopiado.getFlag('${S}', 'veiculoAtor')); if (atorDaCopia) f.ligados.push(atorDaCopia.id);
+        copiou.outroAtor = Boolean(atorDaCopia && atorDaCopia.id !== original.id); copiou.copiaCerta = f.api.itemDoVeiculo(atorDaCopia)?.uuid === itemCopiado.uuid;
+        const id = f.item.id; await f.item.update({ name: 'C46.2 Nome atualizado', 'system.sdp.value': 40 });
+        const pesado = f.pegar('core_upgrades:heavy-chassis'); pesado.system.instaladoEm = f.item.id; await f.dono.createEmbeddedDocuments('Item', [pesado]);
+        await f.esperar(() => original.name === f.item.name && original.system.sdp.max === 70);
+        const atualizou = { id: f.item.id === id, nome: original.name === f.item.name, par: f.par(), reciproco: f.item.getFlag('${S}', 'veiculoAtor') === original.id };
+        await original.delete(); await f.esperar(() => !f.item.getFlag('${S}', 'veiculoAtor'));
+        const apagouAtor = { desligou: !f.item.getFlag('${S}', 'veiculoAtor'), item: f.dono.items.has(id), estado: f.foto(f.item) };
+        await f.api.porVeiculoNaCena(f.item); const ultimo = f.registrar(), antes = f.foto(ultimo), recados = []; ui.notifications.info = mensagem => { recados.push(String(mensagem)); return null; };
+        try {
+          await f.item.delete(); await f.esperar(() => !ultimo.getFlag('${S}', 'veiculoItem'));
+          const apagouItem = { existe: game.actors.has(ultimo.id), npc: !f.api.itemDoVeiculo(ultimo) && !ultimo.getFlag('${S}', 'veiculoItem'), estado: f.foto(ultimo), igual: JSON.stringify(antes) === JSON.stringify(f.foto(ultimo)), aviso: recados.some(m => /veículo|item|NPC/i.test(m)) };
+          const antesDaDona = f.foto(atorDaCopia); recados.length = 0; await copia.delete(); await f.esperar(() => !atorDaCopia.getFlag('${S}', 'veiculoItem'));
+          const apagouDona = { existe: game.actors.has(atorDaCopia.id), npc: !f.api.itemDoVeiculo(atorDaCopia) && !atorDaCopia.getFlag('${S}', 'veiculoItem'), igual: JSON.stringify(antesDaDona) === JSON.stringify(f.foto(atorDaCopia)), aviso: recados.some(m => /veículo|personagem|NPC/i.test(m)) };
+          return { copiou, crossover, atualizou, apagouAtor, apagouItem, apagouDona };
+        } finally { delete ui.notifications.info; }
+      })()`);
+      return conferirAtorVeiculo({ copiou: [info.copiou, { semVinculo: true, original: true, outroAtor: true, copiaCerta: true }],
+        crossover: [info.crossover, { idConservado: true, semVinculo: true, donoNovo: true, original: true }],
+        atualizou: [info.atualizou, { id: true, nome: true, par: [[40, 70, 13, 0], [40, 70, 13, 0]], reciproco: true }], apagouAtor: [info.apagouAtor, { desligou: true, item: true, estado: [40, 70, 13, 0] }],
+        apagouItem: [info.apagouItem, { existe: true, npc: true, estado: [40, 70, 13, 0], igual: true, aviso: true }], apagouDona: [info.apagouDona, { existe: true, npc: true, igual: true, aviso: true }] },
+      { copia: info.copiou, crossover: info.crossover.semVinculo, max: info.atualizou.par[0][1], ator: info.apagouAtor.desligou, item: info.apagouItem.npc, dona: info.apagouDona.npc });
+    }));
+
     await r.passo('veículos (C15), carga Tech e vidro: atravessa o fino sem tirar HP da cobertura, conserva armadura e esquiva da pessoa; vidro grosso com 5 de 30 HP ainda barra a Tech comum, e a Nekomata carregada o atravessa', async () => {
       const info = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
