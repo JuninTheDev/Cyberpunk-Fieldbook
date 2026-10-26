@@ -342,6 +342,17 @@
       }
     },
     {
+      "name": "black-chrome-veiculos",
+      "label": "Veículos do Black Chrome",
+      "path": "packs/black-chrome-veiculos",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
       "name": "lesoes",
       "label": "Lesões críticas",
       "path": "packs/lesoes",
@@ -397,6 +408,7 @@
         "black-chrome-armas",
         "black-chrome-cyberware",
         "black-chrome-equipamento",
+        "black-chrome-veiculos",
         "lesoes",
         "exemplos",
         "arquiteturas"

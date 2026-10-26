@@ -1,6 +1,6 @@
 // Testes de referência do Black Chrome no sistema (o C48, parte 1; foundry-sistema/build/conteudo.mjs e
 // build/compendios.mjs), sem Foundry: os itens dos pacotes do CORE 0.92.4 (black-chrome/* e dlc/black-chrome-plus) no
-// catálogo, pelo id da loja da wiki; os três compêndios; e o preço da unidade pelo lote da munição.
+// catálogo, pelo id da loja da wiki (e os 31 veículos, desde a parte 4); os quatro compêndios; e o preço da unidade pelo lote da munição.
 // Uso: node --test "tests/sistema/*.test.mjs"
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,30 +16,31 @@ const contexto = { window: {} };
 vm.runInNewContext(fs.readFileSync(new URL('loja-catalogo.js', raiz), 'utf8'), contexto);
 const loja = Array.from(contexto.window.shopCatalog.itens);
 const doBlackChrome = id => /^(black-chrome_|dlc_black-chrome-plus:)/.test(id);
-const PACKS_DO_BLACK_CHROME = ['black-chrome-armas', 'black-chrome-cyberware', 'black-chrome-equipamento'];
+const PACKS_DO_BLACK_CHROME = ['black-chrome-armas', 'black-chrome-cyberware', 'black-chrome-equipamento', 'black-chrome-veiculos'];
 
-test('Black Chrome: os itens dos pacotes do CORE no catálogo (os veículos ficam para a parte deles), e os 176 da loja todos', () => {
+test('Black Chrome: os itens dos pacotes do CORE no catálogo (com os 31 veículos, desde a parte 4), e os 176 da loja todos', () => {
   const contagem = {};
   for (const id of Object.keys(catalogo).filter(doBlackChrome)) contagem[id.split(':')[0]] = (contagem[id.split(':')[0]] || 0) + 1;
   assert.deepEqual(contagem, {
     'black-chrome_weapons': 51, 'black-chrome_armor': 23, 'black-chrome_ammo': 9, 'black-chrome_cyberware': 41, 'black-chrome_gear': 28,
-    'black-chrome_clothing': 1, 'black-chrome_upgrades': 5, 'dlc_black-chrome-plus': 21
+    'black-chrome_clothing': 1, 'black-chrome_upgrades': 5, 'black-chrome_vehicles': 31, 'dlc_black-chrome-plus': 21
   });
   const daLoja = loja.filter(item => (item.tags || []).includes('blackchrome') && doBlackChrome(item.id));
   assert.equal(daLoja.length, 176);
   assert.deepEqual(daLoja.filter(item => !catalogo[item.id]).map(item => item.id), []);
-  // Fora da loja: os dois outros modos da ModFire (a wiki só vende o de pistola) e as pedras da funda (de graça).
+  // Fora da loja: os dois outros modos da ModFire (a wiki só vende o de pistola), as pedras da funda (de graça) e os
+  // veículos (a loja não vende veículos do Black Chrome; ficam no compêndio).
   const ids = new Set(daLoja.map(item => item.id));
-  assert.deepEqual(Object.keys(catalogo).filter(id => doBlackChrome(id) && !ids.has(id)).sort(),
+  assert.deepEqual(Object.keys(catalogo).filter(id => doBlackChrome(id) && !ids.has(id) && !id.startsWith('black-chrome_vehicles:')).sort(),
     ['black-chrome_ammo:rocks', 'black-chrome_weapons:modfire-10x-rifle', 'black-chrome_weapons:modfire-10x-smg']);
   // O livro de cada um, do CORE: o Black Chrome ou o Black Chrome Plus (alguns repetem um item do livro básico).
   assert.ok(Object.entries(catalogo).filter(([id]) => doBlackChrome(id)).every(([id, item]) => ['BC', 'BC+', 'Core'].includes(item.system.fonte.livro)
     && (item.system.fonte.livro !== 'BC+') === id.startsWith('black-chrome_')));
 });
 
-test('Black Chrome: os três compêndios (armas, cyberware, moda e equipamento), cada item num só, no manifesto e na pasta do sistema', () => {
+test('Black Chrome: os quatro compêndios (armas, cyberware, moda e equipamento, veículos), cada item num só, no manifesto e na pasta do sistema', () => {
   const packs = idsDosPacks();
-  assert.deepEqual(PACKS_DO_BLACK_CHROME.map(nome => packs[nome].length), [82, 42, 55]);
+  assert.deepEqual(PACKS_DO_BLACK_CHROME.map(nome => packs[nome].length), [82, 42, 55, 31]);
   const todos = Object.keys(catalogo).filter(doBlackChrome);
   for (const id of todos) assert.equal(Object.values(packs).filter(ids => ids.includes(id)).length, 1, id);
   // Os do livro básico e de 2077 não levam nada do Black Chrome, e os do Black Chrome não levam nada deles.
@@ -52,7 +53,7 @@ test('Black Chrome: os três compêndios (armas, cyberware, moda e equipamento),
     assert.deepEqual([pack?.path, pack?.type], [`packs/${nome}`, 'Item'], nome);
     assert.ok(manifesto.packFolders[0].packs.includes(nome), nome);
   }
-  assert.deepEqual(PACKS_DO_BLACK_CHROME.map(nome => manifesto.packs.find(p => p.name === nome).label), ['Armas do Black Chrome', 'Cyberware do Black Chrome', 'Moda e equipamento do Black Chrome']);
+  assert.deepEqual(PACKS_DO_BLACK_CHROME.map(nome => manifesto.packs.find(p => p.name === nome).label), ['Armas do Black Chrome', 'Cyberware do Black Chrome', 'Moda e equipamento do Black Chrome', 'Veículos do Black Chrome']);
 });
 
 test('Black Chrome: a munição tem o lote do pacote do CORE (a sucata em 50, a caça pequena em 100, a rede em 1), e o preço da unidade sai dele', () => {

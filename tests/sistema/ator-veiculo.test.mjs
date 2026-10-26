@@ -12,8 +12,9 @@ const dados = ler('../../foundry-sistema/scripts/dados.mjs');
 const normal = valor => JSON.parse(JSON.stringify(valor));
 
 test('C46: cada veículo do catálogo preenche o ator com SDP, assentos, MOVE, velocidade, tipo e imagem próprios', () => {
+  // Os 14 do CORE e os 31 do Black Chrome (o C48, parte 4: o tipo e o chassi blindado vêm do catálogo).
   const veiculos = Object.values(catalogo).filter(item => item.type === 'veiculo');
-  assert.equal(veiculos.length, 14);
+  assert.equal(veiculos.length, 45);
   for (const item of veiculos) {
     const antes = structuredClone(item);
     const ator = dadosDoVeiculoDoCatalogo(item);
@@ -22,8 +23,8 @@ test('C46: cada veículo do catálogo preenche o ator com SDP, assentos, MOVE, v
     assert.deepEqual(ator.system.sdp, item.system.sdp);
     assert.deepEqual(ator.system.velocidade, item.system.velocidade);
     assert.equal(ator.system.assentos, item.system.assentos);
-    assert.equal(ator.system.tipo, tipoDoVeiculo({ nome: item.name }));
-    assert.equal(ator.system.sp, 0);
+    assert.equal(ator.system.tipo, tipoDoVeiculo({ tipo: item.system.tipo, nome: item.name }));
+    assert.equal(ator.system.sp, item.system.sp ?? 0);
     assert.equal(ator.system.ablacao, 0);
     ator.system.sdp.value = 0;
     ator.system.velocidade.combate = 0;

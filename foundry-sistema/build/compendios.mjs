@@ -51,7 +51,7 @@ export const PACKS_DE_ITENS = {
   upgrades: ['core_', ['upgrade']], veiculos: ['core_', ['veiculo']], lesoes: ['core_', ['lesao']],
   'armas-2077': ['armas-2077:', ['arma', 'municao', 'upgrade']], 'cyberware-2077': ['cyberware-2077:', ['cyberware', 'droga']], 'netrunning-2077': ['netrunning-2077:', ['cyberdeck', 'programa']],
   'black-chrome-armas': [BLACK_CHROME, ['arma', 'municao', 'upgrade']], 'black-chrome-cyberware': [BLACK_CHROME, ['cyberware']],
-  'black-chrome-equipamento': [BLACK_CHROME, ['armadura', 'roupa', 'equipamento', 'droga']]
+  'black-chrome-equipamento': [BLACK_CHROME, ['armadura', 'roupa', 'equipamento', 'droga']], 'black-chrome-veiculos': [BLACK_CHROME, ['veiculo']]
 };
 // Os ids do catálogo que entram em cada compêndio de itens.
 export const idsDosPacks = () => Object.fromEntries(Object.entries(PACKS_DE_ITENS).map(([nome, [prefixo, tipos]]) => [nome,

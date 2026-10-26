@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 190). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 191). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -465,7 +465,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   2077 já seguem o Kit (o C29, ciclos 110 a 116); falta o Rebuild, o acessório de 1.000eb e 2 slots que transforma uma
   arma de fogo do RED em Power, Smart ou Tech (só um por arma; não em arma exótica, que o leva num slot só se tiver um
   livre; o Tech não serve em lança-granadas nem em lança-foguetes; 1 hora para pôr ou tirar).
-- [~] **C48. O Black Chrome no sistema** (sessão Junin, 2026-10-26; depois do C47): os 176 itens da loja nos compêndios
+- [x] **C48. O Black Chrome no sistema:** feito nos ciclos 183, 187, 189 e 190 (sessão Junin, 2026-10-26; depois do C47): os 176 itens da loja nos compêndios
   (convertidos do CORE, `black-chrome_*` e `dlc_black-chrome-plus`), a importação e os pedidos entregando, e as regras
   novas que eles pedem (dano direto no HP, Combinação, cyberdedos, Linear Frames...), um ciclo por parte. Decisão do
   usuário: os itens e as regras.
@@ -481,7 +481,8 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
     (5 e 8 dedos, sem gastar os slots do braço; decisão do usuário), os quadros lineares (o externo com os Interface Plugs
     e sem mudar o HP nem o Death Save, como a wiki; o interno com BODY e os enxertos; o +2 do Fūma) e a aparência de moda
     da armadura (Guarda-roupa e Estilo DV13, Percepção DV15).
-  - [ ] Parte 4, os veículos: os 31 do CORE com o tipo de cada um, o "não aceita o upgrade" e o Acesso Nômade.
+  - [x] Parte 4, os veículos: feita no ciclo 190 (sessão Junin, 2026-10-26): os 31 do CORE num compêndio, com o tipo
+    de cada um, o chassi blindado e os vidros de fábrica, o "não aceita o upgrade" e o Acesso Nômade na frota da família.
 - [~] **C49. Ícones próprios** (sessão Junin, 2026-10-26; depois do C48): os estados no token (os do sistema e os do
   Foundry), os botões do HUD e da ficha e as imagens padrão dos itens, no estilo neon de 2077 (traço fino em ciano,
   vermelho e amarelo, com brilho; decisão do usuário).
@@ -622,9 +623,9 @@ No fim de tudo, uma sessão de teste com a mesa.
   - o endereço da wiki deduzido de `mesa.<domínio>`, como o cpr-2077;
   - só o ator ligado ao personagem entrega pedidos e manda a ficha (a wiki recusa o "ator antigo");
   - o pacote das cenas: as cenas, os diários e as playlists do mundo do Foundry 12 num módulo, com os arquivos.
-- [~] **Black Chrome** (conteúdo: fora do plano de paridade): os 176 itens da loja. Agora é o C48 (pedido do usuário de
+- [x] **Black Chrome** (conteúdo: fora do plano de paridade; o C48, feito): os 176 itens da loja. Agora é o C48 (pedido do usuário de
   2026-10-26), em partes: os itens entram desde o ciclo 183 (a importação e os pedidos entregam), e as regras das armas
-  desde o 187, e o cromo desde o 189; os veículos são a parte 4.
+  desde o 187, o cromo desde o 189 e os veículos desde o 190.
 - [x] **Inventário:** (C16, ciclo 124) usar uma droga (gasta a dose, liga o efeito pela duração e pede o teste de vício); o Medscanner
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da

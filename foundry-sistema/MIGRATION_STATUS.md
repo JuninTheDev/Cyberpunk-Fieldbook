@@ -9196,6 +9196,37 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   build, o quadro externo no BODY de sempre) e C5 a C8 no G4 (o dedo como opção comum do braço, o HP pelo BODY do
   quadro, o quadro que liga sem os plugs, o dedo fora do membro natural).
 
+### Ciclo 190 (2026-10-26): C48 parte 4, os veículos do Black Chrome (sessão Junin)
+
+- **Fonte:** a wiki (`system-blackchrome.js`: os veículos, p. 57–84, com o Acesso Nômade de cada um; o Acesso Nômade, p.
+  9) e o pacote `black-chrome/vehicles` do CORE 0.92.4 (o SDP, os assentos, o MOVE e a velocidade).
+- **Entrega:**
+  - **Os 31 veículos** no catálogo e num compêndio novo, "Veículos do Black Chrome" (na pasta do sistema). O build
+    (`build/conteudo-blackchrome.mjs`) põe o que o CORE não diz: o tipo (os 8 aéreos: os girocópteros, o helicóptero e os
+    AV-4; os outros 23, terrestres), o Acesso Nômade e o que vem de fábrica: o chassi blindado no SP do veículo (13) e os
+    vidros à prova de balas no campo novo `vidros`, que conta como o upgrade instalado (`protecoesDoVeiculo`: a janela
+    nova tem 15 HP, ou 30 com dois). O SDP e os assentos do CORE já trazem o chassi pesado e os upgrades de assentos.
+  - **O "não aceita o upgrade":** o upgrade de assentos nos girocópteros e no Range Trike, o chassi pesado no Ebi e
+    qualquer upgrade no JetBoy são recusados ao instalar, com o motivo (`upgradeNoVeiculo`). A montagem da wiki entra
+    como veio.
+  - **O Acesso Nômade:** o campo `acessoNomade` do veículo, na ficha e na etiqueta ("ACESSO NÔMADE 4"). Marcar o veículo
+    do Black Chrome como da família pede o Moto (o Rank da Role Nomad) igual ou maior que o Acesso; o JetBoy ("—") não
+    entra na frota (`naFrotaDaFamilia`). Os veículos do RED continuam sem a regra.
+- **Limites:** ficam com a mesa o "não aceita alguns upgrades" do EconoCompact, do Destination e do Molly (as páginas
+  faltam no PDF do projeto), as armas e os equipamentos do "Vem com" (a metralhadora, o lança-foguetes, o NOS, o arado, a
+  habitação; quem quiser a arma preparada instala o upgrade dela), o modo corrida da Artemis e as manobras do JetBoy por
+  Atletismo. A loja da wiki não vende estes veículos (ficam no compêndio). Com esta parte, o C48 está feito.
+- **Portões:** G1, 234 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 724 testes, 0 falhas (4
+  testes novos em `tests/sistema/blackchrome-veiculos.test.mjs`, conferidos com a tabela da wiki: os 31 com o tipo e o
+  Acesso; o chassi blindado e os vidros do "Vem com"; o upgrade recusado; a frota da família. Os testes do Black Chrome
+  contam os veículos e o quarto compêndio; os do C46 contam os 45 veículos do catálogo, e os 14 do CORE pelo nome); G4
+  completo, 311/311 em 630 s, com o passo novo: o compêndio com 31; o Gorgon com o SP 13 e a janela de 15 HP; o SH-45 aéreo,
+  que recusa os assentos e aceita o chassi blindado; a Nomad de Rank 5 põe o Grundy na frota, e o Paladin e o JetBoy
+  recusam; a Roadbike do RED entra. No foco, 12/12.
+- **Mutações:** as 7 caíram: V1 a V4 no G3 (os vidros de fábrica fora da conta, o JetBoy com upgrade, a frota sem o
+  Rank e, no build, todo veículo terrestre) e V5 a V7 no G4 (o veículo que aceita qualquer upgrade, a frota sem o
+  Acesso, o veículo sem os vidros de fábrica).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

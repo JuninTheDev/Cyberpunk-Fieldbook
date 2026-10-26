@@ -126,3 +126,30 @@ export const corpoComQuadro = (body, quadro = 0) => ({ valor: Number(quadro) > 0
 export const DV_DA_MODA = { 'wardrobe-style': 13, perception: 15 };
 // Passa quem tira mais que a DV (como os testes de resistência do sistema).
 export const percebeuAArmadura = ({ pericia, total }) => Number(total) > (DV_DA_MODA[pericia] ?? Infinity);
+
+// ---------------- Os veículos (o C48, parte 4) ----------------
+// O "não aceita o upgrade" da wiki (p. 57–84): os girocópteros e o Range Trike não aceitam o upgrade de assentos, o Ebi não
+// aceita o chassi pesado, e o JetBoy não faz upgrade nenhum ("Nomad e Tech não fazem upgrade; pintura pode", e o sistema
+// não tem a pintura). O "não aceita alguns upgrades" do EconoCompact, do Destination e do Molly fica com a mesa (as
+// páginas faltam no PDF do projeto).
+const ASSENTOS = 'core_upgrades:seating-upgrade', CHASSI_PESADO = 'core_upgrades:heavy-chassis';
+export const RECUSAS_DO_VEICULO = {
+  'black-chrome_vehicles:sh-45-patroller': [ASSENTOS], 'black-chrome_vehicles:sh-45-patroller-law': [ASSENTOS],
+  'black-chrome_vehicles:tanson-bellhop': [ASSENTOS], 'black-chrome_vehicles:diego-motors-range-trike': [ASSENTOS],
+  'black-chrome_vehicles:makigai-ebi': [CHASSI_PESADO], 'black-chrome_vehicles:tanson-jetboy-hoverboard': '*'
+};
+export function upgradeNoVeiculo(veiculo, upgrade) {
+  const recusa = RECUSAS_DO_VEICULO[veiculo];
+  if (recusa === '*') return { cabe: false, motivo: 'o veículo não aceita upgrade' };
+  if (recusa?.includes(upgrade)) return { cabe: false, motivo: 'o veículo não aceita este upgrade' };
+  return { cabe: true, motivo: null };
+}
+// O Acesso Nômade (p. 9): o Nomad põe na frota da família o veículo com o Acesso igual ou menor que o Rank de Moto (o da
+// Role Nomad). Só os veículos do Black Chrome têm; o "—" (o JetBoy, 0) não entra na frota.
+export const ehVeiculoDoBlackChrome = catalogo => /^black-chrome_vehicles:/.test(catalogo ?? '');
+export function naFrotaDaFamilia({ catalogo, acesso = 0, rank = 0 }) {
+  if (!ehVeiculoDoBlackChrome(catalogo)) return { cabe: true, motivo: null };
+  if (!acesso) return { cabe: false, motivo: 'o veículo não tem Acesso Nômade' };
+  if (rank < acesso) return { cabe: false, motivo: `o Acesso Nômade do veículo é ${acesso}, e o Moto (o Rank de Nomad) é ${rank}` };
+  return { cabe: true, motivo: null };
+}

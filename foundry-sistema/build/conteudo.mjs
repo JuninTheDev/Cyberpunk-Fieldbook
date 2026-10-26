@@ -478,10 +478,10 @@ const CONVERSORES = {
   'core/critical-injuries-body': lesao, 'core/critical-injuries-head': lesao,
   'core/gear': doPackDeEquipamento, 'core/clothing': roupa, 'core/drugs': droga, 'core/programs': programa, 'core/upgrades': upgrade,
   'core/vehicles': veiculo,
-  // O Black Chrome (o C48): os pacotes do livro e o Black Chrome Plus (o DLC grátis, com tipos misturados). Os veículos
-  // ficam para a parte deles (o tipo de cada um e o Acesso Nômade).
+  // O Black Chrome (o C48): os pacotes do livro e o Black Chrome Plus (o DLC grátis, com tipos misturados); os veículos
+  // desde a parte 4 (o tipo de cada um, as proteções de fábrica e o Acesso Nômade: build/conteudo-blackchrome.mjs).
   'black-chrome/weapons': arma, 'black-chrome/armor': armadura, 'black-chrome/ammo': municao, 'black-chrome/cyberware': cyberware,
-  'black-chrome/gear': doPackDeEquipamento, 'black-chrome/clothing': roupa, 'black-chrome/upgrades': upgrade,
+  'black-chrome/gear': doPackDeEquipamento, 'black-chrome/clothing': roupa, 'black-chrome/upgrades': upgrade, 'black-chrome/vehicles': veiculo,
   'dlc/black-chrome-plus': (doc, s) => ({ weapon: arma, armor: armadura, ammo: municao, gear: equipamento, drug: droga })[doc.type]?.(doc, s) ?? null
 };
 

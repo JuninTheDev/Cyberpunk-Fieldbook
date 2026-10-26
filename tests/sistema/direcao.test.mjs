@@ -52,7 +52,7 @@ test('o tipo do veículo: o campo manda; vazio, os 14 do CORE pelo nome; sem nad
   for (const nome of maritimos) assert.equal(tipoDoVeiculo({ nome }), 'maritimo', nome);
   for (const nome of aereos) assert.equal(tipoDoVeiculo({ nome }), 'aereo', nome);
   // Os 14 são todos os veículos do catálogo do CORE.
-  const doCore = Object.values(catalogo).filter(item => item.type === 'veiculo').map(item => item.name).sort();
+  const doCore = Object.entries(catalogo).filter(([id, item]) => item.type === 'veiculo' && id.startsWith('core_')).map(([, item]) => item.name).sort();
   assert.deepEqual(doCore, [...terrestres, ...maritimos, ...aereos].sort());
   // Sem diferença de maiúsculas nem dos espaços nas pontas.
   assert.equal(tipoDoVeiculo({ nome: '  helicopter ' }), 'aereo');

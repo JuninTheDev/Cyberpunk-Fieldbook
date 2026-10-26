@@ -19795,6 +19795,49 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('os veículos do Black Chrome (o C48, parte 4): o compêndio com os 31; o Gorgon vem com o chassi blindado (SP 13) e o vidro (a janela nova com 15 HP), e o SH-45 é aéreo; o SH-45 recusa o upgrade de assentos e aceita o chassi blindado; a Nomad de Rank 5 põe o Grundy (Acesso 4) na frota, e o Paladin (8) e o JetBoy (—) recusam', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const avisos = [], warn = ui.notifications.warn;
+        ui.notifications.warn = m => { avisos.push(String(m)); };
+        const ator = await Actor.implementation.create({ name: 'Teste Frota', type: 'personagem', ownership: { default: 0 }, system: { role: { nome: 'Nomad', rank: 5 } } });
+        const criar = async id => (await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat[id])]))[0];
+        const lido = {};
+        try {
+          lido.compendio = (await game.packs.get('${S}.black-chrome-veiculos')?.getIndex())?.size ?? null;
+          // 1. As proteções de fábrica e o tipo.
+          const gorgon = await criar('black-chrome_vehicles:militech-gorgon-security-van');
+          const janela = await gorgon.adicionarJanela('Para-brisa');
+          const sh45 = await criar('black-chrome_vehicles:sh-45-patroller');
+          lido.gorgon = { sp: gorgon.system.blindagem.max, vidro: gorgon.system.vidroMax, janela: gorgon.system.janelas[janela]?.hp.max, acesso: gorgon.system.acessoNomade };
+          lido.tipo = { sh45: sh45.system.tipo, gorgon: gorgon.system.tipo, direcao: game.system.api.regras.periciaDoControle?.(sh45.system.tipo) ?? null };
+          // 2. O upgrade que o veículo não aceita.
+          const assentos = await criar('core_upgrades:seating-upgrade');
+          let n = avisos.length;
+          await assentos.update({ 'system.instaladoEm': sh45.id });
+          lido.assentos = { entrou: ator.items.get(assentos.id).system.instaladoEm === sh45.id, aviso: avisos.slice(n).join(' ') };
+          const blindado = await criar('core_upgrades:armored-chassis');
+          await blindado.update({ 'system.instaladoEm': sh45.id });
+          lido.blindado = { entrou: ator.items.get(blindado.id).system.instaladoEm === sh45.id, sp: sh45.system.blindagem.max };
+          // 3. A frota da família pelo Acesso Nômade (a Nomad de Rank 5).
+          const frota = async id => { const v = await criar(id); const m = avisos.length; await v.update({ 'system.familia': true }); return { familia: ator.items.get(v.id).system.familia, aviso: avisos.slice(m).join(' ') }; };
+          lido.grundy = await frota('black-chrome_vehicles:grundy');
+          lido.paladin = await frota('black-chrome_vehicles:paladin-500');
+          lido.jetboy = await frota('black-chrome_vehicles:tanson-jetboy-hoverboard');
+          lido.roadbike = await frota('core_vehicles:roadbike');
+          return lido;
+        } finally { ui.notifications.warn = warn; await ator.delete(); }
+      })()`);
+      const v = info;
+      const ok = v.compendio === 31 && v.gorgon.sp === 13 && v.gorgon.vidro === 15 && v.gorgon.janela === 15 && v.gorgon.acesso === 4
+        && v.tipo.sh45 === 'aereo' && v.tipo.gorgon === 'terrestre'
+        && !v.assentos.entrou && v.assentos.aviso.includes('o veículo não aceita este upgrade') && v.blindado.entrou && v.blindado.sp === 13
+        && v.grundy.familia === true && !v.grundy.aviso
+        && v.paladin.familia === false && v.paladin.aviso.includes('o Acesso Nômade do veículo é 8, e o Moto (o Rank de Nomad) é 5')
+        && v.jetboy.familia === false && v.jetboy.aviso.includes('o veículo não tem Acesso Nômade') && v.roadbike.familia === true;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

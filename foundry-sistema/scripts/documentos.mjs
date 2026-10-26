@@ -23,7 +23,7 @@ import { ehArremesso } from './arremessar.mjs';
 import { PORTA_DO_DECK } from './netrun/regras-da-net.mjs';
 import * as veiculos from './veiculos.mjs';
 import { ehArmaDaCombinacao, ehArmaMontadaEmItem, idDaOrigem, motivoDaArmaMontada } from './armas-cyberware.mjs';
-import { dedoCabe, dedosDaMao, ehCyberdedo, ENXERTO, PLUGS, perfilDoBlackChrome, QUADROS_EXTERNOS, quadroInstala, quadroVeste, slotsNaFundacao } from './regras-black-chrome.mjs';
+import { dedoCabe, dedosDaMao, ehCyberdedo, ENXERTO, naFrotaDaFamilia, PLUGS, perfilDoBlackChrome, QUADROS_EXTERNOS, quadroInstala, quadroVeste, slotsNaFundacao, upgradeNoVeiculo } from './regras-black-chrome.mjs';
 import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
@@ -759,9 +759,20 @@ export class ItemCPR extends Item {
         return false;
       }
     }
+    const destino = foundry.utils.getProperty(mudancas, 'system.instaladoEm');
+    // Os veículos do Black Chrome (o C48, parte 4): o upgrade que o veículo não aceita, e o Acesso Nômade na frota da família.
+    const noVeiculo = this.type === 'upgrade' && destino && destino !== this.system.instaladoEm && this.actor?.items.get(destino);
+    if (noVeiculo?.type === 'veiculo' && !opcoes.montagemDaWiki) {
+      const { cabe, motivo } = upgradeNoVeiculo(noVeiculo.getFlag(SISTEMA, 'catalogo'), catalogo);
+      if (!cabe) { ui.notifications.warn(`${this.name} não entra em ${noVeiculo.name}: ${motivo}.`); return false; }
+    }
+    if (this.type === 'veiculo' && mudancas.system?.familia === true && !this.system.familia && this.actor && !opcoes.montagemDaWiki) {
+      const rank = this.actor.system.roles?.find(role => role.id === 'nomad')?.rank ?? 0;
+      const { cabe, motivo } = naFrotaDaFamilia({ catalogo, acesso: sistema.acessoNomade, rank });
+      if (!cabe) { ui.notifications.warn(`${this.name} não entra na frota da família: ${motivo}.`); return false; }
+    }
     // O acessório que entra numa arma (o C11, parte 4): os slots dela e um carregador por vez. A montagem que vem da wiki
     // (a importação e a migração da mesa) preserva o estado recebido, como a equipagem (o C12).
-    const destino = foundry.utils.getProperty(mudancas, 'system.instaladoEm');
     if (this.type === 'upgrade' && destino && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
       const arma = this.actor.items.get(destino);
       if (arma?.type === 'arma') {

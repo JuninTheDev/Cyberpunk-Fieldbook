@@ -114,6 +114,8 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Assentos</span><input type="number" name="system.assentos" value="{{fonte.assentos}}" min="0"></label>
       <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposDeVeiculo selected=fonte.tipo}}</select></label>
       <label class="celula"><span>SP base</span><input type="number" name="system.sp" value="{{fonte.sp}}" min="0"></label>
+      <label class="celula" data-tooltip="Os vidros à prova de balas que o veículo já traz (contam como o upgrade instalado)"><span>Vidros de fábrica</span><input type="number" name="system.vidros" value="{{fonte.vidros}}" min="0" max="2"></label>
+      <label class="celula" data-tooltip="Black Chrome: o Rank de Moto a partir do qual o Nomad põe o veículo na frota da família (0: sem)"><span>Acesso Nômade</span><input type="number" name="system.acessoNomade" value="{{fonte.acessoNomade}}" min="0"></label>
       <label class="celula"><span>Ablação</span><input type="number" name="system.ablacao" value="{{fonte.ablacao}}" min="0"></label>
       <p class="nota">Blindagem atual: SP {{sistema.blindagem.sp}}/{{sistema.blindagem.max}}. Vidro blindado: {{sistema.vidroMax}} HP por janela.</p>
       {{#if instalados}}<p class="nota">Com os upgrades ({{instalados}}): SDP máximo {{sistema.sdp.max}}, {{sistema.assentos}} assentos.</p>{{/if}}

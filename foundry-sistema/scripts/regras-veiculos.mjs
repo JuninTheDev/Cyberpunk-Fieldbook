@@ -2,8 +2,10 @@
 import { aplicarDano } from './regras.mjs';
 // Wiki, system-criacao.js, RED p. 163: vidro blindado tem 15 HP; a segunda instalação o leva a 30 HP.
 // CORE 0.92.4, Armored Chassis: SP 13 no veículo, sem afetar o vidro. Bulletproof Glass: cada janela perde HP à parte.
-export function protecoesDoVeiculo(upgrades = []) {
-  let vidros = 0;
+// deFabrica: os vidros à prova de balas que o veículo já traz (os do Black Chrome, o C48, parte 4), contados como os
+// upgrades instalados.
+export function protecoesDoVeiculo(upgrades = [], { vidros: deFabrica = 0 } = {}) {
+  let vidros = Math.max(0, Number(deFabrica) || 0);
   let sp = 0;
   for (const upgrade of upgrades) {
     const catalogo = upgrade.flags?.['cpr-fieldbook']?.catalogo;

@@ -535,6 +535,10 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
       descricao: new fields.HTMLField({ required: true, blank: true, initial: '' }),
       ...estadoDoVeiculo(),
       familia: new fields.BooleanField({ initial: false }),
+      // O Black Chrome (o C48, parte 4): o Acesso Nômade (o Rank de Moto a partir do qual o Nomad pega o veículo para a
+      // frota da família; 0, sem) e os vidros à prova de balas que o veículo já traz de fábrica (o chassi blindado é o sp).
+      acessoNomade: inteiro(0, { min: 0 }),
+      vidros: inteiro(0, { min: 0 }),
       // Cada janela perde HP separadamente (CORE, Bulletproof Glass). O máximo fica persistido para não curar o vidro.
       janelas: new fields.TypedObjectField(new fields.SchemaField({ nome: texto('Janela'), hp: recurso(0, 0) })),
       preco: inteiro(0, { min: 0 }),
@@ -545,7 +549,7 @@ export class DadosVeiculo extends foundry.abstract.TypeDataModel {
   prepareDerivedData() {
     const item = this.parent;
     const upgrades = item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id) ?? [];
-    const protecoes = protecoesDoVeiculo(upgrades);
+    const protecoes = protecoesDoVeiculo(upgrades, { vidros: this.vidros });
     const max = Math.max(this.sp, protecoes.sp);
     this.blindagem = { max, sp: Math.max(0, max - this.ablacao) };
     this.vidroMax = protecoes.vidro;

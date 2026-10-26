@@ -54,7 +54,7 @@ function cabecalhoDoItem(item) {
     roupa: () => [[TIPOS_ROUPA[s.tipo] ?? s.tipo, ESTILOS_ROUPA[s.estilo] ?? s.estilo], []],
     equipamento: () => [[], [s.eletronico && vazada('ELETRÔNICO'), s.ocultavel && vazada('OCULTÁVEL')]],
     upgrade: () => [[`para ${(ALVOS_UPGRADE[s.alvo] ?? s.alvo).toLowerCase()}`, item.instaladoNo ? `em ${item.instaladoNo.name}` : 'não instalado'], []],
-    veiculo: () => [[`SDP ${s.sdp?.value}/${s.sdp?.max}`, `SP ${s.blindagem.sp}/${s.blindagem.max}`, `${s.assentos} assentos`], [s.familia && vazada('DA FAMÍLIA'), item.actor?.veiculoAtivo?.id === item.id && cheia(item.actor.system.dirigindo ? 'DIRIGINDO' : 'EM USO')]]
+    veiculo: () => [[`SDP ${s.sdp?.value}/${s.sdp?.max}`, `SP ${s.blindagem.sp}/${s.blindagem.max}`, `${s.assentos} assentos`], [s.familia && vazada('DA FAMÍLIA'), s.acessoNomade > 0 && vazada(`ACESSO NÔMADE ${s.acessoNomade}`), item.actor?.veiculoAtivo?.id === item.id && cheia(item.actor.system.dirigindo ? 'DIRIGINDO' : 'EM USO')]]
   };
   const [resumo, etiquetas] = porTipo[item.type]?.() ?? [[], []];
   if (item.inoperante) etiquetas.push(vazada('INOPERANTE (EMP)'));

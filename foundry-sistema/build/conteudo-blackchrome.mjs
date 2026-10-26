@@ -42,6 +42,24 @@ const MODA = {
   'black-chrome_armor:montage-variable-clothing-line': 'genericChic', 'black-chrome_armor:executive-armor': 'businesswear',
   'black-chrome_armor:corporate-island': 'businesswear'
 };
+// Os veículos (a parte 4; a wiki, p. 57–84): o tipo (o CORE não diz se é aéreo), o Acesso Nômade e as proteções de
+// fábrica do "Vem com" (o chassi blindado, SP 13, e os vidros à prova de balas, que contam como os upgrades instalados). O
+// SDP e os assentos do CORE já trazem o chassi pesado e os upgrades de assentos.
+// [slug, tipo, Acesso Nômade (0: "—"), chassi blindado, vidros à prova de balas]
+const VEICULOS = [
+  ['sh-45-patroller', 'aereo', 2, false, 1], ['sh-45-patroller-law', 'aereo', 4, false, 2], ['dayton-tdt-004', 'aereo', 7, false, 0],
+  ['tanson-bellhop', 'aereo', 1, false, 0], ['zetatech-aerocop', 'aereo', 10, true, 2], ['zetatech-aerovox', 'aereo', 8, false, 0],
+  ['zetatech-destination', 'aereo', 6, false, 0], ['zetatech-herakles', 'aereo', 10, true, 1],
+  ['americar-econocompact', 'terrestre', 1, false, 0], ['americar-family-star-van', 'terrestre', 2, false, 0], ['diego-motors-chupacabra', 'terrestre', 4, false, 0],
+  ['diego-motors-range-trike', 'terrestre', 4, true, 0], ['grundy', 'terrestre', 4, true, 0], ['harvey-100', 'terrestre', 1, false, 0],
+  ['harriet-100', 'terrestre', 2, false, 0], ['harvey-merc', 'terrestre', 4, false, 0], ['highway-master-artemis', 'terrestre', 5, true, 2],
+  ['kaukaz-volkhov', 'terrestre', 7, true, 0], ['makigai-ebi', 'terrestre', 1, false, 0], ['militech-gorgon-security-van', 'terrestre', 4, true, 1],
+  ['zacatzontli-pickup-truck', 'terrestre', 4, false, 0], ['paladin-500', 'terrestre', 8, true, 0], ['quadra-thunder-x', 'terrestre', 8, true, 1],
+  ['street-king-combat-vehicle', 'terrestre', 10, true, 2], ['tanson-jetboy-hoverboard', 'terrestre', 0, false, 0],
+  ['tetracorp-america-megahauler', 'terrestre', 10, true, 2], ['tetracorp-america-badger-corporate-bus', 'terrestre', 6, true, 1],
+  ['yang-s-wheels-rickshaw', 'terrestre', 2, false, 0], ['zonda-molly-1k', 'terrestre', 1, false, 0], ['zonda-parallax-cybercycle', 'terrestre', 8, true, 0],
+  ['zonda-sliver', 'terrestre', 4, false, 1]
+];
 const camel = texto => texto.replace(/-([a-z])/g, (_, letra) => letra.toUpperCase());
 
 // Corrige os itens do catálogo (no lugar). Devolve os ids corrigidos, para o build listar.
@@ -70,6 +88,7 @@ export function corrigirBlackChrome(itens) {
   }
   for (const id of Object.keys(itens).filter(id => id.startsWith('black-chrome_armor:mimic-clothing-'))) mudar(id, { moda: camel(id.split('mimic-clothing-')[1]) });
   for (const [id, estilo] of Object.entries(MODA)) mudar(id, { moda: estilo });
+  for (const [slug, tipo, acessoNomade, blindado, vidros] of VEICULOS) mudar(`black-chrome_vehicles:${slug}`, { tipo, acessoNomade, sp: blindado ? 13 : 0, vidros });
   for (const [id, item] of Object.entries(itens)) {
     const efeito = EFEITOS_DA_MUNICAO[id] ?? (SUCATA.test(id) && item.type === 'municao' ? 'junk' : null);
     if (efeito) mudar(id, { efeito });
