@@ -129,3 +129,18 @@ test('o roteiro da sessão fica na pasta de dados e só o mestre lê', async t =
   assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02')).status, 403);
   assert.equal(fs.readFileSync(path.join(pasta, 'sessao-02.md'), 'utf8'), '# Sessão 2\n\nSó o mestre.\n');
 });
+
+test('o resumo do personagem traz a Humanidade (EMP × 10 sem ficha da mesa), para o cartão do Início', async t => {
+  const servidor = criarServidorIsolado(t);
+  const mestre = await servidor.entrarComoMestre();
+  const jogador = await criarJogador(servidor, mestre, 'Ana');
+  const criado = await servidor.pedir('/api/personagens', { method: 'POST', cookie: jogador.cookie, body: { nome: 'Ricky', stats: { EMP: 6 } } });
+  assert.equal(criado.status, 201, criado.text);
+  const lista = await servidor.pedir('/api/personagens', { cookie: jogador.cookie });
+  const meu = lista.json.personagens.find(item => item.id === criado.json.personagem.id);
+  assert.deepEqual(meu.numeros.humanidade, { atual: 60, max: 60 });
+  // Sem EMP ainda: nada (o cartão não mostra a barra).
+  const vazio = await servidor.pedir('/api/personagens', { method: 'POST', cookie: jogador.cookie, body: { nome: 'Sem STATs' } });
+  const semEmp = (await servidor.pedir('/api/personagens', { cookie: jogador.cookie })).json.personagens.find(item => item.id === vazio.json.personagem.id);
+  assert.equal(semEmp.numeros.humanidade, null);
+});

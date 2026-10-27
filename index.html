@@ -7,6 +7,15 @@
   <title>Night City Fieldbook</title>
   <link rel="stylesheet" href="cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css">
   <link rel="stylesheet" href="wiki.css">
+  <link rel="stylesheet" href="netwire.css">
+  <script>
+    // O tema e a casca escolhidos no menu da conta (wikiApp.prefs "tema" e "casca"), antes de desenhar: sem piscar.
+    try {
+      const dono = localStorage.getItem('night-city-dono') || 'aparelho';
+      if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') === '2077') document.documentElement.dataset.tema = '2077';
+      if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-casca`) || 'null') === 'classica') document.documentElement.dataset.casca = 'classica';
+    } catch { /* sem armazenamento: fica o Fieldbook */ }
+  </script>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icones/icone-192.png">
   <link rel="apple-touch-icon" href="icones/icone-192.png">
@@ -53,9 +62,11 @@
   <script src="conta.js"></script>
   <script src="mestre-npcs.js"></script>
   <script src="campaign-map.js"></script>
+  <script src="nightcity-map.js"></script>
   <script src="campanha-base.js"></script>
   <script src="jogadores-painel.js"></script>
   <script src="campanhas-painel.js"></script>
+  <script src="netwire.js"></script>
   <script>
     // Visão do mestre: campanha, documentos e segredos. Nada daqui chega à visão dos jogadores.
     const sources = {
@@ -92,6 +103,7 @@
         ]},
         { group: 'Mesa', pages: [
           { id: 'notes', label: 'Estado da campanha', icon: 'N' },
+          { id: 'caixa', label: 'Caixa do NetWire', icon: 'NW' },
           { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' },
           { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' },
           { id: 'campanhas', label: 'Campanhas', icon: 'CP' }
@@ -155,20 +167,7 @@
       campaignMap: {
         eyebrow: 'Protocolo Morana / mapa do mestre', title: 'Night City: quadro de operações',
         lede: 'Mapa de planejamento com locais da campanha, ganchos, encontros e atividades secundárias. Selecione um marcador para ver como usá-lo; os prédios exatos ficam em aberto para adaptação à mesa.',
-        html: `<div class="map-toolbar">
-          <label class="map-control">Versão do mapa<select id="map-source"><option value="base">Mapa base</option><option value="reference">Mapa com referências originais</option></select></label>
-          <label class="map-control">Ato / sessão<select id="map-act-filter"><option value="all">Toda a campanha</option><option value="Sessão 01">Sessão 01</option></select></label>
-          <div class="map-zoom-controls" aria-label="Controles de zoom"><button type="button" data-map-action="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button><button type="button" data-map-action="reset" aria-label="Enquadrar mapa" title="Enquadrar mapa">⌖</button><button type="button" data-map-action="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button></div>
-        </div>
-        <div class="map-filter-list" id="map-filters" aria-label="Filtrar marcadores"></div>
-        <div class="campaign-map-layout">
-          <div class="campaign-map-main">
-            <div class="campaign-map-canvas" id="campaign-map-canvas"><svg id="nightcity-map" viewBox="0 0 5600 5320" role="img" aria-label="Mapa interativo de Night City com locais da campanha Protocolo Morana"><image id="nightcity-map-image" href="nightcity-map-base.webp" x="0" y="0" width="5600" height="5320" preserveAspectRatio="none"></image><g id="nightcity-map-pins"></g></svg></div>
-            <div class="map-legend" id="map-legend"></div>
-            <p class="map-caveat">Pinos de planejamento, não coordenadas canônicas de prédios. O mapa com referências originais mantém as marcações que já vieram no arquivo; os pontos da campanha são uma camada separada.</p>
-          </div>
-          <section class="map-detail-panel" aria-live="polite"><div id="map-marker-detail" class="map-marker-detail"><p class="eyebrow">Operações planejadas</p><h3>Escolha um ponto do mapa</h3><p>Os pinos separam cenas da Sessão 01, infraestrutura de Morana e ganchos opcionais.</p></div><div class="map-marker-list" id="map-marker-list"></div></section>
-        </div>`
+        html: window.nightCityMap.renderPage(window.campaignMapData)
       },
       sources: {
         eyebrow: 'Biblioteca local / PDFs disponíveis', title: 'Livros de referência',
@@ -245,6 +244,12 @@
     // O nome do arquivo .md → a página do documento inteiro (para os links dos textos da base).
     const docPage = name => Object.keys(markdownDocs).find(id => markdownDocs[id].file.endsWith(`/${name}`) && !markdownDocs[id].vista) || '';
 
+    // A Caixa do NetWire: o esqueleto que o netwire.js preenche.
+    const netwireInbox = {
+      eyebrow: 'NetWire / caixa do mestre', title: 'Caixa do NetWire',
+      lede: 'As mensagens dentro do jogo: rascunhos, agendadas, as conversas esperando a sua resposta e os canais. Nada chega aos jogadores sem você entregar.',
+      html: '<div data-nw-gm></div>'
+    };
     function startWiki(list) {
       const manager = window.campaignManager;
       const built = manager.build(list, { morana, markdownDocs });
@@ -255,13 +260,26 @@
       window.wikiConfig = {
         campaigns: built.campaigns,
         markdownDocs: { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs },
-        pageContent: { ...pageContent, notes: notesPage(), ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
+        pageContent: { ...pageContent, notes: notesPage(), caixa: netwireInbox, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
         clocks: base.relogiosDaWiki(),
         // Páginas que viraram parte de outra: o endereço antigo continua abrindo.
         aliases: { docQuemEQuem: { id: 'people', section: 'quem-e-quem' }, campaign: { id: 'docDiario' }, session1: { id: 'sessao01Notas' }, docSessao01: { id: 'sessao01Notas' } },
         gmNotes,
-        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), home: setupHomeDesk, sources: setupSources, ...built.pageSetup, ...extras.pageSetup },
+        pageSetup: { playerView: () => window.playerManager && window.playerManager.setup(), caixa: content => window.netwire && window.netwire.setupGm(content), home: setupHomeDesk, sources: setupSources, ...built.pageSetup, ...extras.pageSetup },
         homePage: 'home',
+        // A Caixa do NetWire (netwire.js): as mensagens dentro do jogo, para revisar, agendar e responder.
+        netwire: 'mestre',
+        // As abas do topo (a casca NetWire), pelos nomes dos grupos: valem para o Protocolo Morana e para as campanhas
+        // criadas na página Campanhas (campanhas-painel.js). Mensagens, por enquanto, é a Visão dos jogadores.
+        topTabs: [
+          { id: 'inicio', label: 'Início', inicio: true },
+          { id: 'campanha', label: 'Campanha', grupos: ['Campanha ativa', 'Campanha', 'Documentos', 'Outros documentos', 'Night City (todas as campanhas)'] },
+          { id: 'sessoes', label: 'Sessões', grupos: ['Sessões'] },
+          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['caixa', 'playerView'] },
+          { id: 'mesa', label: 'Mesa', grupos: ['Mesa'] },
+          { id: 'personagens', label: 'Personagens', curto: 'PCs', grupos: ['Personagens dos jogadores'] },
+          { id: 'sistema', label: 'Sistema', area: 'system', pagina: 'screen' }
+        ],
         topMeta: campaign => `${campaign.name} / arquivo do mestre`.toUpperCase(),
         // Relógios e bloco de notas da campanha, no servidor (com o backup), iguais em qualquer aparelho do mestre.
         tableUrl: campaign => `api/campanhas/${encodeURIComponent(campaign)}/mesa`,

@@ -28,3 +28,8 @@ servidor/servidor.local.json
 * (2).*
 # Rascunhos do roteirista (as skills fechar-sessao e preparar-sessao): a trama futura não vai para o repositório público
 rascunhos-do-roteirista/
+# O Superdesign (o redesenho NetWire): a análise da wiki, o design system e os temporários ficam só no PC.
+.superdesign/
+# O exemplo de 2077 do CodePen (MIT), referência do redesenho.
+cyberpunk-2077-html-by-hussard/
+cyberpunk-2077-html-by-hussard.zip

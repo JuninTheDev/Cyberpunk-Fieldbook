@@ -237,15 +237,49 @@
   const publishUrl = campaign => `api/campanhas/${encodeURIComponent(campaign)}/publicar`;
   let handoutCache = { campaign: '', list: [] };
 
+  // As mensagens do NetWire desta campanha (para saber o que já foi mandado por lá).
+  const netwireOf = async campaign => { try { return await (await fetch(`api/netwire?campanha=${encodeURIComponent(campaign)}`, { cache: 'no-store' })).json(); } catch { return { canais: [], mensagens: [] }; } };
   async function handoutStatus(campaign, root) {
     let noticias = [];
     try { noticias = (await (await fetch(publishUrl(campaign), { cache: 'no-store' })).json()).noticias || []; } catch { return; }
+    const sent = (await netwireOf(campaign)).mensagens || [];
     root.querySelectorAll('[data-handout]').forEach(row => {
-      const found = noticias.find(item => String(item.nota || '').startsWith(`${handoutKey(row.dataset.handout, Number(row.dataset.part))} `));
+      const key = `${handoutKey(row.dataset.handout, Number(row.dataset.part))} `;
+      const found = noticias.find(item => String(item.nota || '').startsWith(key));
+      const byNetwire = sent.find(item => String(item.nota || '').startsWith(key));
       const status = row.querySelector('[data-handout-status]');
-      status.textContent = !found ? '' : found.publicada ? 'Entregue: os jogadores veem.' : 'Preparado no Publicar, ainda não entregue.';
-      status.classList.toggle('cc-ok', Boolean(found && found.publicada));
+      status.textContent = [found ? (found.publicada ? 'Entregue: os jogadores veem.' : 'Preparado no Publicar, ainda não entregue.') : '', byNetwire ? 'Mandado pelo NetWire.' : ''].filter(Boolean).join(' ');
+      status.classList.toggle('cc-ok', Boolean((found && found.publicada) || byNetwire));
     });
+  }
+  // Mandar pelo NetWire: o handout vira um arquivo anexo, numa mensagem do contato do canal que o mestre escolhe (a
+  // conversa da Wakako, por exemplo). Chega na hora e conta como não lida. O código H-xx vai na nota (só o mestre vê).
+  async function sendByNetwire(row, item, index, part) {
+    const campaign = handoutCache.campaign;
+    const titulo = handoutTitle(item, part);
+    const key = handoutKey(item.code, index);
+    const netwire = await netwireOf(campaign);
+    const channels = (netwire.canais || []).filter(channel => !channel.virtual);
+    if (!channels.length) { window.wikiPopup.toast('Crie um canal na Caixa do NetWire primeiro (a conversa de um contato, por exemplo).', { tone: 'bad', ms: 6000 }); return; }
+    if ((netwire.mensagens || []).some(message => String(message.nota || '').startsWith(`${key} `))) { window.wikiPopup.toast(`${item.code} já foi mandado pelo NetWire.`); return; }
+    const label = channel => (channel.tipo === 'direto' ? `Direto: ${(channel.contato && channel.contato.nome) || channel.nome}` : `# ${channel.nome}`);
+    const canal = await window.wikiPopup.choose({
+      title: `Mandar ${item.code} pelo NetWire`,
+      html: `<p>Os jogadores do canal recebem <b>${escapeHtml(titulo)}</b> como um arquivo, numa mensagem do contato dele:</p><div class="md-doc handout-preview">${window.wikiApp.renderMarkdown(part.text)}</div><p class="note-status">Confira os campos entre colchetes antes. Chega na hora.</p>`,
+      label: 'Canal', options: channels.map(channel => ({ value: channel.id, label: label(channel) })),
+      value: (channels.find(channel => channel.tipo === 'direto') || channels[0]).id, ok: 'Mandar'
+    });
+    if (!canal) return;
+    row.querySelectorAll('button').forEach(element => { element.disabled = true; });
+    try {
+      await post(`api/netwire/mensagens?campanha=${encodeURIComponent(campaign)}`, { campanha: campaign, canal, estado: 'entregue', texto: '', anexo: { titulo, texto: part.text }, nota: `${key} · do documento Handouts e textos, mandado pelo NetWire.` });
+      window.wikiPopup.toast(`${item.code} mandado pelo NetWire: os jogadores do canal recebem agora.`, { tone: 'ok', ms: 6000 });
+      await handoutStatus(campaign, row.closest('#md-doc') || document);
+    } catch (error) {
+      window.wikiPopup.toast(`Não consegui mandar ${item.code}: ${error.message}`, { tone: 'bad' });
+    } finally {
+      row.querySelectorAll('button').forEach(element => { element.disabled = false; });
+    }
   }
 
   document.addEventListener('wiki:documento', event => {
@@ -263,20 +297,21 @@
       quotes.forEach((quote, index) => {
         const part = item.parts[index];
         const which = item.parts.length > 1 ? ` (${escapeHtml(part.label || String(index + 1))})` : '';
-        quote.insertAdjacentHTML('afterend', `<p class="handout-send" data-handout="${item.code}" data-part="${index}"><button class="action" type="button" data-handout-deliver>Entregar aos jogadores${which}</button><button class="action handout-prepare" type="button" data-handout-prepare>Só preparar</button><span class="note-status" data-handout-status></span></p>`);
+        quote.insertAdjacentHTML('afterend', `<p class="handout-send" data-handout="${item.code}" data-part="${index}"><button class="action" type="button" data-handout-deliver>Entregar aos jogadores${which}</button><button class="action handout-prepare" type="button" data-handout-prepare>Só preparar</button><button class="action ghost" type="button" data-handout-netwire>Mandar pelo NetWire</button><span class="note-status" data-handout-status></span></p>`);
       });
     }
     handoutStatus(campaign, container);
   });
 
   document.addEventListener('click', async event => {
-    const button = event.target.closest('[data-handout-deliver], [data-handout-prepare]');
+    const button = event.target.closest('[data-handout-deliver], [data-handout-prepare], [data-handout-netwire]');
     if (!button) return;
     const row = button.closest('[data-handout]');
     const item = handoutCache.list.find(entry => entry.code === row.dataset.handout);
     const index = Number(row.dataset.part);
     const part = item && item.parts[index];
     if (!part) return;
+    if ('handoutNetwire' in button.dataset) { await sendByNetwire(row, item, index, part); return; }
     const deliver = 'handoutDeliver' in button.dataset;
     const titulo = handoutTitle(item, part);
     if (deliver) {

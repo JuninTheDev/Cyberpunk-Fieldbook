@@ -79,6 +79,18 @@ Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, n
 
 **Não escreva segredos** em `jogadores.html`, `wiki-app.js`, `wiki.css` ou `system-*.js`: esses arquivos vão para os aparelhos dos jogadores.
 
+## Mapa de Night City
+
+O mapa abre ocupando a janela inteira, tanto para o mestre quanto para os jogadores. A navegação da wiki fica no botão **Menu**; escolher outra página devolve o layout normal e mantém a sua preferência de barra lateral inteira ou compacta.
+
+- **Explorar:** arraste o mapa; use a roda do mouse, dois dedos ou os botões **+** e **−** para ampliar. Com o mapa em foco, as setas deslocam, **+** e **−** mudam o zoom e **Home** enquadra a cidade.
+- **Locais:** abre a lista de pontos, com busca e filtros. Selecione um ponto no mapa ou na lista para abrir a ficha do lugar, com o distrito e as informações disponíveis para quem está lendo. Os jogadores continuam recebendo somente o que o mestre publicou.
+- **Camadas:** reúne as versões do mapa e as opções de exibição. O mapa detalhado é o padrão; o mapa base continua disponível e o mestre também pode escolher a versão com referências originais.
+- **No celular e no tablet:** a lista, as camadas e a ficha aparecem na parte inferior, com rolagem própria e opção de expandir. Os controles de zoom ficam acima do painel aberto para continuar acessíveis.
+- **Teclado e navegação:** os marcadores podem ser abertos com **Enter** ou **Espaço**; **Esc** fecha o painel ou menu aberto. **/** ou **Ctrl+K** abre a busca da wiki. Os botões Voltar e Avançar do navegador continuam funcionando entre as páginas.
+
+O mapa detalhado carrega apenas a região visível, priorizando a visão geral e o centro da tela. O detalhe acompanha o zoom quando o gesto termina. Até 768 trechos ficam guardados no aparelho para revisitar sem rede, sem consultar novamente cada imagem já guardada; uma região ainda não carregada precisa de conexão. A troca de layout não muda as coordenadas dos pontos nem revela informações de campanha.
+
 ## Campanhas
 
 Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o mesmo universo. Na wiki do mestre, a página **Campanhas** (no menu de cada campanha) cria, renomeia e apaga; o seletor **Campanha ativa** no menu troca entre elas.
@@ -116,9 +128,14 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre (o Publicar de cada campanha e as Notícias de Night City). |
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. As últimas camadas do `wiki.css` são o visual de 2026. A parte 1 é o padrão da Loja: fundo quase preto, amarelo, ciano e vermelho, Oxanium no texto e Share Tech Mono nos rótulos (as duas do Google Fonts, licença OFL, em `cyberpunk-css-main/cyberpunk-css-main/fonts/`). A parte 2 segue os exemplos do Resumo, de Personagens, da Ficha e do Escudo: a barra de cima de ponta a ponta, a barra lateral em caixa normal (com as abas Campanhas e Sistema), os títulos em caixa normal e os botões vazados para o que só navega. |
+| `netwire.css` | O NetWire, o redesenho da wiki como o menu do jogo Cyberpunk 2077. Vem depois do `wiki.css`. Tem o kit (`.nw-*`: painel de canto cortado, botões, etiqueta, selo, canal, mensagem, faixa de título), que lê variáveis e serve aos dois temas, e o tema **2077** (`<html data-tema="2077">`), que troca os tokens do `wiki.css` pela paleta vermelha e reveste a barra de cima, a lateral, os quadros e os botões. Parte do "Cyberpunk 2077 HTML" de Marc Woodyard, fork do redesenho de Hussard (CodePen, licença MIT). Rajdhani e VT323 (Google Fonts, licença OFL) ficam na pasta de fontes. |
+| `api-netwire.js` | O servidor das mensagens dentro do jogo (carregado pelo `api-personagens.js`, que diz quem é quem). Por campanha, em `campanhas/<id>/netwire.json` (entra no backup): os canais (conversa direta de um NPC com jogadores escolhidos, ou canal da cidade) e as mensagens (rascunho, agendada ou entregue, com a nota do mestre e a origem). O jogador recebe só os canais dele e o que já foi entregue, sem nota; a agendada aparece sozinha quando chega a hora. Os canais #handouts e #n54-news vêm prontos das Notícias e handouts e das Notícias de Night City. |
+| `api-netwire-ia.js` | A IA que rascunha as mensagens, com `fetch` e sem dependências, em dois provedores: o Claude (API de Mensagens da Anthropic) e o Gemini (API Interactions do Google). Monta o contexto que o mestre marcou, pede em JSON com formato fixo, aproveita o cache de cada API e calcula o custo estimado (os preços do Gemini mudam nas datas que o Google anunciou). Liga com `ANTHROPIC_API_KEY` e/ou `GEMINI_API_KEY` no servidor. |
+| `netwire.js` | No navegador: a página **Mensagens** dos jogadores (`#pvMensagens/<canal>`) e a **Caixa do NetWire** do mestre (`#caixa`). Também o selo de não lidas (na conta: o que cada jogador já leu em cada canal). |
 | `campaign-map.js` | Pinos do mapa de operações. Os lugares da base apontam para eles (`#campaignMap/<ponto>` abre o mapa já no ponto). |
 | `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
+| `nightcity-map.js`, `assets/nightcity-map/tiles/` | O mapa detalhado de Night City, padrão nas duas visões: 16.121 tiles locais (137,3 MiB), com cinco níveis de detalhe. Só a região visível é baixada; o aparelho guarda até 768 tiles para revisitar sem rede. O seletor mantém o mapa base e, para o mestre, a versão com referências. Ao substituir os tiles, atualizar a edição `?v=` em `nightcity-map.js`, `sw.js` e `server.js`: cada edição tem cache imutável. |
 | `system-rules.js` | As regras da mesa para consulta: uma regra só, com o Mission Kit valendo sobre o RED quando os dois conflitam. Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (a tabela da ciberpsicose e as de perda e ganho do Kit), terapia e drogas, netrunning (o do RED com os quickhacks no Neuroport do Kit), economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido ou do Kit. |
 | `system-net.js` | O Arsenal da NET (programas, Black ICE, demônios, upgrades, defesas e os 21 cyberdecks com marca, que são cyberdecks do RED da qualidade de cada um) e os quickhacks: os 11 do Mission Kit e os 5 do suplemento de fã que a mesa aprovou, todos de graça pelo Rank de Interface. Um cartão por item. |
 | `system-2077.js` | Os anos 2070: as regras de Power, Smart e Tech e os Rebuilds do Cyberpunk Edgerunners Mission Kit; as 41 armas (13 do Kit e 28 do suplemento de fã aprovados); os 37 implantes (o Neuroport e o cromo do Kit, os do suplemento aprovados e os 8 Berserk e Sandevistan dos anos 2070, mais caros e mais fracos que no suplemento e à venda em todo Night Market de cyberware); e a página **Suplemento de fã: o que saiu**, com o motivo de cada item recusado na revisão de 2026-10-13. As listas cruas (`data`) vão para o módulo do Foundry e a loja. |
@@ -293,6 +310,29 @@ Notas:
 - **Sessões de login:** entrar com o código cria uma sessão; o cookie guarda só um identificador aleatório dela, não o código. No servidor online o cookie só vai por https. Uma sessão sem uso por seis meses acaba (o aparelho esquecido não fica entrando).
 - **Quem vê o quê:** cada jogador vê e edita só os dele; dos outros jogadores da mesma campanha, só nome, apelido, Role e retrato. De outra campanha, nada. Sem código, nenhum personagem. O mestre vê e edita todos.
 
+## Mensagens (NetWire)
+
+As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que escrevem, canais da cidade, e os jogadores respondem.
+
+- **Para os jogadores (aba Mensagens):** à esquerda, os **Feeds** (os canais da cidade, mais #handouts e #n54-news) e o **Direto** (as conversas com os contatos); ao lado, a conversa. Quando o canal aceita resposta, o campo **Mensagem** fica embaixo (Ctrl+Enter envia), assinado com o personagem em uso. O que chegou desde a última leitura ganha um selo no menu e na aba do topo, e a conversa com novidade abre primeiro.
+- **Para o mestre (Mesa → Caixa do NetWire, ou a aba Mensagens):**
+  - **Rascunhos** e **Agendadas:** escreva a mensagem (canal, quem fala, texto, uma nota só sua) e escolha **Entregar agora**, **Agendar** (com data e hora) ou **Salvar rascunho**. Nada chega aos jogadores sem você entregar.
+  - **Esperando você:** as conversas em que um jogador respondeu por último; **Responder como** abre a conversa.
+  - **Excluir a mensagem de um jogador:** o botão **Excluir** aparece nas mensagens dos jogadores (em Esperando você e na conversa). A mensagem sai para todos, inclusive para quem escreveu; editar não dá, porque o texto é do jogador.
+  - **Arquivos (handouts):** uma mensagem pode levar um arquivo, que o jogador abre dentro da conversa. Na página de Handouts, **Mandar pelo NetWire** manda o documento como arquivo na conversa que você escolher (a de um NPC, por exemplo), entregue na hora; o código H-xx fica só na nota do mestre.
+  - **Canais:** crie a conversa de um NPC (marque quem recebe; sem ninguém marcado, todos da campanha) ou um canal da cidade, e diga se os jogadores podem responder. Excluir o canal leva as mensagens junto.
+- **Na hora:** a página fica ouvindo o servidor (`/api/netwire/eventos`, SSE): a mensagem entregue aparece em menos de um segundo, sem recarregar, e a agendada aparece sozinha quando chega a hora (em até 20 s). Sem a conexão, a página confere de tempos em tempos, como antes. As conversas com novidade também aparecem nas **Não lidas** do Início.
+- **Limites:** o jogador manda até 12 mensagens a cada 10 minutos, de até 1.000 caracteres. Cada campanha guarda as últimas 2.000 mensagens.
+- **A IA que rascunha (opcional):** na Caixa, **Rascunhar com IA** escreve 1 a 3 opções de mensagem para um canal (responder à conversa ou uma mensagem nova), com uma instrução sua; em **Esperando você**, **Rascunhar resposta com IA** faz o mesmo de um clique. O que volta é **rascunho**: a nota diz a intenção, o modelo e o custo, e nada chega aos jogadores sem você entregar.
+  - **Gerar de novo e Variação:** nos rascunhos da IA, **Gerar de novo** refaz com o mesmo pedido e troca o rascunho no lugar; **Variação** acrescenta outra versão (outro tom ou outro detalhe) e mantém a que já estava, para você escolher. Cada um conta como um pedido no limite do dia.
+  - **O contexto:** o que os jogadores já sabem vai sempre; a base da campanha, o Estado da campanha e o diário, se você deixar marcados. A IA é instruída a não inventar fatos fora disso e a não entregar segredos.
+  - **Os modelos (no seletor da Caixa):** só aparecem os do provedor que tem chave.
+    - **Claude:** Rápido (Haiku 5.5: menos de um centavo de dólar por pedido), Equilibrado (Sonnet 5.5) e O mais capaz (Opus 5.5).
+    - **Gemini:** Rápido (3.5 Flash-Lite), Equilibrado (3.8 Flash) e O mais capaz (4 Argon). O Google anunciou que o 4 Argon dobra de preço em 1º/12/2026 e o 3.8 Flash em 1º/1/2027; a conta do custo já usa o preço de cada data.
+    - As instruções e o contexto vão no começo de todo pedido: as duas APIs guardam esse pedaço em cache, e os pedidos seguidos saem mais baratos. O Gemini vai com `store: false` (o Google não guarda o pedido; o padrão dele seria guardar por 55 dias).
+  - **Para ligar:** ponha `ANTHROPIC_API_KEY=<a chave da Anthropic>` e/ou `GEMINI_API_KEY=<a chave do Google AI Studio>` no `/etc/fieldbook.env` do servidor e reinicie a wiki (`sudo systemctl restart fieldbook`). Opcionais: `NETWIRE_MODELO` (o modelo padrão, um dos ids: `claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-opus-5-5`, `gemini-3.5-flash-lite`, `gemini-3.8-flash`, `gemini-4-argon`; sem ele, o mais barato do provedor ligado, o Claude primeiro) e `NETWIRE_IA_LIMITE` (pedidos por dia, por campanha; padrão 30). Sem nenhuma chave, a Caixa funciona à mão e avisa que a IA está desligada.
+  - **O uso:** a Caixa mostra os pedidos e o custo estimado de hoje; os últimos 50 ficam no `netwire.json` da campanha.
+
 ## Conta e navegação
 
 - **O botão da conta** fica no canto de cima, à direita, nas duas wikis.
@@ -302,9 +342,22 @@ Notas:
   - **O personagem em uso** é um por campanha, lembrado no aparelho. A **Ficha** e a **Loja** do menu lateral abrem nele, o **Resumo** mostra o cartão "Seu personagem" e a lista de Personagens marca "Em uso" (o botão **Usar** troca).
   - **Mestre:** a campanha ativa, os atalhos (Personagens e códigos, Visão dos jogadores, Campanhas, Agenda das mesas), abrir a visão dos jogadores, a versão no ar, o backup e **Sair do modo mestre**.
   - **Sair de todos os aparelhos** (no menu do jogador): a conta sai do celular, do computador, de tudo. Para voltar, o código de novo. Bom para celular perdido ou computador emprestado.
-- **O que acompanha a conta:** as páginas fixadas, os grupos recolhidos, a barra compacta, as páginas recentes, o personagem em uso e o que já foi visto (selos de novidade e de pedidos) ficam no servidor, na conta do jogador (ou na do mestre). Entrar no celular mostra tudo como estava no computador. Sem código, fica só no aparelho, como antes.
+  - **Aparência** (no menu de todos, até sem código): o tema **Fieldbook** (o amarelo de sempre) ou **2077** (o vermelho do menu do jogo Cyberpunk 2077, com Rajdhani e VT323). A escolha acompanha a conta e já vale ao abrir a página, sem piscar o outro tema. Quem ainda não escolheu começa no **2077** na wiki dos jogadores e no **Fieldbook** na do mestre.
+- **O que acompanha a conta:** o tema, as páginas fixadas, os grupos recolhidos, a barra compacta, as páginas recentes, o personagem em uso e o que já foi visto (selos de novidade e de pedidos) ficam no servidor, na conta do jogador (ou na do mestre). Entrar no celular mostra tudo como estava no computador. Sem código, fica só no aparelho, como antes.
 - **Páginas com abas (wiki do mestre):** cada assunto da campanha é uma entrada só na barra lateral, com abas no topo da página. **A campanha:** Diário e Base. **Elenco:** Pessoas e facções e Fichas. **Night City:** Mapa, Lugares e peças e Guia de 2077. **Cada sessão:** O que aconteceu (as notas, com o modelo do diário), Handouts (os da sessão, com os botões de entregar) e NPCs (as fichas que você escolhe num seletor com todas as fichas da wiki). As fichas e as notas ficam na mesa do servidor, por campanha. Os endereços de antes (`#campaign`, `#session1`) continuam valendo, e a busca acha o texto de todas as abas.
-- **Barra de cima:** de ponta a ponta, com a marca, a busca (tecla **/**), a campanha e o botão da conta.
+- **Barra de cima:** de ponta a ponta, com a marca, as abas do menu, a busca (tecla **/**), a campanha e o botão da conta.
+- **Paleta de comandos (Ctrl+K):** digite para ir a qualquer página (da campanha ou das regras), trocar de aba, de tema ou de menu; o que não achar vira busca na wiki (a última linha). No mapa em tela cheia, o Ctrl+K continua indo direto para a busca.
+- **Teclas do menu:** **1** a **7** (fora de um campo de texto) abrem as abas do topo, na ordem; **/** vai para a busca; **[** deixa a barra lateral compacta.
+- **Abas do topo (o menu NetWire):** o menu principal, como o menu do jogo. Cada aba reúne páginas e volta à última que você viu nela.
+  - **Jogadores:** Início, Personagem (Ficha, Personagens, Loja), Mensagens (por enquanto, as notícias e os handouts), Campanha (Sessões e Pessoas), Mapa e Regras.
+  - **Mestre:** Início, Campanha, Sessões, Mensagens (por enquanto, a Visão dos jogadores), Mesa, Personagens e Sistema. As abas saem dos nomes dos grupos (`topTabs` no `index.html`), então valem para as campanhas novas; aba sem página na campanha some.
+  - **Regras e Sistema** são a área Sistema da barra lateral; as outras, a área Campanhas. A barra lateral continua com a lista inteira da área. As abas Campanhas e Sistema da barra lateral só aparecem na gaveta do celular e no menu clássico.
+  - **Sem espaço:** a campanha some da barra (o botão da conta também a mostra), depois a marca, e as abas ficam com o nome curto.
+  - **No celular,** as abas viram a barra de baixo: as quatro primeiras e **Mais**, que abre a gaveta com o resto.
+  - **Coluna da direita** (telas de 1500 px ou mais): "Nesta página" em lista (a seção em que você está fica acesa) e, na visão dos jogadores, a próxima sessão e os relógios. Os chips de "Nesta página" voltam quando a tela é menor.
+  - **Início do jogador:** o cartão do personagem em uso como a tela de personagem do jogo (retrato, Roles, HP e Humanidade em barras de segmentos, eddies e IP, com Ficha, Loja e Trocar); a próxima sessão e as **Não lidas** lado a lado (o que o mestre publicou desde a sua última visita, como mensagens que levam à página; sem nada novo, as últimas notícias); embaixo, o resumo, os relógios e a última sessão.
+  - **Ficha:** as abas viram as abas do menu, os STATs ganham o canto cortado e o HP vira uma barra de segmentos. A ficha em si não muda.
+  - **Menu clássico:** no menu da conta, em Aparência. Volta à barra lateral com as abas Campanhas e Sistema, como antes. Acompanha a conta.
 - **Barra lateral:**
   - **Duas áreas:** as abas **Campanhas** e **Sistema** (na wiki dos jogadores, **Campanha** e **Regras**). Campanhas tem os grupos da campanha (o primeiro com o nome dela); Sistema, os das regras (Na mesa, Regras, Netrunning, Catálogos, Black Chrome e Fontes). Abrir uma página da outra área troca a aba.
   - **Fixadas:** o botão **☆ Fixar**, ao lado do título de qualquer página (Combate, Escudo do mestre, a Ficha…), põe a página no grupo **Fixadas**, no topo da barra lateral, nas duas abas. Até 8, lembradas no aparelho; **★ Fixada** tira.
@@ -312,7 +365,7 @@ Notas:
   - **Barra compacta:** o botão ☰ (ou a tecla **[**) deixa só os ícones; parar o mouse num ícone mostra o nome. O aparelho lembra.
   - **No celular,** a barra lateral é uma gaveta: o ☰ abre, escolher uma página fecha. O conteúdo começa logo abaixo da barra de cima.
   - **Mesa:** o quadro no pé da barra, sempre à vista, diz se a mesa está aberta (e de qual campanha) e quantos estão conectados, com **Entrar na mesa**; para o mestre, também a saúde do servidor.
-- **Novidades (visão dos jogadores):** sessões, pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. No mapa, os lugares novos aparecem em outra cor, com "(novo)" e a legenda explicando. Abrir a página tira o selo.
+- **Novidades (visão dos jogadores):** sessões, pessoas, lugares e notícias que o mestre publicou desde a última visita ganham um selo no menu e a etiqueta **novo** na página. No mapa, os lugares novos aparecem em outra cor, com "(novo)" e a legenda explicando. Abrir a página tira o selo. O total dos selos (novidades e mensagens; para o mestre, as conversas esperando resposta) também vai no título da aba do navegador, como "(3) Night City Fieldbook".
 - **Voltar ao topo:** nas páginas longas, um botão no canto de baixo.
 
 ## Consulta durante a sessão
@@ -326,7 +379,7 @@ Notas:
   - **Onde aparece:** nas páginas da base, nas tabelas citadas nos documentos (o diário mostra a foto de agora) e nos cartões dos nomes.
   - **Mostrar aos jogadores**, embaixo de cada relógio, põe esse relógio no Resumo dos jogadores (só leitura). Bom para o relógio da cidade.
   - **Estágio de Morana** (Protocolo Morana): o terceiro relógio. Dois segmentos por estágio (Programa, Enxame, Entidade), com a DV do teste de resistência e os gatilhos para marcar e desmarcar.
-  - **Handouts** (Protocolo Morana → Sessões → Handouts e textos, ou a aba Handouts de cada sessão): embaixo de cada documento, **Entregar aos jogadores** publica na hora em Notícias e handouts, com o título que os jogadores devem ver; **Só preparar** deixa no Publicar sem publicar, para editar antes (os campos entre colchetes). O código H-xx fica na nota do mestre, e a página mostra o que já foi preparado ou entregue.
+  - **Handouts** (Protocolo Morana → Sessões → Handouts e textos, ou a aba Handouts de cada sessão): embaixo de cada documento, **Entregar aos jogadores** publica na hora em Notícias e handouts, com o título que os jogadores devem ver; **Só preparar** deixa no Publicar sem publicar, para editar antes (os campos entre colchetes); **Mandar pelo NetWire** manda como arquivo numa conversa das Mensagens (veja **Mensagens (NetWire)**). O código H-xx fica na nota do mestre, e a página mostra o que já foi preparado ou entregue.
   - **Virar rascunho de sessão** cria, com o texto do bloco, uma sessão **não publicada** em Visão dos jogadores → Sessões. Revise (o bloco tem segredos) e marque Publicada.
 - **Início do mestre:** a faixa **Na mesa agora** tem atalhos (Escudo, Fichas de NPC, Encontros, Combate, Glossário, Índice, sessões), as últimas páginas abertas e o estado dos relógios de Sato e da cidade.
 - **Endereço por página:** cada página e seção tem endereço próprio (`#combat/cobertura`). O **Voltar** do navegador volta para a página anterior, recarregar mantém o lugar, e dá para mandar o link de uma regra para alguém. As páginas que viraram parte de outra quando as regras foram unificadas continuam abrindo: `#net2077` vai para Netrunning, `#roles2077` para Roles e `#os2077` para Berserk e Sandevistan, em Cyberware de 2077.
@@ -377,6 +430,8 @@ Os testes abrem o Edge escondido e sobem servidores próprios (portas 8765 a 877
 
 Rode essa suíte uma sessão por vez: as portas de teste e depuração do Edge e a pasta do Foundry de teste
 são compartilhadas entre worktrees. O `tests/validar.js` pode rodar em paralelo.
+
+**Teste do NetWire** (`node tests/rodar.js netwire`): as Mensagens e a Caixa de ponta a ponta. O jogador recebe o recado (selo no menu, na aba e no título), abre, responde assinado pelo personagem, vê a mensagem chegar na hora e as Não lidas do Início; as teclas e a paleta; o mestre vê Esperando você, exclui a mensagem do jogador, pede rascunhos à IA nos dois provedores (com Gerar de novo e Variação) e manda um handout como arquivo, com uma API falsa nesta máquina (nada sai, nada é cobrado).
 
 **Teste dos documentos** (`node tests/rodar.js documentos`): confere os `.md` da campanha. Acusa termos fora do padrão da wiki ("Seriamente Ferido", "Canal", "Cybertech", "Enganação"), palavras comuns sem acento, nomes de perícia que não existem, arquivos citados que não existem, documentos fora da wiki e links para fichas que não existem.
 

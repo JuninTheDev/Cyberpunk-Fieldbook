@@ -71,3 +71,25 @@ node --test tests/ui/cyberware.test.js
 Usa o mesmo isolamento de portas e dados, com perfil exclusivo no Edge. Confere a compra por local,
 a montagem por base, a gravação e os lados exibidos na ficha, além da largura em computador e celular.
 As capturas de revisão visual ficam em `tests/.saida/`, fora do versionamento.
+
+## Conferência do mapa no navegador
+
+```powershell
+node --test tests/ui/mapa.test.js
+```
+
+Usa `comNavegadorIsolado`, com portas HTTP/DevTools dinâmicas, perfil exclusivo do Edge e dados temporários.
+Confere o mapa imersivo sem cabeçalho ou painéis iniciais, tiles locais e detalhe no zoom, arrastar e gesto de
+dois dedos, troca das fontes, coordenadas e endereço dos pinos, busca por título/distrito e filtros sem seleção
+automática. A seleção abre a ficha sem ampliar e mantém o pino fora dos painéis; suas seções começam recolhidas.
+O menu prende o foco por teclado, fecha com Esc e restaura a preferência da barra; Ctrl+K suspende o mapa para
+a busca e Esc o recompõe. Em tela móvel, confere painel único, ficha de metade da altura com expansão,
+rotação e ausência de rolagem da página. O caso de 1025×768 exige que a lista saia do caminho quando o limite
+da câmera impede revelar o pino por pan. Capturas aguardam o desenho agendado e o carregamento das tiles.
+O zoom rápido com rede lenta confere o limite de 24 imagens em carga, a ausência de pedidos de níveis
+intermediários e a permanência do detalhe anterior durante a troca. A resolução 3440×1440 também tem
+verificação de proporção, ausência de rolagem e capturas nos enquadramentos inicial e ampliado.
+Voltar e repetir setup não pode acumular ações. A publicação e o login
+usam a API real: o jogador recebe apenas lugares revelados,
+sem notas ou script do mestre e sem a fonte privada de referência. As capturas ficam em `tests/.saida/`.
+É opcional e não faz parte de `node tests/validar.js`; não usa Foundry nem as portas fixas da suíte antiga.

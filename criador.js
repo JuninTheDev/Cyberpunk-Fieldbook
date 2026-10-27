@@ -1225,50 +1225,81 @@
       ${item && item.desc ? `<p class="cy-ficha-desc">${esc(item.desc)}</p>` : item ? '' : '<p class="cy-ficha-desc note-status">Fora do catálogo da wiki: veja a descrição na ficha do Foundry.</p>'}`;
   }
 
-  // O corpo do holograma, desenhado aqui (a wiki é pública: nada da arte do jogo). A metade esquerda em pontos,
-  // espelhada para a direita; cada parte com cyberware acende em ciano. As âncoras são onde chegam as linhas.
-  const BODY_ARM = [[78, 92], [68, 100], [63, 112], [60, 130], [56, 160], [52, 186], [47, 214], [42, 240], [39, 256], [34, 268], [31, 284], [33, 296], [38, 300], [43, 294], [45, 282], [48, 266], [53, 246], [60, 216], [65, 192], [70, 166], [74, 140]];
-  const BODY_SIDE = [[77, 160], [80, 186], [78, 208], [76, 226], [74, 246]];
-  const BODY_LEG = [[75, 266], [78, 300], [82, 340], [86, 376], [85, 400], [86, 430], [90, 466], [92, 488], [86, 500], [84, 508], [92, 512], [110, 512], [111, 500], [110, 488], [110, 460], [110, 410], [108, 384], [110, 350], [114, 310], [118, 284], [120, 280]];
-  const BODY_NECK = [[113, 64], [111, 80], [96, 86]];
-  const BODY_HEAD = 'M120 14C133 14 141 24 141 38C141 51 135 61 127 66L120 69L113 66C105 61 99 51 99 38C99 24 107 14 120 14Z';
-  const BODY_ANCHORS = { cabeca: [112, 29], olhos: [112, 40], ouvido: [99, 42], ombro: [74, 100], braco: [50, 214], peito: [133, 156], pele: [158, 196], moda: [190, 226], perna: [144, 400] };
-  const mirrorX = points => points.map(([x, y]) => [240 - x, y]);
-  const linePath = (points, close = true) => `M${points.map(([x, y]) => `${x} ${y}`).join('L')}${close ? 'Z' : ''}`;
+  // O corpo do holograma, desenhado aqui (a wiki é pública: nada de arte de terceiros). A metade esquerda da imagem (o
+  // lado direito do personagem) em pontos ligados por curvas, espelhada para a direita; cada parte com cyberware acende
+  // em ciano, e tocar numa parte leva ao grupo dela. As âncoras são onde chegam as linhas.
+  const BODY_W = 260;
+  const BODY_H = 560;
+  const BODY_NECK = [[120, 86], [119, 104]];
+  const BODY_SHOULDER = [[104, 113], [84, 118], [68, 124], [58, 136], [54, 154]];
+  const BODY_ARM_OUT = [[52, 178], [49, 204], [45, 228], [41, 252], [38, 274], [36, 290]];
+  const BODY_HAND = [[31, 298], [25, 310], [22, 320], [26, 322], [32, 315], [31, 330], [33, 344], [38, 352], [45, 354], [51, 349], [53, 334], [53, 316], [54, 300]];
+  const BODY_ARM_IN = [[55, 288], [58, 266], [62, 244], [67, 222], [71, 200], [75, 180], [80, 164]];
+  const BODY_SIDE = [[84, 184], [87, 206], [89, 230], [87, 252], [84, 274]];
+  const BODY_LEG_OUT = [[82, 298], [84, 330], [88, 364], [92, 392], [91, 414], [89, 438], [92, 466], [97, 492], [98, 506]];
+  const BODY_FOOT = [[92, 516], [87, 526], [92, 533], [104, 534], [114, 532], [117, 522], [115, 508]];
+  const BODY_LEG_IN = [[114, 484], [115, 450], [117, 414], [119, 384], [122, 348], [126, 316], [130, 298]];
+  const BODY_HEAD = 'M130 18C147 18 157 31 157 49C157 66 150 79 141 87C137 90 134 92 130 92C126 92 123 90 119 87C110 79 103 66 103 49C103 31 113 18 130 18Z';
+  const BODY_CAP = 'M103.6 46C104 29 115 18 130 18C145 18 156 29 156.4 46C146 51 114 51 103.6 46Z';
+  const BODY_EARS = 'M103 44C98 44 97 52 99 59C100 63 102 65 104 64M157 44C162 44 163 52 161 59C160 63 158 65 156 64';
+  // Músculos, em curvas da metade esquerda (início, controle, fim): clavícula, deltoide, bíceps, antebraço, serrátil,
+  // oblíquo, quadríceps e panturrilha. As articulações: ombro, cotovelo, pulso, quadril, joelho e tornozelo.
+  const BODY_MUSCLES = [[104, 116, 90, 117, 76, 126], [70, 130, 60, 142, 62, 164], [61, 172, 64, 190, 68, 206], [50, 226, 48, 250, 46, 274], [92, 196, 100, 206, 103, 224],
+    [90, 244, 100, 256, 108, 272], [96, 312, 100, 350, 102, 386], [114, 322, 111, 352, 109, 384], [95, 420, 99, 442, 99, 470], [113, 424, 111, 450, 110, 476]];
+  const BODY_JOINTS = [[66, 132], [58, 214], [45, 292], [96, 292], [106, 400], [106, 500]];
+  const BODY_FACE = 'M130 61V69Q130 71 132.5 70.5M124.5 78.5Q130 81 135.5 78.5';
+  const BODY_ANCHORS = { cabeca: [116, 32], olhos: [120, 56], ouvido: [100, 54], ombro: [66, 128], braco: [44, 240], peito: [144, 172], pele: [168, 236], moda: [206, 244], perna: [166, 420] };
+  const mirrorX = points => points.map(([x, y]) => [BODY_W - x, y]);
+  // Uma curva suave pelos pontos (Catmull-Rom convertida em Bézier).
+  function smoothPath(points, close = true) {
+    const p = close ? [points[points.length - 1], ...points, points[0], points[1]] : [points[0], ...points, points[points.length - 1]];
+    const r = value => Math.round(value * 10) / 10;
+    let d = `M${r(p[1][0])} ${r(p[1][1])}`;
+    for (let i = 1; i < p.length - 2; i++) {
+      const [a, b, c, e] = [p[i - 1], p[i], p[i + 1], p[i + 2]];
+      d += `C${r(b[0] + (c[0] - a[0]) / 6)} ${r(b[1] + (c[1] - a[1]) / 6)} ${r(c[0] - (e[0] - b[0]) / 6)} ${r(c[1] - (e[1] - b[1]) / 6)} ${r(c[0])} ${r(c[1])}`;
+    }
+    return d + (close ? 'Z' : '');
+  }
+  const groupOfPart = id => (CYBER_GROUPS.find(group => group.partes.includes(id)) || {}).id || '';
   let bodyCount = 0;
   function bodySvg(lit, label) {
     const n = ++bodyCount;
-    const half = [...BODY_NECK, ...BODY_ARM, ...BODY_SIDE, ...BODY_LEG];
-    const outline = [...half, ...mirrorX(half).reverse().slice(1)];
-    const torsoHalf = [...BODY_NECK, [78, 92], [74, 140], ...BODY_SIDE, [75, 266]];
-    const torso = [...torsoHalf, [120, 280], ...mirrorX(torsoHalf).reverse()];
+    const half = [...BODY_NECK, ...BODY_SHOULDER, ...BODY_ARM_OUT, ...BODY_HAND, ...BODY_ARM_IN, ...BODY_SIDE, ...BODY_LEG_OUT, ...BODY_FOOT, ...BODY_LEG_IN];
+    const outline = smoothPath([...half, ...mirrorX(half).reverse()]);
+    const arm = [[68, 124], [58, 136], [54, 154], ...BODY_ARM_OUT, ...BODY_HAND, ...BODY_ARM_IN, [74, 142]];
+    const leg = [[84, 274], ...BODY_LEG_OUT, ...BODY_FOOT, ...BODY_LEG_IN];
+    const torsoHalf = [...BODY_NECK, [104, 113], [84, 118], [68, 124], [74, 142], [80, 164], ...BODY_SIDE];
+    const torso = [...torsoHalf, [130, 298], ...mirrorX(torsoHalf).reverse()];
     // A parte acesa ganha as linhas do holograma em ciano e o contorno em ciano por cima do vermelho.
     // 'indef': a base sem lado, desenhada na vaga que ocupa, com o contorno tracejado.
-    const part = (id, shapes, line = false) => `<g class="cy-parte${line ? ' cy-parte-linha' : ''}${lit[id] ? ' cy-on' : ''}${lit[id] === 'indef' ? ' cy-indef' : ''}" data-cy-parte="${id}" fill="${lit[id] && !line ? `url(#cy-scan-c-${n})` : 'none'}">${shapes}</g>`;
-    return `<svg viewBox="0 0 240 524" role="img" aria-label="${esc(label)}" focusable="false">
+    const part = (id, shapes, line = false) => `<g class="cy-parte${line ? ' cy-parte-linha' : ''}${lit[id] ? ' cy-on' : ''}${lit[id] === 'indef' ? ' cy-indef' : ''}" data-cy-parte="${id}" data-cy-ir="${groupOfPart(id)}" fill="${lit[id] && !line ? `url(#cy-scan-c-${n})` : 'none'}">${shapes}</g>`;
+    return `<svg viewBox="0 0 ${BODY_W} ${BODY_H}" role="img" aria-label="${esc(label)}" focusable="false">
       <defs>
         <pattern id="cy-scan-${n}" width="6" height="3" patternUnits="userSpaceOnUse"><rect width="6" height="1" fill="currentColor"/></pattern>
         <pattern id="cy-scan-c-${n}" width="6" height="3" patternUnits="userSpaceOnUse"><rect width="6" height="1.2" fill="#00ffd2" fill-opacity=".6"/></pattern>
         <linearGradient id="cy-luz-${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff3158" stop-opacity="0"/><stop offset=".8" stop-color="#ff3158" stop-opacity=".35"/><stop offset="1" stop-color="#ff3158" stop-opacity="0"/></linearGradient>
-        <clipPath id="cy-recorte-${n}"><path d="${linePath(outline)}"/><path d="${BODY_HEAD}"/></clipPath>
+        <clipPath id="cy-recorte-${n}"><path d="${outline}"/><path d="${BODY_HEAD}"/></clipPath>
         <filter id="cy-brilho-${n}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       </defs>
-      <ellipse class="cy-chao" cx="120" cy="515" rx="66" ry="7"/><ellipse class="cy-chao" cx="120" cy="515" rx="40" ry="4"/>
-      <g class="cy-silhueta" fill="url(#cy-scan-${n})"><path d="${linePath(outline)}"/><path d="${BODY_HEAD}"/></g>
-      <g class="cy-contorno" filter="url(#cy-brilho-${n})"><path d="${linePath(outline, false)}"/><path d="${BODY_HEAD}"/></g>
-      ${part('pele', `<path d="${linePath(torso)}"/>`)}
-      ${part('braco-1', `<path d="${linePath(BODY_ARM)}"/>`)}${part('braco-2', `<path d="${linePath(mirrorX(BODY_ARM))}"/>`)}
-      ${part('perna-1', `<path d="${linePath(mirrorX(BODY_LEG))}"/>`)}${part('perna-2', `<path d="${linePath(BODY_LEG)}"/>`)}
-      <g class="cy-detalhe"><path d="M100 92Q110 97 120 95Q130 97 140 92M90 116Q104 132 120 128Q136 132 150 116M97 146Q120 156 143 146M99 160Q120 170 141 160M101 174Q120 184 139 174M120 96V250M108 196H132M108 212H132M110 228H130M82 250Q120 276 158 250"/>
-        <ellipse cx="98" cy="382" rx="7" ry="9"/><ellipse cx="142" cy="382" rx="7" ry="9"/>
-        ${[[72, 104], [168, 104], [58, 190], [182, 190], [44, 258], [196, 258], [90, 264], [150, 264], [101, 490], [139, 490]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2"/>`).join('')}</g>
-      ${part('interno', '<ellipse cx="107" cy="156" rx="9" ry="18"/><ellipse cx="133" cy="156" rx="9" ry="18"/><ellipse cx="120" cy="201" rx="13" ry="9"/>')}
-      ${part('borg', '<path d="M120 70V272"/><path d="M76 98Q86 88 98 88M164 98Q154 88 142 88"/>', true)}
-      ${part('neural', '<circle cx="120" cy="31" r="9"/><path d="M120 40V80"/>', true)}
-      ${part('olho-1', '<ellipse cx="112" cy="40" rx="4" ry="2.4"/>')}${part('olho-2', '<ellipse cx="128" cy="40" rx="4" ry="2.4"/>')}
-      ${part('ouvido', '<path d="M99 33Q93 40 99 48M141 33Q147 40 141 48"/>', true)}
-      ${part('moda', '<path d="M186 212l4 12M183 226l4 13M191 222l3 9"/>', true)}
-      <g clip-path="url(#cy-recorte-${n})"><rect class="cy-varredura" x="0" y="-40" width="240" height="40" fill="url(#cy-luz-${n})"/></g>
+      <ellipse class="cy-chao" cx="130" cy="540" rx="72" ry="8"/><ellipse class="cy-chao" cx="130" cy="540" rx="44" ry="4.5"/>
+      <g class="cy-silhueta" fill="url(#cy-scan-${n})"><path d="${outline}"/><path d="${BODY_HEAD}"/></g>
+      <g class="cy-contorno" filter="url(#cy-brilho-${n})"><path d="${outline}"/><path d="${BODY_HEAD}"/></g>
+      ${part('pele', `<path d="${smoothPath(torso)}"/>`)}
+      ${part('braco-1', `<path d="${smoothPath(arm)}"/>`)}${part('braco-2', `<path d="${smoothPath(mirrorX(arm))}"/>`)}
+      ${part('perna-1', `<path d="${smoothPath(mirrorX(leg))}"/>`)}${part('perna-2', `<path d="${smoothPath(leg)}"/>`)}
+      <g class="cy-regua"><path d="M5 18V534${Array.from({ length: 26 }, (_, i) => `M5 ${18 + i * 20}h${i % 5 ? 4 : 8}`).join('')}"/></g>
+      <g class="cy-detalhe"><path d="M108 114Q119 119 130 117Q141 119 152 114M96 140Q110 158 130 154Q150 158 164 140M104 176Q130 186 156 176M106 192Q130 202 154 192M108 208Q130 218 152 208M130 118V270M116 226H144M116 242H144M118 258H142M90 276Q130 302 170 276"/>
+        <path d="${BODY_MUSCLES.map(([x1, y1, cx, cy, x2, y2]) => `M${x1} ${y1}Q${cx} ${cy} ${x2} ${y2}M${BODY_W - x1} ${y1}Q${BODY_W - cx} ${cy} ${BODY_W - x2} ${y2}`).join('')}"/>
+        <ellipse cx="106" cy="400" rx="7" ry="10"/><ellipse cx="154" cy="400" rx="7" ry="10"/><path class="cy-rosto" d="${BODY_FACE}"/></g>
+      <g class="cy-juntas">${[...BODY_JOINTS, ...mirrorX(BODY_JOINTS)].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6"/><circle class="cy-junta-anel" cx="${x}" cy="${y}" r="4.2"/>`).join('')}</g>
+      ${part('interno', '<ellipse cx="116" cy="172" rx="10" ry="20"/><ellipse cx="144" cy="172" rx="10" ry="20"/><ellipse cx="130" cy="222" rx="14" ry="10"/>')}
+      ${part('borg', '<path d="M130 92V292"/><path d="M72 123Q88 113 104 113M188 123Q172 113 156 113"/>', true)}
+      ${part('neural', `<path d="${BODY_CAP}"/>`)}
+      ${part('olho-1', '<ellipse cx="120" cy="56" rx="4.5" ry="2.6"/>')}${part('olho-2', '<ellipse cx="140" cy="56" rx="4.5" ry="2.6"/>')}
+      ${part('ouvido', `<path d="${BODY_EARS}"/>`, true)}
+      ${part('moda', '<path d="M204 228l4 13M201 244l4 14M210 240l3 10"/>', true)}
+      <g class="cy-scan-faixa" clip-path="url(#cy-recorte-${n})"><rect class="cy-varredura" x="0" y="-40" width="${BODY_W}" height="40" fill="url(#cy-luz-${n})"/></g>
       ${Object.entries(BODY_ANCHORS).map(([id, [x, y]]) => `<circle class="cy-ancora" data-cy-ancora="${id}" cx="${x}" cy="${y}" r="2.6"/>`).join('')}
     </svg>`;
   }
@@ -1288,7 +1319,11 @@
     const lit = {};
     let installed = 0;
     const panel = '<div class="cy-ficha" data-cy-aberta="" hidden></div>';
-    const nameButton = (piece, k) => `<li><button type="button" class="cy-nome" data-cy-item="${k}">${esc(piece.nome)}${piece.qtd > 1 ? ` ×${piece.qtd}` : ''}${piece.local || piece.localPlanejado ? ` <small class="cy-location">${esc(CW.nome(piece.local || piece.localPlanejado))}${!piece.local ? ' (planejado)' : ''}</small>` : ''}${piece.tamanho ? '' : ' <small>sem slot</small>'}</button></li>`;
+    const nameInner = (piece, k) => `<button type="button" class="cy-nome" data-cy-item="${k}">${esc(piece.nome)}${piece.qtd > 1 ? ` ×${piece.qtd}` : ''}${piece.local || piece.localPlanejado ? ` <small class="cy-location">${esc(CW.nome(piece.local || piece.localPlanejado))}${!piece.local ? ' (planejado)' : ''}</small>` : ''}${piece.tamanho ? '' : ' <small>sem slot</small>'}</button>`;
+    const nameButton = (piece, k) => `<li>${nameInner(piece, k)}</li>`;
+    // O chip do implante: a sigla (o slot que ocupa; sem slot, só a marca) colada ao nome. Os dois abrem a mesma ficha.
+    const chip = (piece, k, sigla, over) => `<li class="cy-chip${over ? ' cy-excesso' : ''}">${sigla}${nameInner(piece, k)}</li>`;
+    const SHOP_TITLE = 'Abre a Loja da Campanha só com o que serve neste slot';
     // showSlots: a base mostra os slots dela só quando o grupo tem mais de uma (senão a conta do grupo já diz).
     const unitHtml = (group, unit, showSlots) => {
       if (unit.falta) {
@@ -1297,43 +1332,43 @@
         const accepts = Boolean(unit.local) && Boolean(CW.BASES_NATURAIS[group.tipo]);
         const pieces = unit.itens || [];
         const where = `${group.nome} · ${CW.nome(unit.local)} · ${CW.membro(group.tipo)}`;
-        const names = [];
-        const cells = pieces.map((piece, index) => {
+        const chips = pieces.map((piece, index) => {
           const k = card(piece, where);
+          const over = Boolean(index || piece.qtd > 1);
           installed += piece.qtd;
-          names.push(nameButton(piece, k));
-          return `<button type="button" class="cy-slot cy-cheio${index || piece.qtd > 1 ? ' cy-excesso' : ''}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, peça única ${inNaturalLimb(group.tipo)}">${esc(cyberAbbr(piece.nome))}</button>`;
+          return chip(piece, k, `<button type="button" class="cy-cheio${over ? ' cy-excesso' : ''}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, peça única ${inNaturalLimb(group.tipo)}">${esc(cyberAbbr(piece.nome))}</button>`, over);
         });
-        if (accepts && !pieces.length) cells.push(`<button type="button" class="cy-slot cy-livre" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-natural="1" data-cy-local="${unit.local}" data-cy-nome="${esc(`Peça única · ${CW.nome(unit.local)}`)}" aria-label="Peça única ${inNaturalLimb(group.tipo)} (${esc(CW.nome(unit.local).toLowerCase())}): ver na loja">+</button>`);
-        cells.push(`<button type="button" class="cy-slot cy-livre cy-base" data-cy-loja="${group.tipo}" data-cy-base="${base}" data-cy-local="${unit.local || ''}" data-cy-nome="${esc(unit.local ? `${group.base} · ${CW.nome(unit.local)}` : base ? `Base: ${group.base}` : group.nome)}" aria-label="Comprar ${esc(group.base)}${unit.local ? ` para ${esc(CW.nome(unit.local))}` : ''}">+ ${esc(group.base)}</button>`);
+        const cells = [];
+        if (accepts && !pieces.length) cells.push(`<button type="button" class="cy-slot cy-livre" title="${SHOP_TITLE}" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-natural="1" data-cy-local="${unit.local}" data-cy-nome="${esc(`Peça única · ${CW.nome(unit.local)}`)}" aria-label="Peça única ${inNaturalLimb(group.tipo)} (${esc(CW.nome(unit.local).toLowerCase())}): ver na loja">+</button>`);
+        cells.push(`<button type="button" class="cy-slot cy-livre cy-base" title="Abre a Loja da Campanha com as bases de ${esc(group.base)}" data-cy-loja="${group.tipo}" data-cy-base="${base}" data-cy-local="${unit.local || ''}" data-cy-nome="${esc(unit.local ? `${group.base} · ${CW.nome(unit.local)}` : base ? `Base: ${group.base}` : group.nome)}" aria-label="Comprar ${esc(group.base)}${unit.local ? ` para ${esc(CW.nome(unit.local))}` : ''}">+ ${esc(group.base)}</button>`);
         return `<div class="cy-unit cy-natural" data-cy-holder data-cy-local="${unit.local || ''}"><div class="cy-unit-head">${unit.local ? `<span class="cy-location">${esc(CW.nome(unit.local))}</span>` : ''}<span>${esc(unit.nome)}</span>${accepts ? ' <small>peça única</small>' : ''}</div>
-          <div class="cy-slots">${cells.join('')}</div>${names.length ? `<ul class="cy-nomes">${names.join('')}</ul>` : ''}${panel}</div>`;
+          ${chips.length ? `<ul class="cy-chips">${chips.join('')}</ul>` : ''}<div class="cy-slots">${cells.join('')}</div>${panel}</div>`;
       }
       const where = `${group.nome} · ${unit.corpo ? 'no corpo' : `${unit.local ? CW.nome(unit.local) : group.par ? 'Local não definido' : unit.nome} · ${unit.nome}`}`;
+      const chips = [];
       const cells = [];
-      const names = [];
       let used = 0;
       for (const piece of unit.itens) {
         const k = card(piece, where);
+        const size = (piece.tamanho || 0) * piece.qtd;
+        const over = size > 0 && used + size > unit.slots;
         installed += piece.qtd;
-        names.push(nameButton(piece, k));
-        for (let copy = 0; copy < piece.qtd && piece.tamanho; copy++) {
-          const over = used + piece.tamanho > unit.slots;
-          cells.push(`<button type="button" class="cy-slot cy-cheio${over ? ' cy-excesso' : ''}" style="--t:${piece.tamanho}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, ${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}">${esc(cyberAbbr(piece.nome))}</button>`);
-          used += piece.tamanho;
-        }
+        chips.push(chip(piece, k, piece.tamanho
+          ? `<button type="button" class="cy-cheio${over ? ' cy-excesso' : ''}" style="--t:${piece.tamanho}" data-cy-item="${k}" title="${esc(piece.nome)}" aria-label="${esc(piece.nome)}, ${piece.tamanho} slot${piece.tamanho > 1 ? 's' : ''}">${esc(cyberAbbr(piece.nome))}</button>`
+          : `<span class="cy-sigla" aria-hidden="true">${esc(cyberAbbr(piece.nome))}</span>`, over));
+        used += size;
       }
       const label = unit.corpo ? group.nome : `Opções de ${group.nome}`;
-      for (let free = Math.max(0, unit.slots - used); free > 0; free--) cells.push(`<button type="button" class="cy-slot cy-livre" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-local="${unit.local || ''}" data-cy-em="${esc(unit.base ? parentRef(unit.base) : '')}" data-cy-nome="${esc(unit.local ? `${label} · ${CW.nome(unit.local)}` : label)}" aria-label="Slot livre ${unit.local ? `no ${esc(CW.nome(unit.local).toLowerCase())}` : unit.corpo ? `de ${esc(group.nome)}` : `em ${esc(unit.nome)}`}: ver na loja o que cabe">+</button>`);
+      for (let free = Math.max(0, unit.slots - used); free > 0; free--) cells.push(`<button type="button" class="cy-slot cy-livre" title="${SHOP_TITLE}" data-cy-loja="${group.tipo}" data-cy-base="0" data-cy-local="${unit.local || ''}" data-cy-em="${esc(unit.base ? parentRef(unit.base) : '')}" data-cy-nome="${esc(unit.local ? `${label} · ${CW.nome(unit.local)}` : label)}" aria-label="Slot livre ${unit.local ? `no ${esc(CW.nome(unit.local).toLowerCase())}` : unit.corpo ? `de ${esc(group.nome)}` : `em ${esc(unit.nome)}`}: ver na loja o que cabe">+</button>`);
       let head = '';
       if (!unit.corpo) {
         installed += 1;
         head = `<div class="cy-unit-head">${group.par ? `<span class="cy-location">${esc(CW.nome(unit.local))}</span>` : ''}<button type="button" class="cy-unit-name" data-cy-item="${card(unit.base, `${where} · base com ${unit.slots} slots`)}">${esc(unit.nome)}</button>${showSlots ? ` <small>${used}/${unit.slots}</small>` : ''}</div>`;
       }
       unit.usados = used;
-      return `<div class="cy-unit${group.par && !unit.local ? ' cy-unassigned' : ''}" data-cy-holder data-cy-local="${unit.local || ''}" data-cy-uid="${esc(unit.base ? parentRef(unit.base) : '')}">${head}<div class="cy-slots">${cells.join('')}</div>
-        ${used > unit.slots ? `<p class="cc-warn cy-cheia">Mais do que cabe: ${used} de ${unit.slots} slots.</p>` : ''}
-        ${names.length ? `<ul class="cy-nomes">${names.join('')}</ul>` : ''}${panel}</div>`;
+      return `<div class="cy-unit${group.par && !unit.local ? ' cy-unassigned' : ''}" data-cy-holder data-cy-local="${unit.local || ''}" data-cy-uid="${esc(unit.base ? parentRef(unit.base) : '')}">${head}
+        ${chips.length ? `<ul class="cy-chips">${chips.join('')}</ul>` : ''}${cells.length ? `<div class="cy-slots${unit.corpo ? ' cy-slots-grade' : ''}">${cells.join('')}</div>` : ''}
+        ${used > unit.slots ? `<p class="cc-warn cy-cheia">Mais do que cabe: ${used} de ${unit.slots} slots.</p>` : ''}${panel}</div>`;
     };
     const groupHtml = group => {
       let units = group.corpo
@@ -1356,7 +1391,8 @@
         group.partes.forEach(id => { lit[id] = real > 0; });
         if (!group.corpo && !units.length) units.push({ falta: true, nome: group.vazio });
       }
-      const html = units.map(unit => unitHtml(group, unit, !group.corpo && real > 1)).join('');
+      // Olhos, braços e pernas: o lado esquerdo e o direito lado a lado.
+      const html = `${group.par ? '<div class="cy-pair">' : ''}${units.map(unit => unitHtml(group, unit, !group.corpo && real > 1)).join('')}${group.par ? '</div>' : ''}`;
       const counted = units.filter(unit => !unit.falta);
       const count = counted.length ? `${counted.reduce((sum, unit) => sum + unit.usados, 0)}/${counted.reduce((sum, unit) => sum + unit.slots, 0)}` : '—';
       return `<section class="cy-group" data-cy-grupo="${group.id}" data-cy-alvo="${group.ancora}" data-cy-lado="${group.lado}" aria-label="${esc(group.nome)}">
@@ -1380,28 +1416,32 @@
     const hum = fromTable ? model.humanidade : humanity(doc, model.stats);
     const pct = hum.max ? Math.max(0, Math.min(100, Math.round(hum.atual / hum.max * 100))) : 0;
     const psychosis = cyberpsychosis(fromTable ? { max: hum.max, perda: hum.max - hum.atual, atual: hum.atual, emp: Math.floor(hum.atual / 10) } : hum);
+    // A barra fica amarela com a Humanidade até 30 e vermelha, pulsando, até 10 (a ficha ainda sem EMP não conta).
+    const humState = !hum.max ? '' : hum.atual <= 10 ? ' critico' : hum.atual <= 30 ? ' alerta' : '';
     const source = mesa
       ? `Na mesa: o que o Foundry mandou${model.quando ? ` em ${when(model.quando)}` : ''}. O mestre instala e tira pela ficha do Foundry.`
       : wikiTable ? `Na mesa da wiki${model.jogo.quando ? ` (mudou em ${when(model.jogo.quando)})` : ''}: a criação e o que a loja entregou. O mestre instala pela mesa, que cobra e rola a Humanidade.`
       : 'Da criação: é assim que vai para o Foundry. A base de cada opção muda na Montagem, no passo 5 do criador.';
     return `<div class="section cc-box cy-screen" data-toc="Cyberware">
       <div class="cy-top"><h3>Cyberware</h3>
-        <div class="cy-hum"><small>Humanidade</small><b>${hum.atual}<span>/${hum.max}</span></b><div class="cy-bar" aria-hidden="true"><span style="width:${pct}%"></span></div></div>
+        <div class="cy-hum${humState}"><small>Humanidade</small><b>${hum.atual}<span>/${hum.max}</span></b><div class="cy-bar" aria-hidden="true"><span style="width:${pct}%"></span></div></div>
         <div class="cy-num"><small>EMP</small><b>${esc(String(model.empMostrada ?? '—'))}</b></div>
         <div class="cy-num"><small>Implantes</small><b>${installed}</b></div>
-        <div class="cy-num"><small>Dinheiro</small><b>${eb(model.dinheiro)}</b></div></div>
+        <div class="cy-num cy-eb"><small>Dinheiro</small><b>${eb(model.dinheiro)}</b></div></div>
       ${psychosis ? `<p class="cc-warn cy-aviso">${esc(psychosis)}</p>` : ''}
-      <p class="cy-fonte note-status">${source} Os lados são os do personagem.</p>
+      <p class="cy-fonte${mesa || wikiTable ? ' cy-sync' : ''} note-status">${source} Os lados são os do personagem.</p>
       <div class="cy-summary" aria-label="Resumo dos implantes"><span class="cy-summary-item"><b>${installed}</b> instalados</span><span class="cy-summary-item"><b>${parts.esperando.reduce((sum, item) => sum + item.qtd, 0)}</b> aguardando instalação</span><span class="cy-summary-item"><b>${parts.bases.filter(base => CW.locais(base.tipo).length && !base.local).length}</b> bases sem local definido</span></div>
       <div class="cy-legend"><span class="cy-legend-item"><i class="cy-legend-free" aria-hidden="true"></i>Slot livre</span><span class="cy-legend-item"><i class="cy-legend-filled" aria-hidden="true"></i>Ocupado</span><span class="cy-legend-item"><i class="cy-legend-unassigned" aria-hidden="true"></i>Local não definido</span></div>
       <div class="cy-stage">
         <svg class="cy-links" aria-hidden="true"></svg>
         <div class="cy-col cy-col-esq">${left}</div>
-        <div class="cy-body">${bodySvg(lit, chromed.length ? `O corpo, com cyberware em: ${chromed.join(', ')}.` : 'O corpo, sem cyberware.')}</div>
+        <div class="cy-body"><p class="cy-hud cy-hud-topo" aria-hidden="true"><span>BIOSCAN</span><span>${installed} IMPLANTE${installed === 1 ? '' : 'S'}</span></p>
+          ${bodySvg(lit, chromed.length ? `O corpo, com cyberware em: ${chromed.join(', ')}.` : 'O corpo, sem cyberware.')}
+          <p class="cy-hud cy-hud-base" aria-hidden="true"><span>CROMO EM ${chromed.length}/${CYBER_GROUPS.length} SISTEMAS</span><span>HUM ${hum.atual}/${hum.max}</span></p></div>
         <div class="cy-col cy-col-dir">${right}</div>
       </div>
       ${extras ? `<div class="cy-extra">${extras}</div>` : ''}
-      <p class="cy-dica note-status">Toque num slot ou num nome para ver o implante. O + abre a loja só com o que serve ali.</p>
+      <p class="cy-dica note-status">Toque num implante para ver a ficha dele. O + abre a Loja da Campanha só com o que serve ali.</p>
       ${fichas.map((html, k) => `<template data-cy-ficha="${k}">${html}</template>`).join('')}
     </div>`;
   }
@@ -1410,6 +1450,12 @@
   // tamanho. Um ResizeObserver redesenha quando a aba abre ou a largura muda.
   const cyberStages = new Set();
   const cyberObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => entries.forEach(entry => drawCyberLinks(entry.target))) : null;
+  // O corpo acompanha a rolagem (sticky, wiki.css): as linhas são redesenhadas uma vez por quadro enquanto a página rola.
+  let cyberScrollFrame = 0;
+  if (typeof window.addEventListener === 'function') window.addEventListener('scroll', () => {
+    if (cyberScrollFrame || !cyberStages.size) return;
+    cyberScrollFrame = requestAnimationFrame(() => { cyberScrollFrame = 0; cyberStages.forEach(stage => drawCyberLinks(stage)); });
+  }, { passive: true, capture: true });
   function drawCyberLinks(stage) {
     const svg = stage.querySelector('.cy-links');
     const body = stage.querySelector('.cy-body');
@@ -1437,15 +1483,17 @@
     for (const stage of root.querySelectorAll('.cy-stage')) {
       if (cyberStages.has(stage)) continue;
       cyberStages.add(stage);
+      // O grupo sob o mouse (ou o da parte do corpo sob o mouse) acende com a linha, a âncora e as partes dele.
       const focus = target => {
-        const group = target && target.closest ? target.closest('[data-cy-grupo]') : null;
+        const bodyPart = target && target.closest ? target.closest('[data-cy-ir]') : null;
+        const group = bodyPart ? stage.querySelector(`[data-cy-grupo="${bodyPart.dataset.cyIr}"]`) : target && target.closest ? target.closest('[data-cy-grupo]') : null;
         const id = group ? group.dataset.cyGrupo : '';
         if ((stage.dataset.foco || '') === id) return;
         stage.dataset.foco = id;
         stage.querySelectorAll('.cy-foco').forEach(item => item.classList.remove('cy-foco'));
         if (!group) return;
         group.classList.add('cy-foco');
-        for (const item of stage.querySelectorAll(`[data-cy-linha="${id}"], [data-cy-ancora="${group.dataset.cyAlvo}"]`)) item.classList.add('cy-foco');
+        for (const item of stage.querySelectorAll(`[data-cy-linha="${id}"], [data-cy-ancora="${group.dataset.cyAlvo}"], [data-cy-ir="${id}"]`)) item.classList.add('cy-foco');
       };
       stage.addEventListener('pointerover', event => focus(event.target));
       stage.addEventListener('focusin', event => focus(event.target));
@@ -1457,6 +1505,17 @@
   function cyberClick(event, openShop) {
     const screen = event.target.closest('.cy-screen');
     if (!screen) return false;
+    // Uma parte do corpo: rola até o grupo dela, que pisca para mostrar onde está.
+    const bodyPart = event.target.closest('[data-cy-ir]');
+    if (bodyPart) {
+      const group = screen.querySelector(`[data-cy-grupo="${bodyPart.dataset.cyIr}"]`);
+      if (!group) return true;
+      group.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      group.classList.remove('cy-chamado');
+      void group.offsetWidth;
+      group.classList.add('cy-chamado');
+      return true;
+    }
     const item = event.target.closest('[data-cy-item]');
     if (item) {
       const place = item.closest('[data-cy-holder]');
@@ -1659,7 +1718,7 @@
     const current = SHEET_TABS.some(([key]) => key === saved) ? saved : 'resumo';
     const panel = (key, html) => `<div class="cc-sheet-panel" data-cc-panel="${key}" role="tabpanel"${key === current ? '' : ' hidden'}>${html}</div>`;
     root.innerHTML = `<p class="cc-toolbar"><button class="action ghost" type="button" data-cc-edit>Editar</button><button class="action ghost" type="button" data-cc-shop>Loja</button><button class="action ghost" type="button" data-cc-print>Imprimir ou salvar em PDF</button><button class="action ghost" type="button" data-cc-back>Personagens</button></p>
-      <div class="cc-sheet" data-cc-sheet-body>
+      <div class="cc-sheet" data-cc-sheet-body data-cc-aba="${current}">
         <div class="cc-sheet-side" data-cc-part="lado">${parts.lado}</div>
         <div class="cc-sheet-main">
           <div class="cc-sheet-tabs" role="tablist" aria-label="Partes da ficha">${SHEET_TABS.map(([key, label]) => `<button type="button" class="map-filter cc-sheet-tab${key === current ? ' active' : ''}" role="tab" aria-selected="${key === current}" data-cc-tab="${key}">${label}</button>`).join('')}</div>
@@ -1715,6 +1774,9 @@
       if (tab) {
         root.querySelectorAll('[data-cc-tab]').forEach(button => { const on = button === tab; button.classList.toggle('active', on); button.setAttribute('aria-selected', String(on)); });
         root.querySelectorAll('[data-cc-panel]').forEach(item => { item.hidden = item.dataset.ccPanel !== tab.dataset.ccTab; });
+        // A aba Cyberware ocupa a ficha inteira na tela larga (o lado com o retrato e os Vitais recolhe; wiki.css).
+        const body = root.querySelector('[data-cc-sheet-body]');
+        if (body) body.dataset.ccAba = tab.dataset.ccTab;
         if (helpers.storage) helpers.storage.set('ficha-aba', tab.dataset.ccTab);
         return;
       }
