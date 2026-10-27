@@ -198,6 +198,27 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
   // O que os jogadores veem: os relógios marcados, com o valor de agora.
   const publicClocks = id => { const table = readTable(id); return Object.entries(table.publicos).map(([name, clock]) => ({ id: name, nome: clock.nome, passos: clock.passos, valor: table.relogios[name] || 0 })); };
 
+  // ---------------- Roteiros ----------------
+  // O roteiro de cada sessão (a trama futura) não vai para o git: o repositório é público. Fica só na pasta de dados,
+  // com o backup, e só o mestre lê (a aba Roteiro de cada sessão).
+  //   campanhas/<id>/roteiros/<nome>.md → o texto, em markdown, como os documentos da wiki.
+  // Sem o arquivo, null. O mestre manda o arquivo pela própria aba (writeScript), de qualquer aparelho.
+  const SCRIPT_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
+  const SCRIPT_MAX = 256 * 1024;
+  const scriptFile = (id, name) => path.join(folder(id), 'roteiros', `${name}.md`);
+  const readScript = (id, name) => {
+    if (!SCRIPT_RE.test(String(name || ''))) return null;
+    try { return fs.readFileSync(scriptFile(id, name), 'utf8'); } catch { return null; }
+  };
+  function writeScript(id, name, text) {
+    if (!SCRIPT_RE.test(String(name || ''))) throw Object.assign(new Error('Nome de roteiro inválido.'), { status: 400 });
+    const content = String(text ?? '');
+    if (!content.trim()) throw Object.assign(new Error('O roteiro está vazio.'), { status: 400 });
+    if (content.length > SCRIPT_MAX) throw Object.assign(new Error('O roteiro passa de 256 KB.'), { status: 413 });
+    fs.mkdirSync(path.dirname(scriptFile(id, name)), { recursive: true });
+    fs.writeFileSync(scriptFile(id, name), content);
+  }
+
   // ---------------- Agenda das mesas ----------------
   // As sessões marcadas de todas as campanhas num arquivo só: uma licença do Foundry abre um mundo por vez, então o
   // mestre precisa ver os horários juntos. Os jogadores de cada campanha veem as próximas sessões dela.
@@ -260,7 +281,7 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
   const agendaUpdated = id => readAgenda().porCampanha[id] || null;
   const upcoming = id => readAgenda().sessoes.filter(item => item.campanha === id && endOf(item) > Date.now()).slice(0, 5).map(({ id: sid, inicio, duracao, titulo, nota }) => ({ id: sid, inicio, duracao, titulo, nota }));
 
-  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, publicClocks, readAgenda, agendaView, addSession, updateSession, removeSession, upcoming, agendaUpdated, validId: id => ID_RE.test(String(id || '')) };
+  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, publicClocks, readScript, writeScript, readAgenda, agendaView, addSession, updateSession, removeSession, upcoming, agendaUpdated, validId: id => ID_RE.test(String(id || '')) };
 }
 
 module.exports = { createCampaigns, publishedOf };

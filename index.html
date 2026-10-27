@@ -85,6 +85,9 @@
           { id: 'docSessaoZero', label: 'Sessão zero', icon: 'S0', className: 'session-item' },
           // A Sessão 01 já foi jogada: o que aconteceu (as notas e o registro do diário), os handouts entregues e as fichas.
           { id: 'sessao01Notas', label: 'Sessão 01: A Maleta', icon: 'S1', className: 'session-item', tabs: [{ id: 'sessao01Notas', label: 'O que aconteceu' }, { id: 'sessao01Handouts', label: 'Handouts' }, { id: 'sessao01Npcs', label: 'NPCs' }] },
+          // A Sessão 02 ainda não foi jogada: o roteiro (só no servidor, fora do git público), as fichas e as notas da mesa.
+          // O H-06 não está em Handouts e textos (é trama futura): ele vai na hora, por Visão dos jogadores.
+          { id: 'sessao02Roteiro', label: 'Sessão 02: A manhã depois', icon: 'S2', className: 'session-item', tabs: [{ id: 'sessao02Roteiro', label: 'Roteiro' }, { id: 'sessao02Npcs', label: 'NPCs' }, { id: 'sessao02Notas', label: 'Notas' }] },
           { id: 'docHandouts', label: 'Handouts e textos', icon: 'H', className: 'session-item' }
         ]},
         { group: 'Mesa', pages: [
@@ -99,20 +102,24 @@
         ]}
       ]};
 
-    // As abas montadas: os handouts de cada sessão (tirados de Handouts e textos), as fichas de NPC escolhidas e as
-    // notas da sessão (as duas na mesa do servidor), e as fichas do elenco. npcs: a sugestão até o mestre mudar.
+    // As abas montadas: o roteiro de cada sessão (o .md que fica só no servidor), os handouts (tirados de Handouts e
+    // textos), as fichas de NPC escolhidas e as notas da sessão (as duas na mesa do servidor), e as fichas do elenco.
+    // npcs: a sugestão até o mestre mudar. roteiro: o nome do arquivo em campanhas/morana/roteiros/, na pasta de dados.
     const handoutsFile = 'documentos/morana/handouts-da-campanha.md';
     const diarioFile = 'documentos/morana/diario-da-campanha.md';
     // A base da campanha: um registro para cada pessoa, facção, lugar, peça, relógio e segredo (campanha-base.js).
     const baseFile = 'documentos/morana/base-da-campanha.md';
     const moranaSessions = [
       { n: '01', title: 'Sessão 01: A Maleta', diario: 'Sessão 1:', handouts: ['H-04', 'H-05'],
-        npcs: ['Wakako Okada', 'Mina Kuroda', 'Vega', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner', 'Guarda-costas', 'Tyger Claws'] }
+        npcs: ['Wakako Okada', 'Mina Kuroda', 'Vega', 'Operativo de segurança', 'Operativo de segurança', 'Netrunner', 'Guarda-costas', 'Tyger Claws'] },
+      { n: '02', title: 'Sessão 02: A manhã depois', diario: 'Sessão 2:', roteiro: 'sessao-02', handouts: [],
+        npcs: ['Wakako Okada', 'Vega', 'Operativo de segurança', 'Operativo de segurança', 'Operativo de segurança', 'Tyger Claws', 'MaxTac'] }
     ];
     // cast: as fichas do elenco (as pessoas da base com ficha da campanha).
     const moranaExtras = cast => [
-      ...moranaSessions.flatMap(({ n, title, diario, handouts, npcs }) => [
-        { kind: 'handouts', id: `sessao${n}Handouts`, file: handoutsFile, eyebrow: `${title} / handouts`, title: 'Handouts da sessão', handouts },
+      ...moranaSessions.flatMap(({ n, title, diario, roteiro, handouts, npcs }) => [
+        ...(roteiro ? [{ kind: 'roteiro', id: `sessao${n}Roteiro`, roteiro, eyebrow: `${title} / roteiro, só você vê`, title: 'Roteiro da sessão' }] : []),
+        ...(handouts.length ? [{ kind: 'handouts', id: `sessao${n}Handouts`, file: handoutsFile, eyebrow: `${title} / handouts`, title: 'Handouts da sessão', handouts }] : []),
         { kind: 'npcs', id: `sessao${n}Npcs`, key: `sessao${n}`, eyebrow: `${title} / fichas`, title: 'NPCs da sessão', npcs },
         { kind: 'notas', id: `sessao${n}Notas`, key: `sessao${n}`, eyebrow: `${title} / só você vê`, title: 'Notas da sessão', sessionTitle: title, diario, diarioFile }
       ]),
@@ -173,7 +180,7 @@
     // Página inicial: "Na mesa agora", com atalhos, as últimas páginas abertas e os relógios.
     // Montado na hora (não entra na busca); some se o navegador não guardar nada.
     function setupHomeDesk(content, { recentPages, clockState, escapeHtml }) {
-      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['sessao01Notas', 'Sessão 01'], ['docDiario', 'Diário'], ['docHandouts', 'Handouts']];
+      const shortcuts = [['screen', 'Escudo do mestre'], ['npcs', 'Fichas de NPC'], ['encounters', 'Encontros'], ['combat', 'Combate'], ['glossary', 'Glossário'], ['indice', 'Índice A–Z'], ['sessao02Roteiro', 'Sessão 02'], ['docDiario', 'Diário'], ['docHandouts', 'Handouts']];
       const clockNames = Object.fromEntries(((window.campaignBase.base || {}).relogios || []).map(item => [item.chave, item.nome]));
       const recent = recentPages();
       // Cada relógio com a barra de segmentos (os marcados em amarelo), o último marcado e o próximo.

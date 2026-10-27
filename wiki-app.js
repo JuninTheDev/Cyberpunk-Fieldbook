@@ -1027,7 +1027,9 @@
         if (unit) focusUnit(unit, target.term);
       }).catch(() => {
         const container = document.getElementById('md-doc');
-        if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
+        // erro: o aviso próprio do documento (o roteiro que ainda não foi para o servidor).
+        if (container && markdownDocs[id].erro) container.innerHTML = `<div class="callout">${markdownDocs[id].erro}</div>`;
+        else if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
       });
     }
 

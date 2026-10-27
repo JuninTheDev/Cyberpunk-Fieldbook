@@ -15,8 +15,8 @@ module.exports = async ({ edge, servidores, r }) => {
     await r.passo('barra lateral do Protocolo Morana: só as entradas; os documentos viraram abas', async () => {
       // Os documentos de documentos/night-city/ (de todas as campanhas, como a missão The Jacket) ficam num grupo próprio.
       const itens = (await edge.evaluate(`[...document.querySelectorAll('#navigation .nav-item')].map(b => b.dataset.page)`)).filter(id => !id.startsWith('doc-night-city-'));
-      const esperados = ['home', 'docDiario', 'people', 'campaignMap', 'docSessaoZero', 'sessao01Notas', 'docHandouts', 'notes', 'playerView', 'agenda', 'campanhas', 'personagens', 'loja'];
-      const viraramAba = ['docBase', 'elencoFichas', 'lugares', 'docGuia', 'sessao01Handouts', 'sessao01Npcs'];
+      const esperados = ['home', 'docDiario', 'people', 'campaignMap', 'docSessaoZero', 'sessao01Notas', 'sessao02Roteiro', 'docHandouts', 'notes', 'playerView', 'agenda', 'campanhas', 'personagens', 'loja'];
+      const viraramAba = ['docBase', 'elencoFichas', 'lugares', 'docGuia', 'sessao01Handouts', 'sessao01Npcs', 'sessao02Npcs', 'sessao02Notas'];
       const faltam = esperados.filter(id => !itens.includes(id));
       const sobram = viraramAba.filter(id => itens.includes(id));
       return [!faltam.length && !sobram.length && itens.length === esperados.length, `${itens.length} entradas · faltam ${faltam.join(', ') || 'nenhuma'} · ainda no menu ${sobram.join(', ') || 'nenhuma'}`];

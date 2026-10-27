@@ -11,8 +11,8 @@ Sou o roteirista da campanha. **O mestre decide; eu proponho.** Nada vira oficia
 
 - **O relato do mestre** (o argumento da skill ou a mensagem). Ele pode vir em tópicos soltos ou em áudio transcrito.
   Se faltar algo que os campos do diário pedem, pergunte só o que faltou, numa lista curta.
-- **A sessão jogada:** `documentos/morana/sessao-NN-*.md`, em especial "Objetivos da sessão", "Encerramento da
-  sessão" e "Perguntas para fechar a sessão".
+- **A sessão jogada:** o roteiro em `rascunhos-do-roteirista/sessao-NN-roteiro.md` (o mesmo da aba Roteiro, que fica
+  só no servidor), em especial o resumo, as escolhas que mudam a história e os desfechos.
 - **O diário:** `documentos/morana/diario-da-campanha.md`, com os campos da sessão em "Registro das sessões".
 - **A base:** `documentos/morana/base-da-campanha.md`, com as pessoas, as peças de Morana, os segredos e os relógios.
   Cada relógio traz a regra de quando avança.
@@ -59,7 +59,8 @@ ao mestre um resumo e o caminho do arquivo. O rascunho tem:
   - Use acentos e os termos da wiki: "Gravemente Ferido", "fixer", e as perícias com o nome da página Perícias.
   - Cite a base com `{{base:...}}`; nunca copie.
   - Um handout novo é um `### H-xx · Nome`, com "Para os jogadores" e a citação.
-  - Uma sessão nova entra no `markdownDocs` e no `moranaSessions` do `index.html`.
+  - Uma sessão nova entra no `moranaSessions` e no menu do `index.html`, com o roteiro só no servidor (veja a skill
+    `preparar-sessao`, passo 3).
 - **Teste:** rode `node tests/rodar.js documentos base` e corrija o que ele apontar.
 - Não faça commit sem o mestre pedir. Enquanto o repositório for público, a trama futura não entra nos `.md`.
 
