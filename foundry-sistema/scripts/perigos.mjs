@@ -23,6 +23,7 @@ import { lesaoCritica } from './lesoes.mjs';
 import { rolarResistencia } from './municoes.mjs';
 import { STATUS_EM_CHAMAS } from './netrun/constantes.mjs';
 import * as R from './regras-perigos.mjs';
+import * as RL from './regras-lesoes.mjs';
 import * as RV from './regras-veiculos.mjs';
 import { tokenDaPessoa, veiculoDaTripulacao, veiculoDirigidoPor } from './tripulacao.mjs';
 import { iconeDoEstado } from './regras-icones.mjs';
@@ -480,9 +481,9 @@ export async function esperarOsPerigos() {
   while (filasDosAtores.size) await Promise.all([...filasDosAtores.values()]);
 }
 
-async function cartaoDoTurno(ator, { perigo, titulo, texto, botao, dano, rolls = [] }) {
+async function cartaoDoTurno(ator, { perigo, titulo, texto, botao, dano, rolls = [], pagina = R.PAGINA_DOS_PERIGOS }) {
   if (!vivo(ator)) return null;
-  const content = `<div class="${SISTEMA} cartao perigo"><header><h3>${esc(titulo)}: ${esc(ator.name)}</h3><span class="sabor">${esc(R.PAGINA_DOS_PERIGOS)}</span></header>
+  const content = `<div class="${SISTEMA} cartao perigo"><header><h3>${esc(titulo)}: ${esc(ator.name)}</h3><span class="sabor">${esc(pagina)}</span></header>
     <p class="nota">${esc(texto)}</p><div class="botoes">${botao}<button type="button" data-cprf-perigo="desfazer">Desfazer</button></div></div>`;
   return ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ actor: ator }), content, rolls,
@@ -515,6 +516,23 @@ export function perigosNoFimDoTurno({ fim = null } = {}) {
       await cartaoDoTurno(ator, { perigo: 'radiacao', titulo: 'Na radiação', botao: botaoDeSaida(ator, STATUS_RADIACAO),
         texto: `No fim do turno: ${dano} direto no HP, sem armadura (${hpAntes} → ${hpDepois}).`, dano: { perdeu: hpAntes - hpDepois } });
     }
+  });
+}
+
+// As Costelas quebradas (a wiki, system-rules.js:33; regras-lesoes.mjs): no fim do turno em que andou mais de 4 m a pé, o
+// dano bônus da lesão de novo, direto no HP, com o cartão e o Desfazer dos ticks. Os metros vêm do CombateCPR._onEndTurn
+// (iniciativa.mjs), que lê o histórico de movimento antes de o Foundry zerá-lo no começo do turno seguinte. A marca no item
+// da lesão (como a do efeito nos outros ticks) impede cobrar duas vezes o mesmo turno.
+export function costelasNoFimDoTurno(ator, { metros = 0, turno = '' } = {}) {
+  return naVezDoAtor(ator, async atual => {
+    if (!RL.costelasDoem(atual.items, metros)) return;
+    const lesao = atual.items.find(item => item.type === 'lesao' && item.getFlag(SISTEMA, 'catalogo') === RL.COSTELAS_QUEBRADAS && !item.getFlag(SISTEMA, 'corrigida'));
+    if (!lesao || !await marcar(lesao, 'fimDoTurno', turno) || !vivo(atual)) return;
+    const { hpAntes, hpDepois } = await danoDireto(atual, RL.DANO_DAS_COSTELAS);
+    const pagina = lesao.system.fonte?.pagina ? `Lesões críticas, p. ${lesao.system.fonte.pagina}` : 'Lesões críticas';
+    await cartaoDoTurno(atual, { perigo: 'costelas', titulo: lesao.name, botao: '', pagina,
+      texto: `No fim do turno: andou ${Math.round(metros * 10) / 10} m a pé (mais de ${RL.METROS_DAS_COSTELAS} m), e o dano bônus da lesão volta: ${RL.DANO_DAS_COSTELAS} direto no HP, sem armadura (${hpAntes} → ${hpDepois}).`,
+      dano: { perdeu: hpAntes - hpDepois } });
   });
 }
 

@@ -27,6 +27,7 @@ import { dedoCabe, dedosDaMao, ehCyberdedo, ENXERTO, naFrotaDaFamilia, PLUGS, pe
 import { descarga, efeitoDaLuz, luzDoItem } from './regras-inventario.mjs';
 import { dividirPilha } from './pilhas.mjs';
 import { armadurasDoLocal, spComVariacao } from './regras-armadura.mjs';
+import { vezesNaCabeca } from './regras-lesoes.mjs';
 import { danoNaEstase, desfazerDanoNaEstase } from './cryo.mjs';
 import { gravarNoItemDoVeiculo, limparVinculosCopiados } from './vinculo-veiculo.mjs';
 import { veiculoDirigidoPor } from './tripulacao.mjs';
@@ -601,7 +602,7 @@ export class AtorCPR extends Actor {
     }
     const lugar = localDaArmadura(local);
     const armadura = this.system.armadura[lugar] || { sp: 0, item: null };
-    const conta = aplicarDano({ dano, bonus, sp: armadura.sp, local, ignorarPct, ignorarAbaixo, reducao, letal, hpAtual: hpAntes, direto, menos });
+    const conta = aplicarDano({ dano, bonus, sp: armadura.sp, local, ignorarPct, ignorarAbaixo, reducao, letal, hpAtual: hpAntes, direto, menos, naCabeca: vezesNaCabeca(this.items) });
     await this.update({ 'system.hp.value': hpAntes - conta.recebido });
     if (conta.ablar && ablacao) {
       resumo.armaduras = await this.ablarArmaduras(lugar, ablacao);

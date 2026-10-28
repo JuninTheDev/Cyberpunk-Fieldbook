@@ -5271,6 +5271,88 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('lesões com conta (o C50): o Crânio rachado põe o que passa da armadura ×3 na cabeça (15 de dano sem capacete: 45 em vez de 30), com a nota no cartão; no corpo, nada muda; corrigida, ×2 de novo', async () => {
+      const info = await comMunicoes(`async ({ api, alvo, pegar, armar, atirar, esperar }) => {
+        const S = '${S}';
+        const arma = await armar('core_ammo:heavy-pistol-basic', 'core_weapons:heavy-pistol');
+        // 3d6 em 5, 5 e 5: 15 de dano, sem crítico. A cabeça está sem armadura (SP 0); o corpo, com o Armorjack (SP 11).
+        const tiro = async local => {
+          await arma.update({ 'system.pente.value': 8 });
+          const t = await atirar(arma, [[9,10],[5,6],[5,6],[5,6]], local ? { local } : {});
+          const linha = t.r.linhas[0];
+          const lido = { hp: alvo.system.hp.value, recebido: linha.dano?.recebido, notas: linha.notas, fila: t.fila };
+          await api.combate.desfazer(t.m);
+          await esperar(() => alvo.system.hp.value === 80);
+          return lido;
+        };
+        const semLesao = await tiro('cabeca');
+        const [cranio] = await alvo.createEmbeddedDocuments('Item', [pegar('core_critical-injuries-head:cracked-skull')]);
+        const comCranio = await tiro('cabeca');
+        const noCorpo = await tiro(null);
+        await cranio.setFlag(S, 'corrigida', true);
+        const corrigido = await tiro('cabeca');
+        return { semLesao, comCranio, noCorpo, corrigido };
+      }`);
+      const nota = n => (n ?? []).some(t => /Crânio rachado: o que passou da armadura entra ×3/.test(t));
+      const ok = info.semLesao.hp === 50 && info.semLesao.recebido === 30 && !nota(info.semLesao.notas)
+        && info.comCranio.hp === 35 && info.comCranio.recebido === 45 && nota(info.comCranio.notas)
+        && info.noCorpo.hp === 76 && !nota(info.noCorpo.notas)
+        && info.corrigido.hp === 50 && !nota(info.corrigido.notas);
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('lesões com conta (o C50): as Costelas quebradas cobram 5 direto no HP no fim do turno em que andou mais de 4 m a pé (6 m: 80 → 75, com o cartão e o Desfazer); com 4 m, no deslocamento forçado ou corrigidas, nada', async () => {
+      const info = await comMunicoes(`async ({ a, alvo, cena, token, pegar, esperar }) => {
+        const S = '${S}';
+        const P = await import('/systems/' + S + '/scripts/perigos.mjs');
+        // No combate, o alvo age primeiro (iniciativa 20). A grade da cena é de 2 m.
+        const [costelas] = await alvo.createEmbeddedDocuments('Item', [pegar('core_critical-injuries-body:broken-ribs')]);
+        const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+        for (const [ator, ini] of [[alvo, 20], [a, 10]]) await combate.createEmbeddedDocuments('Combatant', [{ actorId: ator.id, tokenId: cena.tokens.find(t => t.actorId === ator.id).id, sceneId: cena.id, initiative: ini }]);
+        await combate.startCombat();
+        const cartoes = () => game.messages.filter(m => m.getFlag(S, 'perigo')?.perigo === 'costelas');
+        const mover = async (dx, dy, action = 'walk') => {
+          await token.move([{ x: token.x + dx * 100, y: token.y + dy * 100, action }], { animate: false, autoRotate: false, constrainOptions: { ignoreWalls: true, ignoreCost: true } });
+          return token.movementHistory.length;
+        };
+        // A volta inteira: o turno do alvo acaba (o começo do turno do atirador zera os históricos, depois do fim do turno
+        // do alvo), o do atirador também, e o alvo começa outro, com o histórico zerado.
+        const umaVolta = async esperado => {
+          await combate.nextTurn();
+          await esperar(() => token.movementHistory.length === 0);
+          await P.esperarOsPerigos();
+          if (esperado) await esperar(() => alvo.system.hp.value === esperado.hp && cartoes().length === esperado.cartoes);
+          const lido = { hp: alvo.system.hp.value, cartoes: cartoes().length };
+          await combate.nextTurn();
+          await esperar(() => combate.combatant?.actorId === alvo.id && token.movementHistory.length === 0);
+          return lido;
+        };
+        const historico = await mover(0, 3); // 6 m
+        const andou6 = { historico, ...await umaVolta({ hp: 75, cartoes: 1 }) };
+        const cartao = cartoes().at(-1);
+        const texto = cartao?.content ?? '';
+        await P.desfazer(cartao); await P.esperarOsPerigos();
+        const desfeito = alvo.system.hp.value;
+        await mover(0, -2); // 4 m
+        const andou4 = await umaVolta();
+        await mover(5, 0, 'displace'); // 10 m sem andar
+        const forcado = await umaVolta();
+        await costelas.setFlag(S, 'corrigida', true);
+        await mover(-3, 0);
+        const corrigidas = await umaVolta();
+        await costelas.unsetFlag(S, 'corrigida');
+        await mover(0, 3);
+        const deNovo = await umaVolta({ hp: 75, cartoes: 2 });
+        await combate.delete();
+        return { andou6, texto, desfeito, andou4, forcado, corrigidas, deNovo };
+      }`);
+      const ok = info.andou6.historico > 1 && info.andou6.hp === 75 && info.andou6.cartoes === 1
+        && /andou 6 m a pé/.test(info.texto) && /5 direto no HP/.test(info.texto) && /80 → 75/.test(info.texto) && info.desfeito === 80
+        && info.andou4.hp === 80 && info.andou4.cartoes === 1 && info.forcado.hp === 80 && info.forcado.cartoes === 1
+        && info.corrigidas.hp === 80 && info.corrigidas.cartoes === 1 && info.deNovo.hp === 75 && info.deNovo.cartoes === 2;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('munições especiais (C14): EMP pelo botão do mestre, proteção e eletrônicos guardados fora; para efeitos sem desinstalar, volta no minuto e no Desfazer', async () => {
       const info = await comMunicoes(`async ({ api, alvo, pegar, armar, atirar, esperar }) => {
         const neural = pegar('core_cyberware:neural-link'); neural.system.instalado = true;

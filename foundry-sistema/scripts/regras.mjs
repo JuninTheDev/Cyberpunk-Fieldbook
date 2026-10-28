@@ -490,13 +490,14 @@ export const empAtual = (humanidade, empBase) => Math.max(0, Math.min(Number(emp
 // - dano não letal deixa o alvo com 1 HP; a armadura perde SP (ablação) quando o dano passa.
 // O Black Chrome (o C48, parte 2; regras-black-chrome.mjs): o dano direto no HP ("a armadura não reduz nem se desgasta, e
 // o lugar do corpo não multiplica") e o que sai do dano de quem tem SP 1 ou mais (menos: o 1d6 da munição sucata).
-export function aplicarDano({ dano, bonus = 0, sp = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, reducao = 0, letal = true, hpAtual = 0, direto = false, menos = 0 }) {
+// naCabeca: quantas vezes o que passou entra na cabeça (2; 3 com o Crânio rachado, regras-lesoes.vezesNaCabeca).
+export function aplicarDano({ dano, bonus = 0, sp = 0, local = 'corpo', ignorarPct = 0, ignorarAbaixo = 0, reducao = 0, letal = true, hpAtual = 0, direto = false, menos = 0, naCabeca = 2 }) {
   const tirado = danoComMenos(dano, sp, menos);
   const ignorarTudo = direto || sp < ignorarAbaixo;
   let spEfetivo = ignorarTudo ? 0 : sp;
   if (!ignorarTudo && ignorarPct) spEfetivo = Math.round(sp - sp * (ignorarPct / 100));
   const passou = tirado > spEfetivo;
-  const bruto = passou ? (tirado - spEfetivo) * (local === 'cabeca' && !direto ? 2 : 1) : 0;
+  const bruto = passou ? (tirado - spEfetivo) * (local === 'cabeca' && !direto ? naCabeca : 1) : 0;
   let recebido = Math.max(Number(bonus) + bruto - Number(reducao), 0);
   if (!letal && recebido >= hpAtual) recebido = Math.max(hpAtual - 1, 0);
   return { spEfetivo, passou, bruto, recebido, ablar: passou && sp > 0 && !direto, menos: Number(dano) - tirado };

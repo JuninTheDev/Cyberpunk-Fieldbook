@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 194). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 195). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -493,7 +493,7 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
 Foundry 14 e termine"; o plano C1–C49 está feito, menos o C28, do usuário):
 - [x] **A entrega dupla dos pedidos da wiki** (o achado do registro do ciclo 186): feito no ciclo 193 (sessão KouArt,
   2026-10-28). A entrega de cada minuto e a do mestre no mesmo pedido viram uma só.
-- [~] **C50. As lesões com conta** (sessão KouArt, 2026-10-28): o Crânio rachado (o que passa da armadura na cabeça ×3
+- [x] **C50. As lesões com conta:** feito no ciclo 194 (sessão KouArt, 2026-10-28): o Crânio rachado (o que passa da armadura na cabeça ×3
   em vez de ×2) e as Costelas quebradas (no fim do turno em que andou mais de 4 m a pé, o dano bônus da lesão de novo,
   direto no HP), pela tabela de lesões da wiki (`system-rules.js:33` e `:50`). O README as tinha em "Ainda não faz".
 

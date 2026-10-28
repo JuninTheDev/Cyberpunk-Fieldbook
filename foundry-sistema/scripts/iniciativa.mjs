@@ -2,11 +2,13 @@
 // Sandevistan, ligado por padrão) vê a janela de rolagem ao rolar, no computador de quem rola; sem a janela (ou com
 // "Rolar direto"), entram os ligados por padrão. A Sorte da janela entra na rolagem e sai da Sorte do ator. O Black ICE e o
 // demônio não rolam: entram no topo da fila (regras.iniciativaNoTopo), cada um acima de quem já está nela.
-import { ATORES_DA_NET } from './config.mjs';
+import { ATORES_DA_NET, SISTEMA } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
+import { costelasNoFimDoTurno } from './perigos.mjs';
 import { formulaDaIniciativa, iniciativaNoTopo, tempoEntreRodadas } from './regras.mjs';
 import { AVISO_INICIATIVA_VEICULO, podeEntrarNaIniciativa } from './regras-iniciativa.mjs';
+import { metrosAPe } from './regras-lesoes.mjs';
 
 // A escolha da janela de cada combatente, de rollInitiative até a rolagem dele.
 const escolhas = new WeakMap();
@@ -49,6 +51,18 @@ export class CombateCPR extends Combat {
   // O relógio avança no combate; as durações em rodadas dos efeitos continuam em rodadas fora dele.
   getTimeDelta(rodadaAnterior, turnoAnterior, rodadaSeguinte, turnoSeguinte) {
     return tempoEntreRodadas(rodadaAnterior, rodadaSeguinte);
+  }
+
+  // O fim de um turno jogado (no mestre ativo; client/documents/combat.mjs, #triggerTurnEvents): os metros a pé do token
+  // nele, para as Costelas quebradas (perigos.costelasNoFimDoTurno). Aqui o histórico de movimento ainda é o do turno: o
+  // Foundry o zera depois, no começo do turno seguinte (_clearMovementHistoryOnStartTurn). O turno pulado não foi jogado.
+  async _onEndTurn(combatente, contexto) {
+    await super._onEndTurn(combatente, contexto);
+    const token = combatente?.token;
+    if (contexto?.skipped || !token?.actor) return;
+    const metros = metrosAPe(token.movementHistory ?? [], pontos => token.parent?.grid?.measurePath(pontos).distance ?? 0);
+    if (metros > 0) costelasNoFimDoTurno(token.actor, { metros, turno: `${this.id}:${contexto.round}:${contexto.turn}` })
+      .catch(erro => console.warn(`${SISTEMA} | Costelas quebradas`, erro));
   }
 
   async rollInitiative(ids, opcoes = {}) {

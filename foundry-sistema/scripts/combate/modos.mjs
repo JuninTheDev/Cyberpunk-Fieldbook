@@ -4,6 +4,7 @@ import { DEFESAS, SISTEMA } from '../config.mjs';
 import { config } from '../configuracoes.mjs';
 import { TABELAS_DV } from '../gerado.mjs';
 import { escolhaDeLesao, lesaoCritica, PERNA_QUEBRADA } from '../lesoes.mjs';
+import { vezesNaCabeca } from '../regras-lesoes.mjs';
 import { aplicarMunicaoSemDano, incendiar, rolarInteligente } from '../municoes.mjs';
 import * as R from '../regras.mjs';
 import { techAtravessaVidro } from '../regras-veiculos.mjs';
@@ -472,6 +473,7 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
   });
   if (efeito.menos) linha.notas.push(`${municao.name}: −${efeito.menos} (${MENOS_DA_SUCATA}) no dano, contra SP ${efeito.sp}.`);
   if (ctx.explosivo?.direto) linha.notas.push('Direto no HP: a armadura não reduz nem se desgasta, e o lugar do corpo não multiplica.');
+  else if (ctx.local === 'cabeca' && efeito.passou && vezesNaCabeca(ator.items) === 3) linha.notas.push('Crânio rachado: o que passou da armadura entra ×3 na cabeça, em vez de ×2.');
   // A deflexão só se gasta quando entra dano de verdade: o que a armadura ou o escudo seguraram inteiro não é "dano
   // sofrido".
   const sofreu = deflexao > 0 && efeito.entrou > 0;

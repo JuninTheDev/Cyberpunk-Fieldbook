@@ -9332,6 +9332,47 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   e cobraram uma vez (290 → 280), e a de cada minuto avisou "já foi resolvido". Na rodada do M5, o passo do "+ OPÇÃO" da
   fundação (antes do dos pedidos, sem ligação com a mutação) também falhou uma vez; passou nas outras três rodadas.
 
+### Ciclo 194 (2026-10-28): C50, as lesões com conta (sessão KouArt)
+
+- **Pedido do usuário (2026-10-28):** o mesmo do ciclo 193 ("verifique o que falta e termine"). O README tinha, em "Ainda
+  não faz", duas lesões da tabela da wiki com número que o sistema só mostrava no texto.
+- **Fonte:** a wiki, `system-rules.js:50` ("Crânio rachado": "Tiros mirados na cabeça multiplicam o dano que passa da
+  armadura por 3 em vez de 2. Death Save base +1.") e `:33` ("Costelas quebradas": "No fim de cada turno em que andar mais
+  de 4 m a pé, sofre de novo o dano bônus da lesão direto no HP."). O dano bônus da lesão é o do crítico, 5 (p. 187). O
+  CORE 0.92.4 não aplica nenhuma das duas: o dano na cabeça é sempre ×2 (`modules/actor/cpr-actor.js:1487-1490`), e as
+  lesões são só o item com o texto.
+- **Entrega:**
+  - `scripts/regras-lesoes.mjs`: `vezesNaCabeca` (3 com o Crânio rachado, 2 sem), `costelasDoem` (mais de 4 m, não 4) e
+    `metrosAPe`, os metros do histórico de movimento do turno, trecho a trecho pela grade da cena (a regra das diagonais
+    dela), sem o deslocamento forçado (o `displace`, que a tripulação do veículo usa) nem o `blink`. As duas lesões, com a
+    correção rápida (a marca `corrigida`), ficam sem efeito até o "Voltou", como o +1 no Death Save (a decisão do C19);
+  - o Crânio rachado: `regras.aplicarDano` recebe o `naCabeca`, e o `receberDano` da ficha passa o do ator; o dano direto
+    no HP do Black Chrome continua sem multiplicar. O cartão do ataque diz "Crânio rachado: o que passou da armadura entra
+    ×3 na cabeça, em vez de ×2.";
+  - as Costelas quebradas: o `CombateCPR._onEndTurn` (no mestre ativo, antes de o Foundry zerar o histórico de movimento
+    no começo do turno seguinte, `client/documents/combat.mjs`, `#triggerTurnEvents` e `_clearMovementHistoryOnStartTurn`)
+    mede os metros a pé do turno que acabou; mais de 4, `perigos.costelasNoFimDoTurno` tira 5 direto no HP, na fila do
+    ator, com o cartão dos ticks ("Lesões críticas, p." da lesão) e o Desfazer. A marca no item da lesão impede cobrar duas
+    vezes o mesmo turno. O turno pulado (o mestre que avança vários) não foi jogado e não conta.
+- **Limites:** só no combate (fora dele, o Foundry não guarda o histórico de movimento, e a wiki fala do fim do turno).
+  O movimento que o mestre faz arrastando o token conta como andar (é a ação "andar" do Foundry); para não contar, ele usa
+  a ação de deslocar.
+- **Testes:**
+  - **G3:** `lesoes-com-conta.test.mjs` (novo, 4 testes): o texto da wiki, os 4 m e o dano bônus; o ×3 na cabeça e o ×2
+    no corpo, no que não passa, no direto e com a lesão corrigida; os 4 m exatos e os 4,5; os trechos a pé do histórico,
+    sem o `displace` e o `blink`, cada trecho medido inteiro;
+  - **G4:** dois passos novos, depois dos das munições especiais: o tiro de 15 na cabeça sem capacete (30 sem a lesão, 45
+    com o Crânio rachado e a nota no cartão, 4 no corpo, 30 de novo com a lesão corrigida); e, no combate, o alvo com as
+    Costelas quebradas que anda 6 m (80 → 75 no fim do turno, o cartão e o Desfazer), 4 m, 10 m pelo deslocamento forçado
+    e 6 m com a lesão corrigida (nada), e 6 m de novo (75, o segundo cartão).
+- **Portões:** G1, 233 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 737/737; G4 completo, 316/316 em 599 s,
+  na primeira, com a mesa do servidor vazia.
+- **Mutações:** as oito caíram, e os arquivos voltaram exatos. No G3 (na worktree de rascunho do ciclo, com o mesmo
+  código): o Crânio rachado sem mudar a conta (M1), os 4 m exatos que já doem (M2), a correção rápida sem desligar as
+  lesões (M3, 2 testes), o deslocamento forçado contado como andar (M4) e o dano sem o multiplicador pedido (M5). No G4,
+  um G4 inteiro cada, e cada uma só no passo dela: a ficha sem passar o Crânio rachado para o dano (M6), o fim do turno
+  sem conferir as Costelas quebradas (M7) e o cartão sem a nota (M8).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
