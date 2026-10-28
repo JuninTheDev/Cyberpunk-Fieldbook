@@ -1,0 +1,8 @@
+{{!-- O alto do navegador (navegador.mjs; o cpr-browser-globals.hbs do CORE 0.93): a busca pelo nome e, nos itens, a
+origem (o mundo ou os compêndios). --}}
+<header class="navegador-busca">
+  <input type="text" class="navegador-nome" value="{{nome}}" placeholder="Buscar pelo nome…" aria-label="Buscar pelo nome">
+  {{#if itens}}
+  <label class="navegador-campo">Origem <select class="navegador-origem">{{selectOptions origens selected=origem}}</select></label>
+  {{/if}}
+</header>

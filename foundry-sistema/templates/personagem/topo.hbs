@@ -1,0 +1,42 @@
+<header class="topo">
+  <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" data-action="editImage" data-edit="img" data-tooltip="Trocar o retrato" role="button" tabindex="0" aria-label="Trocar o retrato">
+  <div class="identidade">
+    <p class="linha-id">
+      <span>ATOR://</span>
+      <input class="role" type="text" name="system.role.nome" value="{{fonte.role.nome}}" placeholder="ROLE" list="cprf-roles-{{ator.id}}" aria-label="Role">
+      <datalist id="cprf-roles-{{ator.id}}">{{#each roles}}<option value="{{nome}}">{{habilidade}}</option>{{/each}}</datalist>
+      <span>// RANK</span>
+      <input class="rank" type="number" name="system.role.rank" value="{{fonte.role.rank}}" min="0" max="10" aria-label="Rank">
+      {{#if sistema.roleSecundaria.nome}}<span class="segunda-role-topo" data-tooltip="A segunda Role (a regra da mesa): na aba Role">// {{sistema.roleSecundaria.nome}} {{sistema.roleSecundaria.rank}}</span>{{/if}}
+      <label class="campo-busca" data-tooltip="Filtra pelo nome as perícias e as listas de itens de todas as abas; não grava nada na ficha"><i class="fa-solid fa-magnifying-glass" inert></i><input class="busca-da-ficha" type="search" id="cprf-busca-{{ator.id}}" value="{{busca}}" placeholder="Buscar perícias e itens" aria-label="Buscar perícias e itens"></label>
+    </p>
+    {{#if podeAtualizarWiki}}<button type="button" data-action="atualizarWiki"><i class="fa-solid fa-rotate" inert></i> Atualizar da wiki</button>{{/if}}
+    <div class="nome-linha">
+      <input class="nome" type="text" name="name" value="{{ator.name}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>
+      <span class="apelido">“<input type="text" name="system.apelido" value="{{fonte.apelido}}" placeholder="apelido" aria-label="Apelido">”</span>
+    </div>
+    <div class="indicadores">
+      <label class="indicador hp corte estado-{{sistema.ferimento.chave}}" data-tooltip="Pontos de vida: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}">
+        <span class="valor"><input type="number" name="system.hp.value" value="{{sistema.hp.value}}" aria-label="HP atual"><small>/{{sistema.hp.max}}</small></span>
+        <i>HP</i>
+      </label>
+      <div class="indicador corte sorte {{#if sortePreparada}}preparada{{/if}}">
+        <span class="valor" data-tooltip="Sorte que ainda dá para gastar nesta sessão (o máximo é o LUCK)"><input type="number" name="system.sorte.value" value="{{sistema.sorte.value}}" aria-label="Sorte atual"><small>/{{sistema.sorte.max}}</small></span>
+        <i>SORTE</i>
+        <small class="usada {{#if sorteUsada}}gasta{{/if}}" data-tooltip="Sorte gasta nesta sessão: o máximo menos a que resta (o ↺ do começo da sessão zera)">USADA {{sorteUsada}}</small>
+        <span class="sorte-acoes">
+          <button type="button" data-action="prepararSorte" data-delta="-1" data-tooltip="Um ponto a menos no próximo teste" aria-label="Um ponto de Sorte a menos">−</button>
+          <b data-tooltip="Pontos de Sorte no próximo teste: +1 por ponto, que saem da Sorte quando ele rola">{{#if sortePreparada}}+{{sortePreparada}}{{else}}0{{/if}}</b>
+          <button type="button" data-action="prepararSorte" data-delta="1" data-tooltip="Gastar um ponto de Sorte no próximo teste (+1)" aria-label="Um ponto de Sorte a mais">+</button>
+          <button type="button" data-action="recarregarSorte" data-tooltip="Começo da sessão: a Sorte volta ao máximo" aria-label="Recarregar a Sorte">↺</button>
+        </span>
+      </div>
+      {{#each extratos}}
+      <button type="button" class="indicador corte com-extrato" data-action="abrirExtrato" data-campo="{{campo}}" data-tooltip="{{dica}}">
+        <span class="valor"><b class="{{#if (lt valor 0)}}negativo{{/if}}">{{valor}}</b></span>
+        <i>{{sigla}}</i>
+      </button>
+      {{/each}}
+    </div>
+  </div>
+</header>

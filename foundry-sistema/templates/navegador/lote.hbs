@@ -1,0 +1,18 @@
+{{!-- Um lote da lista do navegador (navegador.mjs; o cpr-browser-entry.hbs do CORE 0.93): o cabeçalho do grupo onde o
+tipo muda e as linhas (a imagem, o nome, o tipo, os números, o preço com a categoria e a origem). Não é uma parte da
+janela: entra no fim da lista. --}}
+{{#each itens}}
+{{#if cabecalho}}
+<li class="navegador-grupo{{#if recolhido}} recolhido{{/if}}" data-grupo="{{tipo}}"><button type="button" data-action="grupo" data-grupo="{{tipo}}" aria-expanded="{{#if recolhido}}false{{else}}true{{/if}}">{{rotulo}}</button></li>
+{{else}}
+<li class="navegador-linha {{#if par}}par{{else}}impar{{/if}}{{#if recolhido}} oculta{{/if}}" data-uuid="{{linha.uuid}}" data-classe="{{linha.classe}}" data-grupo="{{linha.tipo}}" draggable="{{#if linha.arrastavel}}true{{else}}false{{/if}}">
+  <div class="navegador-abrir" data-action="abrir" role="button" tabindex="0">
+    <img src="{{linha.img}}" alt="" loading="lazy">
+    <span class="navegador-titulo"><span class="navegador-nome-da-linha">{{linha.nome}}</span><span class="navegador-tipo-da-linha">{{linha.rotuloDoTipo}}</span></span>
+    <span class="navegador-chips">{{#each linha.chips}}<span class="navegador-chip">{{this}}</span>{{/each}}</span>
+    <span class="navegador-preco-da-linha">{{linha.preco}}{{#if linha.categoria}} <small>{{linha.categoria}}</small>{{/if}}</span>
+    <span class="navegador-origem-da-linha">{{linha.origem}}</span>
+  </div>
+</li>
+{{/if}}
+{{/each}}

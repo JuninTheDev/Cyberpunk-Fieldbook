@@ -1,0 +1,10 @@
+{{!-- A lista do navegador (navegador.mjs; o cpr-browser-results.hbs do CORE 0.93): as linhas entram em lotes
+(lote.hbs), e o rodapé conta quantas já entraram. --}}
+<section class="navegador-resultados">
+  <ol class="navegador-lista"></ol>
+  {{#unless total}}<p class="navegador-vazio">Nenhum documento com esses filtros.</p>{{/unless}}
+  <footer class="navegador-rodape{{#if carregando}} carregando{{/if}}">
+    <i class="fa-solid fa-spinner fa-spin" inert></i>
+    <span class="navegador-contagem">Mostrando 0 de {{total}}</span>
+  </footer>
+</section>

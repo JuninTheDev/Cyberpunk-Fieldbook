@@ -1,0 +1,52 @@
+# IDE
+.idea/
+.vscode/
+!.vscode/extensions.json
+node_modules
+**/*.pdf
+**/*.bak
+**/*.swp
+**/*~
+
+# direnv
+.direnv/
+
+# MacOS clutter
+**/.DS_Store
+
+# Local ci
+.gitlab-ci-local/
+vars.env
+errors.txt
+results.json
+
+# Local config
+.foundry
+.env
+foundryconfig.json
+
+# Build
+dist/
+docs/
+src/packs/other/changelog
+
+# Playwright generated runtime state and output.
+.playwright/
+
+# Images dropped in the repo root (e.g. screenshots) — not committed
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+
+# Ryan's temp files
+**/foo*
+**/bar*
+src/packs.*
+
+# LLMs
+.claude/worktrees
+.pi-subagents
+# Temp plan for mapping out needed tests
+.claude/skills/playwright-sheet-plan/*

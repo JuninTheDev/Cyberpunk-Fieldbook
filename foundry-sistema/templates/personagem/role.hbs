@@ -1,0 +1,104 @@
+{{!-- A aba Role, no jeito da maquete "Role Tab" do usuário: à esquerda, a Role em grande (o Rank, os pontos distribuídos,
+o resumo e os botões da habilidade) e o bônus nas perícias; à direita, as especialidades e as outras habilidades. Com a
+segunda Role da criação (a regra da mesa "Duas Roles na criação"; o C23), um bloco igual para ela, com o nome e o Rank;
+sem ela, o painel para acrescentar. --}}
+<section class="tab role {{tab.cssClass}}" data-group="primary" data-tab="role">
+  {{#each rolesDaFicha}}
+  <div class="aba-colunas role-bloco" data-role="{{chave}}">
+    <aside class="coluna-resumo">
+      <section class="painel corte">
+        <div class="titulo">{{#if principal}}ROLE{{else}}SEGUNDA ROLE{{/if}}<span>{{#if roleDaWiki}}{{roleDaWiki.habilidade}} · RANK {{rank}}{{else}}RANK {{rank}}{{/if}}</span></div>
+        {{#if @root.editavel}}{{#if nome}}{{#if (lt rank 10)}}<div class="botoes-resumo"><button type="button" class="acao" data-action="avancarComIp" data-role="{{chave}}" data-tooltip="Subir um Rank gastando IP">SUBIR RANK COM IP</button></div>{{/if}}{{/if}}{{/if}}
+        {{#unless principal}}
+        <p class="segunda-role-campos">
+          <input type="text" name="{{caminho}}.nome" value="{{nome}}" placeholder="ROLE" list="cprf-roles-{{../ator.id}}" aria-label="Segunda Role">
+          <span>RANK</span><input class="rank" type="number" name="{{caminho}}.rank" value="{{rank}}" min="0" max="10" aria-label="Rank da segunda Role">
+          <button type="button" class="acao" data-action="tirarSegundaRole" data-tooltip="Tirar a segunda Role (o nome, o Rank e as habilidades dela)">TIRAR</button>
+        </p>
+        {{/unless}}
+        {{#if roleDaWiki}}
+        <p class="role-nome">{{roleDaWiki.nome}} <small>// {{roleDaWiki.habilidade}}{{#if (ne roleDaWiki.habilidade roleDaWiki.en)}} ({{roleDaWiki.en}}){{/if}}</small></p>
+        <div class="medida"><span>RANK</span><b class="destaque">{{rank}}</b></div>
+        {{#if especialidades}}<div class="medida"><span>PONTOS DISTRIBUÍDOS</span><b class="destaque">{{especialidades.distribuidos}} / {{especialidades.total}}</b></div>{{/if}}
+        <p class="texto">{{roleDaWiki.resumo}}</p>
+        {{#if rolagens.length}}
+        <div class="rolagens-role">
+          {{#each rolagens}}<button type="button" class="acao" data-action="rolarRole" data-rolagem="{{id}}" data-tooltip="{{dica}}">{{rotulo}} <small>{{formula}}</small></button>{{/each}}
+        </div>
+        {{/if}}
+        {{else}}
+        <div class="caixa-vazia">{{#if nome}}A ROLE “{{nome}}” NÃO ESTÁ ENTRE AS DA WIKI{{else}}ESCOLHA A ROLE NO CABEÇALHO{{/if}}</div>
+        {{/if}}
+      </section>
+
+      {{#if bonus}}
+      <section class="painel corte bonus-role">
+        <div class="titulo">BÔNUS NAS PERÍCIAS<span>SEMPRE · RANK {{rank}}</span></div>
+        <p class="soma"><b>{{bonus.rotulo}} +{{bonus.valor}}</b> em {{bonus.pericias}}.</p>
+      </section>
+      {{/if}}
+
+      {{#if principal}}
+      <section class="painel corte notas-curtas">
+        <div class="titulo">NOTAS DA ROLE<span>TEXTO LIVRE</span></div>
+        <textarea name="system.role.notas" rows="4" placeholder="Contatos, dívidas, o que a Role deve ou cobra..." aria-label="Notas da Role">{{../fonte.role.notas}}</textarea>
+      </section>
+      {{/if}}
+    </aside>
+
+    <div class="coluna-principal">
+      {{#if especialidades}}
+      <section class="painel corte especialidades">
+        <div class="titulo">{{especialidades.titulo}}<span class="{{#if especialidades.passou}}conta-erro{{/if}}">{{especialidades.distribuidos}} DE {{especialidades.total}} PONTOS · {{especialidades.pagina}}</span></div>
+        <ol class="habilidades">
+          {{#each especialidades.itens}}
+          <li class="habilidade {{#if pontos}}tem{{/if}}">
+            <span class="nome">{{nome}}<small>{{desc}}</small></span>
+            {{#if efeito}}<span class="efeito">{{efeito}}</span>{{/if}}
+            <span class="pontos-visuais" style="--pontos: {{pontos}}; --max: {{../especialidades.max}}" aria-hidden="true"></span>
+            <input class="{{#if acima}}acima{{/if}}" type="number" name="{{../caminho}}.habilidades.{{id}}" value="{{pontos}}" min="0" max="10" aria-label="Pontos em {{nome}}"{{#if acima}} data-tooltip="Mais que o Rank ({{../especialidades.max}})"{{/if}}>
+          </li>
+          {{/each}}
+        </ol>
+        {{#if especialidades.derivadas.length}}
+        <ul class="derivadas">
+          {{#each especialidades.derivadas}}<li data-derivada="{{id}}"><b>Perícia {{nome}}: {{nivel}}</b> <small>{{conta}}</small></li>{{/each}}
+        </ul>
+        {{/if}}
+        {{#if especialidades.passou}}<div class="conferencia erro">PASSOU DO TOTAL DO RANK {{especialidades.rank}}: {{especialidades.distribuidos}} DE {{especialidades.total}} PONTOS</div>
+        {{else if especialidades.sobra}}<div class="conferencia">SOBRA{{#unless (eq especialidades.sobra 1)}}M{{/unless}} {{especialidades.sobra}} PONTO{{#unless (eq especialidades.sobra 1)}}S{{/unless}} PARA DISTRIBUIR</div>{{/if}}
+        {{#if especialidades.acima}}<div class="conferencia erro">MAIS QUE O RANK ({{especialidades.max}}) EM: {{especialidades.acima}}</div>{{/if}}
+        <p class="dica">No Rank {{especialidades.rank}}: {{especialidades.total}} pontos, até {{especialidades.max}} em cada. {{especialidades.nota}}</p>
+      </section>
+      {{/if}}
+
+      {{#if outrasHabilidades.length}}
+      <section class="painel corte">
+        <div class="titulo">OUTRAS HABILIDADES<span>COMO VIERAM DA IMPORTAÇÃO</span></div>
+        <ol class="habilidades">
+          {{#each outrasHabilidades}}
+          <li class="habilidade tem">
+            <span class="nome">{{nome}}</span>
+            <input type="number" name="{{../caminho}}.habilidades.{{nome}}" value="{{pontos}}" min="0" max="10" aria-label="Pontos em {{nome}}">
+          </li>
+          {{/each}}
+        </ol>
+      </section>
+      {{/if}}
+
+      {{#unless especialidades}}{{#unless outrasHabilidades.length}}<div class="caixa-vazia">ESTA ROLE NÃO TEM ESPECIALIDADES PARA DISTRIBUIR</div>{{/unless}}{{/unless}}
+    </div>
+  </div>
+  {{/each}}
+
+  {{#unless temSegundaRole}}
+  <section class="painel corte segunda-role">
+    <div class="titulo">SEGUNDA ROLE<span>REGRA DA MESA · DUAS ROLES NA CRIAÇÃO</span></div>
+    <p class="segunda-role-campos">
+      <input type="text" name="system.roleSecundaria.nome" value="" placeholder="ROLE" list="cprf-roles-{{ator.id}}" aria-label="Segunda Role">
+      <span>RANK</span><input class="rank" type="number" name="system.roleSecundaria.rank" value="{{sistema.roleSecundaria.rank}}" min="0" max="10" aria-label="Rank da segunda Role">
+    </p>
+    <p class="dica">Uma segunda Role diferente da principal, com o Rank e as habilidades dela (a principal define os STATs, as perícias e o pacote).</p>
+  </section>
+  {{/unless}}
+</section>

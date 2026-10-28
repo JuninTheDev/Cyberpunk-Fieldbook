@@ -15,9 +15,10 @@ module.exports = async ({ edge, servidores, r }) => {
   fs.mkdirSync(backups);
   fs.writeFileSync(path.join(backups, 'backup-2026-10-04.tar.gz'), 'antigo');
   fs.writeFileSync(path.join(backups, 'backup-2026-10-05.tar.gz'), 'mais novo');
-  // Registro de publicações e módulo esperando (como o servidor/atualizar.sh deixa).
+  // Registro de publicações, o módulo e o sistema do Foundry 14 esperando (como o servidor/atualizar.sh deixa).
   fs.writeFileSync(path.join(dados, 'atualizacoes.log'), ['2026-10-05 07:42:14 no ar: abc1234 Primeira', '2026-10-05 07:50:00 no ar: def5678 Segunda', ''].join('\n'));
   fs.writeFileSync(path.join(dados, '.modulo-pendente'), '');
+  fs.writeFileSync(path.join(dados, '.sistema-pendente'), '');
   let mesa = { active: true, world: 'protocolo-morana', users: 2, version: '12.343' };
   // A troca de mesa (Foundry 12 ou 14): as unidades do systemd e um systemctl de mentira, que anota cada comando e "liga"
   // a versão que o Foundry de mentira responde.
@@ -78,12 +79,12 @@ module.exports = async ({ edge, servidores, r }) => {
       const conteudo = await mestre.text();
       return [jogador === 403 && mestre.status === 200 && conteudo === 'mais novo' && /backup-2026-10-05/.test(mestre.headers.get('content-disposition') || ''), `jogador ${jogador} · mestre ${mestre.status} "${conteudo}"`];
     });
-    await r.passo('saúde do servidor: o mestre vê backup, disco, módulo e publicações; o jogador não', async () => {
+    await r.passo('saúde do servidor: o mestre vê backup, disco, módulo, o sistema do Foundry 14 e publicações; o jogador não', async () => {
     const mestre = await (await fetch(`${base}/api/estado`, { headers: { cookie } })).json();
     const jogador = await (await fetch(`${base}/api/estado`)).json();
     const sv = mestre.servidor || {};
-    return [sv.backup?.nome === 'backup-2026-10-05.tar.gz' && sv.disco?.total > 0 && sv.moduloPendente === true && /def5678 Segunda/.test(sv.registro?.[0] || '') && jogador.servidor === null,
-      JSON.stringify({ backup: sv.backup?.nome, disco: Boolean(sv.disco), modulo: sv.moduloPendente, registro: sv.registro?.[0], jogador: jogador.servidor })];
+    return [sv.backup?.nome === 'backup-2026-10-05.tar.gz' && sv.disco?.total > 0 && sv.moduloPendente === true && sv.sistemaPendente === true && /def5678 Segunda/.test(sv.registro?.[0] || '') && jogador.servidor === null,
+      JSON.stringify({ backup: sv.backup?.nome, disco: Boolean(sv.disco), modulo: sv.moduloPendente, sistema: sv.sistemaPendente, registro: sv.registro?.[0], jogador: jogador.servidor })];
   });
   await r.passo('troca de mesa (Foundry 12 ou 14): só o mestre; com 2 conectados pede confirmação; confirmada, liga o 14 (que fica habilitado) e desabilita o 12; o jogador não vê a versão', async () => {
       const trocar = (corpo, headers = { cookie }) => fetch(`${base}/api/mestre/mesa`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(corpo) })
@@ -167,7 +168,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const texto = await textoDe('#side-status');
       const menu = await menuDaConta();
       const titulo = await edge.evaluate('document.title');
-      return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(menu) && /No ar: [0-9a-f]{7,}/.test(menu) && /Baixar backup/.test(menu) && /Servidor: backup .*módulo esperando a mesa vazia/.test(texto), `${titulo} · ${texto} · menu: ${menu}`];
+      return [!/Jogadores/.test(titulo) && /Sair do modo mestre/.test(menu) && /No ar: [0-9a-f]{7,}/.test(menu) && /Baixar backup/.test(menu) && /Servidor: backup .*módulo esperando a mesa vazia · sistema do Foundry 14 esperando a mesa vazia/.test(texto), `${titulo} · ${texto} · menu: ${menu}`];
     });
     await edge.shot('barra-mestre');
     await r.passo('barra lateral do mestre: "Foundry 12 · 14" com o 12 aceso; o clique no 14 confirma, avisa dos 2 conectados e confirma de novo; a barra acende o 14', async () => {

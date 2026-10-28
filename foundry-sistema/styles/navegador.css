@@ -1,0 +1,94 @@
+/* O navegador de itens e atores (o C43, parte 3; navegador.mjs), com as cores e as fontes do tema (as variáveis --cp-* de
+   tema.css, que põe a janela na lista das temáticas): a busca em cima, os filtros à esquerda e a lista à direita. As
+   regras de botão e de campo ficam no corpo da janela (.window-content), longe dos botões do cabeçalho (ciclo 58). */
+.cpr-fieldbook.navegador .window-content {
+  display: grid; grid-template-columns: 270px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 10px; padding: 12px; overflow: hidden;
+}
+.cpr-fieldbook.navegador .window-content :is(input[type="text"], input[type="number"], select) {
+  background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0; box-shadow: none; color: var(--cp-texto); font-family: var(--cp-dados);
+}
+.cpr-fieldbook.navegador .window-content :is(input, select):focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+.cpr-fieldbook.navegador .window-content :is(button, [data-action], input, select):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 1px; }
+.cpr-fieldbook.navegador .window-content input[type="number"] { appearance: textfield; }
+
+/* ---------- A busca ---------- */
+.cpr-fieldbook.navegador .navegador-busca { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+.cpr-fieldbook.navegador .navegador-nome { flex: 1; }
+.cpr-fieldbook.navegador .navegador-campo { display: flex; align-items: center; gap: 6px; flex: none; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.15em; color: var(--cp-amarelo); text-transform: uppercase; }
+.cpr-fieldbook.navegador .navegador-campo select { width: auto; text-transform: none; letter-spacing: normal; }
+
+/* ---------- Os filtros ---------- */
+.cpr-fieldbook.navegador .navegador-filtros { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.cpr-fieldbook.navegador .navegador-caixas { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
+.cpr-fieldbook.navegador .navegador-filtros fieldset { margin: 0; padding: 6px 8px; border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-amarelo); background: var(--cp-painel); }
+.cpr-fieldbook.navegador .navegador-filtros legend { display: flex; align-items: center; gap: 4px; padding: 0 4px; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.12em; color: var(--cp-amarelo); text-transform: uppercase; }
+.cpr-fieldbook.navegador .navegador-preco { display: flex; gap: 6px; }
+.cpr-fieldbook.navegador .navegador-caixa.recolhida .navegador-filtros-do-tipo { display: none; }
+.cpr-fieldbook.navegador .navegador-filtros-do-tipo { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.cpr-fieldbook.navegador .navegador-rotulo { display: block; font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.12em; color: var(--cp-fraco); text-transform: uppercase; }
+.cpr-fieldbook.navegador .navegador-faixa { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.cpr-fieldbook.navegador .navegador-faixa .navegador-rotulo { grid-column: 1 / -1; }
+.cpr-fieldbook.navegador .navegador-conjunto { display: flex; flex-direction: column; }
+.cpr-fieldbook.navegador .navegador-aninhados { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 0 14px; }
+.cpr-fieldbook.navegador .navegador-aninhados[hidden] { display: none; }
+.cpr-fieldbook.navegador .window-content .navegador-abrir-caixa {
+  flex: none; width: 22px; height: 22px; min-height: 0; margin-left: auto; padding: 0; border: 1px solid var(--cp-linha); border-radius: 0;
+  background: transparent; color: var(--cp-amarelo); font-size: 11px;
+}
+.cpr-fieldbook.navegador .navegador-caixa:not(.recolhida) .navegador-abrir-caixa i { transform: rotate(180deg); }
+/* O tristate: a marca à esquerda diz o estado (vazia, incluídos; o ✓ ciano, só estes; o ✕ vermelho, excluídos). */
+.cpr-fieldbook.navegador .window-content .navegador-tristate {
+  display: flex; align-items: center; gap: 6px; width: 100%; height: auto; min-height: 0; padding: 2px 4px; border: none; border-radius: 0;
+  background: transparent; color: var(--cp-texto); font-family: var(--cp-titulo); font-size: 14px; letter-spacing: normal; text-align: left; text-transform: none; cursor: pointer;
+}
+.cpr-fieldbook.navegador .navegador-filtros legend .navegador-tristate { width: auto; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.navegador .window-content .navegador-tristate:hover { background: color-mix(in srgb, var(--cp-amarelo) 10%, transparent); box-shadow: none; }
+.cpr-fieldbook.navegador .navegador-marca { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1px solid var(--cp-fraco); font: 700 11px/1 var(--cp-dados); }
+.cpr-fieldbook.navegador .navegador-tristate[data-estado="so"] .navegador-marca { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.navegador .navegador-tristate[data-estado="so"] .navegador-marca::before { content: '✓'; }
+.cpr-fieldbook.navegador .navegador-tristate[data-estado="excluir"] { color: var(--cp-fraco); text-decoration: line-through; }
+.cpr-fieldbook.navegador .navegador-tristate[data-estado="excluir"] .navegador-marca { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.navegador .navegador-tristate[data-estado="excluir"] .navegador-marca::before { content: '✕'; }
+.cpr-fieldbook.navegador .navegador-acoes { display: flex; gap: 6px; }
+.cpr-fieldbook.navegador .window-content .navegador-acoes button {
+  flex: 1; height: 28px; min-height: 0; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; color: var(--cp-amarelo);
+}
+.cpr-fieldbook.navegador .window-content .navegador-acoes button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+
+/* ---------- A lista ---------- */
+.cpr-fieldbook.navegador .navegador-resultados { display: flex; flex-direction: column; min-height: 0; }
+.cpr-fieldbook.navegador .navegador-lista { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.navegador .navegador-vazio, .cpr-fieldbook.navegador .navegador-rodape { font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); }
+.cpr-fieldbook.navegador .navegador-rodape { flex: none; display: flex; align-items: center; gap: 6px; padding-top: 6px; }
+.cpr-fieldbook.navegador .navegador-rodape:not(.carregando) i { display: none; }
+.cpr-fieldbook.navegador .navegador-grupo { position: sticky; top: 0; z-index: 1; background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.navegador .window-content .navegador-grupo button {
+  display: block; width: 100%; height: auto; min-height: 0; padding: 4px 6px; border: none; border-radius: 0; background: transparent;
+  color: var(--cp-amarelo); font: 400 12px/1.4 var(--cp-dados); letter-spacing: 0.2em; text-align: left; text-transform: uppercase;
+}
+.cpr-fieldbook.navegador .navegador-grupo button::before { content: '▾ '; }
+.cpr-fieldbook.navegador .navegador-grupo.recolhido button::before { content: '▸ '; }
+.cpr-fieldbook.navegador .navegador-linha.oculta { display: none; }
+.cpr-fieldbook.navegador .navegador-linha.impar { background: color-mix(in srgb, var(--cp-painel) 70%, transparent); }
+.cpr-fieldbook.navegador .navegador-abrir {
+  display: grid; grid-template-columns: 36px minmax(0, 1.6fr) minmax(0, 2fr) 120px 150px; align-items: center; gap: 10px; padding: 4px 6px; cursor: pointer;
+}
+.cpr-fieldbook.navegador .navegador-linha[draggable="true"] .navegador-abrir { cursor: grab; }
+.cpr-fieldbook.navegador .navegador-abrir:hover { background: color-mix(in srgb, var(--cp-ciano) 10%, transparent); }
+.cpr-fieldbook.navegador .navegador-abrir img { width: 36px; height: 36px; object-fit: cover; border: none; }
+.cpr-fieldbook.navegador .navegador-titulo { display: flex; flex-direction: column; min-width: 0; }
+.cpr-fieldbook.navegador .navegador-nome-da-linha { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.cpr-fieldbook.navegador .navegador-tipo-da-linha { font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.12em; color: var(--cp-ciano); text-transform: uppercase; }
+.cpr-fieldbook.navegador .navegador-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+.cpr-fieldbook.navegador .navegador-chip { padding: 0 5px; border: 1px solid var(--cp-linha); font-family: var(--cp-dados); font-size: 11px; color: var(--cp-texto); white-space: nowrap; }
+.cpr-fieldbook.navegador .navegador-preco-da-linha { font-family: var(--cp-dados); font-size: 13px; color: var(--cp-amarelo); text-align: right; }
+.cpr-fieldbook.navegador .navegador-preco-da-linha small { display: block; font-size: 10px; color: var(--cp-fraco); }
+.cpr-fieldbook.navegador .navegador-origem-da-linha { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--cp-dados); font-size: 11px; color: var(--cp-fraco); text-align: right; }
+
+/* ---------- O menu dos compêndios ---------- */
+.cpr-fieldbook.navegador-compendios .navegador-compendios-corpo { display: flex; flex-direction: column; gap: 8px; }
+.cpr-fieldbook.navegador-compendios .navegador-compendios-grupos { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.cpr-fieldbook.navegador-compendios fieldset { margin: 0; padding: 6px 10px; border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-amarelo); background: var(--cp-painel); }
+.cpr-fieldbook.navegador-compendios legend { color: var(--cp-amarelo); font-family: var(--cp-dados); letter-spacing: 0.1em; }
+.cpr-fieldbook.navegador-compendios .navegador-compendios-linha { display: flex; align-items: center; gap: 6px; }
+.cpr-fieldbook.navegador-compendios .dica { margin: 0; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }

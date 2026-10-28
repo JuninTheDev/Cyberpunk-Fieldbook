@@ -1,0 +1,6 @@
+<div class="cpr-fieldbook cartao dano {{#if critico}}critico-sucesso{{/if}}{{#if net}} net{{/if}}">
+  <header><h3>{{rotulo}}</h3></header>
+  {{#if critico}}<p class="critico">Crítico: {{regraDoCritico}}. +{{bonus}} direto no HP{{#if semLesao}}. Esta munição não causa lesão crítica{{else}} e uma Lesão Crítica{{/if}}.</p>{{/if}}
+  {{{dados}}}
+  {{#if botoes.length}}<div class="botoes">{{#each botoes}}<button type="button" data-cprf-acao="{{#if acao}}{{acao}}{{else}}aplicarNet{{/if}}"{{#if onde}} data-onde="{{onde}}"{{/if}}>{{rotulo}}</button>{{/each}}</div>{{/if}}
+</div>

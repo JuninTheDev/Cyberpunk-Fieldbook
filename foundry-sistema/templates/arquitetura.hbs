@@ -1,0 +1,68 @@
+{{!-- A ficha da arquitetura da NET (ficha-arquitetura.mjs): o DV, os andares (um conteúdo por linha), o mapa, o "Gerar a
+cena" do mestre e a descrição. --}}
+<div class="item-ficha arquitetura-ficha">
+  <header class="cabecalho">
+    <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img">
+    <input class="nome" type="text" name="name" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
+  </header>
+
+  <div class="campos">
+    <label data-tooltip="O DV do Pathfinder, do Cloak e do Virus. 0: o maior DV dos andares">DV da arquitetura
+      <span><input type="number" name="system.dv" value="{{fonte.dv}}" min="0"> <small>{{#if fonte.dv}}o deste item{{else}}o dos andares: {{dvDaArquitetura}}{{/if}}</small></span>
+    </label>
+    <label>Preço (eb) <input type="number" name="system.preco" value="{{fonte.preco}}" min="0"></label>
+  </div>
+
+  <h3>Andares <small>um conteúdo por linha; o ramo novo sai do andar de cima do ramo à esquerda</small></h3>
+  <table class="andares">
+    <thead>
+      <tr><th>Andar</th><th>Ramo</th><th>Conteúdo</th><th>DV ou qual</th><th>Nome</th><th>O que tem</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each linhas}}
+      <tr data-indice="{{indice}}">
+        <td><input type="number" name="system.andares.{{indice}}.andar" value="{{andar}}" min="1" max="18" aria-label="Andar"></td>
+        <td><select name="system.andares.{{indice}}.ramo" aria-label="Ramo">{{selectOptions @root.ramos selected=ramo}}</select></td>
+        <td><select name="system.andares.{{indice}}.tipo" aria-label="Conteúdo">{{selectOptions @root.tipos selected=tipo}}</select></td>
+        <td>
+          {{#if temDv}}<input type="number" name="system.andares.{{indice}}.dv" value="{{dv}}" min="0" aria-label="DV">{{/if}}
+          {{#if ehIce}}<select name="system.andares.{{indice}}.ice" aria-label="Black ICE">{{selectOptions @root.ices selected=ice blank="—"}}</select>{{/if}}
+          {{#if ehDemonio}}<select name="system.andares.{{indice}}.demonio" aria-label="Demônio">{{selectOptions @root.demonios selected=demonio}}</select>{{/if}}
+          {{#if ehNetrunner}}<select name="system.andares.{{indice}}.ator" aria-label="Netrunner inimigo">{{selectOptions @root.atores selected=ator blank="—"}}</select>{{/if}}
+        </td>
+        <td><input type="text" name="system.andares.{{indice}}.nome" value="{{nome}}" placeholder="—" aria-label="Nome"></td>
+        <td><input type="text" name="system.andares.{{indice}}.descricao" value="{{descricao}}" aria-label="O que tem"></td>
+        <td><button type="button" class="apagar" data-action="tirarLinha" data-indice="{{indice}}" data-tooltip="Tirar a linha">✕</button></td>
+      </tr>
+      {{else}}
+      <tr><td colspan="7" class="vazio">Sem andares.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if editavel}}<div class="acoes-arquitetura"><button type="button" class="acao" data-action="gerar" data-tooltip="As tabelas do livro: 3d6 andares, os ramos pelo 1d10 e os andares pelo lobby e pela dificuldade">Gerar pelas tabelas</button><button type="button" class="acao" data-action="novaLinha">+ Andar</button></div>{{/if}}
+
+  <h3>Mapa{{#if editavel}} <small>arraste um andar para outra célula (em cima de outro, os dois trocam); o + cria o andar ali</small>{{/if}}</h3>
+  <div class="mapa-net" style="--colunas: {{ramosDoMapa.length}}">
+    <span class="canto"></span>
+    {{#each ramosDoMapa}}<span class="ramo">RAMO {{this}}</span>{{/each}}
+    <span class="entrada">PONTO DE ACESSO</span>
+    {{#each mapa}}
+    <span class="andar">{{andar}}</span>
+    {{#each celulas}}
+    {{#if vazio}}<button type="button" class="criar-andar" data-action="criarAndar" data-posicao="{{posicao}}" data-tooltip="{{rotulo}}" aria-label="{{rotulo}}">+</button>
+    {{else if this}}
+    <div class="no" data-no="{{id}}" data-posicao="{{posicao}}"{{#if @root.editavel}} draggable="true"{{/if}}>
+      <b>{{id}}</b>{{#if desvio}} <small>de {{desvio}}</small>{{/if}}
+      <ul>{{#each conteudos}}<li>{{this}}</li> {{/each}}</ul>
+    </div>
+    {{else}}<span class="sem-no"></span>{{/if}}
+    {{/each}}
+    {{/each}}
+  </div>
+  {{#if gm}}<div class="acoes-arquitetura"><a class="acao" data-action="gerarCena" role="button" tabindex="0" data-tooltip="Uma cena com um Tile por andar e as ligações, como o CORE; gerar de novo atualiza a mesma cena">Gerar a cena</a></div>{{/if}}
+
+  <h3>Descrição</h3>
+  {{#if editavel}}
+  <prose-mirror name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
+  {{else}}<div class="texto">{{{descricaoRica}}}</div>{{/if}}
+</div>

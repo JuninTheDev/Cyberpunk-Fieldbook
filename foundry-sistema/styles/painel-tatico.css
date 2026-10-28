@@ -1,0 +1,504 @@
+/* Painel Tático (o C25; o módulo painel-tatico da mesa do Foundry 12, dentro do sistema): a barra (#painel-tatico,
+   solta no <body>) e as janelas de estilo e de retrato.
+   As cores, a fonte e os tamanhos da barra vêm do estilo de cada jogador, em variáveis --pt-* no próprio elemento.
+   Os botões da barra começam do zero (all: unset): o CSS do Foundry e o do sistema CPR estilizam `button` em geral. */
+
+/* ==================== Barra ==================== */
+#painel-tatico {
+  --pt-fundo: rgba(var(--pt-fundo-rgb), var(--pt-opacidade));
+  --pt-linha: rgba(var(--pt-acento-rgb), 0.38);
+  --pt-linha-fraca: rgba(var(--pt-acento-rgb), 0.16);
+  --pt-apagado: rgba(var(--pt-texto-rgb), 0.62);
+  --pt-verde: #57e389;
+  --pt-laranja: #ff9f40;
+  --pt-retrato-largura: calc(var(--pt-retrato-altura) * 0.56);
+  --pt-chanfro: 14px;
+  position: fixed;
+  z-index: 70;
+  width: max-content;
+  left: 50%;
+  bottom: var(--pt-base);
+  transform: translateX(-50%) scale(var(--pt-escala));
+  transform-origin: bottom center;
+  pointer-events: none;
+  font-family: var(--pt-fonte);
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--pt-texto);
+}
+#painel-tatico.pt-posicao-livre { bottom: auto; transform: scale(var(--pt-escala)); transform-origin: top left; }
+#painel-tatico.pt-vazio { display: none; }
+#painel-tatico.pt-arrastando { transition: none; opacity: 0.85; }
+#painel-tatico *, #painel-tatico *::before, #painel-tatico *::after { box-sizing: border-box; }
+
+#painel-tatico button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  line-height: 1;
+  transition: color 0.12s, background-color 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+#painel-tatico button:focus-visible { outline: 1px solid var(--pt-acento); outline-offset: 1px; }
+#painel-tatico button:disabled { opacity: 0.4; cursor: default; }
+#painel-tatico input, #painel-tatico select { font: inherit; color: inherit; box-shadow: none; margin: 0; }
+#painel-tatico select { height: 22px; padding: 0 2px; border: 1px solid var(--pt-linha); border-radius: 0; background: rgba(0, 0, 0, 0.55); font-size: 11px; }
+#painel-tatico select option { background: rgb(var(--pt-fundo-rgb)); color: var(--pt-texto); }
+#painel-tatico img { border: none; }
+#painel-tatico [hidden] { display: none !important; }
+
+#painel-tatico .pt-casca { position: relative; display: flex; align-items: flex-end; pointer-events: auto; }
+
+/* ---------- A barra ---------- */
+#painel-tatico .pt-barra {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: var(--pt-largura-max, calc(100vw - 32px));
+  padding: 6px 14px 8px 12px;
+  background: linear-gradient(180deg, rgba(var(--pt-fundo-rgb), calc(var(--pt-opacidade) * 0.92)) 0%, var(--pt-fundo) 100%);
+  backdrop-filter: blur(var(--pt-desfoque));
+  border: 1px solid var(--pt-linha);
+  border-bottom: 3px solid var(--pt-acento);
+}
+/* O personagem fica em pé sobre a barra: o fundo passa por baixo do retrato, e o conteúdo começa depois dele. */
+#painel-tatico .pt-casca-livre .pt-barra { padding-left: calc(var(--pt-retrato-largura) + 6px); }
+#painel-tatico.pt-retrato-direita .pt-casca-livre .pt-barra { padding-left: 12px; padding-right: calc(var(--pt-retrato-largura) + 6px); }
+#painel-tatico.pt-cantos-chanfrado .pt-barra { clip-path: polygon(var(--pt-chanfro) 0, 100% 0, 100% calc(100% - var(--pt-chanfro)), calc(100% - var(--pt-chanfro)) 100%, 0 100%, 0 var(--pt-chanfro)); }
+#painel-tatico.pt-cantos-chanfrado .pt-barra::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(135deg, transparent 0 9px, var(--pt-acento) 9px 11px, transparent 11px);
+}
+#painel-tatico.pt-cantos-arredondado .pt-barra { border-radius: 12px; }
+#painel-tatico.pt-brilho .pt-barra { box-shadow: 0 0 18px rgba(var(--pt-acento-rgb), 0.16), inset 0 0 26px rgba(var(--pt-acento-rgb), 0.07); }
+#painel-tatico.pt-scanlines .pt-barra::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 3px);
+}
+#painel-tatico.pt-ferimento-grave .pt-barra { border-color: rgba(255, 159, 64, 0.5); }
+#painel-tatico.pt-ferimento-mortal .pt-barra,
+#painel-tatico.pt-ferimento-morto .pt-barra { border-color: rgba(var(--pt-acento2-rgb), 0.6); border-bottom-color: var(--pt-acento2); }
+#painel-tatico.pt-brilho.pt-ferimento-mortal .pt-barra { box-shadow: 0 0 22px rgba(var(--pt-acento2-rgb), 0.3), inset 0 0 30px rgba(var(--pt-acento2-rgb), 0.12); }
+#painel-tatico.pt-meu-turno .pt-barra { border-bottom-color: var(--pt-destaque); }
+#painel-tatico.pt-meu-turno.pt-brilho .pt-barra { animation: pt-turno 2.2s ease-in-out infinite; }
+
+/* ---------- Retrato ---------- */
+.pt-retrato { pointer-events: none; }
+.pt-retrato-img { display: block; max-width: none; border: none; user-select: none; }
+#painel-tatico .pt-casca-livre .pt-retrato {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 0;
+  width: var(--pt-retrato-largura);
+  height: var(--pt-retrato-altura);
+}
+#painel-tatico.pt-retrato-direita .pt-casca-livre .pt-retrato { left: auto; right: 0; }
+.pt-retrato-livre .pt-retrato-img {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: auto;
+  height: 100%;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.85));
+}
+.pt-retrato-livre::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -4px;
+  height: 18px;
+  background: radial-gradient(ellipse at center, rgba(var(--pt-acento-rgb, 0, 255, 210), 0.45), transparent 70%);
+}
+#painel-tatico .pt-retrato-alvo { position: absolute; z-index: 3; left: 0; top: 0; bottom: 0; width: var(--pt-retrato-largura); }
+#painel-tatico.pt-retrato-direita .pt-retrato-alvo { left: auto; right: 0; }
+#painel-tatico .pt-moldura-caixa {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 92px;
+  min-height: 92px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--pt-linha);
+  background: rgba(0, 0, 0, 0.4);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+.pt-retrato-moldura { position: absolute; inset: 0; }
+.pt-retrato-moldura .pt-retrato-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.pt-retrato.pt-trocou .pt-retrato-img { animation: pt-entra 0.45s ease-out; }
+
+/* Efeitos de ferimento (no painel e na prévia da janela de retrato). */
+.pt-efeito-lightlyWounded .pt-retrato-img { filter: drop-shadow(0 0 6px rgba(255, 120, 60, 0.35)) saturate(0.95); }
+.pt-efeito-seriouslyWounded .pt-retrato-img {
+  filter: drop-shadow(0 0 10px rgba(255, 60, 60, 0.55)) saturate(0.75) sepia(0.25) hue-rotate(-18deg);
+  animation: pt-falha 5s steps(1) infinite;
+}
+.pt-efeito-mortallyWounded .pt-retrato-img {
+  filter: drop-shadow(0 0 14px rgba(255, 30, 50, 0.85)) grayscale(0.35) sepia(0.55) hue-rotate(-38deg) saturate(2.4) brightness(0.82);
+  animation: pt-falha 2.6s steps(1) infinite, pt-pulso 1.1s ease-in-out infinite;
+}
+.pt-efeito-dead .pt-retrato-img { filter: grayscale(1) brightness(0.42) contrast(1.15); }
+.pt-flatline {
+  position: absolute;
+  left: 50%;
+  bottom: 28%;
+  transform: translateX(-50%) rotate(-10deg);
+  padding: 2px 10px;
+  border: 2px solid #ff2e63;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ff2e63;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+  text-shadow: 0 0 6px rgba(255, 46, 99, 0.8);
+}
+.pt-retrato-moldura .pt-flatline { bottom: 38%; padding: 1px 4px; font-size: 10px; letter-spacing: 0.1em; }
+
+/* ---------- Topo ---------- */
+#painel-tatico .pt-topo { display: flex; align-items: center; gap: 8px; min-height: 24px; padding-bottom: 5px; border-bottom: 1px solid var(--pt-linha-fraca); }
+#painel-tatico .pt-alca { display: inline-flex; align-items: center; padding: 3px 2px; color: var(--pt-apagado); cursor: grab; touch-action: none; }
+#painel-tatico .pt-alca:hover { color: var(--pt-acento); }
+#painel-tatico.pt-arrastando .pt-alca { cursor: grabbing; }
+#painel-tatico .pt-nome { font-size: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pt-acento); white-space: nowrap; }
+#painel-tatico.pt-brilho .pt-nome { text-shadow: 0 0 8px rgba(var(--pt-acento-rgb), 0.55); }
+#painel-tatico .pt-sub { overflow: hidden; max-width: 260px; color: var(--pt-apagado); font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
+#painel-tatico .pt-estado { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border: 1px solid currentColor; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.pt-estado-ok { color: var(--pt-verde, #57e389); }
+.pt-estado-leve { color: var(--pt-destaque, #f8ef02); }
+.pt-estado-grave { color: var(--pt-laranja, #ff9f40); }
+.pt-estado-mortal, .pt-estado-morto { color: var(--pt-acento2, #ff2e63); }
+#painel-tatico .pt-estado-mortal { animation: pt-pulso 1s ease-in-out infinite; }
+#painel-tatico .pt-selo { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border: 1px solid var(--pt-linha); background: rgba(var(--pt-acento-rgb), 0.08); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+#painel-tatico .pt-selo-turno { border-color: var(--pt-destaque); color: var(--pt-destaque); }
+#painel-tatico .pt-selo-alerta { border-color: var(--pt-acento2); color: var(--pt-acento2); }
+#painel-tatico .pt-selo-net { border-color: #b26bff; color: #d7b4ff; background: rgba(178, 107, 255, 0.12); }
+#painel-tatico .pt-selo-net:hover { box-shadow: 0 0 8px rgba(178, 107, 255, 0.5); }
+#painel-tatico .pt-ferramentas { display: flex; gap: 2px; margin-left: auto; padding-left: 10px; }
+#painel-tatico .pt-ferramentas button { width: 24px; height: 22px; color: var(--pt-apagado); border: 1px solid transparent; }
+#painel-tatico .pt-ferramentas button:hover, #painel-tatico .pt-ferramentas button.pt-ativa { color: var(--pt-acento); border-color: var(--pt-linha); }
+
+/* ---------- Corpo e seções ---------- */
+#painel-tatico .pt-corpo { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px 12px; }
+#painel-tatico .pt-secao { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; }
+#painel-tatico .pt-secao + .pt-secao { padding-left: 12px; border-left: 1px solid var(--pt-linha-fraca); }
+
+/* Vitais */
+#painel-tatico .pt-hp { display: flex; align-items: center; gap: 3px; }
+#painel-tatico .pt-passo { min-width: 28px; height: 28px; padding: 0 4px; border: 1px solid; font-weight: 700; font-size: 12px; }
+#painel-tatico .pt-menos { color: var(--pt-acento2); border-color: rgba(var(--pt-acento2-rgb), 0.5); background: rgba(var(--pt-acento2-rgb), 0.08); }
+#painel-tatico .pt-mais { color: var(--pt-verde); border-color: rgba(87, 227, 137, 0.45); background: rgba(87, 227, 137, 0.07); }
+#painel-tatico .pt-menos:hover { background: rgba(var(--pt-acento2-rgb), 0.25); }
+#painel-tatico .pt-mais:hover { background: rgba(87, 227, 137, 0.22); }
+#painel-tatico .pt-hp-barra { position: relative; width: 140px; height: 28px; overflow: hidden; border: 1px solid var(--pt-linha); background: rgba(0, 0, 0, 0.5); }
+#painel-tatico .pt-hp-cheio { position: absolute; top: 0; bottom: 0; left: 0; background: linear-gradient(90deg, rgba(var(--pt-acento-rgb), 0.45), rgba(var(--pt-acento-rgb), 0.85)); transition: width 0.35s ease-out; }
+#painel-tatico.pt-ferimento-grave .pt-hp-cheio { background: linear-gradient(90deg, rgba(255, 159, 64, 0.45), rgba(255, 159, 64, 0.9)); }
+#painel-tatico.pt-ferimento-mortal .pt-hp-cheio,
+#painel-tatico.pt-ferimento-morto .pt-hp-cheio { background: linear-gradient(90deg, rgba(var(--pt-acento2-rgb), 0.5), rgba(var(--pt-acento2-rgb), 0.95)); }
+#painel-tatico .pt-hp-marca { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.35); }
+#painel-tatico .pt-hp-texto { position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; height: 100%; font-weight: 700; font-size: 14px; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+#painel-tatico .pt-hp-texto em { font-style: normal; font-weight: 400; color: rgba(var(--pt-texto-rgb), 0.8); }
+#painel-tatico .pt-hp-campo { width: 36px; height: 22px; padding: 0; border: none; background: transparent; text-align: right; font-weight: 700; -moz-appearance: textfield; }
+#painel-tatico .pt-hp-campo::-webkit-outer-spin-button, #painel-tatico .pt-hp-campo::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#painel-tatico .pt-hp-campo:focus { outline: 1px solid var(--pt-acento); background: rgba(0, 0, 0, 0.5); }
+#painel-tatico .pt-fichas { display: flex; flex-wrap: wrap; gap: 4px; max-width: 300px; }
+#painel-tatico .pt-ficha { display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 5px; border: 1px solid rgba(var(--pt-acento-rgb), 0.26); background: rgba(var(--pt-acento-rgb), 0.06); }
+#painel-tatico .pt-ficha > i { color: var(--pt-acento); font-size: 11px; }
+#painel-tatico .pt-ficha-valor { font-weight: 700; white-space: nowrap; }
+#painel-tatico .pt-ficha-valor em { color: var(--pt-apagado); font-style: normal; font-weight: 400; font-size: 10px; }
+#painel-tatico .pt-mini-passo { width: 16px; height: 18px; border: 1px solid transparent; color: var(--pt-apagado); font-weight: 700; }
+#painel-tatico .pt-mini-passo:hover { border-color: var(--pt-linha); color: var(--pt-acento); }
+#painel-tatico .pt-ficha.pt-sem { opacity: 0.45; }
+#painel-tatico .pt-ficha.pt-gasta .pt-ficha-valor { color: var(--pt-destaque); }
+#painel-tatico .pt-ficha.pt-alerta { border-color: rgba(var(--pt-acento2-rgb), 0.7); }
+#painel-tatico .pt-ficha.pt-alerta > i { color: var(--pt-acento2); }
+#painel-tatico .pt-death { cursor: pointer; }
+#painel-tatico .pt-death > i { color: var(--pt-acento2); }
+#painel-tatico .pt-death:hover { border-color: var(--pt-acento2); background: rgba(var(--pt-acento2-rgb), 0.15); }
+#painel-tatico .pt-pulsa { animation: pt-pulso 1s ease-in-out infinite; }
+
+/* Atributos */
+#painel-tatico .pt-grade-stats { display: grid; grid-template-columns: repeat(5, 42px); gap: 3px; }
+#painel-tatico .pt-stat { flex-direction: column; gap: 2px; height: 40px; border: 1px solid rgba(var(--pt-acento-rgb), 0.2); background: rgba(var(--pt-acento-rgb), 0.05); }
+#painel-tatico .pt-stat small { color: var(--pt-apagado); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+#painel-tatico .pt-stat b { font-size: 17px; }
+#painel-tatico .pt-stat:hover { border-color: var(--pt-acento); background: rgba(var(--pt-acento-rgb), 0.16); }
+#painel-tatico.pt-brilho .pt-stat:hover { box-shadow: 0 0 8px rgba(var(--pt-acento-rgb), 0.45); }
+#painel-tatico .pt-stat:hover b { color: var(--pt-acento); }
+
+/* Armas */
+#painel-tatico .pt-armas { min-width: 320px; max-width: 460px; justify-content: flex-start; }
+#painel-tatico .pt-armas-topo { display: flex; align-items: center; gap: 6px; color: var(--pt-apagado); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+#painel-tatico .pt-titulo { color: var(--pt-acento); }
+#painel-tatico .pt-icone { width: 22px; height: 22px; border: 1px solid transparent; color: var(--pt-apagado); }
+#painel-tatico .pt-icone:hover { border-color: var(--pt-linha); color: var(--pt-acento); }
+#painel-tatico .pt-alvo { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; font-size: 11px; letter-spacing: 0; text-transform: none; }
+#painel-tatico .pt-alvo-nomes { max-width: 160px; overflow: hidden; color: var(--pt-texto); white-space: nowrap; text-overflow: ellipsis; }
+#painel-tatico .pt-alvo-nomes.pt-apagado { color: var(--pt-apagado); font-style: italic; }
+#painel-tatico .pt-fluxo-pronto .pt-fluxo { color: var(--pt-verde); }
+#painel-tatico .pt-fluxo-espera .pt-fluxo { color: var(--pt-destaque); }
+#painel-tatico .pt-lista-armas { display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--pt-linha) transparent; }
+#painel-tatico .pt-arma { display: flex; align-items: center; gap: 6px; padding: 3px 4px 3px 6px; border-left: 2px solid rgba(var(--pt-acento-rgb), 0.45); background: rgba(var(--pt-acento-rgb), 0.045); }
+#painel-tatico .pt-arma-com-modo { border-left-color: var(--pt-destaque); }
+#painel-tatico .pt-arma-img { flex: 0 0 auto; width: 30px; height: 30px; object-fit: contain; cursor: pointer; }
+#painel-tatico .pt-arma-info { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+#painel-tatico .pt-arma-nome { justify-content: flex-start; overflow: hidden; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+#painel-tatico .pt-arma-nome:hover { color: var(--pt-acento); }
+#painel-tatico .pt-arma-sub { color: var(--pt-apagado); font-size: 11px; white-space: nowrap; }
+#painel-tatico .pt-arma-sub i { font-size: 10px; }
+#painel-tatico .pt-sem-bala { color: var(--pt-acento2); font-weight: 700; }
+#painel-tatico .pt-modo-nome { color: var(--pt-destaque); font-weight: 700; }
+#painel-tatico .pt-pilulas { display: flex; flex-wrap: wrap; gap: 3px; }
+#painel-tatico .pt-pilula { padding: 1px 5px; border: 1px solid rgba(var(--pt-acento-rgb), 0.5); color: var(--pt-acento); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+#painel-tatico button.pt-pilula:hover, #painel-tatico .pt-pilula.pt-ativa { background: rgba(var(--pt-acento-rgb), 0.2); }
+#painel-tatico .pt-classe-power { border-color: #ff9e3d; color: #ffbf7a; }
+#painel-tatico .pt-classe-tech { border-color: #5ec8ff; color: #9fdcff; }
+#painel-tatico .pt-classe-smart { border-color: #b26bff; color: #d7b4ff; }
+#painel-tatico .pt-pilula.pt-alerta { border-color: var(--pt-acento2); color: var(--pt-acento2); }
+#painel-tatico .pt-arma-botoes { display: flex; flex: 0 0 auto; align-items: center; gap: 2px; }
+#painel-tatico .pt-modos { display: inline-flex; gap: 1px; }
+#painel-tatico .pt-modo { width: 20px; height: 22px; border: 1px solid transparent; color: var(--pt-apagado); }
+#painel-tatico .pt-modo:hover { border-color: var(--pt-linha); color: var(--pt-texto); }
+#painel-tatico .pt-modo.pt-ativa { border-color: var(--pt-destaque); background: rgba(var(--pt-destaque-rgb), 0.2); color: var(--pt-destaque); }
+#painel-tatico .pt-modo-2077 { color: rgba(var(--pt-acento-rgb), 0.7); }
+#painel-tatico .pt-modo-2077.pt-ativa { border-color: var(--pt-acento); background: rgba(var(--pt-acento-rgb), 0.2); color: var(--pt-acento); }
+#painel-tatico .pt-local { width: 78px; }
+#painel-tatico .pt-atk, #painel-tatico .pt-dmg { height: 24px; padding: 0 6px; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; }
+#painel-tatico .pt-atk { border: 1px solid var(--pt-acento2); background: rgba(var(--pt-acento2-rgb), 0.85); color: #fff; text-shadow: 0 0 2px rgba(0, 0, 0, 0.8); }
+#painel-tatico .pt-atk:hover { background: var(--pt-acento2); box-shadow: 0 0 10px rgba(var(--pt-acento2-rgb), 0.6); }
+#painel-tatico .pt-dmg { border: 1px solid rgba(var(--pt-acento2-rgb), 0.7); color: var(--pt-acento2); }
+#painel-tatico .pt-dmg:hover { background: rgba(var(--pt-acento2-rgb), 0.18); }
+#painel-tatico .pt-vazio-texto { margin: 4px 0; color: var(--pt-apagado); font-size: 11px; font-style: italic; }
+
+/* Ações */
+#painel-tatico .pt-acoes { display: grid; grid-template-columns: repeat(2, minmax(84px, auto)); align-content: center; gap: 3px; }
+#painel-tatico .pt-acao { justify-content: flex-start; gap: 6px; height: 27px; padding: 0 8px; border: 1px solid rgba(var(--pt-acento-rgb), 0.3); background: rgba(var(--pt-acento-rgb), 0.06); font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }
+#painel-tatico .pt-acao i { color: var(--pt-acento); }
+#painel-tatico .pt-acao:hover, #painel-tatico .pt-acao.pt-ativa { border-color: var(--pt-acento); background: rgba(var(--pt-acento-rgb), 0.17); }
+#painel-tatico .pt-acao.pt-turno { border-color: var(--pt-destaque); color: var(--pt-destaque); }
+#painel-tatico .pt-acao.pt-turno i { color: var(--pt-destaque); }
+
+/* Perícias favoritas */
+#painel-tatico .pt-favoritas { display: flex; flex-wrap: wrap; gap: 3px; padding-top: 5px; border-top: 1px solid var(--pt-linha-fraca); }
+#painel-tatico .pt-favorita { gap: 5px; height: 21px; padding: 0 7px; border: 1px solid rgba(var(--pt-destaque-rgb), 0.35); font-size: 11px; }
+#painel-tatico .pt-favorita i { color: var(--pt-destaque); font-size: 9px; }
+#painel-tatico .pt-favorita b { color: var(--pt-acento); }
+#painel-tatico .pt-favorita:hover { background: rgba(var(--pt-destaque-rgb), 0.14); }
+
+/* ---------- Painéis (perícias, Role, NET, equipamento) ---------- */
+#painel-tatico .pt-painel {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  bottom: calc(100% + 6px);
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-height: 440px;
+  border: 1px solid var(--pt-linha);
+  border-top: 2px solid var(--pt-acento);
+  background: rgba(var(--pt-fundo-rgb), 0.97);
+  box-shadow: 0 0 22px rgba(0, 0, 0, 0.75);
+  pointer-events: auto;
+}
+#painel-tatico.pt-abrir-abaixo .pt-painel { top: calc(100% + 6px); bottom: auto; }
+#painel-tatico.pt-retrato-direita .pt-painel { right: auto; left: 0; }
+#painel-tatico .pt-painel header { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--pt-linha-fraca); color: var(--pt-acento); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+#painel-tatico .pt-painel header > span { margin-right: auto; }
+#painel-tatico .pt-busca { flex: 1 1 auto; height: 24px; padding: 0 6px; border: 1px solid var(--pt-linha); border-radius: 0; background: rgba(0, 0, 0, 0.45); text-transform: none; letter-spacing: 0; font-size: 12px; }
+#painel-tatico .pt-busca:focus { outline: none; border-color: var(--pt-acento); }
+#painel-tatico .pt-painel-corpo { overflow-y: auto; padding: 4px 8px 8px; scrollbar-width: thin; scrollbar-color: var(--pt-linha) transparent; }
+#painel-tatico .pt-painel h4 { margin: 8px 0 3px; padding-bottom: 2px; border-bottom: 1px solid var(--pt-linha-fraca); color: var(--pt-apagado); font-size: 10px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
+#painel-tatico .pt-linha { display: flex; align-items: center; gap: 7px; padding: 3px 4px; cursor: pointer; }
+#painel-tatico .pt-linha:hover { background: rgba(var(--pt-acento-rgb), 0.1); }
+#painel-tatico .pt-linha-nome { flex: 1 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#painel-tatico .pt-linha small { color: var(--pt-apagado); font-size: 10px; white-space: nowrap; }
+#painel-tatico .pt-linha b { min-width: 22px; color: var(--pt-acento); text-align: right; }
+#painel-tatico .pt-estrela { width: 16px; height: 16px; color: rgba(var(--pt-texto-rgb), 0.22); font-size: 10px; }
+#painel-tatico .pt-estrela.pt-ativa, #painel-tatico .pt-estrela:hover { color: var(--pt-destaque); }
+#painel-tatico .pt-linha-equip img { width: 24px; height: 24px; object-fit: contain; }
+#painel-tatico .pt-equip { min-width: 74px; padding: 3px 6px; border: 1px solid currentColor; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+#painel-tatico .pt-equip-equipped { color: var(--pt-verde); }
+#painel-tatico .pt-equip-carried { color: var(--pt-destaque); }
+#painel-tatico .pt-equip-owned { color: var(--pt-apagado); }
+#painel-tatico .pt-grade-interface { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+#painel-tatico .pt-botoes { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+#painel-tatico .pt-botao { height: 26px; padding: 0 9px; border: 1px solid var(--pt-linha); background: rgba(var(--pt-acento-rgb), 0.06); font-size: 11px; }
+#painel-tatico .pt-botao:hover { border-color: var(--pt-acento); background: rgba(var(--pt-acento-rgb), 0.18); }
+#painel-tatico .pt-botao.pt-perigo { border-color: rgba(var(--pt-acento2-rgb), 0.6); color: var(--pt-acento2); }
+#painel-tatico .pt-nota { margin: 4px 0; color: var(--pt-apagado); font-size: 11px; }
+#painel-tatico .pt-net-conectado p { margin: 4px 0; }
+#painel-tatico .pt-net-conectado i { color: #b26bff; }
+#painel-tatico .pt-erro { padding: 10px 14px; color: var(--pt-acento2); }
+
+/* ---------- Recolhido ---------- */
+#painel-tatico .pt-mini-botao { gap: 10px; height: 38px; padding: 0 12px 0 0; border: 1px solid var(--pt-linha); border-bottom: 2px solid var(--pt-acento); background: var(--pt-fundo); backdrop-filter: blur(var(--pt-desfoque)); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+#painel-tatico .pt-mini-retrato { width: 38px; height: 36px; overflow: hidden; }
+#painel-tatico .pt-mini-retrato img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+#painel-tatico .pt-mini-nome { color: var(--pt-acento); font-weight: 700; }
+#painel-tatico .pt-mini-hp { font-weight: 700; }
+
+/* ---------- Compacto ---------- */
+#painel-tatico.pt-compacto .pt-barra { gap: 3px; padding: 4px 10px 5px 8px; }
+#painel-tatico.pt-compacto .pt-sub { display: none; }
+#painel-tatico.pt-compacto .pt-nome { font-size: 13px; }
+#painel-tatico.pt-compacto .pt-stat { height: 32px; }
+#painel-tatico.pt-compacto .pt-stat b { font-size: 14px; }
+#painel-tatico.pt-compacto .pt-grade-stats { grid-template-columns: repeat(5, 38px); }
+#painel-tatico.pt-compacto .pt-lista-armas { max-height: 66px; }
+#painel-tatico.pt-compacto .pt-arma-img { width: 22px; height: 22px; }
+#painel-tatico.pt-compacto .pt-acoes { grid-template-columns: repeat(3, auto); }
+#painel-tatico.pt-compacto .pt-acao span { display: none; }
+
+/* ---------- Sem animação ---------- */
+#painel-tatico.pt-sem-animacao *, #painel-tatico.pt-sem-animacao *::before, #painel-tatico.pt-sem-animacao *::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  #painel-tatico *, .pt-janela-retrato * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Mira (escolher o alvo) e o Combat HUD escondido ---------- */
+#painel-tatico-mira {
+  position: fixed;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px;
+  transform: translate(16px, 12px);
+  border: 1px solid #ff2e63;
+  background: rgba(10, 4, 8, 0.9);
+  color: #ffd2dd;
+  font-size: 12px;
+  pointer-events: none;
+}
+#painel-tatico-mira i { position: absolute; left: -14px; top: -10px; color: #ff2e63; font-size: 18px; }
+#painel-tatico-mira small { color: #c99aa6; font-size: 10px; }
+body.painel-tatico-mirando #board { cursor: crosshair; }
+
+/* ---------- Animações ---------- */
+@keyframes pt-pulso { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes pt-entra { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+@keyframes pt-turno { 0%, 100% { box-shadow: 0 0 14px rgba(var(--pt-destaque-rgb), 0.15); } 50% { box-shadow: 0 0 26px rgba(var(--pt-destaque-rgb), 0.45); } }
+@keyframes pt-falha {
+  0%, 90%, 100% { clip-path: none; translate: 0 0; }
+  92% { clip-path: inset(18% 0 58% 0); translate: -5px 0; }
+  94% { clip-path: inset(62% 0 12% 0); translate: 5px 0; }
+  96% { clip-path: inset(40% 0 35% 0); translate: -2px 0; }
+  98% { clip-path: none; translate: 1px 0; }
+}
+
+/* ==================== Janelas (estilo e retrato) ====================
+   Começam por .application.painel-tatico .window-content: o CSS do CPR pinta botões, rótulos e campos com
+   `.application .window-content …` e com variáveis --cpr-text-* (!important); aqui elas valem o tema do painel. */
+.application.painel-tatico {
+  --pt-j-fundo: rgba(6, 11, 14, 0.97);
+  --pt-j-painel: rgba(12, 24, 27, 0.9);
+  --pt-j-linha: #1f4041;
+  --pt-j-acento: #00ffd2;
+  --pt-j-alerta: #ff2e63;
+  --pt-j-texto: #e2f7f2;
+  --pt-j-apagado: #93aeaa;
+  --color-form-label: var(--pt-j-texto);
+  --color-form-hint: var(--pt-j-apagado);
+  --color-text-primary: var(--pt-j-texto);
+  --cpr-text-window: var(--pt-j-texto);
+  --cpr-text-normal: var(--pt-j-texto);
+  --cpr-text-hint: var(--pt-j-apagado);
+  --cpr-text-foundry-hint: var(--pt-j-apagado);
+  --cpr-text-foundry-input: var(--pt-j-texto);
+  --cpr-background-foundry-input: #061012;
+}
+.application.painel-tatico .window-header { border-bottom: 1px solid var(--pt-j-acento); background: linear-gradient(90deg, #071a1c, #170812); color: var(--pt-j-acento); }
+.application.painel-tatico .window-content { padding: 10px 12px; background: var(--pt-j-fundo); color: var(--pt-j-texto); font-size: 13px; }
+.application.painel-tatico .window-content button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: auto; height: auto; min-height: 26px; margin: 0; padding: 3px 10px; border: 1px solid var(--pt-j-linha); border-radius: 2px; background: #0a1a1c; color: var(--pt-j-texto); font-size: 12px; line-height: 1.2; box-shadow: none; }
+.application.painel-tatico .window-content button:hover:not(:disabled) { border-color: var(--pt-j-acento); background: #0f2a2c; color: var(--pt-j-acento); box-shadow: 0 0 6px rgba(0, 255, 210, 0.3); }
+.application.painel-tatico .window-content button:disabled { opacity: 0.4; }
+.application.painel-tatico .window-content button.pt-principal { border-color: var(--pt-j-acento); color: var(--pt-j-acento); }
+.application.painel-tatico .window-content button.pt-ativa { border-color: var(--pt-j-acento); background: #0b3632; color: var(--pt-j-acento); }
+.application.painel-tatico .window-content h3 { display: flex; gap: 6px; align-items: center; margin: 0 0 8px; padding: 0; border: 0; color: var(--pt-j-acento); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; }
+.application.painel-tatico .window-content h3 i { color: var(--pt-j-alerta); }
+.application.painel-tatico .window-content label { display: flex; flex-direction: column; gap: 3px; color: var(--pt-j-texto); font-size: 12px; }
+.application.painel-tatico .window-content label.pt-caixa { flex-direction: row; align-items: center; gap: 5px; }
+.application.painel-tatico .window-content input[type="text"],
+.application.painel-tatico .window-content textarea,
+.application.painel-tatico .window-content select { width: 100%; min-height: 26px; border: 1px solid var(--pt-j-linha); border-radius: 2px; background: #061012; color: var(--pt-j-texto); font-size: 12px; }
+.application.painel-tatico .window-content textarea { padding: 4px 6px; font-family: monospace; resize: vertical; }
+.application.painel-tatico .window-content select option { background: #061012; color: var(--pt-j-texto); }
+.application.painel-tatico .window-content input:focus,
+.application.painel-tatico .window-content textarea:focus,
+.application.painel-tatico .window-content select:focus { border-color: var(--pt-j-acento); outline: none; box-shadow: 0 0 4px rgba(0, 255, 210, 0.4); }
+.application.painel-tatico .window-content input[type="checkbox"],
+.application.painel-tatico .window-content input[type="range"] { accent-color: var(--pt-j-acento); }
+.application.painel-tatico .window-content input[type="range"] { width: 100%; }
+.application.painel-tatico .window-content input[type="color"] { width: 100%; height: 28px; padding: 0 2px; border: 1px solid var(--pt-j-linha); background: #061012; }
+.application.painel-tatico .window-content output { color: var(--pt-j-apagado); font-size: 11px; }
+.application.painel-tatico .pt-nota { margin: 4px 0; color: var(--pt-j-apagado); font-size: 11px; }
+.application.painel-tatico .pt-aviso { color: #ffb3c4; }
+.application.painel-tatico .pt-rodape { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--pt-j-linha); }
+.application.painel-tatico .pt-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 6px 0; }
+.application.painel-tatico .pt-grade { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 8px 14px; }
+.application.painel-tatico .pt-largo { grid-column: 1 / -1; }
+
+/* Estilo */
+.pt-estilo section { margin-bottom: 12px; padding: 10px; border: 1px solid var(--pt-j-linha); background: var(--pt-j-painel); }
+.pt-temas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 8px; }
+.application.painel-tatico .window-content .pt-tema { flex-direction: column; gap: 4px; padding: 6px 4px; border-color: var(--f, #000); background: var(--f, #000); color: #e8e8e8; font-size: 11px; }
+.application.painel-tatico .window-content .pt-tema.pt-ativa { border-color: var(--a); box-shadow: 0 0 8px var(--a); color: var(--a); }
+.pt-tema-cores { display: flex; gap: 3px; }
+.pt-tema-cores i { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--a); }
+.pt-tema-cores i:nth-child(2) { background: var(--b); }
+.pt-tema-cores i:nth-child(3) { background: var(--c); }
+.pt-cores { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.pt-secoes { margin: 0 0 8px; padding: 0; list-style: none; }
+.pt-secoes li { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed var(--pt-j-linha); }
+.application.painel-tatico .window-content .pt-secoes button { min-height: 22px; padding: 1px 6px; }
+.pt-pecas { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin-bottom: 8px; }
+
+/* Retrato */
+.pt-rc { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; }
+.pt-rc-previa { display: flex; flex-direction: column; gap: 6px; }
+.pt-rc-palco {
+  --pt-retrato-largura: calc(var(--pt-retrato-altura) * 0.56);
+  position: relative;
+  height: 360px;
+  overflow: hidden;
+  border: 1px solid var(--pt-j-linha);
+  background-color: #10181a;
+  background-image: linear-gradient(45deg, #182326 25%, transparent 25%), linear-gradient(-45deg, #182326 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #182326 75%), linear-gradient(-45deg, transparent 75%, #182326 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+.pt-rc-palco .pt-retrato-livre { position: absolute; z-index: 2; left: 8px; bottom: 0; width: var(--pt-retrato-largura); height: var(--pt-retrato-altura); }
+.pt-rc-palco .pt-retrato-moldura { z-index: 2; inset: auto auto 8px 8px; width: 64px; height: 64px; border: 1px solid var(--pt-j-acento); overflow: hidden; }
+.pt-rc-barra { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; height: 80px; padding-left: min(calc(var(--pt-retrato-largura) + 16px), 170px); border-top: 1px solid var(--pt-j-acento); border-bottom: 3px solid var(--pt-j-acento); background: rgba(6, 11, 14, 0.92); }
+.pt-rc-palco:has(.pt-retrato-moldura) .pt-rc-barra { padding-left: 82px; }
+.pt-rc-barra b { color: var(--pt-j-acento); text-transform: uppercase; letter-spacing: 0.06em; }
+.pt-rc-barra span { color: var(--pt-j-apagado); font-size: 11px; }
+.pt-rc-estados { display: flex; flex-wrap: wrap; gap: 3px; }
+.application.painel-tatico .window-content .pt-rc-estados button { min-height: 22px; padding: 1px 6px; font-size: 10px; }
+.pt-rc-campos { display: flex; flex-direction: column; gap: 6px; }
+.pt-rc-linha { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px; border: 1px solid transparent; }
+.pt-rc-linha.pt-ativa { border-color: var(--pt-j-linha); background: var(--pt-j-painel); }
+.pt-rc-linha small { color: var(--pt-j-apagado); font-weight: 400; }
+.application.painel-tatico .window-content .pt-rc-miniatura { width: 44px; height: 44px; min-height: 0; padding: 0; overflow: hidden; background: #10181a; }
+.pt-rc-miniatura img { width: 100%; height: 100%; object-fit: cover; object-position: top center; border: none; }
+.pt-rc-botoes { display: flex; gap: 3px; }
+.application.painel-tatico .window-content .pt-rc-botoes button { min-height: 26px; padding: 2px 7px; }
+.pt-rc-ajustes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; padding: 8px; border: 1px solid var(--pt-j-linha); background: var(--pt-j-painel); }

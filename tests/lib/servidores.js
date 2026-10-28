@@ -36,8 +36,8 @@ async function subirServidores() {
   const ip = ipDaRede();
   // Contas e personagens dos testes ficam numa pasta temporária, compartilhada pelos dois servidores.
   const dados = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-dados-'));
-  // O Foundry de teste (tests/lib/foundry.js) fala com este servidor de outra origem.
-  const local = await subir(8765, { HOST: '127.0.0.1', GM_KEY: '', DADOS_PERSONAGENS: dados, FOUNDRY_ORIGIN: 'http://localhost:30999' });
+  // Os Foundry de teste (tests/lib/foundry.js, o 12, e tests/lib/foundry14.js) falam com este servidor de outra origem.
+  const local = await subir(8765, { HOST: '127.0.0.1', GM_KEY: '', DADOS_PERSONAGENS: dados, FOUNDRY_ORIGIN: 'http://localhost:30999,http://localhost:31014' });
   const rede = ip ? await subir(8766, { HOST: '0.0.0.0', GM_KEY: SENHA_MESTRE, DADOS_PERSONAGENS: dados }) : null;
   return {
     local: 'http://127.0.0.1:8765',

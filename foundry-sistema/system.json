@@ -1,0 +1,423 @@
+{
+  "id": "cpr-fieldbook",
+  "title": "Cyberpunk RED — Fieldbook",
+  "description": "Sistema próprio de Cyberpunk RED para o Foundry VTT 14, feito em volta da wiki da mesa: ficha, rolagens com o crítico do d10, armadura com ablação, cyberware que só vale instalado, o combate do Fluxo de Combate (tiro, mirado, corpo a corpo, autofogo, fogo supressivo, cartucho e explosivo em área, com a esquiva às cegas e o dano na ficha), Lesão Crítica, Death Save e importação dos personagens criados na wiki.",
+  "version": "0.2.0",
+  "authors": [
+    {
+      "name": "Junin"
+    }
+  ],
+  "license": "GPL-3.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.369",
+    "maximum": "14"
+  },
+  "esmodules": [
+    "scripts/sistema.mjs"
+  ],
+  "styles": [
+    {
+      "src": "styles/sistema.css",
+      "layer": "system"
+    },
+    {
+      "src": "styles/tema.css",
+      "layer": "system"
+    },
+    {
+      "src": "styles/tema-foundry.css",
+      "layer": "system"
+    },
+    {
+      "src": "styles/icones.css",
+      "layer": "system"
+    },
+    {
+      "src": "styles/painel-tatico.css",
+      "layer": "system"
+    },
+    {
+      "src": "styles/arvore-itens.css",
+      "layer": "system"
+    },
+    {
+      "src": "styles/navegador.css",
+      "layer": "system"
+    }
+  ],
+  "languages": [
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/pt-BR.json"
+    }
+  ],
+  "documentTypes": {
+    "Actor": {
+      "personagem": {
+        "htmlFields": [
+          "notas"
+        ]
+      },
+      "capanga": {
+        "htmlFields": [
+          "notas"
+        ]
+      },
+      "veiculo": {
+        "htmlFields": [
+          "notas"
+        ]
+      },
+      "blackice": {
+        "htmlFields": [
+          "notas"
+        ]
+      },
+      "demonio": {
+        "htmlFields": [
+          "notas"
+        ]
+      },
+      "conteiner": {
+        "htmlFields": [
+          "notas"
+        ]
+      }
+    },
+    "Item": {
+      "arma": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "armadura": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "municao": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "cyberware": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "lesao": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "equipamento": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "roupa": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "droga": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "cyberdeck": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "programa": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "upgrade": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "veiculo": {
+        "htmlFields": [
+          "descricao"
+        ]
+      },
+      "arquitetura": {
+        "htmlFields": [
+          "descricao"
+        ]
+      }
+    }
+  },
+  "socket": true,
+  "grid": {
+    "distance": 2,
+    "units": "m"
+  },
+  "primaryTokenAttribute": "hp",
+  "secondaryTokenAttribute": "humanidade",
+  "initiative": "1d10 + @iniciativa",
+  "packs": [
+    {
+      "name": "armas",
+      "label": "Armas",
+      "path": "packs/armas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "armaduras",
+      "label": "Armaduras",
+      "path": "packs/armaduras",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "municao",
+      "label": "Munição",
+      "path": "packs/municao",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "cyberware",
+      "label": "Cyberware",
+      "path": "packs/cyberware",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "equipamento",
+      "label": "Equipamento",
+      "path": "packs/equipamento",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "roupas",
+      "label": "Roupas",
+      "path": "packs/roupas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "drogas",
+      "label": "Drogas",
+      "path": "packs/drogas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "netrunning",
+      "label": "Netrunning",
+      "path": "packs/netrunning",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "upgrades",
+      "label": "Upgrades e acessórios",
+      "path": "packs/upgrades",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "veiculos",
+      "label": "Veículos",
+      "path": "packs/veiculos",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "armas-2077",
+      "label": "Armas de 2077",
+      "path": "packs/armas-2077",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "cyberware-2077",
+      "label": "Cyberware de 2077",
+      "path": "packs/cyberware-2077",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "netrunning-2077",
+      "label": "Netrunning de 2077",
+      "path": "packs/netrunning-2077",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "black-chrome-armas",
+      "label": "Armas do Black Chrome",
+      "path": "packs/black-chrome-armas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "black-chrome-cyberware",
+      "label": "Cyberware do Black Chrome",
+      "path": "packs/black-chrome-cyberware",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "black-chrome-equipamento",
+      "label": "Moda e equipamento do Black Chrome",
+      "path": "packs/black-chrome-equipamento",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "black-chrome-veiculos",
+      "label": "Veículos do Black Chrome",
+      "path": "packs/black-chrome-veiculos",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "lesoes",
+      "label": "Lesões críticas",
+      "path": "packs/lesoes",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "exemplos",
+      "label": "Personagens de exemplo",
+      "path": "packs/exemplos",
+      "type": "Actor",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "NONE",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "arquiteturas",
+      "label": "Arquiteturas da NET",
+      "path": "packs/arquiteturas",
+      "type": "Item",
+      "system": "cpr-fieldbook",
+      "ownership": {
+        "PLAYER": "NONE",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Cyberpunk RED — Fieldbook",
+      "sorting": "m",
+      "color": "#6b0012",
+      "packs": [
+        "armas",
+        "armaduras",
+        "municao",
+        "cyberware",
+        "equipamento",
+        "roupas",
+        "drogas",
+        "netrunning",
+        "upgrades",
+        "veiculos",
+        "armas-2077",
+        "cyberware-2077",
+        "netrunning-2077",
+        "black-chrome-armas",
+        "black-chrome-cyberware",
+        "black-chrome-equipamento",
+        "black-chrome-veiculos",
+        "lesoes",
+        "exemplos",
+        "arquiteturas"
+      ]
+    }
+  ],
+  "flags": {}
+}

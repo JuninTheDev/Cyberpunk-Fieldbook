@@ -1,0 +1,46 @@
+<div class="janela-wiki-conteudo">
+  <div class="barra">
+    <button type="button" data-action="recarregar"><i class="fa-solid fa-rotate" inert></i> Atualizar a lista</button>
+    <button type="button" data-action="avisos">Avisos de envio</button>
+  </div>
+  {{#if erro}}<p class="aviso erro">{{erro}}</p>{{/if}}
+  {{#if campanha.id}}<p class="campanha">Campanha da wiki deste mundo: <b>{{campanha.nome}}</b>.</p>{{/if}}
+  {{#if ajuda}}<p class="aviso erro campanha">{{ajuda}} A lista mostra todas as campanhas; os pedidos ficam bloqueados.</p>{{/if}}
+  {{#if avisos.length}}<div class="aviso erro"><ul>{{#each avisos}}<li>{{this}}</li>{{/each}}</ul></div>{{/if}}
+  {{#if ultimo}}
+  <div class="aviso {{#if ultimo.erro}}erro{{/if}} ultimo">
+    <b>{{ultimo.titulo}}</b>
+    {{#if ultimo.notas.length}}<ul>{{#each ultimo.notas}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+  </div>
+  {{/if}}
+
+  {{#if pedidos.length}}
+  <h3>Pedidos da loja esperando o mestre</h3>
+  <ol class="itens pedidos">
+    {{#each pedidos}}
+    <li data-wiki-id="{{wikiId}}" data-pedido="{{id}}">
+      <span class="detalhe"><b>{{nome}}</b> pediu {{total}}eb{{#if erro}} · <i>{{erro}}</i>{{/if}}<br><small>{{itens}}{{#if nota}} · “{{nota}}”{{/if}}</small></span>
+      {{#if temAtor}}<button type="button" data-action="aprovar">{{#if erro}}Tentar de novo{{else}}Aprovar{{/if}}</button>{{else}}<small>importe antes</small>{{/if}}
+      {{#if podeRecusar}}<button type="button" data-action="recusar">Recusar</button>{{/if}}
+    </li>
+    {{/each}}
+  </ol>
+  {{/if}}
+
+  <h3>Personagens</h3>
+  <ol class="itens personagens">
+    {{#each personagens}}
+    <li data-wiki-id="{{id}}">
+      <span class="detalhe">{{#if campanhaNome}}[{{campanhaNome}}] {{/if}}<b>{{nome}}</b>{{#if apelido}} “{{apelido}}”{{/if}}{{#if role}} · {{role}}{{/if}} · {{donoNome}}<br><small>{{situacao}}</small></span>
+      {{#if ator}}
+      <button type="button" data-action="abrir">Abrir ficha</button>
+      <button type="button" data-action="atualizar">Atualizar da wiki</button>
+      {{else}}
+      <select name="dono-{{id}}" aria-label="Dono no Foundry">{{selectOptions ../jogadores selected=donoSugerido}}</select>
+      <button type="button" data-action="importar" data-tooltip="O personagem como foi criado na wiki">{{#if reimportar}}Importar de novo{{else}}Importar{{/if}}</button>
+      {{#if mesa}}<button type="button" data-action="importarDaMesa" data-tooltip="O personagem como está na ficha da mesa do Foundry {{mesaDoFoundry}}">Importar da mesa</button>{{/if}}
+      {{/if}}
+    </li>
+    {{else}}<li class="vazio">Nenhum personagem na wiki.</li>{{/each}}
+  </ol>
+</div>

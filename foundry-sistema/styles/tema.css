@@ -1,0 +1,1274 @@
+/* Cyberpunk RED — Fieldbook: o visual do modelo de ficha da mesa ("Modelo de ficha/": Cyberpunk 2077, amarelo, ciano e
+   vermelho sobre o escuro) na ficha do personagem, na ficha do item e nos cartões do chat. As fontes vêm embutidas
+   (fontes/, SIL OFL) e as fichas e as janelas do sistema (o extrato, a rolagem, a reação do alvo) ficam sempre no tema
+   escuro do Foundry (classes "themed theme-dark"). Nas mensagens do chat, só as que têm um cartão deste sistema (a classe
+   cprf-mensagem, que combate.mjs põe ao desenhar). */
+@font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fontes/rajdhani-500.woff2') format('woff2'); }
+@font-face { font-family: 'Rajdhani'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fontes/rajdhani-700.woff2') format('woff2'); }
+@font-face { font-family: 'Share Tech Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fontes/share-tech-mono-400.woff2') format('woff2'); }
+
+/* A paleta vale também no <html> quando o tema do sistema vai para o resto do Foundry (tema-foundry.css). */
+.cpr-fieldbook.ficha-personagem, .cpr-fieldbook.ficha-item, .cpr-fieldbook.extrato, .cpr-fieldbook.janela-rolagem, .cpr-fieldbook.janela-defesa, .cpr-fieldbook.net-config, .cpr-fieldbook.janela-net, .cpr-fieldbook.navegador, .cpr-fieldbook.navegador-compendios, .chat-message.cprf-mensagem, html[data-cprf-tema-foundry] {
+  --cp-fundo: #0b0b10; --cp-painel: #14141c; --cp-poco: #0d0d14; --cp-linha: #23232f;
+  --cp-texto: #e8e6d9; --cp-fraco: #8a8d99;
+  --cp-amarelo: #fcee09; --cp-ciano: #02d7f2; --cp-vermelho: #ff2a4a;
+  --cp-titulo: 'Rajdhani', 'Signika', sans-serif; --cp-dados: 'Share Tech Mono', 'Courier New', monospace;
+}
+
+/* ---------- Janela ---------- */
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net, .navegador, .navegador-compendios) .window-header {
+  background: var(--cp-fundo); border-bottom: 2px solid var(--cp-amarelo); color: var(--cp-amarelo);
+  font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .extrato, .janela-rolagem, .janela-defesa, .net-config, .janela-net, .navegador, .navegador-compendios) .window-content {
+  background-color: var(--cp-fundo);
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
+  color: var(--cp-texto); font-family: var(--cp-titulo); font-weight: 500; font-size: 15px;
+}
+.cpr-fieldbook.ficha-personagem .window-content { display: flex; flex-direction: column; gap: 12px; padding: 16px; overflow: hidden; container-type: inline-size; }
+
+/* Campos: no poço escuro, com a fonte de dados; os números sem as setinhas. */
+.cpr-fieldbook.ficha-personagem :is(input[type="text"], input[type="number"], select, textarea),
+.cpr-fieldbook.ficha-item :is(input[type="text"], input[type="number"], select, textarea) {
+  background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0; box-shadow: none; color: var(--cp-texto); font-family: var(--cp-dados);
+}
+.cpr-fieldbook.ficha-personagem :is(input, select, textarea):focus, .cpr-fieldbook.ficha-item :is(input, select, textarea):focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+.cpr-fieldbook.ficha-personagem input[type="number"], .cpr-fieldbook.ficha-item input[type="number"] { appearance: textfield; }
+/* A altura de linha do Foundry deixa os campos altos demais: aqui cada campo tem a dele. */
+.cpr-fieldbook.ficha-personagem :is(input[type="text"], input[type="number"]) { line-height: 1.2; min-height: 0; }
+.cpr-fieldbook.ficha-personagem input[type="number"]::-webkit-inner-spin-button, .cpr-fieldbook.ficha-personagem input[type="number"]::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item, .janela-rolagem, .janela-defesa) .window-content :is([data-action], button, a, input, select, textarea, [contenteditable="true"]):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 2px; }
+.cpr-fieldbook.ficha-personagem .window-content .corte[data-action]:focus-visible { outline-offset: -4px; }
+.cpr-fieldbook.ficha-personagem small { color: var(--cp-fraco); }
+
+/* ---------- Peças do modelo ---------- */
+.cpr-fieldbook.ficha-personagem .corte { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+.cpr-fieldbook.ficha-personagem .painel { background: var(--cp-painel); border-left: 3px solid var(--cp-amarelo); padding: 14px 16px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .painel.vermelho, .cpr-fieldbook.ficha-personagem .painel.perigo { border-left-color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .titulo {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 10px;
+  font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; color: var(--cp-amarelo); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .titulo span { color: var(--cp-fraco); text-align: right; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.cpr-fieldbook.ficha-personagem .perigo .titulo { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .caixa-vazia, .cpr-fieldbook.ficha-personagem .estado-caixa {
+  border: 1px dashed #3a3a4a; padding: 10px; margin-top: 8px; text-align: center;
+  font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.15em; color: var(--cp-fraco); text-transform: uppercase; list-style: none;
+}
+.cpr-fieldbook.ficha-personagem .estado-caixa.estado-leve { color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .estado-caixa:is(.estado-grave, .estado-mortal) { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
+/* O estado mental (o C21): amarelo no limítrofe e no dissociativo, vermelho na ciberpsicose. */
+.cpr-fieldbook.ficha-personagem .estado-mental:is(.estado-mental-limitrofe, .estado-mental-dissociativo) { color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .estado-mental:is(.estado-mental-ciberpsicose, .estado-mental-extrema) { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .dica { margin: 10px 0 0; font-family: var(--cp-dados); font-size: 12px; line-height: 1.5; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .vazio { color: var(--cp-fraco); font-style: italic; }
+/* O botão do modelo: contorno amarelo, cheio ao passar o mouse. */
+.cpr-fieldbook.ficha-personagem :is(.acao, .alternar-pericias, table.lista td.acoes button) {
+  flex: none; width: auto; height: auto; min-height: 0; padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.1em; line-height: 1.2; cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem :is(.acao, .alternar-pericias, table.lista td.acoes button):hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .perigo .acao { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .perigo .acao:hover { background: var(--cp-vermelho); color: var(--cp-fundo); }
+/* O "+" de cada lista (o C32; o item-create do CORE): cria um item em branco do tipo dela. */
+.cpr-fieldbook.ficha-personagem .titulo span .criar {
+  flex: none; width: 22px; height: 22px; min-height: 0; padding: 0; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; color: var(--cp-amarelo); font: 700 15px/1 var(--cp-dados); cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem .titulo span .criar:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .perigo .titulo span .criar { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .perigo .titulo span .criar:hover { background: var(--cp-vermelho); color: var(--cp-fundo); }
+
+/* ---------- Cabeçalho ---------- */
+.cpr-fieldbook.ficha-personagem .topo { display: flex; gap: 20px; flex: none; }
+.cpr-fieldbook.ficha-personagem .topo .retrato {
+  flex: none; width: 150px; height: 170px; object-fit: cover; border: none; cursor: pointer;
+  background: repeating-linear-gradient(135deg, #1c1c28 0 8px, var(--cp-painel) 8px 16px);
+}
+.cpr-fieldbook.ficha-personagem .identidade { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.cpr-fieldbook.ficha-personagem .linha-id {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0;
+  font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.2em; color: var(--cp-ciano); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .linha-id input {
+  height: auto; padding: 0 2px; background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--cp-ciano);
+  font: inherit; letter-spacing: inherit; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .linha-id input:is(:hover, :focus) { border-bottom-color: var(--cp-ciano); background: transparent; }
+.cpr-fieldbook.ficha-personagem .linha-id input.role { width: auto; field-sizing: content; min-width: 5ch; }
+.cpr-fieldbook.ficha-personagem .linha-id input.rank { width: 3ch; text-align: center; }
+/* A busca de perícias e itens (o C32): no fim da linha do alto, sem as maiúsculas do resto da linha. */
+.cpr-fieldbook.ficha-personagem .linha-id .campo-busca { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .linha-id .campo-busca input { width: 24ch; border-bottom-color: var(--cp-linha); color: var(--cp-texto); letter-spacing: 0.04em; text-transform: none; }
+.cpr-fieldbook.ficha-personagem .linha-id .campo-busca input:is(:hover, :focus) { border-bottom-color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .nome-linha { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 10px; }
+.cpr-fieldbook.ficha-personagem .nome-linha .nome {
+  width: auto; field-sizing: content; min-width: 6ch; max-width: 100%; height: auto; padding: 0; background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--cp-texto); font: 700 46px/1.05 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .nome-linha .nome:is(:hover, :focus) { border-bottom-color: var(--cp-linha); background: transparent; }
+.cpr-fieldbook.ficha-personagem .apelido { display: inline-flex; align-items: baseline; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .apelido input {
+  width: auto; field-sizing: content; min-width: 4ch; height: auto; padding: 0; background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--cp-amarelo); font: inherit; text-transform: uppercase; text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .apelido input:is(:hover, :focus) { border-bottom-color: var(--cp-amarelo); background: transparent; }
+.cpr-fieldbook.ficha-personagem .indicadores { display: flex; flex-wrap: wrap; gap: 10px; }
+.cpr-fieldbook.ficha-personagem .indicador {
+  display: flex; flex-direction: column; align-items: center; min-width: 88px; padding: 8px 14px;
+  background: var(--cp-painel); border-top: 2px solid var(--cp-amarelo); text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .indicador .valor { display: flex; align-items: baseline; justify-content: center; }
+.cpr-fieldbook.ficha-personagem .indicador input {
+  width: 2.6ch; height: auto; padding: 0; background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .indicador input.largo { width: 6ch; }
+.cpr-fieldbook.ficha-personagem .indicador input:is(:hover, :focus) { border-bottom-color: currentColor; background: transparent; }
+.cpr-fieldbook.ficha-personagem .indicador small { font-family: var(--cp-dados); font-size: 14px; }
+.cpr-fieldbook.ficha-personagem .indicador i { font-family: var(--cp-dados); font-size: 11px; font-style: normal; letter-spacing: 0.15em; color: var(--cp-fraco); }
+/* A Sorte usada na sessão, embaixo do rótulo (amarela quando já se gastou alguma). */
+.cpr-fieldbook.ficha-personagem .indicador.sorte .usada { margin-top: 1px; font-size: 10px; letter-spacing: 0.15em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .indicador.sorte .usada.gasta { color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .indicador.hp { border-top-color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .indicador.hp input { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .indicador.hp:is(.estado-grave, .estado-mortal) { background: color-mix(in srgb, var(--cp-vermelho) 18%, var(--cp-painel)); }
+/* A Sorte: os pontos preparados para o próximo teste (− e +) e o ↺ do começo da sessão. */
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes button {
+  width: 20px; height: 20px; min-height: 0; padding: 0; border: 1px solid var(--cp-linha); border-radius: 0;
+  background: transparent; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; line-height: 1;
+}
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes button:hover { border-color: var(--cp-amarelo); color: var(--cp-amarelo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .indicador.sorte .sorte-acoes b { min-width: 3ch; text-align: center; font-family: var(--cp-dados); font-size: 12px; font-weight: 400; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .indicador.sorte.preparada { border-top-color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .indicador.sorte.preparada .sorte-acoes b { color: var(--cp-ciano); }
+/* Eurodólares, IP e Reputação: o indicador é um botão que abre o extrato (o valor muda por lá, com o motivo). O Facedown
+do capanga é um botão do mesmo jeito, que rola. */
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola) {
+  width: auto; height: auto; min-height: 0; gap: 0; margin: 0; border: none; border-top: 2px solid var(--cp-amarelo); border-radius: 0;
+  background: var(--cp-painel); box-shadow: none; color: var(--cp-texto); font: inherit; line-height: 1; cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola):hover { border-top-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 10%, var(--cp-painel)); }
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola) b { min-width: 2.6ch; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .indicador.com-extrato b.negativo { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .indicador:is(.com-extrato, .rola) i { margin-top: 4px; }
+
+/* ---------- Abas ---------- */
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs {
+  display: flex; flex: none; gap: 4px; margin: 0; padding: 0; overflow-x: auto; justify-content: flex-start;
+  border: none; border-bottom: 2px solid var(--cp-amarelo);
+}
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs > a {
+  display: flex; align-items: center; gap: 8px; flex: none; padding: 10px 18px; border: none; background: var(--cp-painel); color: #c9c7bb;
+  font: 700 15px var(--cp-titulo); letter-spacing: 0.15em; text-transform: uppercase; text-shadow: none;
+}
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs > a:hover { color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem nav.sheet-tabs > a.active { background: var(--cp-amarelo); color: var(--cp-fundo); }
+.cpr-fieldbook.ficha-personagem section.tab { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
+.cpr-fieldbook.ficha-personagem section.tab.active { display: flex; flex-direction: column; gap: 16px; }
+.cpr-fieldbook.ficha-personagem section.tab:not(.active) { display: none; }
+.cpr-fieldbook.ficha-personagem .duas-colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+/* As abas no jeito das maquetes do usuário: à esquerda, a coluna dos números (os painéis de resumo); à direita, o
+   conteúdo (as listas e as tabelas). */
+.cpr-fieldbook.ficha-personagem .aba-colunas { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 16px; align-items: start; }
+/* As duas Roles (o C23): o bloco da segunda abaixo do da principal, e o painel de acrescentar. */
+.cpr-fieldbook.ficha-personagem .role-bloco + .role-bloco, .cpr-fieldbook.ficha-personagem .tab.role > .segunda-role { margin-top: 16px; }
+.cpr-fieldbook.ficha-personagem .segunda-role-campos { display: flex; align-items: center; gap: 8px; }
+.cpr-fieldbook.ficha-personagem .segunda-role-campos input[type="text"] { flex: 1; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .segunda-role-campos input.rank { width: 4em; }
+.cpr-fieldbook.ficha-personagem :is(.coluna-resumo, .coluna-principal) { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .numero-grande { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 2px; }
+.cpr-fieldbook.ficha-personagem .numero-grande b { color: var(--cp-amarelo); font: 700 48px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .numero-grande small { color: var(--cp-fraco); font: 700 22px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .medida b.destaque { color: var(--cp-amarelo); font-size: 18px; }
+/* O painel ciano (a Humanidade, a NET): a borda e o número grande na cor. */
+.cpr-fieldbook.ficha-personagem .painel.ciano { border-left-color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .painel.ciano .numero-grande b { color: var(--cp-ciano); }
+/* A conexão na NET, na aba NET: o nome do ponto de acesso em ciano; desconectado, apagado. */
+.cpr-fieldbook.ficha-personagem .medida b.conexao { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .medida b.conexao.conectado { color: var(--cp-ciano); }
+/* Os slots do deck em caixas (ciano) e o estado de cada programa (guardado, carregado, ativo), como as maquetes. */
+.cpr-fieldbook.ficha-personagem .pontos-visuais.slots { --cor-pontos: var(--cp-ciano); --passo: 14px; display: inline-block; height: 10px; vertical-align: middle; }
+.cpr-fieldbook.ficha-personagem .estado-programa { flex: none; padding: 1px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .estado-programa.estado-carregado { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .estado-programa.estado-ativo { border-color: var(--cp-amarelo); background: var(--cp-amarelo); color: var(--cp-fundo); }
+/* A arquitetura ao vivo, na aba NET: o andar, o que há nele e o estado (hostil em vermelho, trancado em ciano). */
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo li { flex-wrap: wrap; }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .rotulo-andar { flex: none; min-width: 3ch; color: var(--cp-ciano); font: 700 14px var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .detalhe { flex: 1 1 8ch; color: var(--cp-texto); white-space: normal; text-align: left; }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .estado-andar { flex: none; padding: 1px 6px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 10px/1.4 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .andar-hostil .estado-andar { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .arquitetura-ao-vivo .andar-trancado .estado-andar { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+/* As notas curtas da coluna dos números (a Role, a ciberpsicose): um campo de texto que ocupa o painel. */
+.cpr-fieldbook.ficha-personagem .notas-curtas textarea { width: 100%; min-height: 5.5em; margin-top: 8px; resize: vertical; font: 400 15px/1.4 var(--cp-titulo); }
+/* A Role: cada especialidade com os pontos em caixas (o desenho; o número continua no campo), como a maquete "Role Tab". */
+.cpr-fieldbook.ficha-personagem .habilidade { grid-template-columns: minmax(0, 1fr) auto auto 56px; }
+.cpr-fieldbook.ficha-personagem .habilidade > .nome { grid-column: 1; }
+.cpr-fieldbook.ficha-personagem .habilidade > .efeito { grid-column: 2; }
+.cpr-fieldbook.ficha-personagem .habilidade > .pontos-visuais { grid-column: 3; }
+.cpr-fieldbook.ficha-personagem .habilidade > input { grid-column: 4; }
+.cpr-fieldbook:is(.ficha-personagem, .ficha-item) .pontos-visuais {
+  --passo: 20px; width: max(0px, calc(var(--max) * var(--passo) - 4px)); height: 12px;
+  background:
+    linear-gradient(90deg, var(--cor-pontos, var(--cp-amarelo)) calc(var(--pontos) * var(--passo)), transparent 0),
+    linear-gradient(var(--cp-fraco), var(--cp-fraco)) top / 100% 1px no-repeat,
+    linear-gradient(var(--cp-fraco), var(--cp-fraco)) bottom / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--cp-fraco) 0 1px, transparent 1px calc(var(--passo) - 5px), var(--cp-fraco) calc(var(--passo) - 5px) calc(var(--passo) - 4px), transparent calc(var(--passo) - 4px) var(--passo));
+  mask: repeating-linear-gradient(90deg, #000 0 calc(var(--passo) - 4px), transparent calc(var(--passo) - 4px) var(--passo));
+}
+/* A NET: as habilidades de Interface em cartões (o nome grande, o valor sem o dado e o custo), como a maquete "Net Tab". */
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li {
+  position: relative; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px 9px; background: var(--cp-poco); border-top: 2px solid var(--cp-ciano);
+}
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li > .acao:first-child {
+  padding: 0; border: none; background: transparent; color: var(--cp-texto); font: 700 18px/1.1 var(--cp-titulo); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li > .acao:first-child b { color: var(--cp-ciano); font: 400 15px var(--cp-dados); }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li > .acao:first-child:hover { color: var(--cp-amarelo); background: transparent; }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface li small { color: var(--cp-fraco); letter-spacing: 0.06em; }
+.cpr-fieldbook.ficha-personagem .interface-net .habilidades-interface .dano-zap { position: absolute; top: 8px; right: 8px; padding: 1px 6px; font-size: 11px; }
+/* O Neuroport (neuroport.mjs): as ligações do netrunner, o Jack In e quem está no Neuroport deste ator. */
+.cpr-fieldbook.ficha-personagem .neuroports .jack-in { margin-top: 6px; }
+.cpr-fieldbook.ficha-personagem .neuroports .conexao-direta { margin-left: 6px; }
+.cpr-fieldbook.ficha-personagem .neuroports .direta { color: var(--cp-ciano); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
+.cpr-fieldbook.ficha-personagem .neuroports .andares-neuroport { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.04em; }
+.cpr-fieldbook.ficha-personagem .neuroports .passwalls { color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.06em; }
+.cpr-fieldbook.ficha-personagem .neuroports .no-meu { margin: 6px 0 0; color: var(--cp-vermelho); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.ficha-personagem .neuroports .no-meu small { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .neuroports .no-meu .expulsar { margin: 0 6px 0 2px; }
+/* A Vida: o Lifepath em painéis, como a maquete "Lifepath Tab"; o da Role, largo. */
+.cpr-fieldbook.ficha-personagem .lifepath-grupos { align-items: start; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath { display: flex; flex-direction: column; gap: 10px; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath.largo { grid-column: 1 / -1; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath .campo-lifepath { padding-bottom: 8px; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath .campo-lifepath:last-child { padding-bottom: 0; border-bottom: none; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath .campo-lifepath span { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath textarea { min-height: 2.2em; background: transparent; border-color: transparent; font-size: 17px; }
+.cpr-fieldbook.ficha-personagem .grupo-lifepath textarea:hover { border-color: var(--cp-linha); }
+.cpr-fieldbook.ficha-personagem .coluna-resumo .barra { margin-top: 4px; }
+.cpr-fieldbook.ficha-personagem .coluna-resumo .estado-caixa { margin-top: 12px; }
+
+/* ---------- Perícias: o painel geral em três colunas ---------- */
+.cpr-fieldbook.ficha-personagem .geral { display: grid; grid-template-columns: 300px minmax(0, 1fr) 330px; gap: 16px; }
+.cpr-fieldbook.ficha-personagem .coluna { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .crescer { flex: 1; }
+.cpr-fieldbook.ficha-personagem .atributos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .atributo {
+  position: relative; display: flex; flex-direction: column; align-items: center; padding: 6px 0 4px;
+  background: var(--cp-poco); border-top: 2px solid var(--cp-ciano);
+}
+.cpr-fieldbook.ficha-personagem .atributo input {
+  width: 100%; height: auto; padding: 0; background: transparent; border: none; color: var(--cp-amarelo);
+  font: 700 28px/1 var(--cp-titulo); text-align: center;
+}
+.cpr-fieldbook.ficha-personagem .atributo .rolar {
+  width: 100%; height: auto; min-height: 0; padding: 2px 0 0; background: none; border: none; color: var(--cp-fraco);
+  font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; line-height: 1.2; cursor: pointer;
+}
+.cpr-fieldbook.ficha-personagem .atributo .rolar:hover { color: var(--cp-amarelo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem .atributo .efetivo { position: absolute; top: 2px; right: 4px; font-family: var(--cp-dados); font-size: 12px; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .medida { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 10px 0 3px; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .medida b { font-family: var(--cp-dados); font-weight: 400; text-transform: none; text-align: right; }
+.cpr-fieldbook.ficha-personagem .medida input { width: 4ch; height: 24px; padding: 0 2px; text-align: right; font-size: 15px; }
+.cpr-fieldbook.ficha-personagem .barra { height: 12px; background: var(--cp-poco); }
+.cpr-fieldbook.ficha-personagem .barra > div { height: 100%; }
+.cpr-fieldbook.ficha-personagem .barra .hp { background: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .barra .hum { background: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem :is(.death-save, .rolavel) a { cursor: pointer; color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .death-save .zerar { margin-left: 6px; color: var(--cp-fraco); text-decoration: underline; }
+
+/* As perícias: nome, atributo, nível e a base (sem o dado). */
+.cpr-fieldbook.ficha-personagem .lista-pericias { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .linha-pericia {
+  display: grid; grid-template-columns: minmax(0, 1fr) 44px 40px 44px; align-items: center; gap: 6px;
+  padding: 4px 0; border-bottom: 1px solid var(--cp-linha); font-size: 16px;
+}
+.cpr-fieldbook.ficha-personagem .linha-pericia > :nth-child(n+2) { text-align: center; font-family: var(--cp-dados); }
+.cpr-fieldbook.ficha-personagem .linha-pericia.cabeca { padding-top: 0; font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .celula-nome { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .pericia .nome { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.ficha-personagem .pericia .nome:hover { color: var(--cp-amarelo); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem .pericia .tirar { color: var(--cp-fraco); font-size: 11px; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem .pericia .tirar:hover { color: var(--cp-vermelho); }
+/* O "+IP" da perícia (o C39): subir um nível gastando IP. */
+.cpr-fieldbook.ficha-personagem .pericia .subir-ip { color: var(--cp-fraco); font-size: 11px; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem .pericia .subir-ip:hover { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .pericia input { width: 100%; height: 24px; padding: 0; background: transparent; border-color: transparent; text-align: center; font-size: 16px; }
+.cpr-fieldbook.ficha-personagem .pericia input:is(:hover, :focus) { background: var(--cp-poco); border-color: var(--cp-linha); }
+.cpr-fieldbook.ficha-personagem .pericia:not(.tem) :is(.nome, input, .total) { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .pericia.alta input { color: var(--cp-amarelo); font-weight: 700; }
+.cpr-fieldbook.ficha-personagem .pericia .sigla { font-size: 12px; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .grupo-pericias {
+  padding: 12px 0 4px; border-bottom: 1px solid var(--cp-linha);
+  font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.2em; color: var(--cp-amarelo); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .alternar-pericias { padding: 2px 8px; font-size: 11px; }
+.cpr-fieldbook.ficha-personagem .pericias-painel .novo { margin-top: 12px; }
+
+/* A coluna da direita: armadura, armas, cyberware e lesões. */
+.cpr-fieldbook.ficha-personagem .sp-caixas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.cpr-fieldbook.ficha-personagem .sp-caixas > div {
+  padding: 8px; background: var(--cp-poco); border-top: 2px solid var(--cp-vermelho); text-align: center; font-size: 14px; letter-spacing: 0.1em;
+}
+.cpr-fieldbook.ficha-personagem .sp-caixas b { display: block; color: var(--cp-vermelho); font: 700 34px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .sp-caixas small { display: block; font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.1em; }
+.cpr-fieldbook.ficha-personagem .item-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--cp-linha); font-size: 16px; }
+.cpr-fieldbook.ficha-personagem .item-linha .nome { min-width: 0; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem .item-linha .nome:hover { color: var(--cp-amarelo); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem .item-linha small { display: block; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; }
+.cpr-fieldbook.ficha-personagem .lesoes .item-linha .nome { color: var(--cp-vermelho); }
+/* A lesão corrigida até o fim do dia (a correção rápida): a marca em ciano. */
+.cpr-fieldbook.ficha-personagem .lesoes .corrigida { flex: none; padding: 1px 8px; border: 1px solid var(--cp-ciano); color: var(--cp-ciano); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
+/* O estabilizado (o C36), junto do ferimento: a mesma marca em ciano. */
+.cpr-fieldbook.ficha-personagem .botoes-resumo.cura .estabilizado { align-self: center; padding: 1px 8px; border: 1px solid var(--cp-ciano); color: var(--cp-ciano); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
+
+/* ---------- Listas de itens (Combate, Equipamento, Cyberware, NET) ---------- */
+.cpr-fieldbook.ficha-personagem ol.itens { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem ol.itens > li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--cp-linha); font-size: 16px; }
+.cpr-fieldbook.ficha-personagem ol.itens > li.vazio { border: none; font-size: 14px; }
+.cpr-fieldbook.ficha-personagem ol.itens > li.guardada { opacity: 0.55; }
+.cpr-fieldbook.ficha-personagem ol.itens img { flex: none; width: 24px; height: 24px; border: none; }
+.cpr-fieldbook.ficha-personagem ol.itens .nome { flex: 0 1 auto; font-weight: 700; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem ol.itens .nome:hover { color: var(--cp-amarelo); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem ol.itens .detalhe { flex: 1; min-width: 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem ol.itens button {
+  flex: none; width: auto; height: auto; min-height: 0; padding: 3px 8px; border: 1px solid var(--cp-linha); border-radius: 0;
+  background: transparent; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; line-height: 1.2;
+}
+.cpr-fieldbook.ficha-personagem ol.itens button:hover { border-color: var(--cp-amarelo); color: var(--cp-amarelo); box-shadow: none; }
+.cpr-fieldbook.ficha-personagem ol.itens button.alternar.ligado { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem ol.itens button.apagar { border-color: transparent; }
+.cpr-fieldbook.ficha-personagem ol.itens button.apagar:hover { color: var(--cp-vermelho); border-color: var(--cp-vermelho); }
+/* A estrela dos favoritos (o C20): apagada até marcar; marcada, em amarelo. */
+.cpr-fieldbook.ficha-personagem .estrela { flex: none; color: var(--cp-fraco); opacity: 0.45; font-size: 11px; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem ol.itens button.estrela { border-color: transparent; }
+.cpr-fieldbook.ficha-personagem .estrela:hover, .cpr-fieldbook.ficha-personagem ol.itens button.estrela:hover { color: var(--cp-amarelo); opacity: 1; text-shadow: none; }
+.cpr-fieldbook.ficha-personagem .estrela.ligada, .cpr-fieldbook.ficha-personagem ol.itens button.estrela.ligada { color: var(--cp-amarelo); opacity: 1; }
+.cpr-fieldbook.ficha-personagem .favoritos .medida span { display: flex; align-items: center; gap: 6px; }
+.cpr-fieldbook.ficha-personagem .favoritos .item-linha .nome { flex: 1; }
+/* O painel de Eurodólares (aba Equipamento): o saldo, o botão do extrato e as últimas mudanças. */
+.cpr-fieldbook.ficha-personagem .dinheiro .titulo span { color: var(--cp-fraco); font-size: 12px; letter-spacing: 0.15em; }
+.cpr-fieldbook.ficha-personagem .botoes-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+/* O botão que liga um estado (o "Em cobertura"): ligado, cheio em ciano. */
+.cpr-fieldbook.ficha-personagem .botoes-resumo .acao.ligado { border-color: var(--cp-ciano); background: var(--cp-ciano); color: var(--cp-fundo); }
+/* A aba Cyberware em árvore: as opções logo abaixo da fundação, os slots dela e a opção sem fundação. */
+.cpr-fieldbook.ficha-personagem .tab.cyberware li.opcao { padding-left: 18px; }
+.cpr-fieldbook.ficha-personagem .tab.cyberware .detalhe .slots { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .tab.cyberware .detalhe .sem-fundacao { color: var(--cp-amarelo); }
+/* A quantidade do inventário com − e + (as maquetes do usuário). */
+.cpr-fieldbook.ficha-personagem ol.itens .quantidade { display: flex; flex: none; align-items: center; gap: 6px; }
+/* A droga viciada (o efeito secundário até a terapia). */
+.cpr-fieldbook.ficha-personagem ol.itens .viciado { flex: none; padding: 1px 8px; border: 1px solid var(--cp-vermelho); color: var(--cp-vermelho); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
+.cpr-fieldbook.ficha-personagem ol.itens .quantidade b { min-width: 2ch; color: var(--cp-amarelo); font: 400 15px var(--cp-dados); text-align: center; }
+.cpr-fieldbook.ficha-personagem ol.itens .quantidade button { width: 24px; height: 24px; padding: 0; line-height: 1; }
+/* Na coluna estreita, o histórico recente: a mudança em cima, o detalhe embaixo. */
+.cpr-fieldbook.ficha-personagem .coluna-resumo .extrato-recente > li { flex-wrap: wrap; gap: 0 8px; }
+.cpr-fieldbook.ficha-personagem .coluna-resumo .extrato-recente .detalhe { flex-basis: 100%; }
+/* As outras listas da coluna (a munição): o número numa linha só, à direita. */
+.cpr-fieldbook.ficha-personagem .coluna-resumo ol.itens:not(.extrato-recente) .detalhe { flex: none; color: var(--cp-amarelo); text-align: right; white-space: nowrap; }
+.cpr-fieldbook.ficha-personagem .extrato-recente .mudanca { flex: none; min-width: 9ch; font-family: var(--cp-dados); font-size: 15px; }
+.cpr-fieldbook.ficha-personagem .extrato-recente .entrou .mudanca { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .extrato-recente .saiu .mudanca { color: var(--cp-vermelho); }
+
+/* A tabela das armas (aba Combate), com os botões de cada modo. */
+.cpr-fieldbook.ficha-personagem table.lista { width: 100%; margin: 0; border: none; border-collapse: collapse; background: transparent; }
+.cpr-fieldbook.ficha-personagem table.lista thead { background: transparent; text-shadow: none; }
+.cpr-fieldbook.ficha-personagem table.lista th {
+  padding: 0 4px 6px; border: none; background: transparent; text-align: left;
+  font-family: var(--cp-dados); font-size: 11px; font-weight: 400; letter-spacing: 0.15em; color: var(--cp-fraco); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem table.lista tr { background: transparent; }
+.cpr-fieldbook.ficha-personagem table.lista td { padding: 6px 4px; border: none; border-top: 1px solid var(--cp-linha); vertical-align: middle; font-size: 16px; }
+.cpr-fieldbook.ficha-personagem table.lista td.num { text-align: center; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 17px; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 190px; font-weight: 700; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome img { width: 24px; height: 24px; border: none; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome a { cursor: pointer; }
+.cpr-fieldbook.ficha-personagem table.lista td.nome small { font-family: var(--cp-dados); font-size: 11px; font-weight: 400; }
+.cpr-fieldbook.ficha-personagem table.lista td.acoes .botoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.cpr-fieldbook.ficha-personagem table.lista td.acoes button { padding: 3px 8px; font-size: 12px; }
+.cpr-fieldbook.ficha-personagem table.lista tr.guardada { opacity: 0.5; }
+.cpr-fieldbook.ficha-personagem .classe-2077 { color: var(--cp-ciano) !important; }
+.cpr-fieldbook.ficha-personagem .aviso-2077 { color: var(--cp-vermelho) !important; font-weight: 700; }
+
+/* ---------- Role ---------- */
+.cpr-fieldbook.ficha-personagem .role-nome { margin: 0; font: 700 28px/1.1 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .role-nome small { font-family: var(--cp-dados); font-size: 14px; font-weight: 400; letter-spacing: 0.1em; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .texto { margin: 6px 0 0; line-height: 1.4; }
+.cpr-fieldbook.ficha-personagem .habilidades { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .habilidade { display: grid; grid-template-columns: minmax(0, 1fr) auto 56px; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-personagem .habilidade .nome { font-size: 17px; font-weight: 700; }
+.cpr-fieldbook.ficha-personagem .habilidade .nome small { display: block; font-family: var(--cp-dados); font-size: 12px; font-weight: 400; line-height: 1.4; }
+.cpr-fieldbook.ficha-personagem .habilidade .efeito { font-family: var(--cp-dados); font-size: 13px; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .habilidade input { height: auto; padding: 2px 0; text-align: center; color: var(--cp-amarelo); font: 700 22px var(--cp-titulo); }
+.cpr-fieldbook.ficha-personagem .habilidade:not(.tem) input { color: var(--cp-fraco); }
+/* A conferência dos pontos de Role: o que sobra (amarelo) e o que passou (vermelho). */
+.cpr-fieldbook.ficha-personagem .titulo .conta-erro { color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .habilidade input.acima { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-personagem .conferencia {
+  margin-top: 8px; padding: 8px; border: 1px dashed var(--cp-amarelo); color: var(--cp-amarelo); text-align: center;
+  font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.12em;
+}
+.cpr-fieldbook.ficha-personagem .conferencia.erro { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+/* As perícias que vêm das especialidades (a Cirurgia e a Tecnologia Médica do Medtech). */
+.cpr-fieldbook.ficha-personagem .derivadas { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 10px 0 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .derivadas b { color: var(--cp-ciano); font-family: var(--cp-dados); font-weight: 400; font-size: 15px; }
+.cpr-fieldbook.ficha-personagem .derivadas small { margin-left: 4px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; }
+/* As rolagens da habilidade de Role (o Impacto Carismático, a pechincha, o Backup...). */
+.cpr-fieldbook.ficha-personagem .rolagens-role { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.cpr-fieldbook.ficha-personagem .rolagens-role .acao small { margin-left: 6px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 11px; text-transform: none; }
+.cpr-fieldbook.ficha-personagem .rolagens-role .acao:hover small { color: inherit; }
+/* O que a Role soma nas perícias: o Moto do Nomad. */
+.cpr-fieldbook.ficha-personagem .bonus-role .soma { margin: 0; font-size: 16px; line-height: 1.4; }
+.cpr-fieldbook.ficha-personagem .bonus-role .soma b { color: var(--cp-ciano); font-family: var(--cp-dados); font-weight: 400; }
+
+/* ---------- Vida: o Lifepath, a moradia e as notas ---------- */
+.cpr-fieldbook.ficha-personagem .campo-lifepath { display: flex; flex-direction: column; gap: 3px; }
+.cpr-fieldbook.ficha-personagem .campo-lifepath span { font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-amarelo); text-transform: uppercase; }
+.cpr-fieldbook.ficha-personagem .campo-lifepath textarea { min-height: 2.8em; resize: vertical; font-family: var(--cp-titulo); font-size: 15px; line-height: 1.35; }
+.cpr-fieldbook.ficha-personagem .moradia .entradas-moradia { display: flex; align-items: center; gap: 8px; }
+.cpr-fieldbook.ficha-personagem .moradia .entradas-moradia > input[type="text"], .cpr-fieldbook.ficha-personagem .moradia .linha-moradia > input[type="text"] { flex: 1; min-width: 0; font-family: var(--cp-titulo); font-size: 16px; }
+.cpr-fieldbook.ficha-personagem .moradia .custo-moradia { display: flex; align-items: center; gap: 4px; flex: none; font-family: var(--cp-dados); font-size: 12px; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .moradia .custo-moradia input { width: 7ch; text-align: right; color: var(--cp-amarelo); font-size: 15px; }
+.cpr-fieldbook.ficha-personagem .notas prose-mirror { min-height: 18rem; background: var(--cp-poco); }
+
+/* ---------- Rodapé ---------- */
+.cpr-fieldbook.ficha-personagem .rodape {
+  display: flex; justify-content: space-between; gap: 12px; flex: none;
+  font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.2em; color: var(--cp-fraco); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-personagem .rodape span:first-child { color: var(--cp-ciano); }
+
+/* ---------- NET: as rolagens da Interface ---------- */
+.cpr-fieldbook.ficha-personagem .habilidades-interface { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 16px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-personagem .habilidades-interface li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cpr-fieldbook.ficha-personagem .habilidades-interface .acao b { margin-left: 4px; font-family: var(--cp-dados); font-weight: 400; }
+.cpr-fieldbook.ficha-personagem .habilidades-interface small { flex: 1; min-width: 0; font-family: var(--cp-dados); font-size: 11px; }
+
+/* Os programas no combate da NET: o ataque, o dano e a REZ de cada um. */
+.cpr-fieldbook.ficha-personagem .tab.net ol.itens > li { flex-wrap: wrap; }
+.cpr-fieldbook.ficha-personagem .tab.net ol.itens .rez { flex: none; font-family: var(--cp-dados); font-size: 13px; color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .tab.net ol.itens .rez.zerada { color: var(--cp-vermelho); }
+
+/* ---------- O C34: os efeitos, o +1 do Death Save e as listas que recolhem ---------- */
+/* A aba Efeitos: cada efeito com as mudanças, a origem e o estado (valendo em ciano, situacional em amarelo, parado apagado). */
+.cpr-fieldbook.ficha-personagem .tab.efeitos ol.itens > li { flex-wrap: wrap; }
+.cpr-fieldbook.ficha-personagem .tab.efeitos ol.itens .origem { flex: none; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .estado-efeito { flex: none; padding: 1px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.12em; }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .estado-valendo .estado-efeito { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .estado-situacional .estado-efeito { border-color: var(--cp-amarelo); color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-personagem .tab.efeitos .efeitos-parado ol.itens > li.efeito { opacity: 0.6; }
+/* O +1 do Death Save, ao lado do "zerar". */
+.cpr-fieldbook.ficha-personagem .death-save .subir { margin-left: 6px; color: var(--cp-fraco); text-decoration: underline; }
+/* O nome da lista que recolhe e expande (o _expandButton do CORE): recolhida, as linhas somem pelo CSS, menos as
+   favoritas; a busca da ficha esconde pelo hidden, e uma não desfaz a outra. */
+.cpr-fieldbook.ficha-personagem a.recolher { display: inline-flex; align-items: center; gap: 6px; color: inherit; cursor: pointer; }
+.cpr-fieldbook.ficha-personagem a.recolher:hover { color: var(--cp-texto); text-shadow: none; }
+.cpr-fieldbook.ficha-personagem a.recolher i { font-size: 9px; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-personagem .painel.recolhida ol.itens > li[data-item-id]:not(:has(.estrela.ligada)),
+.cpr-fieldbook.ficha-personagem .lista-pericias li.pericia.recolhida { display: none; }
+
+/* ---------- Capanga (o mook do CORE): uma página só, entre o cabeçalho e o rodapé ---------- */
+.cpr-fieldbook.ficha-capanga .corpo-capanga { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; }
+.cpr-fieldbook.ficha-capanga .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }
+.cpr-fieldbook.ficha-capanga .indicador b { min-width: 2.6ch; color: var(--cp-amarelo); font: 700 30px/1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-capanga .indicador i { margin-top: 4px; }
+/* A ficha limitada: a imagem, o nome e as notas. */
+.cpr-fieldbook.ficha-capanga .capanga-limitado { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.cpr-fieldbook.ficha-capanga .capanga-limitado .retrato { width: 120px; height: 136px; cursor: default; }
+.cpr-fieldbook.ficha-capanga .capanga-limitado .nome-linha .nome { font-size: 34px; border-bottom: none; }
+
+/* Veículo (C46): os campos curtos seguem os painéis e o cabeçalho do capanga. */
+.cpr-fieldbook.ficha-veiculo .campos-veiculo { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.cpr-fieldbook.ficha-veiculo .campos-veiculo label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 12ch; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.ficha-veiculo .campos-veiculo input[type="number"] { width: 8ch; }
+.cpr-fieldbook.ficha-veiculo .notas prose-mirror { min-height: 8rem; }
+.cpr-fieldbook.ficha-veiculo .retrato:not([data-action]) { cursor: default; }
+.cpr-fieldbook.ficha-veiculo .dono-do-veiculo { margin: 0 0 8px; color: var(--cp-fraco); font: 400 12px/1.4 var(--cp-dados); }
+.cpr-fieldbook.ficha-veiculo .dono-do-veiculo a { color: var(--cp-ciano); }
+
+/* ---------- Black ICE e demônio (os atores da NET): uma página só, no visual da ficha do personagem ---------- */
+.cpr-fieldbook.ficha-net .window-content { overflow-y: auto; }
+.cpr-fieldbook.ficha-net .ficha-net-corpo { display: flex; flex-direction: column; gap: 14px; }
+/* A janela é estreita (640 px), mas o cabeçalho fica em linha: a imagem ao lado do nome. */
+.cpr-fieldbook.ficha-personagem.ficha-net .topo { flex-direction: row; }
+.cpr-fieldbook.ficha-personagem.ficha-net .topo .retrato { width: 120px; height: 136px; }
+.cpr-fieldbook.ficha-personagem.ficha-net .nome-linha .nome { font-size: 36px; }
+.cpr-fieldbook.ficha-net .linha-id .modelo { color: var(--cp-amarelo); cursor: help; }
+.cpr-fieldbook.ficha-net .linha-id select {
+  width: auto; height: auto; padding: 0 2px; background: transparent; border: none; border-bottom: 1px solid var(--cp-linha);
+  color: var(--cp-amarelo); font: inherit; letter-spacing: inherit; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-net .linha-id select option { background: var(--cp-poco); color: var(--cp-texto); text-transform: none; }
+.cpr-fieldbook.ficha-net .indicador.rez { border-top-color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-net .indicador.rez input { color: var(--cp-ciano); }
+.cpr-fieldbook.ficha-net .atributos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cpr-fieldbook.ficha-net.ficha-demonio .atributos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cpr-fieldbook.ficha-net .atributo .rolar { text-transform: uppercase; }
+.cpr-fieldbook.ficha-net .campos-net { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-bottom: 8px; }
+.cpr-fieldbook.ficha-net .campos-net label {
+  display: flex; align-items: center; gap: 6px; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-net .campos-net input { width: 7ch; }
+.cpr-fieldbook.ficha-net .efeito-net textarea { width: 100%; min-height: 2.8em; resize: vertical; font-family: var(--cp-titulo); font-size: 15px; line-height: 1.35; }
+.cpr-fieldbook.ficha-net .notas prose-mirror { min-height: 8rem; }
+.cpr-fieldbook.ficha-net .acoes-net { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* ---------- Contêiner (o container do CORE): a loja, o saque, o esconderijo ---------- */
+.cpr-fieldbook.ficha-conteiner .ficha-conteiner-corpo { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.cpr-fieldbook.ficha-conteiner .conteiner-colunas { flex: 1; min-height: 0; }
+.cpr-fieldbook.ficha-conteiner .conteiner-colunas > .coluna-principal { max-height: 100%; overflow-y: auto; padding-right: 4px; }
+.cpr-fieldbook.ficha-conteiner .identidade-conteiner .retrato { display: block; width: 100%; height: 180px; object-fit: cover; }
+.cpr-fieldbook.ficha-conteiner .identidade-conteiner .nome { width: 100%; margin: 4px 0 0; font: 700 26px/1.1 var(--cp-titulo); }
+.cpr-fieldbook.ficha-conteiner .linha-id { margin: 10px 0 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-conteiner .linha-id .tipo-conteiner { margin-left: 6px; color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-conteiner .trocar select, .cpr-fieldbook.ficha-conteiner .campo-conteiner select { width: 100%; margin-top: 6px; }
+.cpr-fieldbook.ficha-conteiner .campo-conteiner { display: block; margin: 8px 0; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); text-transform: uppercase; }
+.cpr-fieldbook.ficha-conteiner .permissao { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.cpr-fieldbook.ficha-conteiner .subtitulo { margin: 10px 0 2px; font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; color: var(--cp-fraco); text-transform: uppercase; }
+.cpr-fieldbook.ficha-conteiner .categoria-conteiner .titulo { display: flex; align-items: center; gap: 8px; }
+.cpr-fieldbook.ficha-conteiner .categoria-conteiner .titulo .criar { flex: none; width: 26px; height: 26px; margin-left: auto; padding: 0; line-height: 1; }
+.cpr-fieldbook.ficha-conteiner ol.itens .detalhe .quantidade { display: inline; color: var(--cp-amarelo); }
+.cpr-fieldbook.ficha-conteiner .notas prose-mirror { min-height: 6rem; }
+
+/* ---------- Janela estreita ---------- */
+@container (max-width: 1020px) {
+  .cpr-fieldbook.ficha-personagem .geral { grid-template-columns: 280px minmax(0, 1fr); }
+  .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 700px) {
+  .cpr-fieldbook.ficha-personagem .topo { flex-direction: column; }
+  .cpr-fieldbook.ficha-personagem .nome-linha .nome { font-size: 34px; }
+  .cpr-fieldbook.ficha-personagem :is(.geral, .duas-colunas, .aba-colunas) { grid-template-columns: minmax(0, 1fr); }
+  .cpr-fieldbook.ficha-personagem .geral > .coluna:last-child { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- O extrato (Eurodólares, IP e Reputação) ---------- */
+.cpr-fieldbook.extrato .window-content { padding: 16px; overflow: hidden; }
+.cpr-fieldbook.extrato .extrato-conteudo { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+.cpr-fieldbook.extrato .corte { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+.cpr-fieldbook.extrato :is(button, a, input):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 2px; }
+/* O saldo, grande, no painel amarelo. */
+.cpr-fieldbook.extrato .saldo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px; background: var(--cp-painel); border-left: 3px solid var(--cp-amarelo); }
+.cpr-fieldbook.extrato .saldo i { font-family: var(--cp-dados); font-size: 12px; font-style: normal; letter-spacing: 0.2em; color: var(--cp-amarelo); text-transform: uppercase; }
+.cpr-fieldbook.extrato .saldo b { color: var(--cp-amarelo); font: 700 40px/1 var(--cp-titulo); }
+.cpr-fieldbook.extrato .saldo b.negativo { color: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .saldo b small { font-family: var(--cp-dados); font-size: 16px; font-weight: 400; color: var(--cp-fraco); }
+/* O menu: a quantia, o motivo e os três botões (somar em ciano, subtrair em vermelho, definir em amarelo). */
+.cpr-fieldbook.extrato .mudar { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 10px 12px; padding: 12px 16px; background: var(--cp-painel); border-left: 3px solid var(--cp-ciano); }
+.cpr-fieldbook.extrato .mudar label { display: flex; flex-direction: column; gap: 4px; font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; color: var(--cp-fraco); text-transform: uppercase; }
+.cpr-fieldbook.extrato .mudar input {
+  height: 30px; min-height: 0; padding: 0 8px; background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0; box-shadow: none;
+  color: var(--cp-texto); font-family: var(--cp-dados); font-size: 15px; letter-spacing: normal; line-height: 1.2; text-transform: none;
+}
+.cpr-fieldbook.extrato .mudar input:focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+.cpr-fieldbook.extrato .mudar input[type="number"] { appearance: textfield; }
+.cpr-fieldbook.extrato .mudar input[type="number"]::-webkit-inner-spin-button, .cpr-fieldbook.extrato .mudar input[type="number"]::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.cpr-fieldbook.extrato .mudar .botoes { grid-column: 1 / -1; display: flex; gap: 8px; }
+.cpr-fieldbook.extrato .mudar .botoes button {
+  --cor: var(--cp-amarelo);
+  flex: 1; height: auto; min-height: 0; padding: 6px 10px; border: 1px solid var(--cor); border-radius: 0; background: transparent; box-shadow: none;
+  color: var(--cor); font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.1em; line-height: 1.2; cursor: pointer;
+}
+.cpr-fieldbook.extrato .mudar .botoes button[data-action="somar"] { --cor: var(--cp-ciano); }
+.cpr-fieldbook.extrato .mudar .botoes button[data-action="subtrair"] { --cor: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .mudar .botoes button:hover { background: var(--cor); color: var(--cp-fundo); box-shadow: none; }
+/* O histórico, do mais novo para o mais antigo: só a lista rola, o cabeçalho fica. */
+.cpr-fieldbook.extrato .historico { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 12px 16px; background: var(--cp-painel); border-left: 3px solid var(--cp-amarelo); }
+.cpr-fieldbook.extrato .historico ol { flex: 1; min-height: 0; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.cpr-fieldbook.extrato .historico .linha {
+  display: grid; grid-template-columns: 2.2rem 7.4rem 7.6rem 4.6rem minmax(0, 1fr) 6.5rem 1.4rem; align-items: baseline; gap: 6px;
+  padding: 6px 0; border-bottom: 1px solid var(--cp-linha); font-family: var(--cp-dados); font-size: 13px;
+}
+.cpr-fieldbook.extrato .historico .linha.cabeca { padding-top: 0; font-size: 11px; letter-spacing: 0.15em; color: var(--cp-fraco); }
+.cpr-fieldbook.extrato .historico :is(.numero, .quando, .usuario) { color: var(--cp-fraco); font-size: 12px; }
+.cpr-fieldbook.extrato .historico .usuario { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.extrato .historico .saldo-linha { color: var(--cp-amarelo); }
+.cpr-fieldbook.extrato .historico .saldo-linha.negativo { color: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .historico .motivo { font-family: var(--cp-titulo); font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+.cpr-fieldbook.extrato .historico .entrou .mudanca { color: var(--cp-ciano); }
+.cpr-fieldbook.extrato .historico .saiu .mudanca { color: var(--cp-vermelho); }
+.cpr-fieldbook.extrato .historico .apagar { color: var(--cp-fraco); text-align: center; cursor: pointer; }
+.cpr-fieldbook.extrato .historico .apagar:hover { color: var(--cp-vermelho); text-shadow: none; }
+.cpr-fieldbook.extrato .historico .vazio { padding: 10px 0; color: var(--cp-fraco); font-style: italic; }
+
+/* ---------- A janela de rolagem ---------- */
+.cpr-fieldbook.janela-rolagem .window-content { padding: 14px 16px; }
+.cpr-fieldbook.janela-rolagem .dialog-content { display: flex; flex-direction: column; gap: 10px; }
+.cpr-fieldbook.janela-rolagem .partes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-rolagem .partes li { padding: 3px 8px; background: var(--cp-poco); border-top: 1px solid var(--cp-ciano); color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.janela-rolagem .partes li b { color: var(--cp-texto); font-weight: 400; }
+.cpr-fieldbook.janela-rolagem .partes li.dado { border-top-color: var(--cp-amarelo); color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-rolagem fieldset {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 0; padding: 8px 12px 10px;
+  background: var(--cp-painel); border: none; border-left: 3px solid var(--cp-amarelo);
+}
+.cpr-fieldbook.janela-rolagem fieldset.situacionais { grid-template-columns: minmax(0, 1fr); border-left-color: var(--cp-ciano); }
+.cpr-fieldbook.janela-rolagem legend { padding: 0 4px; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+.cpr-fieldbook.janela-rolagem fieldset label { display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 1.25; cursor: pointer; }
+.cpr-fieldbook.janela-rolagem fieldset label span { flex: 1; min-width: 0; }
+.cpr-fieldbook.janela-rolagem fieldset label b { color: var(--cp-fraco); font-family: var(--cp-dados); font-weight: 400; }
+.cpr-fieldbook.janela-rolagem fieldset label:has(input:checked) b { color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-rolagem input[type="checkbox"] { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-rolagem .linha { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.cpr-fieldbook.janela-rolagem .linha label { display: flex; align-items: center; gap: 8px; color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.janela-rolagem .linha input {
+  width: 6ch; height: 28px; min-height: 0; padding: 0 4px; background: var(--cp-poco); border: 1px solid var(--cp-linha); border-radius: 0;
+  color: var(--cp-texto); font-family: var(--cp-dados); font-size: 15px; text-align: center;
+}
+.cpr-fieldbook.janela-rolagem .linha input:focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+.cpr-fieldbook.janela-rolagem .total { display: flex; justify-content: space-between; align-items: baseline; margin: 0; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; }
+.cpr-fieldbook.janela-rolagem .total b { font: 700 32px/1 var(--cp-titulo); letter-spacing: 0; }
+.cpr-fieldbook.janela-rolagem .form-footer button { border-radius: 0; font-family: var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.janela-rolagem .form-footer button[data-action="rolar"] { background: var(--cp-amarelo); border-color: var(--cp-amarelo); color: var(--cp-fundo); }
+
+/* ---------- A janela de reação do alvo ("Você está sendo atacado!") ---------- */
+/* Como a "Ataque!" do Fluxo de Combate: quem ataca e quem é atacado, a arma, as escolhas com a conta e a barra do tempo. */
+.cpr-fieldbook.janela-defesa .window-header { border-bottom-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa .window-content { padding: 12px 14px 14px; }
+.cpr-fieldbook.janela-defesa .defesa-conteudo { display: flex; flex-direction: column; gap: 10px; }
+.cpr-fieldbook.janela-defesa .duelo { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.cpr-fieldbook.janela-defesa .duelo figure { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; max-width: 170px; margin: 0; }
+.cpr-fieldbook.janela-defesa .duelo img { width: 64px; height: 64px; object-fit: cover; background: var(--cp-poco); border: 1px solid var(--cp-linha); border-top: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.janela-defesa .duelo figure:last-child img { border-top-color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa .duelo figcaption { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 15px/1.2 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.janela-defesa .duelo > i { color: var(--cp-vermelho); font-size: 22px; }
+.cpr-fieldbook.janela-defesa p { margin: 0; text-align: center; }
+.cpr-fieldbook.janela-defesa .arma { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.04em; }
+.cpr-fieldbook.janela-defesa .arma b { color: var(--cp-amarelo); font-weight: 400; }
+.cpr-fieldbook.janela-defesa .total { color: var(--cp-texto); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.janela-defesa .total b { color: var(--cp-vermelho); font: 700 22px/1 var(--cp-titulo); letter-spacing: 0; }
+.cpr-fieldbook.janela-defesa .nota { color: var(--cp-fraco); font-size: 13px; }
+.cpr-fieldbook.janela-defesa .opcoes { display: flex; flex-direction: column; gap: 6px; }
+.cpr-fieldbook.janela-defesa button.opcao {
+  display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; height: auto; min-height: 0; margin: 0; padding: 8px 12px;
+  background: var(--cp-painel); border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-ciano); border-radius: 0;
+  color: var(--cp-texto); font-family: var(--cp-titulo); text-align: left; line-height: 1.3; cursor: pointer; box-shadow: none;
+}
+.cpr-fieldbook.janela-defesa button.opcao > i { flex: none; width: 22px; margin: 0; color: var(--cp-ciano); font-size: 18px; text-align: center; }
+.cpr-fieldbook.janela-defesa button.opcao span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cpr-fieldbook.janela-defesa button.opcao span > b { font: 700 15px/1.2 var(--cp-titulo); letter-spacing: 0.06em; text-transform: uppercase; }
+.cpr-fieldbook.janela-defesa button.opcao small { color: var(--cp-fraco); font-family: var(--cp-dados); font-size: 12px; white-space: normal; }
+.cpr-fieldbook.janela-defesa button.opcao small b { color: var(--cp-amarelo); font-weight: 400; }
+.cpr-fieldbook.janela-defesa button.opcao.aguentar { border-left-color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa button.opcao.aguentar > i { color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-defesa button.opcao.escudo { border-left-color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-defesa button.opcao.escudo > i { color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-defesa button.opcao:is(:hover, :focus-visible) {
+  border-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 10%, var(--cp-painel)); outline: none;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cp-ciano) 35%, transparent);
+}
+.cpr-fieldbook.janela-defesa .tempo { height: 4px; overflow: hidden; background: var(--cp-poco); }
+.cpr-fieldbook.janela-defesa .tempo span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, var(--cp-vermelho), var(--cp-amarelo)); transition: width 0.25s linear; }
+
+/* ---------- Cartões do chat ---------- */
+/* A mensagem inteira é o cartão (as maquetes do usuário): o painel com o canto cortado e a faixa de cima na cor do tipo;
+   na linha de cima, o tipo e quem rolou, com a hora. O tipo vem do cartão dentro da mensagem (:has), e o rótulo dele é
+   desenhado pelo CSS, para o texto do cartão continuar o mesmo. */
+.chat-message.cprf-mensagem {
+  --acento: var(--cp-amarelo); --tipo: 'TESTE';
+  position: relative; padding: 12px 14px 12px; border: none; border-radius: 0; background-color: var(--cp-painel);
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  color: var(--cp-texto); font-family: var(--cp-titulo); font-size: 14px;
+}
+/* A faixa de cima (um elemento à parte: a cor do jogador que o Foundry põe na borda não a troca). */
+.chat-message.cprf-mensagem::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--acento); }
+.chat-message.cprf-mensagem:has(.cartao.tipo-ataque) { --acento: var(--cp-vermelho); --tipo: 'ATAQUE'; }
+.chat-message.cprf-mensagem:has(.cartao.tipo-defesa) { --acento: var(--cp-ciano); --tipo: 'DEFESA'; }
+.chat-message.cprf-mensagem:has(.cartao.tipo-net) { --acento: var(--cp-ciano); --tipo: 'NET'; }
+.chat-message.cprf-mensagem:has(.cartao.backup) { --acento: var(--cp-ciano); --tipo: 'BACKUP'; }
+.chat-message.cprf-mensagem:has(.cartao.backup.falhou) { --acento: var(--cp-fraco); }
+.chat-message.cprf-mensagem:has(.cartao.ataque) { --acento: var(--cp-vermelho); --tipo: 'RESULTADO'; }
+.chat-message.cprf-mensagem:has(.cartao.dano) { --acento: var(--cp-vermelho); --tipo: 'DANO'; }
+.chat-message.cprf-mensagem:has(.cartao.dano.net) { --acento: var(--cp-ciano); --tipo: 'DANO NET'; }
+.chat-message.cprf-mensagem:has(.cartao.dano-net) { --acento: var(--cp-ciano); --tipo: 'NET'; }
+.chat-message.cprf-mensagem:has(.cartao.death-save) { --acento: var(--cp-ciano); --tipo: 'DEATH SAVE'; }
+.chat-message.cprf-mensagem:has(.cartao.death-save.falhou) { --acento: var(--cp-vermelho); }
+.chat-message.cprf-mensagem:has(.cartao.lesao) { --acento: var(--cp-vermelho); --tipo: 'LESÃO'; }
+.chat-message.cprf-mensagem:has(.cartao.espera) { --acento: var(--cp-fraco); --tipo: 'DEFESA'; }
+.chat-message.cprf-mensagem:has(.cartao.morte) { --acento: var(--cp-vermelho); --tipo: 'MORTE'; }
+.chat-message.cprf-mensagem:has(.cartao.migracao) { --acento: var(--cp-fraco); --tipo: 'SISTEMA'; }
+.chat-message.cprf-mensagem:has(.cartao.conserto) { --acento: var(--cp-ciano); --tipo: 'CONSERTO'; }
+.chat-message.cprf-mensagem:has(.cartao.humanidade) { --acento: var(--cp-vermelho); --tipo: 'HUMANIDADE'; }
+.chat-message.cprf-mensagem:has(.cartao.tratamento) { --acento: var(--cp-ciano); --tipo: 'TRATAMENTO'; }
+.chat-message.cprf-mensagem:has(.cartao.tratamento.falhou) { --acento: var(--cp-fraco); }
+.chat-message.cprf-mensagem:has(.cartao.droga) { --acento: var(--cp-amarelo); --tipo: 'DROGA'; }
+.chat-message.cprf-mensagem:has(.cartao.droga.viciou) { --acento: var(--cp-vermelho); }
+/* A linha de cima: o tipo na cor dele, quem rolou e, à direita, a hora e o apagar. */
+.chat-message.cprf-mensagem .message-header { align-items: baseline; margin: 0 0 4px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.12em; }
+.chat-message.cprf-mensagem .message-sender { overflow: hidden; color: var(--cp-texto); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.14em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.chat-message.cprf-mensagem .message-sender::before { content: var(--tipo) ' // '; color: var(--acento); }
+.chat-message.cprf-mensagem :is(.message-metadata, .whisper-to, .flavor-text) { color: var(--cp-fraco); font-family: var(--cp-dados); }
+.chat-message.cprf-mensagem .message-content { margin: 0; }
+
+/* O corpo: o título grande, o que soma (o subtítulo), os dados com o total, o resultado, a regra e os botões. A ordem
+   é do CSS (o cabeçalho do cartão some na caixa dele: o título vem primeiro e a regra vai para baixo). */
+.cpr-fieldbook.cartao { display: flex; flex-direction: column; gap: 6px; color: var(--cp-texto); font-family: var(--cp-titulo); }
+.cpr-fieldbook.cartao > * { order: 4; margin: 0; }
+.cpr-fieldbook.cartao header { display: contents; }
+.cpr-fieldbook.cartao h3 { order: 1; margin: 0; border: none; color: var(--cp-texto); font: 700 21px/1.1 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.cartao p { margin: 0; line-height: 1.35; }
+.cpr-fieldbook.cartao b { color: var(--cp-amarelo); }
+/* O que soma ao 1d10, como o subtítulo da maquete: "1D10 · REF +8 · ARMAS DE UMA MÃO +4". */
+.cpr-fieldbook.cartao .partes { order: 2; display: flex; flex-wrap: wrap; gap: 2px 0; padding: 0; list-style: none; color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.06em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .partes li + li::before { content: '·'; margin: 0 6px; color: var(--cp-linha); }
+.cpr-fieldbook.cartao .partes li b { color: var(--acento, var(--cp-amarelo)); font-weight: 400; }
+/* Os dados: cada um numa caixa (o 10 do crítico em amarelo, o 1 da falha em vermelho), o resto e o total grande. */
+.cpr-fieldbook.cartao .dados-do-cartao { order: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 0; }
+.cpr-fieldbook.cartao .dados-do-cartao .dado {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 4px;
+  border: 1px solid var(--cp-fraco); background: var(--cp-poco); color: var(--cp-texto); font: 700 20px/1 var(--cp-titulo);
+}
+.cpr-fieldbook.cartao .dados-do-cartao .dado.maximo { border-color: var(--cp-amarelo); color: var(--cp-amarelo); }
+.cpr-fieldbook.cartao .dados-do-cartao .dado.minimo { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao .dados-do-cartao i { color: var(--cp-fraco); font: 400 15px/1 var(--cp-dados); font-style: normal; }
+.cpr-fieldbook.cartao .dados-do-cartao .total { margin-left: auto; padding-left: 8px; color: var(--acento, var(--cp-amarelo)); font: 700 42px/1 var(--cp-titulo); }
+/* O resultado: o crítico numa etiqueta, e a frase do Death Save e do Backup na linha de baixo. */
+.cpr-fieldbook.cartao :is(.critico, .resultado) { order: 5; font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .critico { align-self: flex-start; padding: 3px 8px; border: 1px solid currentColor; color: var(--cp-ciano); }
+.cpr-fieldbook.cartao.critico-falha .critico { color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao.dano .critico { color: var(--cp-amarelo); }
+.cpr-fieldbook.cartao .resultado { padding-top: 6px; border-top: 1px solid var(--cp-linha); }
+.cpr-fieldbook.cartao.death-save.passou .resultado { color: var(--cp-ciano); }
+.cpr-fieldbook.cartao.death-save.falhou .resultado, .cpr-fieldbook.cartao.morte { color: var(--cp-vermelho); }
+/* A regra (o sabor), as notas e os botões, no fim. */
+.cpr-fieldbook.cartao .sabor { order: 6; color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); letter-spacing: 0.03em; }
+.cpr-fieldbook.cartao .nota { order: 7; color: var(--cp-fraco); font: 400 11px/1.4 var(--cp-dados); }
+.cpr-fieldbook.cartao .botoes { order: 8; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); }
+.cpr-fieldbook.cartao .botoes button {
+  flex: none; width: auto; height: auto; min-height: 0; margin: 0; padding: 5px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; box-shadow: none; color: var(--cp-amarelo); font: 400 11px/1.2 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.cpr-fieldbook.cartao .botoes button:hover { background: var(--cp-amarelo); box-shadow: none; color: var(--cp-fundo); }
+/* O resultado do ataque: o total do ataque grande, cada alvo com a etiqueta do que aconteceu, o dano e a barra de HP. */
+.cpr-fieldbook.cartao .placar { order: 3; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .placar b { color: var(--acento); font: 700 34px/1 var(--cp-titulo); letter-spacing: 0; }
+.cpr-fieldbook.cartao .alvos { order: 4; display: flex; flex-direction: column; gap: 6px; padding: 0; list-style: none; }
+.cpr-fieldbook.cartao .alvo { padding: 6px 0 0; border-top: 1px solid var(--cp-linha); }
+.cpr-fieldbook.cartao .alvo .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cpr-fieldbook.cartao .alvo .linha b { color: var(--cp-texto); font-weight: 700; }
+.cpr-fieldbook.cartao .alvo img { width: 28px; height: 28px; border: 1px solid var(--cp-linha); object-fit: cover; }
+.cpr-fieldbook.cartao .alvo .rotulo { padding: 2px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.cartao .alvo:is(.resultado-acertou, .resultado-suprimido) .rotulo { border-color: var(--cp-vermelho); background: var(--cp-vermelho); color: var(--cp-fundo); }
+.cpr-fieldbook.cartao .alvo:is(.resultado-esquivou, .resultado-firme) .rotulo { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.cartao .contra { color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.06em; }
+.cpr-fieldbook.cartao .dano { margin: 4px 0 0; padding-left: 16px; color: var(--cp-texto); font-size: 13px; line-height: 1.35; }
+.cpr-fieldbook.cartao .dano .lesao, .cpr-fieldbook.cartao .dano .lesao b { color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao .barra-hp { display: block; height: 8px; margin: 6px 0 2px; background: linear-gradient(90deg, var(--cp-vermelho) var(--hp), var(--cp-poco) var(--hp)); }
+/* A lesão crítica: o texto do item. */
+.cpr-fieldbook.cartao.lesao > :is(p, ul) { color: var(--cp-texto); font-size: 14px; }
+/* O Desfazer: o cartão desbotado, com o carimbo. */
+.cpr-fieldbook.cartao.desfeito { opacity: 0.55; }
+.cpr-fieldbook.cartao.desfeito::after { content: 'DESFEITO'; order: 9; align-self: flex-start; padding: 2px 8px; border: 1px solid var(--cp-vermelho); color: var(--cp-vermelho); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.2em; }
+.cpr-fieldbook.cartao.desfeito .botoes { display: none; }
+
+/* ---------- Ficha do item: o mesmo tema ---------- */
+.cpr-fieldbook.ficha-item .cabecalho { border-bottom: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.ficha-item .cabecalho .retrato { border: none; border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.cpr-fieldbook.ficha-item .cabecalho .nome { background: transparent; border: none; color: var(--cp-texto); font: 700 26px/1.1 var(--cp-titulo); letter-spacing: 0.04em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .campos label { font-family: var(--cp-dados); font-size: 13px; letter-spacing: 0.04em; color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-item :is(.nota, .fonte, .efeitos) { font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.ficha-item h3 { border-bottom: 1px solid var(--cp-linha); color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }
+/* A ficha do item no jeito da maquete "Item Sheets" do usuário (a da arquitetura não muda): a cor do tipo (vermelho na
+   arma e na lesão; ciano no cyberware, no programa e no deck; amarelo no resto) no rótulo, nas abas e nas células. */
+.cpr-fieldbook.ficha-item .ficha-de-item { --cor-tipo: var(--cp-amarelo); gap: 10px; }
+.cpr-fieldbook.ficha-item .ficha-de-item:is(.tipo-arma, .tipo-lesao) { --cor-tipo: var(--cp-vermelho); }
+.cpr-fieldbook.ficha-item .ficha-de-item:is(.tipo-cyberware, .tipo-programa, .tipo-cyberdeck) { --cor-tipo: var(--cp-ciano); }
+.cpr-fieldbook.ficha-item .ficha-de-item .cabecalho { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px; border-bottom: 2px solid var(--cor-tipo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .linha-tipo { display: flex; justify-content: space-between; margin: 0; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.18em; }
+.cpr-fieldbook.ficha-item .ficha-de-item .linha-tipo .tipo { color: var(--cor-tipo); text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .identidade { display: flex; align-items: flex-start; gap: 14px; }
+.cpr-fieldbook.ficha-item .ficha-de-item .retrato { flex: none; width: 72px; height: 72px; object-fit: cover; background: repeating-linear-gradient(135deg, #1c1c28 0 8px, var(--cp-painel) 8px 16px); }
+.cpr-fieldbook.ficha-item .ficha-de-item .nome-e-resumo { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.cpr-fieldbook.ficha-item .ficha-de-item .cabecalho .nome { width: 100%; height: auto; padding: 0; font-size: 24px; }
+.cpr-fieldbook.ficha-item .ficha-de-item .resumo { margin: 0; color: var(--cp-fraco); font: 400 12px/1.4 var(--cp-dados); letter-spacing: 0.08em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; }
+.cpr-fieldbook.ficha-item .ficha-de-item .etiqueta { padding: 2px 8px; border: 1px solid var(--cor-tipo); color: var(--cor-tipo); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.12em; }
+.cpr-fieldbook.ficha-item .ficha-de-item .etiqueta.cheia { background: var(--cor-tipo); color: var(--cp-fundo); }
+/* As abas: o texto em mono, a ativa cheia na cor do tipo. */
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item { display: flex; gap: 4px; margin: 0; padding: 0 0 6px; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item a {
+  flex: none; padding: 5px 12px; color: var(--cp-fraco); font: 400 12px/1.2 var(--cp-dados); letter-spacing: 0.15em; text-transform: uppercase; text-shadow: none; cursor: pointer;
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item a:hover { color: var(--cor-tipo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .abas-do-item a.active { background: var(--cor-tipo); color: var(--cp-fundo); }
+.cpr-fieldbook.ficha-item .ficha-de-item section.tab:not(.active) { display: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item section.tab.active { display: flex; flex-direction: column; gap: 10px; }
+/* Os detalhes em células: o rótulo pequeno em cima, o valor grande embaixo e a borda na cor do tipo. */
+.cpr-fieldbook.ficha-item .ficha-de-item .campos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula {
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 2px; min-width: 0; padding: 6px 10px 5px;
+  background: var(--cp-poco); border-bottom: 2px solid var(--cor-tipo);
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula.larga { grid-column: 1 / -1; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula > span:first-child { color: var(--cp-fraco); font: 400 10px/1.3 var(--cp-dados); letter-spacing: 0.15em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula :is(input, select) {
+  width: 100%; height: auto; min-height: 0; padding: 0; border: none; background: transparent; color: var(--cp-texto); font: 700 18px/1.3 var(--cp-titulo);
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula select option { background: var(--cp-painel); }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula .par { display: flex; align-items: baseline; gap: 6px; color: var(--cp-fraco); font: 400 14px var(--cp-dados); }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.celula .par input { flex: 1; min-width: 0; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.caixa { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--cp-linha); color: var(--cp-texto); font: 400 12px/1.3 var(--cp-dados); letter-spacing: 0.06em; }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos label.caixa input { width: 16px; height: 16px; margin: 0; accent-color: var(--cor-tipo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .campos .nota { grid-column: 1 / -1; margin: 0; color: var(--cp-fraco); }
+/* Os botões das ações do item (o "Consertar" da armadura), na linha toda, no jeito dos botões das maquetes. */
+.cpr-fieldbook.ficha-item .ficha-de-item .acoes-do-item { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+/* O SP de cada local da armadura em caixas, com o número e o "−1" (as maquetes do usuário: a trilha do SP). */
+.cpr-fieldbook.ficha-item .ficha-de-item .trilha-sp { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .ficha-de-item .trilha-sp .pontos-visuais { --passo: 14px; flex: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item .trilha-sp b { color: var(--cp-amarelo); font-size: 13px; }
+.cpr-fieldbook.ficha-item .ficha-de-item :is(.acoes-do-item, .trilha-sp) button {
+  flex: none; width: auto; height: auto; padding: 5px 12px; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; box-shadow: none;
+  color: var(--cp-amarelo); font: 400 12px/1.2 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase;
+}
+.cpr-fieldbook.ficha-item .ficha-de-item :is(.acoes-do-item, .trilha-sp) button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); }
+/* O uso (possuído, carregando, equipado) em três botões lado a lado. */
+.cpr-fieldbook.ficha-item .ficha-de-item .uso { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento {
+  display: flex; justify-content: center; padding: 6px 4px; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+}
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento + .segmento { border-left: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento input { position: absolute; opacity: 0; pointer-events: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento.ativo { background: var(--cor-tipo); color: var(--cp-fundo); }
+.cpr-fieldbook.ficha-item .ficha-de-item .uso .segmento:focus-within { outline: 2px solid var(--cp-ciano); outline-offset: -2px; }
+/* A descrição e os efeitos. */
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos { margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 0; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos li.vazio { color: var(--cp-fraco); }
+.cpr-fieldbook.ficha-item .ficha-de-item .efeitos li b { color: var(--cor-tipo); }
+
+/* ---------- Ficha da arquitetura da NET: os andares (uma linha por conteúdo) e o mapa ---------- */
+.cpr-fieldbook.ficha-arquitetura .campos small { white-space: nowrap; }
+.cpr-fieldbook.ficha-arquitetura h3 small { margin-left: 8px; color: var(--cp-fraco); letter-spacing: 0.04em; text-transform: none; }
+.cpr-fieldbook.ficha-arquitetura table.andares { width: 100%; border-collapse: collapse; font-family: var(--cp-dados); font-size: 12px; }
+.cpr-fieldbook.ficha-arquitetura table.andares th { color: var(--cp-fraco); font-weight: 400; letter-spacing: 0.1em; text-align: left; text-transform: uppercase; }
+.cpr-fieldbook.ficha-arquitetura table.andares td { padding: 2px 4px; border-top: 1px solid var(--cp-linha); }
+.cpr-fieldbook.ficha-arquitetura table.andares td:first-child input { width: 3.5rem; }
+.cpr-fieldbook.ficha-arquitetura table.andares td :is(input, select) { width: 100%; }
+.cpr-fieldbook.ficha-arquitetura table.andares td:nth-child(2) select { width: 3.5rem; }
+.cpr-fieldbook.ficha-arquitetura table.andares td:last-child { width: 2rem; text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .acoes-arquitetura { display: flex; justify-content: flex-end; gap: 8px; margin: 6px 0; }
+.cpr-fieldbook.ficha-arquitetura .acao {
+  padding: 4px 10px; border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; color: var(--cp-amarelo); font-family: var(--cp-dados); font-size: 12px; letter-spacing: 0.1em;
+}
+.cpr-fieldbook.ficha-arquitetura .acao:hover { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: none; text-shadow: none; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net {
+  display: grid; grid-template-columns: 2.5rem repeat(var(--colunas, 1), minmax(0, 1fr)); gap: 6px; align-items: stretch;
+  font-family: var(--cp-dados); font-size: 11px;
+}
+.cpr-fieldbook.ficha-arquitetura .mapa-net .ramo { color: var(--cp-fraco); letter-spacing: 0.15em; text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .entrada { grid-column: 2 / -1; padding: 4px; border: 1px dashed var(--cp-ciano); color: var(--cp-ciano); letter-spacing: 0.2em; text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .andar { align-self: center; color: var(--cp-amarelo); font: 700 18px/1 var(--cp-titulo); text-align: center; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no { padding: 4px 6px; background: var(--cp-poco); border-left: 2px solid var(--cp-amarelo); }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no ul { margin: 2px 0 0; padding-left: 14px; color: var(--cp-texto); }
+/* O editor visual no mapa: o andar que se arrasta, a célula onde ele cai e o "+" das células vazias. */
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no[draggable] { cursor: grab; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .no.arrastando { opacity: 0.4; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .sobre { outline: 1px dashed var(--cp-ciano); outline-offset: 2px; }
+.cpr-fieldbook.ficha-arquitetura .mapa-net .criar-andar {
+  min-height: 2.4rem; padding: 0; border: 1px dashed var(--cp-linha); border-radius: 0; background: transparent; color: var(--cp-fraco); font: 700 16px/1 var(--cp-dados);
+}
+.cpr-fieldbook.ficha-arquitetura .mapa-net .criar-andar:hover { border-color: var(--cp-amarelo); color: var(--cp-amarelo); box-shadow: none; }
+
+/* ---------- A NET na mesa (netrun/): a configuração do ponto de acesso e a janela da NET ---------- */
+.cpr-fieldbook.net-config .window-content { padding: 14px 16px; }
+.cpr-fieldbook.net-config .net-config-corpo { display: flex; flex-direction: column; gap: 10px; font-family: var(--cp-dados); font-size: 13px; }
+.cpr-fieldbook.net-config label { display: flex; align-items: center; gap: 8px; color: var(--cp-fraco); }
+.cpr-fieldbook.net-config label:not(.caixa) > :is(input, select) { flex: 1; min-width: 0; }
+.cpr-fieldbook.net-config label.aviso { color: var(--cp-amarelo); }
+.cpr-fieldbook.net-config input[type="checkbox"] { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--cp-amarelo); }
+.cpr-fieldbook.net-config .colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.cpr-fieldbook.net-config fieldset { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; border: 1px solid var(--cp-linha); border-left: 3px solid var(--cp-amarelo); }
+.cpr-fieldbook.net-config legend { padding: 0 4px; color: var(--cp-amarelo); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+.cpr-fieldbook.net-config .form-footer { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Os nós de controle ligados à cena: cada nó com o que já está ligado (os chips) e a lista do que a cena tem. */
+.cpr-fieldbook.net-config fieldset.ligacoes { flex-direction: column; flex-wrap: nowrap; }
+.cpr-fieldbook.net-config .ligar { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px dashed var(--cp-linha); }
+.cpr-fieldbook.net-config .ligar .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.net-config .ligar .chips li { display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border: 1px solid var(--cp-linha); color: var(--cp-texto); }
+.cpr-fieldbook.net-config .ligar .chips li.nada { border-style: dashed; color: var(--cp-fraco); }
+.cpr-fieldbook.net-config .ligar .chips button { flex: none; width: auto; min-height: 0; padding: 0 4px; border: none; background: none; }
+.cpr-fieldbook.net-config .ligar .linha { display: flex; gap: 6px; }
+.cpr-fieldbook.net-config .ligar .linha select { flex: 1; min-width: 0; }
+/* A janela da NET (templates/netrun/janela.hbs), no jeito de um terminal de netrunner: o topo com a conexão e o
+   netrunner, o mapa num fundo quadriculado (cada andar ligado ao andar de onde se chega por um cabo com os dados
+   correndo), o painel ao lado e, embaixo, as habilidades e o registro. A cor do andar diz o que manda nele: vermelho, o
+   inimigo ativo; amarelo, a senha; verde, o nó de controle; roxo, o arquivo; ciano, livre; cinza, limpo ou sem sinal. */
+.cpr-fieldbook.janela-net { --net-verde: #2bff9a; --net-roxo: #b98cff; --net-laranja: #ff8a1f; --net-brilho: rgba(2, 215, 242, 0.35); --net-vermelho-brilho: rgba(255, 42, 74, 0.4); }
+.cpr-fieldbook.janela-net .window-content { padding: 0; overflow-x: hidden; overflow-y: auto; container-type: inline-size; }
+/* As quatro faixas pelo nome (sem avisos, a faixa deles fica vazia e o meio continua com o espaço que sobra). */
+.cpr-fieldbook.janela-net .janela-net-corpo {
+  position: relative; display: grid; grid-template-areas: 'cabecalho' 'avisos' 'meio' 'rodape'; grid-template-rows: auto auto minmax(0, 1fr) auto; flex: 1; height: 100%; min-height: 0;
+}
+.cpr-fieldbook.janela-net .net-cabecalho { grid-area: cabecalho; }
+.cpr-fieldbook.janela-net .avisos { grid-area: avisos; }
+.cpr-fieldbook.janela-net .net-meio { grid-area: meio; }
+.cpr-fieldbook.janela-net .net-rodape { grid-area: rodape; }
+.cpr-fieldbook.janela-net .janela-net-corpo.ocupada { cursor: progress; }
+/* Enquanto o mestre resolve o pedido, uma faixa corre no topo. */
+.cpr-fieldbook.janela-net .janela-net-corpo.ocupada::before {
+  content: ''; position: absolute; z-index: 5; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cp-ciano), transparent) no-repeat; background-size: 40% 100%; animation: cprf-net-processando 1s linear infinite;
+}
+.cpr-fieldbook.janela-net h3 {
+  display: flex; align-items: baseline; gap: 6px; margin: 0 0 8px; padding: 0 0 4px; border: none; border-bottom: 1px solid color-mix(in srgb, var(--cp-ciano) 25%, transparent);
+  color: var(--cp-ciano); font: 400 11px/1.2 var(--cp-dados); letter-spacing: 0.18em;
+}
+.cpr-fieldbook.janela-net h3 small { min-width: 0; overflow: hidden; color: var(--cp-fraco); letter-spacing: 0.05em; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.janela-net .dica { margin: 0 0 8px; color: var(--cp-fraco); font: 400 12px/1.45 var(--cp-dados); }
+
+/* Os botões e os campos. */
+.cpr-fieldbook.janela-net .janela-net-corpo button {
+  display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 6px; width: auto; height: auto; min-height: 0; margin: 0; padding: 4px 10px;
+  border: 1px solid var(--cp-amarelo); border-radius: 0; background: transparent; box-shadow: none; color: var(--cp-amarelo);
+  font: 400 12px/1.2 var(--cp-dados); letter-spacing: 0.08em; cursor: pointer; transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.cpr-fieldbook.janela-net .janela-net-corpo button:hover:not(:disabled) { background: var(--cp-amarelo); color: var(--cp-fundo); box-shadow: 0 0 12px color-mix(in srgb, var(--cp-amarelo) 40%, transparent); }
+.cpr-fieldbook.janela-net .janela-net-corpo button.perigo { border-color: var(--cp-vermelho); background: color-mix(in srgb, var(--cp-vermelho) 10%, transparent); color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .janela-net-corpo button.perigo:hover:not(:disabled) { background: var(--cp-vermelho); color: var(--cp-fundo); box-shadow: 0 0 12px var(--net-vermelho-brilho); }
+.cpr-fieldbook.janela-net .janela-net-corpo button:disabled { opacity: 0.4; cursor: not-allowed; }
+.cpr-fieldbook.janela-net .janela-net-corpo :is(button, input, select, [data-action]):focus-visible { outline: 2px solid var(--cp-ciano); outline-offset: 2px; }
+.cpr-fieldbook.janela-net .janela-net-corpo :is(input[type="text"], select) {
+  height: auto; min-height: 0; padding: 5px 8px; border: 1px solid var(--cp-linha); border-radius: 0; background: var(--cp-poco); box-shadow: none; color: var(--cp-texto); font: 400 12px/1.3 var(--cp-dados);
+}
+.cpr-fieldbook.janela-net .janela-net-corpo :is(input[type="text"], select):focus { border-color: var(--cp-ciano); outline: none; box-shadow: none; }
+
+/* ---------- O topo ---------- */
+.cpr-fieldbook.janela-net .net-cabecalho {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 18px; padding: 10px 16px;
+  background: color-mix(in srgb, var(--cp-painel) 85%, black); border-bottom: 1px solid color-mix(in srgb, var(--cp-ciano) 30%, transparent);
+}
+.cpr-fieldbook.janela-net .identidade { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.cpr-fieldbook.janela-net .selo {
+  display: inline-flex; flex: none; align-items: center; gap: 7px; padding: 4px 8px; border: 1px solid var(--cp-ciano);
+  background: color-mix(in srgb, var(--cp-ciano) 12%, transparent); color: var(--cp-ciano); font: 400 11px/1 var(--cp-dados); letter-spacing: 0.15em;
+}
+.cpr-fieldbook.janela-net .selo .pulso { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; animation: cprf-net-piscar 1.4s infinite; }
+.cpr-fieldbook.janela-net .selo.sem-conexao { border-color: var(--cp-fraco); background: transparent; color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .selo.sem-conexao .pulso { box-shadow: none; animation: none; }
+.cpr-fieldbook.janela-net .do-mestre .selo { border-color: var(--cp-amarelo); background: color-mix(in srgb, var(--cp-amarelo) 10%, transparent); color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .identidade .titulo { min-width: 0; }
+.cpr-fieldbook.janela-net h2 {
+  margin: 0; overflow: hidden; border: none; color: var(--cp-texto); font: 700 22px/1.05 var(--cp-titulo); letter-spacing: 0.08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap;
+}
+.cpr-fieldbook.janela-net .net-cabecalho .arquitetura { margin: 3px 0 0; color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.05em; }
+.cpr-fieldbook.janela-net .net-cabecalho button.sair { padding: 6px 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+/* A faixa do netrunner, embaixo do título: quem, onde, a Interface, a Sorte preparada e as Ações NET. */
+.cpr-fieldbook.janela-net .netrunner {
+  grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; padding-top: 8px; border-top: 1px dashed var(--cp-linha);
+}
+.cpr-fieldbook.janela-net .netrunner > * { padding: 0 14px; border-left: 1px solid var(--cp-linha); }
+.cpr-fieldbook.janela-net .netrunner > :first-child { padding-left: 0; border-left: none; }
+.cpr-fieldbook.janela-net .netrunner .quem { display: flex; align-items: baseline; gap: 6px; }
+.cpr-fieldbook.janela-net .netrunner .quem i { color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .netrunner .quem b { color: var(--cp-ciano); font: 700 16px/1.1 var(--cp-titulo); letter-spacing: 0.05em; }
+.cpr-fieldbook.janela-net .netrunner .quem small { color: var(--cp-fraco); font: 400 11px/1.2 var(--cp-dados); }
+.cpr-fieldbook.janela-net .netrunner .numero { display: flex; align-items: baseline; gap: 6px; }
+.cpr-fieldbook.janela-net .netrunner .numero small { color: var(--cp-fraco); font: 400 10px/1.3 var(--cp-dados); letter-spacing: 0.12em; text-transform: uppercase; }
+.cpr-fieldbook.janela-net .netrunner .numero b { color: var(--cp-amarelo); font: 700 18px/1 var(--cp-titulo); }
+/* As Ações NET: um losango por ação (as que sobram, acesas; fora de combate, todas só no contorno). */
+.cpr-fieldbook.janela-net .netrunner .acoes {
+  display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 5px 10px; border: 1px solid var(--cp-linha); background: rgba(255, 255, 255, 0.03); color: var(--cp-fraco); font: 400 11px/1.2 var(--cp-dados);
+}
+.cpr-fieldbook.janela-net .netrunner .acoes .rotulo { letter-spacing: 0.1em; text-transform: uppercase; }
+.cpr-fieldbook.janela-net .netrunner .acoes .pips { display: inline-flex; gap: 8px; padding: 0 3px; }
+.cpr-fieldbook.janela-net .netrunner .acoes .pips i {
+  width: 11px; height: 11px; border: 1.5px solid var(--cp-ciano); background: var(--cp-ciano); box-shadow: 0 0 8px var(--cp-ciano); transform: rotate(45deg); transition: all 0.25s;
+}
+.cpr-fieldbook.janela-net .netrunner .acoes .pips i.gasto { background: transparent; box-shadow: none; opacity: 0.35; }
+.cpr-fieldbook.janela-net .netrunner .acoes .pips i.livre { background: transparent; box-shadow: none; opacity: 0.7; }
+.cpr-fieldbook.janela-net .netrunner .acoes .frase b { color: var(--cp-ciano); }
+
+/* ---------- Os avisos (o fogo, o Kraken, o Skunk, o Wisp), lado a lado ---------- */
+.cpr-fieldbook.janela-net .avisos { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px; border-bottom: 1px solid var(--cp-linha); }
+.cpr-fieldbook.janela-net .aviso-net {
+  display: flex; flex: 1 1 260px; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--cp-vermelho) 35%, transparent); border-left: 3px solid var(--cp-vermelho);
+  background: color-mix(in srgb, var(--cp-vermelho) 12%, var(--cp-poco)); color: var(--cp-texto); font: 400 12px/1.35 var(--cp-dados);
+}
+.cpr-fieldbook.janela-net .aviso-net i { margin-right: 4px; color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .aviso-net.fogo {
+  border-color: color-mix(in srgb, var(--net-laranja) 40%, transparent); border-left-color: var(--net-laranja); background: color-mix(in srgb, var(--net-laranja) 12%, var(--cp-poco));
+  animation: cprf-net-fogo 1.6s ease-in-out infinite;
+}
+.cpr-fieldbook.janela-net .aviso-net.fogo i { color: var(--net-laranja); }
+.cpr-fieldbook.janela-net .aviso-net button { margin-left: auto; padding: 2px 8px; border-color: var(--net-laranja); color: var(--net-laranja); font-size: 11px; }
+.cpr-fieldbook.janela-net .aviso-net button:hover:not(:disabled) { background: var(--net-laranja); color: var(--cp-fundo); box-shadow: none; }
+
+/* ---------- O meio: o mapa e o painel ao lado ---------- */
+.cpr-fieldbook.janela-net .net-meio { display: grid; grid-template-columns: minmax(0, 1fr) 290px; min-height: 0; }
+.cpr-fieldbook.janela-net .mapa {
+  min-height: 0; overflow: auto; padding: 16px 18px 22px; background-color: var(--cp-fundo);
+  background-image: radial-gradient(circle at 50% 40%, rgba(2, 215, 242, 0.07), rgba(255, 42, 74, 0.03) 45%, transparent 75%),
+    linear-gradient(rgba(2, 215, 242, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 215, 242, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px; background-attachment: local;
+}
+/* O mapa: a coluna dos andares e uma coluna por ramo; o vão entre as linhas é por onde passam os cabos. */
+.cpr-fieldbook.janela-net .mapa-net {
+  --vao-x: 22px; --vao-y: 30px; display: grid; grid-template-columns: 2.6rem repeat(var(--colunas, 1), minmax(150px, 250px)); column-gap: var(--vao-x); row-gap: var(--vao-y);
+  justify-content: center; align-items: stretch; min-width: min-content; font: 400 11px/1.35 var(--cp-dados);
+}
+.cpr-fieldbook.janela-net .mapa-net .ramo { align-self: end; color: var(--cp-fraco); font-size: 10px; letter-spacing: 0.2em; text-align: center; }
+.cpr-fieldbook.janela-net .mapa-net .entrada {
+  grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; padding: 7px 10px;
+  border: 1px dashed var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 7%, transparent); color: var(--cp-ciano); letter-spacing: 0.2em; cursor: pointer;
+}
+.cpr-fieldbook.janela-net .mapa-net .entrada b { color: var(--cp-texto); letter-spacing: 0.05em; }
+.cpr-fieldbook.janela-net .mapa-net .andar { display: flex; flex-direction: column; align-items: center; align-self: center; color: var(--cp-amarelo); font: 700 20px/1 var(--cp-titulo); }
+.cpr-fieldbook.janela-net .mapa-net .andar::before { content: 'ANDAR'; color: var(--cp-fraco); font: 400 8px/1.5 var(--cp-dados); letter-spacing: 0.15em; }
+
+/* O andar: a borda e o canto cortado na cor do que manda nele. */
+.cpr-fieldbook.janela-net .mapa-net .no {
+  --cor: var(--cp-ciano); --fio: var(--cp-ciano); position: relative; display: flex; flex-direction: column; gap: 5px; min-width: 0; padding: 8px 12px 9px 13px;
+  background: rgba(9, 15, 26, 0.92); box-shadow: inset 3px 0 0 var(--cor), inset 0 0 0 1px color-mix(in srgb, var(--cor) 40%, transparent);
+  color: var(--cp-texto); cursor: pointer; transition: filter 0.15s, box-shadow 0.2s;
+}
+.cpr-fieldbook.janela-net .mapa-net .no:hover { filter: brightness(1.3); }
+.cpr-fieldbook.janela-net .mapa-net .no::after { content: ''; position: absolute; top: 0; right: 0; border-style: solid; border-width: 0 10px 10px 0; border-color: transparent var(--cor) transparent transparent; }
+.cpr-fieldbook.janela-net .mapa-net .no.livre { --cor: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .mapa-net .no.arquivo { --cor: var(--net-roxo); }
+.cpr-fieldbook.janela-net .mapa-net .no.controle { --cor: var(--net-verde); }
+.cpr-fieldbook.janela-net .mapa-net .no.senha { --cor: var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .mapa-net .no.hostil { --cor: var(--cp-vermelho); --fio: var(--cp-vermelho); background: rgba(28, 8, 16, 0.92); }
+.cpr-fieldbook.janela-net .mapa-net .no.feito { --cor: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .mapa-net .no.desconhecido {
+  --cor: var(--cp-fraco); --fio: var(--cp-fraco); background: repeating-linear-gradient(-45deg, rgba(138, 141, 153, 0.07) 0 6px, transparent 6px 12px), rgba(9, 12, 18, 0.9);
+}
+/* O inimigo ativo pulsa; onde o netrunner está, o brilho ciano. */
+.cpr-fieldbook.janela-net .mapa-net .no.hostil::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: 0 0 18px var(--net-vermelho-brilho); animation: cprf-net-pulso 2.2s ease-in-out infinite;
+}
+.cpr-fieldbook.janela-net .mapa-net .no.atual {
+  box-shadow: inset 3px 0 0 var(--cor), inset 0 0 0 1px var(--cp-ciano), inset 0 0 14px rgba(2, 215, 242, 0.15), 0 0 20px var(--net-brilho);
+}
+.cpr-fieldbook.janela-net .mapa-net :is(.no, .entrada).vizinho:not(.selecionado) { outline: 1px dashed color-mix(in srgb, var(--cp-ciano) 70%, transparent); outline-offset: 3px; }
+.cpr-fieldbook.janela-net .mapa-net :is(.no, .entrada).selecionado { outline: 1px solid var(--cp-amarelo); outline-offset: 3px; }
+.cpr-fieldbook.janela-net .mapa-net .entrada.atual { box-shadow: 0 0 18px var(--net-brilho); background: color-mix(in srgb, var(--cp-ciano) 14%, transparent); }
+/* Para o mestre: o que os jogadores ainda não viram. */
+.cpr-fieldbook.janela-net .mapa-net .no.escondido { opacity: 0.5; }
+.cpr-fieldbook.janela-net .mapa-net .no .topo { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--cp-fraco); font-size: 10px; letter-spacing: 0.1em; }
+.cpr-fieldbook.janela-net .mapa-net .no .rotulo { color: var(--cor); font-weight: 400; }
+.cpr-fieldbook.janela-net .mapa-net .no .rotulo::before { content: 'ANDAR '; color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .mapa-net .no .tag { margin-right: 8px; color: var(--cor); white-space: nowrap; }
+.cpr-fieldbook.janela-net .mapa-net .no.livre .tag::before { content: 'LIVRE'; }
+.cpr-fieldbook.janela-net .mapa-net .no.arquivo .tag::before { content: 'ARQUIVO'; }
+.cpr-fieldbook.janela-net .mapa-net .no.controle .tag::before { content: 'CONTROLE'; }
+.cpr-fieldbook.janela-net .mapa-net .no.senha .tag::before { content: 'SENHA'; }
+.cpr-fieldbook.janela-net .mapa-net .no.hostil .tag::before { content: 'HOSTIL'; }
+.cpr-fieldbook.janela-net .mapa-net .no.feito .tag::before { content: 'LIMPO'; }
+.cpr-fieldbook.janela-net .mapa-net .no.desconhecido .tag::before { content: 'SEM SINAL'; }
+.cpr-fieldbook.janela-net .mapa-net .no.escondido .tag::after { content: ' · OCULTO'; color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .mapa-net .no ul { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-net .mapa-net .no li { overflow-wrap: anywhere; color: var(--cp-texto); font: 700 13px/1.25 var(--cp-titulo); letter-spacing: 0.02em; }
+.cpr-fieldbook.janela-net .mapa-net .no li i { width: 15px; color: var(--cor); text-align: center; }
+.cpr-fieldbook.janela-net .mapa-net .no li.inimigo:not(.feito) { color: #ff6b80; }
+.cpr-fieldbook.janela-net .mapa-net .no li.inimigo:not(.feito) i { color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .mapa-net .no li.feito { color: var(--cp-fraco); font-weight: 500; }
+.cpr-fieldbook.janela-net .mapa-net .no li.feito i { color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .mapa-net .interrogacao { align-self: center; color: var(--cp-fraco); font: 700 22px/1 var(--cp-titulo); letter-spacing: 0.3em; animation: cprf-net-ruido 3.5s steps(1) infinite; }
+/* Quem está no andar: a etiqueta no alto, à direita. */
+.cpr-fieldbook.janela-net .mapa-net .aqui { position: absolute; z-index: 2; top: -9px; right: 14px; display: flex; gap: 4px; max-width: calc(100% - 20px); margin: 0; }
+.cpr-fieldbook.janela-net .mapa-net .aqui b {
+  overflow: hidden; padding: 1px 6px; background: var(--cp-ciano); box-shadow: 0 0 10px var(--cp-ciano); color: var(--cp-fundo);
+  font: 700 10px/1.4 var(--cp-dados); letter-spacing: 0.05em; text-overflow: ellipsis; white-space: nowrap;
+}
+.cpr-fieldbook.janela-net .mapa-net .aqui b::before { content: '● '; }
+/* A barra de REZ do inimigo. */
+.cpr-fieldbook.janela-net .barra { display: block; height: 3px; margin-top: 4px; background: linear-gradient(90deg, var(--cp-vermelho) var(--rez), rgba(255, 42, 74, 0.18) var(--rez)); }
+
+/* Os cabos: do andar de cima até este, no vão entre as linhas. Reto (o mesmo ramo, ou o ponto de acesso); em degrau
+   (de um ramo à esquerda: desce, atravessa as colunas, desce); só a ponta (o andar de onde se chega está longe). */
+.cpr-fieldbook.janela-net .mapa-net .cabo { position: absolute; bottom: 100%; height: var(--vao-y); pointer-events: none; }
+.cpr-fieldbook.janela-net .mapa-net :is(.liga, .solto) .cabo,
+.cpr-fieldbook.janela-net .mapa-net .ramifica .cabo::before,
+.cpr-fieldbook.janela-net .mapa-net .ramifica .cabo::after {
+  width: 2px; background-image: linear-gradient(to bottom, var(--fio) 0 7px, transparent 7px); background-size: 2px 13px; background-repeat: repeat-y;
+  filter: drop-shadow(0 0 3px var(--fio)); animation: cprf-net-fluxo-v 0.9s linear infinite;
+}
+.cpr-fieldbook.janela-net .mapa-net :is(.liga, .solto) .cabo { left: calc(50% - 1px); }
+.cpr-fieldbook.janela-net .mapa-net .solto .cabo { height: calc(var(--vao-y) * 0.6); mask-image: linear-gradient(to top, black, transparent); }
+.cpr-fieldbook.janela-net .mapa-net .ramifica .cabo {
+  right: 50%; width: calc(var(--salto) * (100% + var(--vao-x)));
+  background-image: linear-gradient(to right, var(--fio) 0 7px, transparent 7px); background-size: 13px 2px; background-position: 0 50%; background-repeat: repeat-x;
+  filter: drop-shadow(0 0 3px var(--fio)); animation: cprf-net-fluxo-h 0.9s linear infinite;
+}
+.cpr-fieldbook.janela-net .mapa-net .ramifica .cabo::before,
+.cpr-fieldbook.janela-net .mapa-net .ramifica .cabo::after { content: ''; position: absolute; height: calc(50% + 1px); filter: none; }
+.cpr-fieldbook.janela-net .mapa-net .ramifica .cabo::before { top: 0; left: -1px; }
+.cpr-fieldbook.janela-net .mapa-net .ramifica .cabo::after { bottom: 0; right: -1px; }
+.cpr-fieldbook.janela-net .mapa-net .hostil .cabo, .cpr-fieldbook.janela-net .mapa-net .hostil .cabo::before, .cpr-fieldbook.janela-net .mapa-net .hostil .cabo::after { animation-duration: 0.5s; }
+.cpr-fieldbook.janela-net .mapa-net :is(.desconhecido, .escondido) .cabo,
+.cpr-fieldbook.janela-net .mapa-net :is(.desconhecido, .escondido) .cabo::before,
+.cpr-fieldbook.janela-net .mapa-net :is(.desconhecido, .escondido) .cabo::after { filter: none; opacity: 0.6; animation: none; }
+
+/* ---------- O painel ao lado ---------- */
+.cpr-fieldbook.janela-net .net-lado {
+  display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto; padding: 14px;
+  background: color-mix(in srgb, var(--cp-painel) 70%, var(--cp-fundo)); border-left: 1px solid color-mix(in srgb, var(--cp-ciano) 22%, transparent);
+}
+.cpr-fieldbook.janela-net .corredores ul { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-net .corredores li {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; padding: 4px 6px;
+  border: 1px solid var(--cp-linha); border-left: 2px solid var(--cp-linha); background: rgba(255, 255, 255, 0.025);
+}
+.cpr-fieldbook.janela-net .corredores li[data-action] { cursor: pointer; }
+.cpr-fieldbook.janela-net .corredores li[data-action]:hover { border-color: color-mix(in srgb, var(--cp-amarelo) 40%, transparent); }
+.cpr-fieldbook.janela-net .corredores li.eu { border-left-color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .corredores li.eu b { color: var(--cp-ciano); }
+.cpr-fieldbook.janela-net .do-mestre .corredores li.eu { border-left-color: var(--cp-amarelo); background: color-mix(in srgb, var(--cp-amarelo) 7%, transparent); }
+.cpr-fieldbook.janela-net .do-mestre .corredores li.eu b { color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .corredores li.vazio { display: block; border-style: dashed; color: var(--cp-fraco); font: italic 400 12px/1.4 var(--cp-dados); }
+.cpr-fieldbook.janela-net .corredores img { grid-row: 1 / 3; width: 28px; height: 28px; border: 1px solid var(--cp-linha); object-fit: cover; }
+.cpr-fieldbook.janela-net .corredores li b { overflow: hidden; font: 700 13px/1.15 var(--cp-titulo); text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.janela-net .corredores li span { grid-column: 2; color: var(--cp-fraco); font: 400 11px/1.2 var(--cp-dados); }
+.cpr-fieldbook.janela-net .corredores button { grid-column: 3; grid-row: 1 / 3; padding: 2px 8px; border-color: var(--cp-vermelho); color: var(--cp-vermelho); font-size: 11px; }
+.cpr-fieldbook.janela-net .corredores button:hover:not(:disabled) { background: var(--cp-vermelho); color: var(--cp-fundo); box-shadow: none; }
+
+.cpr-fieldbook.janela-net .andar-escolhido h3 small { color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .andar-escolhido ul { display: flex; flex-direction: column; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-net .andar-escolhido li {
+  --cor: var(--cp-ciano); display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 7px; padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--cor) 30%, transparent); border-left: 2px solid var(--cor); background: rgba(255, 255, 255, 0.025); font: 400 12px/1.35 var(--cp-dados);
+}
+.cpr-fieldbook.janela-net .andar-escolhido li > i { grid-row: 1 / 4; margin-top: 3px; color: var(--cor); text-align: center; }
+.cpr-fieldbook.janela-net .andar-escolhido li > :not(i) { grid-column: 2; }
+.cpr-fieldbook.janela-net .andar-escolhido li.arquivo { --cor: var(--net-roxo); }
+.cpr-fieldbook.janela-net .andar-escolhido li.controle { --cor: var(--net-verde); }
+.cpr-fieldbook.janela-net .andar-escolhido li.senha { --cor: var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .andar-escolhido li.inimigo { --cor: var(--cp-vermelho); background: rgba(255, 42, 74, 0.05); }
+.cpr-fieldbook.janela-net .andar-escolhido li:is(.feito, .vazio) { --cor: var(--cp-fraco); background: transparent; }
+.cpr-fieldbook.janela-net .andar-escolhido li.vazio:not(:has(i)) { display: block; color: var(--cp-fraco); font-style: italic; }
+.cpr-fieldbook.janela-net .andar-escolhido .linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+.cpr-fieldbook.janela-net .andar-escolhido .linha b { color: var(--cp-texto); font: 700 14px/1.2 var(--cp-titulo); letter-spacing: 0.03em; }
+.cpr-fieldbook.janela-net .andar-escolhido .linha small { color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .andar-escolhido .situacao {
+  margin-left: auto; padding: 1px 5px; background: color-mix(in srgb, var(--cor) 18%, transparent); color: var(--cor); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.cpr-fieldbook.janela-net .andar-escolhido li p { margin: 4px 0 0; color: var(--cp-texto); font-size: 11px; line-height: 1.45; }
+/* O diário do arquivo copiado pelo Eye-Dee. */
+.cpr-fieldbook.janela-net .andar-escolhido button.abrir-arquivo { justify-self: start; margin-top: 6px; padding: 3px 9px; border-color: var(--net-roxo); color: var(--net-roxo); font-size: 11px; }
+.cpr-fieldbook.janela-net .andar-escolhido button.abrir-arquivo:hover { background: var(--net-roxo); color: var(--cp-fundo); }
+.cpr-fieldbook.janela-net .andar-escolhido button.ir { width: 100%; padding: 7px; border-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 8%, transparent); color: var(--cp-ciano); letter-spacing: 0.15em; }
+.cpr-fieldbook.janela-net .andar-escolhido button.ir:hover:not(:disabled) { background: var(--cp-ciano); color: var(--cp-fundo); box-shadow: 0 0 12px var(--net-brilho); }
+
+.cpr-fieldbook.janela-net .mestre { padding: 10px; border: 1px solid color-mix(in srgb, var(--cp-amarelo) 30%, transparent); background: color-mix(in srgb, var(--cp-amarelo) 4%, transparent); }
+.cpr-fieldbook.janela-net .mestre h3 { border-bottom-color: color-mix(in srgb, var(--cp-amarelo) 30%, transparent); color: var(--cp-amarelo); }
+.cpr-fieldbook.janela-net .mestre .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.cpr-fieldbook.janela-net .mestre .botoes.ataques { margin-top: 8px; }
+.cpr-fieldbook.janela-net .mestre .rez-inimigo { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--cp-linha); font: 400 12px/1.3 var(--cp-dados); }
+.cpr-fieldbook.janela-net .mestre .rez-inimigo small { color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .mestre .rez-inimigo .ajuste { display: flex; gap: 4px; }
+.cpr-fieldbook.janela-net .mestre .rez-inimigo .ajuste button { flex: 1 1 auto; padding: 3px 6px; white-space: nowrap; }
+
+.cpr-fieldbook.janela-net .deck .programa {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 7px 9px;
+  border: 1px solid var(--cp-linha); border-left: 2px solid var(--cp-fraco); background: rgba(255, 255, 255, 0.025); font: 400 11px/1.3 var(--cp-dados);
+}
+.cpr-fieldbook.janela-net .deck .programa.ativo {
+  border-color: color-mix(in srgb, var(--cp-ciano) 55%, transparent); border-left-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 9%, transparent); box-shadow: inset 0 0 12px rgba(2, 215, 242, 0.08);
+}
+.cpr-fieldbook.janela-net .deck .programa > span:first-child { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.cpr-fieldbook.janela-net .deck .programa b { color: var(--cp-texto); font: 700 13px/1.2 var(--cp-titulo); }
+.cpr-fieldbook.janela-net .deck .programa small { color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .deck .programa.ativo b::after {
+  content: 'ATIVO'; margin-left: 6px; padding: 0 4px; background: rgba(2, 215, 242, 0.2); color: var(--cp-ciano); font: 400 9px/1.5 var(--cp-dados); letter-spacing: 0.1em; vertical-align: middle;
+}
+.cpr-fieldbook.janela-net .deck .programa .botoes { display: flex; flex-direction: column; gap: 4px; }
+.cpr-fieldbook.janela-net .deck .programa button { padding: 2px 8px; font-size: 11px; }
+.cpr-fieldbook.janela-net .deck .programa button.atacar { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .deck .programa button.atacar:hover:not(:disabled) { background: var(--cp-vermelho); color: var(--cp-fundo); box-shadow: 0 0 10px var(--net-vermelho-brilho); }
+
+/* ---------- Embaixo: as habilidades de Interface e o registro ---------- */
+.cpr-fieldbook.janela-net .net-rodape {
+  display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; border-top: 1px solid color-mix(in srgb, var(--cp-ciano) 30%, transparent); background: rgba(6, 10, 16, 0.98);
+}
+.cpr-fieldbook.janela-net .net-rodape.so-registro { grid-template-columns: minmax(0, 1fr); }
+.cpr-fieldbook.janela-net .habilidades { padding: 10px 16px 12px; }
+.cpr-fieldbook.janela-net .habilidades h3 { color: var(--cp-fraco); border-bottom-color: var(--cp-linha); }
+.cpr-fieldbook.janela-net .habilidades label.alvo { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--cp-fraco); font: 400 11px/1.2 var(--cp-dados); }
+.cpr-fieldbook.janela-net .habilidades label.alvo select { flex: 1; border-color: color-mix(in srgb, var(--cp-vermelho) 50%, transparent); }
+.cpr-fieldbook.janela-net .habilidades .botoes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cpr-fieldbook.janela-net .habilidades button.habilidade {
+  justify-content: flex-start; gap: 8px; padding: 8px 10px; border-color: color-mix(in srgb, var(--cp-ciano) 35%, transparent);
+  background: color-mix(in srgb, var(--cp-ciano) 5%, transparent); color: var(--cp-texto); font: 700 12px/1.2 var(--cp-dados); letter-spacing: 0.08em; text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+}
+.cpr-fieldbook.janela-net .habilidades button.habilidade i { width: 14px; color: var(--cp-ciano); text-align: center; }
+.cpr-fieldbook.janela-net .habilidades button.habilidade small { margin-left: auto; color: var(--cp-ciano); font-size: 10px; font-weight: 400; letter-spacing: 0.04em; opacity: 0.85; text-transform: none; }
+.cpr-fieldbook.janela-net .habilidades button.habilidade:hover:not(:disabled) {
+  border-color: var(--cp-ciano); background: color-mix(in srgb, var(--cp-ciano) 20%, transparent); box-shadow: inset 0 0 14px var(--net-brilho); color: var(--cp-texto);
+}
+.cpr-fieldbook.janela-net .habilidades button.habilidade.combate { border-color: color-mix(in srgb, var(--cp-vermelho) 50%, transparent); background: color-mix(in srgb, var(--cp-vermelho) 7%, transparent); }
+.cpr-fieldbook.janela-net .habilidades button.habilidade.combate :is(i, small) { color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .habilidades button.habilidade.combate:hover:not(:disabled) {
+  border-color: var(--cp-vermelho); background: color-mix(in srgb, var(--cp-vermelho) 25%, transparent); box-shadow: inset 0 0 14px var(--net-vermelho-brilho);
+}
+.cpr-fieldbook.janela-net .habilidades input[data-texto="virus"] { width: 100%; margin-top: 8px; }
+.cpr-fieldbook.janela-net .habilidades .comando { display: flex; gap: 6px; margin-top: 8px; }
+.cpr-fieldbook.janela-net .habilidades .comando input { flex: 1; min-width: 0; }
+/* O que o nó de controle tomado comanda na cena: a coisa, a situação e os comandos. */
+.cpr-fieldbook.janela-net .habilidades .ligacoes { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
+.cpr-fieldbook.janela-net .habilidades .ligacoes li { display: flex; align-items: center; gap: 6px; color: var(--net-verde); }
+.cpr-fieldbook.janela-net .habilidades .ligacoes small { flex: 1; min-width: 0; color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .habilidades .ligacoes button { flex: none; width: auto; }
+/* O registro, como um terminal: a hora antes de cada linha (o CSS a desenha) e o cursor na mais nova. */
+.cpr-fieldbook.janela-net .registro { display: flex; flex-direction: column; min-height: 0; padding: 10px 12px; background: #030508; border-left: 1px solid color-mix(in srgb, var(--cp-ciano) 22%, transparent); }
+.cpr-fieldbook.janela-net .so-registro .registro { border-left: none; }
+.cpr-fieldbook.janela-net .registro h3 { color: var(--cp-fraco); border-bottom-color: var(--cp-linha); }
+.cpr-fieldbook.janela-net .registro ol { flex: 1; min-height: 0; max-height: 8rem; margin: 0; padding: 0; overflow-y: auto; list-style: none; color: #9fb3c8; font: 400 11px/1.5 var(--cp-dados); }
+.cpr-fieldbook.janela-net .registro li { margin-bottom: 3px; }
+.cpr-fieldbook.janela-net .registro li::before { content: '[' attr(data-hora) '] '; color: var(--cp-fraco); }
+.cpr-fieldbook.janela-net .registro li[data-hora=""]::before { content: '› '; }
+.cpr-fieldbook.janela-net .registro li:first-child { color: var(--cp-texto); }
+.cpr-fieldbook.janela-net .registro li:first-child::after { content: '▌'; margin-left: 3px; color: var(--cp-ciano); animation: cprf-net-piscar 1s steps(1) infinite; }
+.cpr-fieldbook.janela-net .registro li.ok { color: var(--net-verde); }
+.cpr-fieldbook.janela-net .registro li.falha { color: var(--cp-vermelho); }
+.cpr-fieldbook.janela-net .registro li.ice { color: #ff7a9a; }
+
+/* Estreita: tudo numa coluna, a janela rola. */
+@container (max-width: 860px) {
+  .cpr-fieldbook.janela-net .janela-net-corpo { display: block; flex: none; height: auto; }
+  .cpr-fieldbook.janela-net .net-meio, .cpr-fieldbook.janela-net .net-rodape { grid-template-columns: minmax(0, 1fr); }
+  .cpr-fieldbook.janela-net .mapa { max-height: 26rem; }
+  .cpr-fieldbook.janela-net .net-lado { overflow: visible; border-left: none; border-top: 1px solid color-mix(in srgb, var(--cp-ciano) 22%, transparent); }
+  .cpr-fieldbook.janela-net .registro { border-left: none; border-top: 1px solid var(--cp-linha); }
+  .cpr-fieldbook.janela-net .habilidades .botoes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpr-fieldbook.janela-net *, .cpr-fieldbook.janela-net *::before, .cpr-fieldbook.janela-net *::after { animation: none !important; transition: none !important; }
+}
+@keyframes cprf-net-piscar { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes cprf-net-pulso { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+@keyframes cprf-net-fluxo-v { from { background-position: 0 0; } to { background-position: 0 13px; } }
+@keyframes cprf-net-fluxo-h { from { background-position: 0 50%; } to { background-position: 13px 50%; } }
+@keyframes cprf-net-processando { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+@keyframes cprf-net-fogo { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 12px rgba(255, 138, 31, 0.35); } }
+@keyframes cprf-net-ruido { 0%, 100% { opacity: 0.6; transform: none; } 92% { opacity: 0.2; transform: translateX(2px); } 95% { opacity: 0.9; transform: translateX(-1px); } }
+.cpr-fieldbook.net-virus .colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cpr-fieldbook.net-virus table.exemplos { width: 100%; font-size: 12px; }
+.cpr-fieldbook.net-virus table.exemplos td:not(:first-child), .cpr-fieldbook.net-virus table.exemplos th:not(:first-child) { width: 3.5rem; text-align: center; }
+/* Os tokens dinâmicos (o C45): a janela do conjunto, com a grade das 8 direções e as poses sem direção. */
+.cpr-fieldbook.token-dinamico .token-dinamico-corpo { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.cpr-fieldbook.token-dinamico .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cpr-fieldbook.token-dinamico .linha input[type="text"] { min-width: 18rem; }
+.cpr-fieldbook.token-dinamico .dica { font-size: 12px; opacity: 0.8; margin: 0; }
+.cpr-fieldbook.token-dinamico table.grade { width: 100%; border-collapse: collapse; }
+.cpr-fieldbook.token-dinamico table.grade th { font-size: 12px; text-align: center; padding: 2px; }
+.cpr-fieldbook.token-dinamico table.grade tbody th { text-align: left; white-space: nowrap; }
+.cpr-fieldbook.token-dinamico .fixas { display: flex; flex-wrap: wrap; gap: 8px; }
+.cpr-fieldbook.token-dinamico .fixa { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
+.cpr-fieldbook.token-dinamico .celula button { width: 72px; height: 72px; padding: 2px; display: grid; place-items: center; border: 1px dashed var(--cp-linha, #555); background: rgba(0, 0, 0, 0.35); }
+.cpr-fieldbook.token-dinamico .celula img { max-width: 100%; max-height: 100%; object-fit: contain; border: none; }
+.cpr-fieldbook.token-dinamico footer { display: flex; justify-content: flex-end; }
+/* O cortador da folha (o C45, parte 3): a grade das linhas e a prévia. */
+.cpr-fieldbook.cortador-de-folha .cortador-corpo { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.cpr-fieldbook.cortador-de-folha .linha, .cpr-fieldbook.cortador-de-folha .linha-da-folha { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cpr-fieldbook.cortador-de-folha .linha input[type="text"] { min-width: 14rem; }
+.cpr-fieldbook.cortador-de-folha .linha input[type="number"] { width: 4.5rem; }
+.cpr-fieldbook.cortador-de-folha .poses { display: flex; flex-wrap: wrap; gap: 4px; }
+.cpr-fieldbook.cortador-de-folha .poses select { width: 7.5rem; }
+.cpr-fieldbook.cortador-de-folha canvas.previa { width: 100%; height: auto; background: repeating-conic-gradient(#2a2a2a 0 25%, #1c1c1c 0 50%) 0 0 / 16px 16px; }
+.cpr-fieldbook.cortador-de-folha .dica { font-size: 12px; opacity: 0.8; margin: 0; }
+.cpr-fieldbook.cortador-de-folha footer { display: flex; justify-content: space-between; align-items: center; }

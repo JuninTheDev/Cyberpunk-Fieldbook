@@ -1,0 +1,64 @@
+{{!-- A coluna dos filtros do navegador (navegador.mjs; o cpr-browser-sidebar.hbs do CORE 0.93): o preço (nos itens),
+uma caixa por tipo com o tristate do tipo e os filtros dele (a lista de valores, a faixa, o booleano e a alternância
+com os filtros de dentro), e os botões de limpar, de atualizar o índice e, para o mestre, dos compêndios. --}}
+<aside class="navegador-filtros">
+  {{#if itens}}
+  <fieldset class="navegador-preco">
+    <legend>Preço (eb)</legend>
+    <input type="number" min="0" data-limite="min" value="{{precoMin}}" placeholder="Mín." aria-label="Preço mínimo">
+    <input type="number" min="0" data-limite="max" value="{{precoMax}}" placeholder="Máx." aria-label="Preço máximo">
+  </fieldset>
+  {{/if}}
+  <div class="navegador-caixas">
+    {{#each caixas}}
+    <fieldset class="navegador-caixa{{#unless aberta}} recolhida{{/unless}}" data-tipo="{{tipo}}">
+      <legend>
+        {{> "systems/cpr-fieldbook/templates/navegador/tristate.hbs" tristate}}
+        {{#if temFiltros}}<button type="button" class="navegador-abrir-caixa" data-action="caixa" data-tipo="{{tipo}}" aria-expanded="{{#if aberta}}true{{else}}false{{/if}}" aria-label="Filtros de {{rotulo}}"><i class="fa-solid fa-chevron-down" inert></i></button>{{/if}}
+      </legend>
+      {{#if temFiltros}}
+      <div class="navegador-filtros-do-tipo">
+        {{#each filtros}}
+        {{#if conjunto}}
+        <div class="navegador-conjunto" data-filtro="{{id}}">
+          <span class="navegador-rotulo">{{rotulo}}</span>
+          {{#each opcoes}}{{> "systems/cpr-fieldbook/templates/navegador/tristate.hbs" this}}{{/each}}
+        </div>
+        {{else if faixa}}
+        <div class="navegador-faixa" data-filtro="{{id}}">
+          <span class="navegador-rotulo">{{rotulo}}</span>
+          <input type="number" data-tipo="{{tipo}}" data-filtro="{{id}}" data-limite="min" value="{{min}}" placeholder="Mín." aria-label="{{rotulo}}: mínimo">
+          <input type="number" data-tipo="{{tipo}}" data-filtro="{{id}}" data-limite="max" value="{{max}}" placeholder="Máx." aria-label="{{rotulo}}: máximo">
+        </div>
+        {{else if booleano}}
+        {{> "systems/cpr-fieldbook/templates/navegador/tristate.hbs" tristate}}
+        {{else if alternancia}}
+        <div class="navegador-alternancia">
+          {{> "systems/cpr-fieldbook/templates/navegador/tristate.hbs" tristate}}
+          <div class="navegador-aninhados" data-tipo="{{tipo}}" data-filtro="{{id}}"{{#unless mostrar}} hidden{{/unless}}>
+            {{#each filtros}}
+            {{#if faixa}}
+            <div class="navegador-faixa" data-filtro="{{id}}">
+              <span class="navegador-rotulo">{{rotulo}}</span>
+              <input type="number" data-tipo="{{tipo}}" data-filtro="{{id}}" data-limite="min" value="{{min}}" placeholder="Mín." aria-label="{{rotulo}}: mínimo">
+              <input type="number" data-tipo="{{tipo}}" data-filtro="{{id}}" data-limite="max" value="{{max}}" placeholder="Máx." aria-label="{{rotulo}}: máximo">
+            </div>
+            {{else if booleano}}
+            {{> "systems/cpr-fieldbook/templates/navegador/tristate.hbs" tristate}}
+            {{/if}}
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+        {{/each}}
+      </div>
+      {{/if}}
+    </fieldset>
+    {{/each}}
+  </div>
+  <footer class="navegador-acoes">
+    <button type="button" data-action="limpar" data-tooltip="Limpar os filtros" aria-label="Limpar os filtros"><i class="fa-solid fa-filter-circle-xmark" inert></i></button>
+    <button type="button" data-action="atualizar" data-tooltip="Atualizar o índice" aria-label="Atualizar o índice"><i class="fa-solid fa-arrows-rotate" inert></i></button>
+    {{#if mestre}}<button type="button" data-action="compendios" data-tooltip="Escolher os compêndios" aria-label="Escolher os compêndios"><i class="fa-solid fa-gear" inert></i></button>{{/if}}
+  </footer>
+</aside>

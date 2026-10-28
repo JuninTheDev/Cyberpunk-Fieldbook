@@ -1,0 +1,10 @@
+{{!-- Os movimentos especiais das Artes Marciais (artes-marciais.mjs; a wiki, p. 178–180): os da forma em que o
+personagem tem pelo menos 1 ponto, e a Recuperação. Na aba Combate do personagem e na ficha do capanga. --}}
+{{#if movimentos.length}}
+<section class="painel corte artes-marciais">
+  <div class="titulo">ARTES MARCIAIS<span>MOVIMENTOS ESPECIAIS</span></div>
+  <div class="botoes-resumo movimentos">
+    {{#each movimentos}}<button type="button" class="acao" data-action="movimento" data-movimento="{{id}}" data-tooltip="{{nomeDaForma}}{{#if confirmar}}. Requisito: {{confirmar}}{{/if}} {{efeito}}{{#if bloqueio}} {{bloqueio}}{{/if}}"{{#if bloqueio}} disabled{{/if}}>{{nome}}</button>{{/each}}
+  </div>
+</section>
+{{/if}}

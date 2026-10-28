@@ -1,0 +1,47 @@
+<header class="topo">
+  <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" data-action="editImage" data-edit="img" role="button" tabindex="0" aria-label="Trocar o retrato" data-tooltip="Trocar o retrato">
+  <div class="identidade">
+    <p class="linha-id">
+      <span>CAPANGA://</span>
+      {{#if naCena}}
+      <span class="modelo" data-tooltip="A ficha deste token: o que muda aqui (HP, munição) não muda os outros capangas do mesmo ator">ESTE TOKEN</span>
+      {{else}}
+      <span class="modelo" data-tooltip="A ficha do ator: os capangas na cena seguem o que ela tem, menos o que cada um já mudou (HP, munição)">MODELO DOS TOKENS</span>
+      {{/if}}
+      <label class="campo-busca" data-tooltip="Filtra pelo nome as perícias, as armas e os itens; não grava nada na ficha"><i class="fa-solid fa-magnifying-glass" inert></i><input class="busca-da-ficha" type="search" id="cprf-busca-{{ator.id}}" value="{{busca}}" placeholder="Buscar perícias e itens" aria-label="Buscar perícias e itens"></label>
+    </p>
+    <div class="nome-linha">
+      <input class="nome" type="text" name="name" value="{{nomeNaFicha}}" placeholder="Nome" aria-label="Nome" {{#unless editavel}}disabled{{/unless}}>
+    </div>
+    <div class="indicadores">
+      <label class="indicador hp corte estado-{{sistema.ferimento.chave}}" data-tooltip="Pontos de vida: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}">
+        <span class="valor"><input type="number" name="system.hp.value" value="{{sistema.hp.value}}" aria-label="HP atual"><small>/{{sistema.hp.max}}</small></span>
+        <i>HP</i>
+      </label>
+      <div class="indicador corte sp" data-tooltip="SP da cabeça e do corpo: a maior das armaduras vestidas">
+        <span class="valor"><b>{{sistema.armadura.cabeca.sp}}</b><small>/{{sistema.armadura.corpo.sp}}</small></span>
+        <i>SP CABEÇA/CORPO</i>
+      </div>
+      <div class="indicador corte iniciativa" data-tooltip="{{iniciativa.dica}}">
+        <span class="valor"><b>{{iniciativa.valor}}</b></span>
+        <i>INICIATIVA</i>
+      </div>
+      <div class="indicador corte esquiva" data-tooltip="DEX + Evasão (+ 1d10 contra o ataque){{#unless podeEsquivarTiro}}; de tiro, só com REF 8+{{/unless}}">
+        <span class="valor"><b>{{esquiva}}</b></span>
+        <i>ESQUIVA</i>
+      </div>
+      <label class="indicador corte reputacao" data-tooltip="Reputação: soma no Facedown; a de covarde conta negativa">
+        <span class="valor"><input type="number" name="system.reputacao" value="{{sistema.reputacao}}" aria-label="Reputação"></span>
+        <i>REPUTAÇÃO</i>
+      </label>
+      <button type="button" class="indicador corte rola facedown" data-action="rolarFacedown" data-tooltip="{{facedown.dica}}">
+        <span class="valor"><b>{{facedown.valor}}</b></span>
+        <i>FACEDOWN</i>
+      </button>
+      {{#if editavel}}<button type="button" class="indicador corte rola reconhecimento" data-action="rolarReputacao" data-tooltip="Ao conhecer alguém: 1d10 abaixo do nível de Reputação indica que já ouviu falar de você. Má fama conta sem o sinal: −5 conta como 5.">
+        <span class="valor"><b>1d10</b></span>
+        <i>RECONHECIMENTO</i>
+      </button>{{/if}}
+    </div>
+  </div>
+</header>

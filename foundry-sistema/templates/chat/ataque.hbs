@@ -1,0 +1,56 @@
+<div class="cpr-fieldbook cartao ataque">
+  <header><h3>{{atacante}}: {{descricao}}</h3><span class="sabor">{{arma}}</span></header>
+  <p class="placar">{{#if (ne ataque null)}}Ataque <b>{{ataque}}</b>{{#if cabecalho}} · {{/if}}{{/if}}{{cabecalho}}</p>
+  {{#if falhaDaArma}}<p class="nota falha-da-arma"><b>Falha crítica da arma:</b> {{falhaDaArma.texto}}</p>{{/if}}
+  <ol class="alvos">
+    {{#each linhas}}
+    <li class="alvo resultado-{{resultado}}">
+      <div class="linha">
+        <img src="{{img}}" alt="">
+        <b>{{nome}}</b>
+        <span class="rotulo">{{rotulo}}</span>
+        {{#if contra}}<span class="contra">contra {{contra}}</span>{{/if}}
+        {{#if metros}}<span class="contra">{{metros}} m</span>{{/if}}
+      </div>
+      {{#if alvoOriginal}}<p class="nota">Alvo original: {{alvoOriginal.nome}}. O escudo humano {{nome}} recebe o ataque.</p>{{/if}}
+      {{#if cadaver}}<p class="nota">Escudo de cadáver: perdeu {{cadaver.perdeu}} PV ({{cadaver.antes}} → {{cadaver.depois}}, máximo {{cadaver.max}}).{{#unless cadaver.passou}} A sobra não alcança quem o segura.{{/unless}}</p>{{/if}}
+      {{#if veicular}}
+      <ul class="dano-veicular">
+        {{#if (eq veicular.tipo "vidro")}}
+        <li><b>{{veicular.nome}}</b>: {{#if veicular.atravessado}}a carga Tech atravessou sem tirar HP do vidro ({{veicular.antes}} → {{veicular.depois}}).{{else}}perdeu {{veicular.perdeu}} HP ({{veicular.antes}} → {{veicular.depois}}). {{#if veicular.passou}}O vidro não protegeu a pessoa.{{else}}O vidro segurou o ataque; a sobra se perde.{{/if}}{{/if}}</li>
+        {{else}}
+        <li><b>{{veicular.nome}}</b>: perdeu {{veicular.perdeu}} SDP ({{veicular.antes}} → {{veicular.depois}}), contra SP {{veicular.spEfetivo}}{{#if (ne veicular.spEfetivo veicular.sp)}} (de {{veicular.sp}}){{/if}}{{#if veicular.ablado}}; a blindagem perdeu {{veicular.ablado}} de SP{{/if}}.</li>
+        {{/if}}
+      </ul>
+      {{/if}}
+      {{#if dano}}
+      <ul class="dano">
+        {{#if dano.estase}}<li>{{dano.estase}} (a cobertura da estase) levou {{dano.estaseAblada}}.</li>{{/if}}
+        {{#if dano.escudo}}<li>O escudo ({{dano.escudo}}) levou {{dano.escudoAblado}}.</li>{{/if}}
+        {{#if (or dano.lugar (not (or dano.escudo dano.estase)))}}<li>Dano <b>{{dano.dano}}</b>{{#if multiplicador}} (2d6 × {{multiplicador}}){{/if}} contra SP {{dano.spEfetivo}}{{#if (ne dano.spEfetivo dano.sp)}} (de {{dano.sp}}){{/if}}{{#if dano.armadura}} ({{dano.armadura}}){{/if}}: {{#if dano.passou}}passaram {{dano.bruto}}{{#if (eq dano.local "cabeca")}} (cabeça ×2){{/if}}{{else}}a armadura segurou{{/if}}.</li>{{/if}}
+        {{#if dano.pontoFraco}}<li>Ponto Fraco: +{{dano.pontoFraco}} no dano (primeiro acerto da rodada).</li>{{/if}}
+        {{#if dano.bonus}}<li>Crítico: +{{dano.bonus}} direto no HP.</li>{{/if}}
+        {{#if dano.deflexao}}<li>Deflexão de Dano: −{{dano.deflexao}} (primeiro dano da rodada).</li>{{/if}}
+        <li><b>Perdeu {{dano.recebido}} HP</b> ({{dano.hpAntes}} → {{dano.hpDepois}}){{#if dano.ablado}}; a armadura perdeu {{dano.ablado}} de SP{{/if}}.</li>
+        {{#each dano.lesoes}}<li class="lesao">Lesão crítica: <b>{{nome}}</b>.</li>{{/each}}
+      </ul>
+      {{#if hp}}<span class="barra-hp" style="--hp: {{hp}}%"></span>{{/if}}
+      {{/if}}
+      {{#each notas}}<p class="nota">{{this}}</p>{{/each}}
+      {{#if municao}}
+      {{#unless municao.resistencia.passou}}
+      <div class="botoes">
+        {{#if (eq municao.efeito "emp")}}<button type="button" data-cprf-acao="aplicarEmp" data-ator="{{municao.ator}}">Escolher itens EMP</button><button type="button" data-cprf-acao="encerrarMunicao" data-ator="{{municao.ator}}">Acabou o minuto</button>{{/if}}
+        {{#if (eq municao.efeito "sleep")}}<button type="button" data-cprf-acao="encerrarMunicao" data-ator="{{municao.ator}}">Acordar (uma Ação de outra pessoa)</button>{{/if}}
+        {{#if municao.itens.length}}<button type="button" data-cprf-acao="encerrarMunicao" data-ator="{{municao.ator}}">Acabou o minuto</button>{{/if}}
+        {{#if (eq municao.efeito "incendiary")}}<button type="button" data-cprf-acao="apagarFogo" data-ator="{{municao.ator}}">Apagar fogo (uma Ação)</button>{{/if}}
+      </div>
+      {{/unless}}
+      {{/if}}
+    </li>
+    {{/each}}
+  </ol>
+  {{#each notas}}<p class="nota">{{this}}</p>{{/each}}
+  {{#if danoDoArremesso}}<div class="botoes"><button type="button" data-cprf-acao="rolarDanoArremesso">Dano do arremesso</button></div>{{/if}}
+  {{#if desfazer}}<div class="botoes"><button type="button" data-cprf-acao="desfazer">Desfazer</button></div>{{/if}}
+</div>

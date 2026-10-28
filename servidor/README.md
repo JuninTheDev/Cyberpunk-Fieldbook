@@ -249,7 +249,7 @@ O Foundry 14 fica em `/srv/foundry14`, com o Node 24 em `/opt/node24`, a mesma p
 | Para | Comando |
 |---|---|
 | Preparar ou atualizar o Foundry 14 (zip baixado em `/srv/foundry14`; sem zip, mantém o instalado; não liga) e liberar a troca pela wiki | `sudo bash /srv/fieldbook/wiki/servidor/instalar-foundry14.sh` |
-| Instalar o sistema da `sistema-v14` no Foundry 14 | `sudo bash /srv/fieldbook/wiki/servidor/instalar-sistema-v14.sh` |
+| Instalar o sistema do master no Foundry 14 agora, sem esperar a mesa esvaziar (derruba quem estiver nela) | `sudo bash /srv/fieldbook/wiki/servidor/instalar-sistema-v14.sh` |
 | Gerar também o "Arquivo da mesa" (as cenas do mundo do 12) | `sudo bash /srv/fieldbook/wiki/servidor/instalar-sistema-v14.sh --pacote edgerunners-storys` |
 | Trocar de mesa (o mesmo que o botão da wiki): o 14, ou de volta o 12 | `sudo systemctl enable --now foundry14 && sudo systemctl disable foundry` / `sudo systemctl enable --now foundry && sudo systemctl disable foundry14` |
 | Só ligar um por agora (ao reiniciar o servidor, volta o que estiver habilitado) | `sudo systemctl start foundry14` / `sudo systemctl start foundry` |
@@ -258,7 +258,12 @@ O Foundry 14 fica em `/srv/foundry14`, com o Node 24 em `/opt/node24`, a mesma p
 - O zip vem da sua conta (foundryvtt.com → Purchased Licenses → versão 14, Linux). O link vale poucos minutos: baixe direto no servidor, em `/srv/foundry14`.
 - Na primeira vez, o Foundry 14 recebe a licença e a senha de administrador do 12.
 - O backup diário já leva os mundos, a configuração e os arquivos soltos do Foundry 14.
-- A atualização automática pelo GitHub continua instalando os módulos só no Foundry 12. Com o 14 no ar, ela gera os módulos do 12 sem parar nada e não liga o 12 (o `receber.sh` e o `instalar.sh` também não). O sistema novo se instala à mão, pelo `instalar-sistema-v14.sh`, até a `sistema-v14` entrar no master.
+- A atualização automática pelo GitHub instala os módulos (`foundry-*/`) só no Foundry 12. Com o 14 no ar, ela gera os módulos do 12 sem parar nada e não liga o 12 (o `receber.sh` e o `instalar.sh` também não).
+- **O sistema do Foundry 14 se instala sozinho** (desde o C28, quando a `sistema-v14` entrou no master): a cada minuto, o `atualizar.sh` compara a versão do `foundry-sistema/` do master (e a do documento das arquiteturas da campanha, que entra num compêndio) com a instalada, e o `atualizar-sistema.sh` instala a nova.
+  - **Com o 12 no ar,** o 14 está parado: instala na hora.
+  - **Com o 14 no ar,** espera a mesa dele esvaziar (a barra lateral do mestre mostra "sistema do Foundry 14 esperando a mesa vazia"). Aí para o 14 por alguns segundos, instala e liga de novo, com o mesmo mundo aberto (o `iniciar-foundry.sh` abre o mundo que estava aberto, pelo `--world` do Foundry).
+  - **Se der erro,** registra uma vez no `atualizacoes.log` (o resto em `/srv/fieldbook/dados/sistema-ultimo-erro.log`), liga o 14 de novo e espera a próxima versão. Para tentar de novo a mesma, rode o `instalar-sistema-v14.sh`.
+  - **A marca** fica em `/srv/fieldbook/dados/.sistema-instalado`. Apagar a marca faz o sistema se instalar de novo no minuto seguinte (com a mesa vazia).
 
 ### Como funciona por dentro
 
@@ -277,11 +282,12 @@ O Foundry 14 fica em `/srv/foundry14`, com o Node 24 em `/opt/node24`, a mesma p
 | `instalar.sh` | Monta ou refaz o servidor. |
 | `atualizar.sh` | Roda a cada minuto e puxa o GitHub. |
 | `atualizar-modulo.sh` | Gera o módulo cpr-2077 e instala os outros (`foundry-*/instalar.mjs`); sozinho, só com a mesa vazia. |
+| `atualizar-sistema.sh` | Instala no Foundry 14 o sistema do master (`foundry-sistema/`); sozinho, só com a mesa do 14 vazia. |
 | `backup.sh` | Faz o backup diário e, quando algum mapa ou retrato muda, o pacote dos arquivos soltos. |
 | `backup-completo.sh` | Faz o backup completo do Foundry e da wiki (à mão, antes de uma mudança grande). |
 | `receber.sh` | Recebe o envio do PC. |
 | `iniciar-foundry.sh` | Liga o Foundry (o 12 com o Node do sistema; o 14 com o Node 24). |
 | `instalar-foundry14.sh` | Prepara o Foundry 14 ao lado do 12: swap, Node 24, programa, dados, o serviço `foundry14` e o sudo da troca de mesa pela wiki. |
-| `instalar-sistema-v14.sh` | Instala no Foundry 14 o sistema da `sistema-v14` e, com `--pacote`, o "Arquivo da mesa". |
+| `instalar-sistema-v14.sh` | Instala agora no Foundry 14 o sistema do master (o `atualizar-sistema.sh --agora`) e, com `--pacote`, o "Arquivo da mesa". |
 | `enviar-para-servidor.ps1` | Faz o envio, do lado do PC. |
 | `baixar-backup.ps1` | Traz o backup e o pacote dos arquivos mais recentes para o PC (no PC; `-Agendar` para toda semana). |
