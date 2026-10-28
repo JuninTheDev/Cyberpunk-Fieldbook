@@ -9898,6 +9898,53 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...info, wiki: [status(pedido.id).status, status(caro.id).status, status(caro.id).erro] })];
     });
 
+    await r.passo('pedidos da loja: a entrega de cada minuto e a do mestre no mesmo pedido entregam uma vez, sem o aviso falso de "já foi resolvido" (as duas juntas; e a de cada minuto com a ficha lida antes de a outra terminar)', async () => {
+      // A corrida do registro do ciclo 186: duas entregas do mesmo pedido. Dois pedidos de 10 balas de rifle (10eb cada).
+      const novo = async () => {
+        const { pedido } = await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'core_ammo:rifle-basic', qtd: 10 }] });
+        await api(`/api/personagens/${solo.id}/pedidos/${pedido.id}/aprovar`, 'POST', {});
+        return (await api(`/api/personagens/${solo.id}`)).personagem.pedidos.find(p => p.id === pedido.id);
+      };
+      const juntos = await novo();
+      const atrasado = await novo();
+      const info = await edge.evaluate(`(async () => {
+        const w = game.system.api.wiki, id = ${JSON.stringify(solo.id)};
+        const a = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === id);
+        const balas = () => a.items.filter(i => i.type === 'municao' && i.name === 'Rifle (Basic)').reduce((soma, i) => soma + i.system.quantidade, 0);
+        const mensagens = [];
+        ui.notifications.info = m => { mensagens.push(String(m)); };
+        ui.notifications.warn = m => { mensagens.push(String(m)); };
+        const original = window.fetch;
+        try {
+          const antes = { dinheiro: a.system.dinheiro, balas: balas() };
+          const duas = await Promise.all([1, 2].map(() => w.entregarPedido(a, id, ${JSON.stringify(juntos)}).then(r => r.ok, e => e.message)));
+          const depoisDasDuas = { dinheiro: a.system.dinheiro, balas: balas() };
+          // A de cada minuto fica parada na ficha da wiki que leu (o pedido ainda aprovado) até a do mestre entregá-lo.
+          let soltar, segurou = false;
+          const segurar = new Promise(r => { soltar = r; });
+          window.fetch = async function (url, opcoes) {
+            const resposta = await original.apply(this, arguments);
+            if (!segurou && (!opcoes?.method || opcoes.method === 'GET') && String(url).includes('/api/personagens/' + id + '?')) { segurou = true; await segurar; }
+            return resposta;
+          };
+          const doMinuto = w.entregarPedidos();
+          for (let i = 0; i < 100 && !segurou; i++) await new Promise(r => setTimeout(r, 50));
+          window.fetch = original;
+          const doMestre = await w.entregarPedido(a, id, ${JSON.stringify(atrasado)}).then(r => r.ok, e => e.message);
+          soltar();
+          const resultados = await doMinuto;
+          return { antes, duas, depoisDasDuas, segurou, doMestre, resultados: resultados.filter(r => r.ator === a.name), mensagens, depois: { dinheiro: a.system.dinheiro, balas: balas() } };
+        } finally { window.fetch = original; delete ui.notifications.info; delete ui.notifications.warn; }
+      })()`);
+      const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
+      const status = id => doc.pedidos.find(p => p.id === id)?.status;
+      const ok = info.duas.join() === 'true,true' && info.depoisDasDuas.dinheiro === info.antes.dinheiro - 10 && info.depoisDasDuas.balas === info.antes.balas + 10
+        && info.segurou && info.doMestre === true && !info.resultados.some(r => r.pedido === atrasado.id)
+        && info.depois.dinheiro === info.antes.dinheiro - 20 && info.depois.balas === info.antes.balas + 20
+        && !info.mensagens.some(m => /não foi entregue/.test(m)) && status(juntos.id) === 'entregue' && status(atrasado.id) === 'entregue';
+      return [ok, JSON.stringify({ ...info, wiki: [status(juntos.id), status(atrasado.id)] })];
+    });
+
     await r.passo('migração: "Importar da mesa" monta o ator pela ficha que o Foundry 12 mandou (HP, dinheiro, lesão, itens pelo uid e pelo nome, o pente, o SP que sobrou, os programas no deck)', async () => {
       // Um personagem da wiki de teste com a criação mínima e a ficha da mesa no formato do cpr-2077 (Foundry 12).
       const { personagem } = await api('/api/personagens', 'POST', {

@@ -53,23 +53,23 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 | CORE | macros na barra (a arma, a perícia e o item arrastados da ficha) e os favoritos (o alfinete do item e da perícia) | portados no ciclo 139 (C20): o favorito vai para o painel da aba Combate (ver as dúvidas) |
 | CORE | ficha de capanga (o mook) | portada nos ciclos 36 e 37: o tipo de ator com os dados do personagem, o token solto, a ficha de uma página, o item arrastado que entra equipado ou instalado e a ficha limitada |
 | CORE | Black ICE e demônio como atores | o ciclo 43: os tipos, as fichas com as rolagens, o modelo da wiki, o token solto com a REZ e a iniciativa no topo da fila (ver as dúvidas); o dano no 44 (o do Black ICE no netrunner, o "em Black ICE" e o Zap na REZ, o Zap do demônio); os programas de Black ICE do netrunner no 45 (os 12 da wiki no compêndio de Netrunning); o token que o programa rezza no 46 (pelo mestre ativo) |
-| CORE | contêiner (loja, saque, esconderijo) | falta |
+| CORE | contêiner (loja, saque, esconderijo) | portado nos ciclos 122, 130 e 132 (o C24; a linha de baixo, no fim da tabela) |
 | CORE | a Sorte na janela de rolagem | portada no ciclo 20: preparada na ficha (− e +), entra no próximo teste e sai da Sorte |
 | CORE | o ledger de Eurodólares, IP e Reputação | portado no ciclo 21, o extrato: somar, subtrair e definir com o motivo, o histórico com quem mudou e o mestre tirando linhas; as diferenças estão nas dúvidas |
 | Fluxo de Combate | ataque, defesa às cegas, dano na ficha, mirado, autofogo, supressivo, cartucho, explosivo, Lesão Crítica, Death Save no turno, Desfazer, jogador rolando o dano | portado |
 | Fluxo de Combate | a janela "Ataque!" (a reação do alvo: quem ataca, a conta de cada escolha, a barra do tempo; o X e o tempo valem a escolha padrão) | portada no ciclo 28, no visual do sistema |
 | Fluxo de Combate | um ataque por vez no mestre, quem vê o cartão do resultado, esconder ou não o total do ataque, texto e animação no token | portados no ciclo 29 (com diferenças: ver as dúvidas) |
 | Fluxo de Combate | Reflex Tuner | portado no ciclo 30, pela wiki (ver as dúvidas) |
-| cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077), menos o Black Chrome, e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). Falta pôr as opções de cyberware na base |
+| cpr-2077 | importação da wiki | portada para os itens: tudo o que a loja da wiki vende (CORE e 2077), menos o Black Chrome, e os veículos da família, com a montagem (programas e hardware no deck, acessórios na arma, upgrades no veículo). As opções de cyberware entram na base desde o ciclo 83, e o Black Chrome desde o 183 (o C48) |
 | cpr-2077 | o conteúdo de 2077 (armas, cyberware, netrunning) | portado no ciclo 12, da própria wiki, com os números do módulo; no ciclo 31, com o Mission Kit (Neuroport, Rebuilds, munição Smart melhorada, Immunoblockers, quickhacks do Kit) |
 | cpr-2077 | os modos das armas de 2077 (ricochete, carga e rajada Tech, teste Smart) e as três configurações | portados no ciclo 17, pelas regras do suplemento de fã. Com o Mission Kit (ciclo 31), a wiki trocou essas regras pelas do Kit, e os modos ainda não o seguem (ROADMAP, C29). A arma Smart segue o Kit desde o ciclo 110 (a ligação e o +1), e as duas configurações do ataque Smart saíram; o Power, desde o 114 (o Ricochete do Kit e o crítico de 10); a Tech, desde o 115 (a carga do Kit), e saiu a última configuração; as regras de cada modelo, desde o 116 |
-| cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, pelo suplemento de fã (com os dois cartuchos da Testera, que o Kit manteve). Com o Kit, a wiki mudou várias (a Lexington, a Yukimura, a Burya, a Omaha): ROADMAP, P0 |
-| wiki | o Black Chrome (176 itens da loja) | falta |
+| cpr-2077 | as regras de cada modelo: os dois canos da Palica, os dois alvos da Kappa, a coronha da Dian | portadas no ciclo 18, pelo suplemento de fã (com os dois cartuchos da Testera, que o Kit manteve). Com o Kit, a wiki mudou várias (a Lexington, a Yukimura, a Burya, a Omaha), e elas seguem o Kit desde o ciclo 116 (o C29) |
+| wiki | o Black Chrome (176 itens da loja) | portado nos ciclos 183, 187, 189 e 190 (o C48: os itens, as armas, o cromo e os veículos; o que fica com a mesa está no README) |
 | cpr-2077 | volta da ficha para a wiki ("Na mesa") | portada no ciclo 13, no mesmo formato |
 | cpr-2077 | pedidos da loja | portada no ciclo 14: a entrega dos aprovados (a aprovação é na página do personagem na wiki) |
 | cpr-2077 | janela "Personagens da wiki" | portada no ciclo 16: importar, importar da mesa, abrir a ficha, aprovar e recusar pedidos |
 | cpr-2077 | a importação no Foundry 12 e no 14 ao mesmo tempo (cada um com o seu vínculo na wiki) | nova no ciclo 57 (o pedido do usuário; o módulo do 12 não muda; ver as dúvidas) |
-| cpr-2077 | avisos de envio, a campanha da wiki de cada mundo, crossover entre campanhas, Atualizar da wiki, retrato | falta |
+| cpr-2077 | avisos de envio, a campanha da wiki de cada mundo, crossover entre campanhas, Atualizar da wiki, retrato | portados nos ciclos 146 e 147 (o C27; o histórico do ledger fica fora, porque pede mudar o cpr-2077) |
 | CORE | a Interface do Netrunner (as 9 habilidades, a Defesa e a Velocidade, as Ações NET, os boosters ativos) | portada no ciclo 40 |
 | CORE | os programas no combate da NET (a REZ, o ataque, o dano sem crítico; o dano no cérebro e num programa, pelo mestre) | portados nos ciclos 41 e 42 (o Shield e o Armor pela wiki) |
 | NET Architect | a arquitetura (o item, os andares com os demônios e os netrunners inimigos, o mapa) | portada no ciclo 47 (o C8, parte 1) |
@@ -95,7 +95,7 @@ os bloqueadores abaixo resolvidos, backup e autorização.
 ## Bloqueadores para migrar a campanha
 
 1. ~~O importador descarta itens~~: resolvido nos ciclos 8 a 12. Tudo o que a loja da wiki vende entra na ficha, e o
-   que um dia não existir vira aviso, sem contar como entregue. Falta só pôr as opções de cyberware na base (P3).
+   que um dia não existir vira aviso, sem contar como entregue. As opções de cyberware entram na base desde o ciclo 83.
 2. ~~Volta da ficha e pedidos~~: resolvido nos ciclos 13 e 14.
 3. ~~O estado de jogo da campanha~~: resolvido no ciclo 15 pelo "Importar da mesa" (decisão do usuário: pela ficha
    "Na mesa"). Veja o procedimento abaixo. O que valia antes da decisão: o importador trazia o personagem como foi
@@ -107,9 +107,11 @@ os bloqueadores abaixo resolvidos, backup e autorização.
      os nomes do CORE, então quase sempre acha);
    - **pelos atores do Foundry 12** (a exportação do mundo, ou o envio de crossover que a wiki já recebe), convertidos
      do formato do CORE para este sistema: mais completo, e mais trabalho.
-4. **Faltam a NET, as regras do Mission Kit nos modos das armas de 2077 e o Black Chrome,** que a campanha usa. Os
-   modos de 2077 entraram nos ciclos 17 e 18 pelo suplemento de fã; com o Kit, a wiki trocou essas regras, e os modos
-   precisam segui-lo. As macros Ricochete e Ataque Smart do mundo do Foundry 12 dependem dos modos de 2077 do cpr-2077.
+4. ~~Faltam a NET, as regras do Mission Kit nos modos das armas de 2077 e o Black Chrome,~~ que a campanha usa:
+   resolvido. A NET nos ciclos 40 a 56, 85, 89 a 91 e 94 a 105 (C5 a C9); os modos de 2077 pelo Kit nos ciclos 110 a 116
+   (C29); o Black Chrome nos ciclos 183, 187, 189 e 190 (C48). O que valia antes: os modos de 2077 entraram nos ciclos 17
+   e 18 pelo suplemento de fã, e as macros Ricochete e Ataque Smart do mundo do Foundry 12 dependem dos modos de 2077 do
+   cpr-2077 (no Foundry 14, os modos estão no ataque da arma).
 5. ~~Sem migração de dados entre versões deste sistema~~: resolvido no ciclo 38 (o C1).
 
 ## Comparação com o CORE (2026-10-12)
@@ -150,6 +152,9 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
   | Conteúdo | o Black Chrome e os DLCs do CORE 0.92.4; as macros e as cenas | não convertidos (a loja da wiki não vende; a migração avisa) | P3 |
   | Mesa | a régua de DV e o DV no HUD do token; "Hardened" (fora da wiki) | falta | P4 |
 
+- **Estado em 2026-10-28** (a tabela acima é a de 2026-10-12): tudo o que ela diz que faltava entrou depois, pelo plano
+  do ROADMAP (C8 a C26, e o Black Chrome no C48), menos os DLCs do CORE fora do Black Chrome, as macros e as cenas do
+  CORE e o "Hardened" (fora da wiki), que ficam para quando a mesa pedir.
 - **Já está aqui e bate com o Foundry 12:** a ficha, os atributos e as perícias (com as de família), a iniciativa
   (1d10 + REF + bônus, sem crítico, como o padrão do CORE), os testes com o crítico do d10, o Death Save, o combate do
   Fluxo, a armadura (SP do local, ablação, pesada, arma branca), o escudo, as lesões, o cyberware com a Humanidade, as
@@ -9066,7 +9071,8 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   entregue. Este pedido já foi resolvido.": a entrega automática dos pedidos da wiki (a cada minuto, `wiki.mjs:601-603`)
   e a entrega de um passo do G4 pegaram o mesmo pedido ao mesmo tempo, e a que chegou depois avisou. Nada do C42 (que não
   mexe na wiki); na mesa, o mesmo aviso falso pode aparecer se o mestre entregar um pedido no minuto da entrega
-  automática. Fica anotado para o usuário decidir.
+  automática. Fica anotado para o usuário decidir. (Corrigido no ciclo 193: era um defeito, e não uma regra; a entrega
+  dupla também podia acontecer.)
 - **Testes:**
   - **G3:** `dice-so-nice.test.mjs` (novo, 2 testes: as três cores lidas do `dice-so-nice-preset.js` do CORE 0.92.4,
     os nomes do lang dele; o registro no `diceSoNiceReady`, com a cor do jogador e sem conjunto de faces);
@@ -9285,6 +9291,46 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   os 47 glifos servidos. No foco, 12/12.
 - **Mutações:** as 3 caíram: G1 e G2 no G3 (a estrela sem o glifo, o CSS fora do gerador) e G3 no G4 (o manifesto sem
   o CSS).
+
+### Ciclo 193 (2026-10-28): a entrega dupla dos pedidos da wiki (sessão KouArt)
+
+- **Pedido do usuário (2026-10-28):** "verifique o que falta para completar o sistema do Foundry 14 e termine". O plano
+  C1–C49 está feito (menos o C28, do usuário); o defeito que ficou registrado era este, o do registro do ciclo 186.
+- **O que era:** a entrega de cada minuto (`entregarPedidos`, no mestre ativo) e a do mestre (o "Aprovar" da janela
+  "Personagens da wiki", a macro) podiam pegar o mesmo pedido ao mesmo tempo. A que chegava depois ou avisava "Wiki: o
+  pedido de X não foi entregue. Este pedido já foi resolvido." (a rota `entregue` de `api-personagens.js` recusa marcar de
+  novo), ou, se as duas conferissem os itens da ficha antes de qualquer uma criá-los, entregava em dobro: os itens e o
+  desconto do dinheiro. Era um defeito, e não uma regra: não pedia decisão da mesa.
+- **Entrega:** `scripts/wiki-pedidos.mjs` (novo), `umaEntregaPorVez`: um pedido por vez neste navegador. Quem chega com
+  o mesmo pedido (o id do personagem na wiki e o do pedido) em curso espera a mesma entrega e recebe o mesmo resultado; a
+  entrega de cada minuto, que leu a lista da wiki antes, pula o pedido que este navegador está entregando ou já entregou.
+  O `entregarPedido` de `wiki.mjs` passa por ela. Entregar de novo, à mão, um pedido já entregue continua chegando à wiki,
+  que recusa sem nada em dobro (o passo antigo do G4 confere isso). A entrega que falha (sem dinheiro, a wiki fora do ar)
+  não fica marcada e se tenta de novo.
+- **Limite:** a trava é deste navegador. Dois mestres, cada um entregando o mesmo pedido no mesmo instante (o ativo pela
+  entrega de cada minuto e o outro pela janela), ainda podem cair na corrida; fechar isso pede uma reserva do pedido na
+  wiki, uma mudança da API do master, fora do sistema.
+- **Testes:**
+  - **G3:** `wiki-pedidos.test.mjs` (novo, 4 testes, com uma entrega de mentira que só termina quando o teste deixa): as
+    duas ao mesmo tempo viram uma; pedidos diferentes, e o mesmo id em outro personagem, não esperam um pelo outro; o
+    entregue aqui fica marcado para a entrega de cada minuto, e entregar de novo à mão ainda chega à wiki; a entrega que
+    falha não fica marcada;
+  - **G4:** um passo novo, depois do dos pedidos da loja: dois pedidos de 10 balas de rifle. O primeiro, entregue duas
+    vezes ao mesmo tempo: uma entrega só (−10eb e +10 balas), as duas respostas certas. O segundo, com a entrega de cada
+    minuto parada (pelo `fetch` do navegador) na ficha da wiki que ela leu com o pedido ainda aprovado, enquanto a do
+    mestre o entrega: ela não tenta de novo nem avisa. No fim, −20eb, +20 balas, os dois entregues na wiki e nenhum "não
+    foi entregue".
+- **Portões:** G1, 232 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 733/733; G4 completo, 314/314 em
+  907 s, com a mesa do servidor vazia. A primeira rodada (313/314, 1.237 s) falhou no HUD do jogador do passo da
+  metralhadora montada (o C46.4), que não tem ligação com os pedidos: ela rodou junto com testes do G3 neste PC, e o mesmo
+  passo passou na rodada sem nada em paralelo.
+- **Mutações:** as cinco caíram, e os arquivos voltaram exatos. No G3: a segunda entrega sem esperar a primeira (M1; na
+  primeira tentativa, o teste ficou esperando a resposta que não vinha, e cada teste ganhou o limite de 2 s, para a
+  mutação virar falha), o pedido entregue sem a marca (M2) e a entrega que falha com a marca (M3). No G4, um G4 inteiro
+  cada: a entrega de cada minuto sem pular o que este navegador entregou (M4: o aviso falso volta) e o `entregarPedido`
+  de antes do ciclo (M5). O M5 mostrou o defeito inteiro: as duas entregas juntas puseram as 10 balas em dobro (55 → 75)
+  e cobraram uma vez (290 → 280), e a de cada minuto avisou "já foi resolvido". Na rodada do M5, o passo do "+ OPÇÃO" da
+  fundação (antes do dos pedidos, sem ligação com a mutação) também falhou uma vez; passou nas outras três rodadas.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 193). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 194). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **Conflito no ROADMAP ou no MIGRATION_STATUS:** junte as duas versões; nada se apaga.
 - **Só o Foundry 14** (decisão do usuário, 2026-10-19: "vamos focar todas as atualizações do sistema e etc apenas para o
@@ -489,7 +489,13 @@ do master) e a wiki (`system-rules.js`). O CHANGELOG da 0.93 deu as ideias do "b
   - [x] Parte 1, os estados no token e as imagens padrão: feita no ciclo 191 (sessão Junin, 2026-10-26).
   - [x] Parte 2, os botões do HUD e da ficha: feita no ciclo 192 (sessão Junin, 2026-10-26).
 
-
+**O que a verificação de 2026-10-28 achou** (pedido do usuário: "verifique o que falta para completar o sistema do
+Foundry 14 e termine"; o plano C1–C49 está feito, menos o C28, do usuário):
+- [x] **A entrega dupla dos pedidos da wiki** (o achado do registro do ciclo 186): feito no ciclo 193 (sessão KouArt,
+  2026-10-28). A entrega de cada minuto e a do mestre no mesmo pedido viram uma só.
+- [~] **C50. As lesões com conta** (sessão KouArt, 2026-10-28): o Crânio rachado (o que passa da armadura na cabeça ×3
+  em vez de ×2) e as Costelas quebradas (no fim do turno em que andou mais de 4 m a pé, o dano bônus da lesão de novo,
+  direto no HP), pela tabela de lesões da wiki (`system-rules.js:33` e `:50`). O README as tinha em "Ainda não faz".
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
@@ -632,7 +638,7 @@ No fim de tudo, uma sessão de teste com a mesa.
   e o Techscanner que, pela wiki, não acumulam com outro; a luz da lanterna e do sinalizador no token.
 - [x] **Na rolagem, a Sorte** (Ciclo 20): os pontos preparados na ficha entram no próximo teste, +1 cada, e saem da
   Sorte; o ↺ do começo da sessão.
-- [ ] **Na rolagem, o resto:** (→ C4 e C10; o Facedown no ciclo 39) Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
+- [x] **Na rolagem, o resto:** (→ C4 e C10; o Facedown no ciclo 39, a Briga e as Artes Marciais nos ciclos 131 e 141) Briga e Artes Marciais (dano pelo BODY), com o Ataque de Precisão e a Recuperação de
   Falhas do Solo; Facedown (COOL + Reputação + 1d10, como o CORE).
 - [x] **As rolagens das Roles** (→ C3; ciclos 34 e 35, com as Roles do RED) (o CORE rola pelo item de Role; aqui só o Solo tinha efeito):
   - Impacto Carismático do Face (Rank + 1d10 contra DV 8, 10 ou 12) e Credibilidade da Media (Rank + 1d10);
@@ -782,12 +788,12 @@ No fim de tudo, uma sessão de teste com a mesa.
 ## P3: Netrunning, cyberware, NPCs e ferramentas do mestre
 
 - [x] **NET:** (→ C5 a C8, feitos nos ciclos 40 a 56, 85 e 89 a 91) o NET Architect dentro do sistema (Interface, programas, Black ICE, dano no cérebro).
-- [ ] **Cyberware:** (→ C21) base e slots ao instalar (com as opções na base, como a montagem da wiki: ciclos 82 a 84), terapia e ciberpsicose.
-- [ ] **NET de 2077:** (→ C9) a RAM e o Cooling do deck, os quickhacks e os daemons.
+- [x] **Cyberware:** (→ C21, ciclos 82 a 84 e 145) base e slots ao instalar (com as opções na base, como a montagem da wiki: ciclos 82 a 84), terapia e ciberpsicose.
+- [x] **NET de 2077:** (→ C9, ciclos 95 a 105) a RAM e o Cooling do deck (saíram com a revisão da wiki de 2026-10-16: ciclo 93), os quickhacks e os daemons.
 - [x] **NPCs:** (→ C2 e C7, feitos nos ciclos 36 e 37 e 43 a 46) ficha de capanga (mook), Black ICE e demônios como atores.
-- [ ] **Ferramentas do mestre:** (→ C24 e C25) o Painel Tático dentro do sistema (feito no ciclo 125); o contêiner do CORE (loja, saque e esconderijo, com
+- [x] **Ferramentas do mestre:** (→ C24 e C25, ciclos 122, 125, 130 e 132) o Painel Tático dentro do sistema (feito no ciclo 125); o contêiner do CORE (loja, saque e esconderijo, com
   o registro das trocas).
-- [ ] **Conteúdo fora do livro básico:** (conteúdo: fora do plano de paridade) os DLCs do CORE 0.92.4 (o Black Chrome é o C48), as tabelas de arquitetura da NET e as
+- [ ] **Conteúdo fora do livro básico:** (conteúdo: fora do plano de paridade) os DLCs do CORE 0.92.4 (o Black Chrome é o C48, feito; as tabelas de arquitetura da NET entraram no ciclo 49) e as
   macros e cenas do CORE. A loja da wiki não vende esses itens; se o mestre deu algum no Foundry 12, a migração avisa
   item a item. Converter o que a mesa usar.
 
@@ -798,8 +804,8 @@ No fim de tudo, uma sessão de teste com a mesa.
 - [x] Acessibilidade das fichas: teclado e leitor de tela (desde o ciclo 19, a ficha é sempre escura): ciclo 150 (com o Codex), nas fichas do
   personagem, do capanga e do item; as outras janelas ficam como estavam.
 - [x] Ícones próprios no lugar dos genéricos do Foundry: o C49 (os estados e as imagens padrão no ciclo 191, os botões no 192).
-- [ ] Conveniências do CORE: (→ C26) a régua que mostra o DV da arma pela distância e o DV no HUD do token (o ataque já calcula
-  o DV sozinho); "Hardened" (Danger Gal Dossier p. 150, fora da wiki: só se a mesa quiser).
+- [ ] Conveniências do CORE: (→ C26) a régua que mostra o DV da arma pela distância e o DV no HUD do token (feitos no ciclo 144; o ataque já calcula
+  o DV sozinho); falta só o "Hardened" (Danger Gal Dossier p. 150, fora da wiki: só se a mesa quiser).
 
 ## Fora do plano: o que só existe no CORE 0.93
 
@@ -807,7 +813,8 @@ A pasta `fvtt-cyberpunk-red-core-dev/` é a 0.93, de desenvolvimento; a mesa usa
 depois e a mesa não tem: o navegador de documentos com o carrinho de compras (a loja da wiki faz esse papel), os
 modificadores `red` e `dmg` nas fórmulas, o crítico configurável por arma e munição (aqui a munição já diz o que não
 causa lesão), a Sorte caseira do JonJon, os marcadores de turno e o tema estendido ao Foundry. Entram só se o usuário
-pedir.
+pedir. Desde 2026-10-25, quase tudo entrou pelo C43 (as fórmulas e o crítico no ciclo 172, os marcadores de turno no
+171, o tema no 184 e o navegador, sem o carrinho, no 185); de fora ficam o carrinho e a Sorte caseira do JonJon.
 
 ## Decisões tomadas
 

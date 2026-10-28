@@ -16,6 +16,7 @@ import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { ehBaseNatural, ladoValido, linhaDoExtrato, moradiaDaMesa, moradiaDaWiki, moradiaParaAWiki, periciaPropria } from './regras.mjs';
 import { mudouDeCampanha, pertenceACampanha, prepararAtorTransferido, resolverCampanha, vinculoDaGeracao14 } from './wiki-campanha.mjs';
+import { umaEntregaPorVez } from './wiki-pedidos.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
 const GERACAO = 14;
@@ -620,7 +621,7 @@ function registrarVoltaParaWiki() {
 // instalar. Sem dinheiro na mesa, o pedido fica aprovado, com o erro, e a wiki mostra "Tentar de novo".
 const souOMestreAtivo = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id);
 
-export async function entregarPedido(ator, wikiId, pedido) {
+async function entregarUmPedido(ator, wikiId, pedido) {
   if (!game.user.isGM) throw new Error('Só o mestre entrega os pedidos da wiki.');
   const campanha = await campanhaDoMundo();
   const { personagem } = await wikiFetch(`/api/personagens/${wikiId}`);
@@ -646,6 +647,7 @@ export async function entregarPedido(ator, wikiId, pedido) {
   await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notas, ator: ator.id } });
   return { ok: true, notas };
 }
+export const entregarPedido = umaEntregaPorVez(entregarUmPedido);
 
 // O ator ligado ao personagem na wiki (o da última importação), mesmo com uma cópia antiga neste mundo. A wiki guarda o
 // vínculo de cada Foundry à parte (o foundry14 e o foundry12), e o "foundry" que ela mostra é o do 12 quando o personagem
@@ -673,7 +675,7 @@ export async function entregarPedidos() {
     const ator = atorLigado(resumo, resumo.id);
     if (!ator) continue;
     const { personagem } = await wikiFetch(`/api/personagens/${resumo.id}`);
-    for (const pedido of (personagem?.pedidos || []).filter(p => p.status === 'aprovado' && !p.erro)) {
+    for (const pedido of (personagem?.pedidos || []).filter(p => p.status === 'aprovado' && !p.erro && !entregarPedido.ocupado(resumo.id, p))) {
       const resultado = await entregarPedido(ator, resumo.id, pedido).catch(erro => ({ ok: false, notas: [erro.message] }));
       if (resultado.ok) ui.notifications.info(`Wiki: pedido de ${ator.name} entregue na ficha.${resultado.notas.length ? ` ${resultado.notas.join(' ')}` : ''}`);
       else ui.notifications.warn(`Wiki: o pedido de ${ator.name} não foi entregue. ${resultado.notas.join(' ')}`);
