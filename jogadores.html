@@ -332,13 +332,34 @@
           offline: 'Esta página precisa ser aberta pelo servidor do mestre (o endereço que ele passou). As regras continuam disponíveis na aba Regras.'
         }[kind];
         const callout = `<div class="callout">${text}</div>`;
-        const login = kind === 'visitante' ? '<div class="section" data-toc="Entrar"><h3>Entrar</h3><form class="cc-login" data-pv-login><input id="pv-code" autocomplete="off" placeholder="NC-XXXX-XXXX" aria-label="Código do jogador"><button class="action" type="submit">Entrar</button></form><p class="cc-msg" id="pv-login-msg"></p></div>' : '';
+        // Sem código, o Início é a tela "Entrar no NetWire", em tela cheia (netwire.css esconde a barra de cima e a
+        // lateral enquanto ela está na página). As regras continuam a um clique, sem entrar.
+        const entry = `<div class="nw-entry">
+          <div class="nw-entry-hero">
+            <p class="nw-entry-kicker">Conexão segura // canal do grupo</p>
+            <p class="nw-entry-title" aria-hidden="true">Night City<br>NetWire</p>
+            <p class="nw-entry-lede">A rede do grupo. Ficha, campanha, mensagens e loja num lugar só.</p>
+            <p class="nw-entry-table" data-entry-table hidden></p>
+          </div>
+          <div class="nw-entry-box">
+            <h3 class="nw-entry-head">Entrar no NetWire</h3>
+            <form class="nw-entry-form" data-pv-login>
+              <label class="nw-label" for="pv-code">Código do jogador</label>
+              <div class="nw-field"><input id="pv-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="NC-XXXX-XXXX"></div>
+              <p class="nw-entry-note">O código vem do mestre. Este aparelho lembra dele.</p>
+              <p class="nw-entry-msg" id="pv-login-msg" role="alert"></p>
+              <button class="nw-btn nw-btn--lg nw-btn--primary nw-entry-go" type="submit">Conectar <span aria-hidden="true">→</span></button>
+            </form>
+            <div class="nw-entry-links"><button type="button" class="nw-entry-link" data-page="combat">Ver as regras sem entrar</button><a class="nw-entry-link nw-entry-gm" href="mestre" data-entry-gm hidden>Sou o mestre</a></div>
+          </div>
+        </div>`;
         const titles = { pvSessions: 'Sessões', pvPeople: 'Pessoas', pvMap: 'Mapa', pvNews: 'Notícias e handouts', pvNightCity: 'Notícias de Night City' };
         return {
-          pvHome: { eyebrow: 'Night City', title: kind === 'offline' ? 'Sem conexão' : 'O que o grupo sabe', lede: kind === 'visitante' ? 'Cada jogador vê a campanha em que joga.' : 'Não consegui ler o que o mestre publicou.', html: `${callout}${login}` },
+          pvHome: { eyebrow: 'Night City', title: kind === 'offline' ? 'Sem conexão' : kind === 'visitante' ? 'Entrar no NetWire' : 'O que o grupo sabe', lede: kind === 'visitante' ? 'Cada jogador vê a campanha em que joga.' : 'Não consegui ler o que o mestre publicou.', html: kind === 'visitante' ? entry : callout },
           ...Object.fromEntries(Object.entries(titles).map(([id, title]) => [id, { eyebrow: 'Night City', title, lede: '', html: callout }]))
         };
       }
+      let entryListening = false;
       // Entrar pela página inicial: o menu passa a ter as campanhas do jogador.
       window.playerView = {
         // No Início, a próxima sessão e os relógios já estão na página: a coluna fica só com o índice.
@@ -347,14 +368,35 @@
           renderMe(content);
           const form = content.querySelector('[data-pv-login]');
           if (!form) return;
+          // A mesa (do api/estado, que a wiki já lê) e o "Sou o mestre" (só onde há senha do mestre).
+          const drawState = state => {
+            const table = content.querySelector('[data-entry-table]');
+            const mesa = state && state.mesa;
+            if (table && mesa) {
+              table.hidden = false;
+              table.classList.toggle('on', Boolean(mesa.aberta));
+              table.textContent = mesa.aberta ? `Mesa aberta${mesa.usuarios ? ` // ${mesa.usuarios} ${mesa.usuarios > 1 ? 'conectados' : 'conectado'}` : ''}` : 'Mesa fechada';
+            }
+            const gm = content.querySelector('[data-entry-gm]');
+            if (gm) gm.hidden = !(state && state.login);
+          };
+          drawState(window.wikiApp.status && window.wikiApp.status());
+          // Um ouvinte só (o Início é desenhado de novo a cada visita): ele sempre lê o #content da hora.
+          if (!entryListening) { entryListening = true; document.addEventListener('wiki:estado', event => drawState(event.detail)); }
           form.onsubmit = async event => {
             event.preventDefault();
             const message = content.querySelector('#pv-login-msg');
+            const code = content.querySelector('#pv-code').value.trim();
+            if (!code) { message.textContent = 'Digite o código que o mestre te passou.'; content.querySelector('#pv-code').focus(); return; }
+            const button = form.querySelector('[type="submit"]');
+            button.disabled = true;
+            message.textContent = '';
             try {
-              const response = await fetch('api/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: content.querySelector('#pv-code').value.trim() }) });
+              const response = await fetch('api/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: code }) });
               if (response.ok) return location.reload();
               message.textContent = (await response.json().catch(() => ({}))).erro || 'Não deu certo.';
             } catch { message.textContent = 'Sem conexão com o servidor da wiki.'; }
+            button.disabled = false;
           };
         }
       };

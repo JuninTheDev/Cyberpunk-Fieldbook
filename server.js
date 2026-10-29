@@ -230,7 +230,8 @@ async function gmLogin(request, response) {
   if (tooManyLogins(ip)) return sendJson(response, 429, { erro: 'Muitas tentativas. Espere 10 minutos.' });
   let senha = '';
   try { senha = String((await readJsonBody(request)).senha || ''); } catch (error) { return sendJson(response, error.status || 400, { erro: error.message }); }
-  if (!sameSecret(senha, gmKey)) return sendJson(response, 403, { erro: 'Senha incorreta.' });
+  // Quantas ainda cabem nos 10 minutos (a tela do mestre mostra).
+  if (!sameSecret(senha, gmKey)) return sendJson(response, 403, { erro: 'Senha incorreta.', restantes: Math.max(0, 10 - loginAttempts.get(ip).count) });
   loginAttempts.delete(ip);
   return sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie(gmToken, 31536000) });
 }

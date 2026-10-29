@@ -296,9 +296,6 @@
 :root[data-tema="2077"] .popup-title { color: #2be4ea; }
 :root[data-tema="2077"] :is(.toast, .pv-toast) { border-color: #fed33f; background: #1e181e; color: #fed33f; }
 
-/* A tela de entrar do mestre. */
-:root[data-tema="2077"] .login-box { border: 2px solid #9c3230; background: #1e181e; clip-path: var(--nw-notch-path); }
-:root[data-tema="2077"] .login-box h1 { color: #2be4ea; font-family: var(--ui); text-transform: uppercase; }
 
 /* ================= 3. A casca NetWire (sem <html data-casca="classica">) ================= */
 /* As abas do topo são o menu principal, como no menu do jogo; a barra lateral fica com a lista inteira da área. As abas
@@ -568,3 +565,71 @@
 .nw-anexo .md-doc blockquote { margin: .3rem 0; padding-left: .75rem; border-left: 2px solid var(--nw-border); }
 /* Os botões da IA no rascunho dela (Gerar de novo, Variação). */
 .nw-toolbar .nw-ai-redo { margin-left: auto; }
+
+/* ================= 9. As telas de entrada: "Entrar no NetWire" (jogador) e "Entrar como mestre" ================= */
+/* O jogador sem código: o Início dele é a tela de entrada, em tela cheia (sem a barra de cima, a lateral e a de baixo,
+   enquanto ela estiver na página). O mestre.html usa a mesma caixa (.nw-entry-box). Desenhos de 2026-10-29. */
+body:has(#content .nw-entry) :is(.topbar, .shell > aside, .top-tabs, .nw-side, .nav-backdrop, .to-top) { display: none !important; }
+body:has(#content .nw-entry) { padding-bottom: 0 !important; }
+body:has(#content .nw-entry) .shell { display: block; }
+body:has(#content .nw-entry) main { display: block !important; padding: 0 !important; }
+body:has(#content .nw-entry) .content { width: 100%; max-width: none; margin: 0; padding: 0; }
+#content:has(> .nw-entry) > :not(.nw-entry) { display: none !important; }
+.nw-entry, .nw-login-page {
+  position: relative; display: grid; min-height: 100vh; min-height: 100dvh; align-items: center; padding: 48px clamp(16px, 5vw, 64px);
+  background: radial-gradient(ellipse at 20% 0%, rgb(232 97 90 / 22%), transparent 60%), var(--bg, #191a1e);
+}
+/* As linhas de varredura do monitor, bem leves (paradas: nada se mexe). */
+.nw-entry::before, .nw-login-page::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgb(255 255 255 / 2.2%) 0 1px, transparent 1px 3px); }
+.nw-entry { grid-template-columns: minmax(0, 1.25fr) minmax(300px, 420px); gap: clamp(32px, 6vw, 96px); }
+.nw-entry > * { position: relative; }
+.nw-entry-kicker { margin: 0 0 18px; color: var(--nw-primary); font: 400 15px var(--nw-font-label); letter-spacing: .14em; text-transform: uppercase; }
+.nw-entry-title { margin: 0; color: var(--nw-primary); font: 400 clamp(48px, 8.5vw, 112px)/.95 VT323, var(--nw-font-label), monospace; letter-spacing: .12em; text-shadow: 0 0 22px rgb(232 97 90 / 55%); text-transform: uppercase; }
+.nw-entry-lede { max-width: 32ch; margin: 28px 0 0; color: var(--nw-primary); font: 500 clamp(17px, 1.6vw, 21px)/1.5 var(--nw-font); opacity: .9; }
+.nw-entry-table { position: absolute; left: 0; bottom: -64px; display: flex; align-items: center; gap: 10px; margin: 0; color: var(--mu); font: 400 14px var(--nw-font-label); letter-spacing: .1em; text-transform: uppercase; }
+.nw-entry-table::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--mu); }
+.nw-entry-table.on { color: var(--nw-active); }
+.nw-entry-table.on::before { background: var(--nw-active); box-shadow: 0 0 8px var(--nw-active); }
+/* A caixa: o painel de canto cortado, com o título em ciano. */
+.nw-entry-box { position: relative; padding: 32px 32px 28px; border: 2px solid var(--nw-primary-dim, var(--nw-border)); background: var(--nw-surface); clip-path: var(--nw-notch-path); }
+.nw-entry-box::after { content: ''; position: absolute; right: -6px; bottom: 5px; width: var(--nw-notch-line); height: 2px; background: var(--nw-primary-dim, var(--nw-border)); transform: rotate(-45deg); }
+.nw-entry-head, .nw-entry-box h1 { margin: 0 0 22px; color: var(--nw-secondary); font: 700 22px/1.15 var(--nw-font); letter-spacing: .06em; text-shadow: 0 0 18px rgb(43 228 234 / 45%); text-transform: uppercase; }
+.nw-entry-box h1 { font-size: clamp(26px, 3.2vw, 34px); }
+.nw-entry-form { display: grid; gap: 0; }
+.nw-entry-form .nw-label { justify-self: start; }
+.nw-entry-form .nw-field input { min-height: 56px; padding: 0 16px; font: 400 24px var(--nw-font-label); letter-spacing: .14em; }
+.nw-entry-form .nw-field input::placeholder { color: var(--nw-primary); opacity: .25; }
+.nw-entry-form .nw-field:focus-within { border-color: var(--nw-secondary); }
+.nw-entry-note { margin: 10px 0 0; color: var(--mu); font: 400 14px/1.4 var(--nw-font-label); letter-spacing: .03em; }
+.nw-entry-msg { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; padding: 10px 14px; border: 1px solid var(--nw-primary); background: var(--nw-primary-deep); color: var(--nw-primary-soft); font: 600 15px/1.35 var(--nw-font); }
+.nw-entry-msg::before { content: '!'; display: inline-grid; flex: 0 0 auto; place-items: center; width: 18px; height: 18px; border: 1.5px solid currentcolor; border-radius: 50%; font-size: 12px; }
+.nw-entry-msg:empty { display: none; }
+.nw-entry-go { justify-content: center; width: 100%; min-height: 60px; margin-top: 24px; font: 700 18px var(--nw-font); letter-spacing: .12em; text-transform: uppercase; }
+.nw-entry-go:disabled { opacity: .55; cursor: progress; }
+.nw-entry-links { display: grid; justify-items: center; text-align: center; gap: 14px; margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--nw-border); }
+.nw-entry-link { padding: 4px 8px; border: 0; background: none; color: var(--nw-primary); cursor: pointer; font: 400 15px var(--nw-font-label); letter-spacing: .12em; text-decoration: none; text-transform: uppercase; }
+.nw-entry-link:hover { color: var(--nw-primary-soft); text-decoration: underline; text-underline-offset: 4px; }
+.nw-entry-gm { color: var(--mu); }
+.nw-entry-link[hidden] { display: none; }
+/* O mestre.html: só a caixa, no meio da tela. */
+.nw-login-page { place-items: center; }
+.nw-login-page .nw-entry-box { width: min(520px, 100%); padding: 36px 34px 30px; }
+.nw-login-kicker { margin: 0 0 8px; color: var(--nw-primary); font: 400 13px var(--nw-font-label); letter-spacing: .12em; text-transform: uppercase; }
+.nw-login-lede { margin: 0 0 24px; color: var(--nw-primary); font: 500 16px/1.6 var(--nw-font); opacity: .9; }
+.nw-login-page .nw-entry-msg { margin: 0 0 22px; }
+.nw-pass { display: flex; align-items: center; }
+.nw-pass input { flex: 1 1 auto; min-width: 0; }
+.nw-pass-eye { flex: 0 0 auto; width: 48px; height: 48px; border: 0; background: none; color: var(--nw-primary); cursor: pointer; }
+.nw-pass-eye svg { width: 22px; height: 22px; fill: none; stroke: currentcolor; stroke-width: 1.6; }
+.nw-pass-eye[aria-pressed="true"] { color: var(--nw-secondary); }
+.nw-login-page .nw-field input { letter-spacing: .2em; }
+@media (max-width: 820px) {
+  .nw-entry { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 28px; padding-top: 36px; }
+  .nw-entry-title { font-size: clamp(44px, 15vw, 72px); }
+  .nw-entry-lede { margin-top: 16px; }
+  .nw-entry-table { position: static; margin-top: 18px; }
+  .nw-entry-box, .nw-login-page .nw-entry-box { padding: 26px 20px 22px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nw-entry-box { animation: nw-entra .25s ease-out; }
+}

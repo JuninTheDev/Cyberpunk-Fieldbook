@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#191a1e">
-  <title>Entrar como mestre · Night City Fieldbook</title>
+  <title>Entrar como mestre · Night City NetWire</title>
   <link rel="stylesheet" href="cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css">
   <link rel="stylesheet" href="wiki.css">
   <link rel="stylesheet" href="netwire.css">
@@ -21,33 +21,54 @@
   <link rel="apple-touch-icon" href="icones/icone-192.png">
 </head>
 <body>
-  <!-- Tela de login do mestre. Os jogadores também baixam esta página: nada de segredo aqui. -->
-  <main class="login-page">
-    <div class="login-box">
-      <div class="brand-mark">Night City Fieldbook</div>
+  <!-- Tela de login do mestre. Os jogadores também baixam esta página: nada de segredo aqui. O visual é o da tela
+       "Entrar no NetWire" dos jogadores (netwire.css, seção 9). -->
+  <main class="nw-login-page">
+    <div class="nw-entry-box">
+      <p class="nw-login-kicker">Night City NetWire // acesso do mestre</p>
       <h1>Entrar como mestre</h1>
-      <p>Com a senha do mestre, este aparelho passa a abrir a wiki do mestre. Ele fica lembrado por um ano.</p>
-      <form id="login">
-        <label>Senha do mestre<input id="senha" type="password" autocomplete="current-password" required autofocus></label>
-        <button class="action" type="submit">Entrar</button>
-        <p class="cc-msg" id="msg" role="status"></p>
+      <p class="nw-login-lede">Com a senha do mestre, este aparelho passa a abrir a wiki do mestre. Ele fica lembrado por um ano.</p>
+      <p class="nw-entry-msg" id="msg" role="alert"></p>
+      <form id="login" class="nw-entry-form">
+        <label class="nw-label" for="senha">Senha do mestre</label>
+        <div class="nw-field nw-pass">
+          <input id="senha" type="password" autocomplete="current-password" required autofocus>
+          <button type="button" class="nw-pass-eye" id="olho" aria-label="Mostrar a senha" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <button class="nw-btn nw-btn--lg nw-btn--primary nw-entry-go" type="submit">Entrar</button>
       </form>
-      <p class="login-back"><a href="./">Voltar para a wiki dos jogadores</a></p>
+      <div class="nw-entry-links"><a class="nw-entry-link nw-entry-gm" href="./">‹ Voltar para a wiki dos jogadores</a></div>
     </div>
   </main>
   <script>
     const msg = document.getElementById('msg');
+    const senha = document.getElementById('senha');
+    const olho = document.getElementById('olho');
+    olho.addEventListener('click', () => {
+      const mostrar = senha.type === 'password';
+      senha.type = mostrar ? 'text' : 'password';
+      olho.setAttribute('aria-pressed', String(mostrar));
+      olho.setAttribute('aria-label', mostrar ? 'Esconder a senha' : 'Mostrar a senha');
+      senha.focus();
+    });
     document.getElementById('login').addEventListener('submit', async event => {
       event.preventDefault();
-      msg.textContent = 'Conferindo…';
+      const botao = event.target.querySelector('[type="submit"]');
+      botao.disabled = true;
+      botao.textContent = 'Conferindo…';
+      msg.textContent = '';
       try {
-        const response = await fetch('api/mestre/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: document.getElementById('senha').value }) });
+        const response = await fetch('api/mestre/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: senha.value }) });
         const data = await response.json().catch(() => ({}));
         if (response.ok) { location.href = './'; return; }
-        msg.textContent = data.erro || 'Não consegui entrar.';
+        // O servidor conta as tentativas erradas por endereço (10 a cada 10 minutos).
+        msg.textContent = `${data.erro || 'Não consegui entrar.'}${Number.isInteger(data.restantes) ? ` Tentativas restantes: ${data.restantes}.` : ''}`;
+        senha.select();
       } catch {
         msg.textContent = 'Sem conexão com a wiki.';
       }
+      botao.disabled = false;
+      botao.textContent = 'Entrar';
     });
   </script>
 </body>
