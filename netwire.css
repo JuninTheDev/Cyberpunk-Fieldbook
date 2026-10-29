@@ -633,3 +633,77 @@ body:has(#content .nw-entry) .content { width: 100%; max-width: none; margin: 0;
 @media (prefers-reduced-motion: no-preference) {
   .nw-entry-box { animation: nw-entra .25s ease-out; }
 }
+
+/* ================= 10. O Início do mestre: o painel da mesa (desenho de 2026-10-29) ================= */
+/* Os botões do título (Marcar sessão, Abrir a mesa), colados um no outro. */
+.desk-head-actions { display: flex; align-self: center; margin-left: auto; }
+.desk-head-actions .nw-btn { min-height: 42px; padding: .5rem 1.1rem; font: 700 15px var(--nw-font); letter-spacing: .08em; text-transform: uppercase; }
+.desk-head-actions .nw-btn + .nw-btn { margin-left: -1px; }
+.desk-head-actions .nw-btn[hidden] { display: none; }
+/* O Fixar e o Copiar link vão para o fim da linha, depois dos botões. */
+.page-head:has(.desk-head-actions) .page-actions { order: 3; align-self: center; }
+.page-head .desk-head-actions { order: 2; }
+.home-desk { margin: 26px 0 20px; }
+/* Os três quadros do alto. */
+.desk-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 18px; }
+.desk-card { position: relative; display: flex; flex-direction: column; min-height: 200px; margin: 0; padding: 18px 20px 20px; border: 2px solid var(--nw-primary-dim, var(--nw-border)); background: var(--nw-surface); clip-path: var(--nw-notch-path); }
+.desk-card::after { content: ''; position: absolute; right: -6px; bottom: 5px; width: var(--nw-notch-line); height: 2px; background: var(--nw-primary-dim, var(--nw-border)); transform: rotate(-45deg); }
+.desk-card-tag { margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--nw-border); color: var(--nw-primary); font: 400 13px var(--nw-font-label); letter-spacing: .1em; text-transform: uppercase; }
+.desk-card-big { margin: 0; color: var(--nw-primary); font: 700 20px/1.2 var(--nw-font); letter-spacing: .03em; }
+.desk-card-big.desk-on { color: var(--nw-active); text-shadow: 0 0 10px rgb(43 254 160 / 35%); text-transform: uppercase; }
+.desk-card-big.desk-warn { color: var(--nw-tertiary); text-transform: uppercase; }
+.desk-card-big.desk-bad { color: var(--nw-primary-soft); text-transform: uppercase; }
+.desk-card-sub { margin: 4px 0 0; color: var(--mu); font: 500 15px/1.35 var(--nw-font); }
+.desk-card-sub:empty { display: none; }
+.desk-card-meta { display: grid; gap: 4px; margin: 12px 0 0; color: var(--nw-tertiary); font: 400 13px var(--nw-font-label); letter-spacing: .08em; text-transform: uppercase; }
+.desk-card-meta:empty { display: none; }
+.desk-card-actions { margin-top: auto; padding-top: 16px; }
+.desk-card-actions .nw-btn { min-height: 34px; font: 600 13px var(--nw-font); letter-spacing: .1em; text-decoration: none; text-transform: uppercase; }
+.desk-card-actions:empty { display: none; }
+/* As três colunas: relógios, recentes e atalhos. */
+.home-desk .desk-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 28px; margin-top: 34px; }
+.home-desk h3.desk-title { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--nw-border); color: var(--nw-primary); font: 700 17px var(--nw-font); letter-spacing: .12em; text-transform: uppercase; }
+.home-desk .desk-clocks li { display: flex; flex-direction: column; gap: 3px; padding: 6px 0 10px; border: 0; }
+.home-desk .desk-clocks .desk-clock { order: -1; margin: 0; }
+.home-desk .desk-clocks b { color: var(--nw-primary); font: 400 13px var(--nw-font-label); letter-spacing: .06em; text-transform: uppercase; }
+.home-desk .desk-recent li { padding: 6px 0; border: 0; }
+.home-desk .desk-recent a { color: var(--nw-primary); font: 500 16px var(--nw-font); }
+.home-desk .desk-recent a:hover { color: var(--nw-primary-soft); }
+.home-desk .desk-recent li small { display: block; margin-top: 2px; }
+.home-desk .desk-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; margin: 0; }
+:root .home-desk .desk-buttons .action.ghost[data-page] { display: flex; align-items: center; justify-content: flex-start; gap: 9px; width: 100%; min-height: 0; margin: 0; padding: 6px 0; border: 0; background: none; box-shadow: none; clip-path: none; color: var(--nw-primary); font: 500 15px/1.2 var(--nw-font); letter-spacing: 0; text-align: left; text-transform: none; }
+:root .home-desk .desk-buttons .action.ghost[data-page]:hover { background: none; color: var(--nw-primary-soft); text-decoration: underline; text-underline-offset: 3px; }
+:root .home-desk .desk-buttons .action.ghost[data-page]::before, :root .home-desk .desk-buttons .action.ghost[data-page]::after { content: none; }
+.desk-icon { flex: 0 0 auto; width: 16px; height: 16px; fill: none; stroke: currentcolor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+/* Os personagens dos jogadores: retrato, nome, Role e o HP. */
+.desk-people { margin-top: 34px; }
+.desk-people[hidden] { display: none; }
+.desk-people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 18px; }
+.desk-person { position: relative; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 2px solid var(--nw-primary-dim, var(--nw-border)); background: var(--nw-surface); clip-path: var(--nw-notch-path); color: var(--nw-primary); text-decoration: none; }
+.desk-person:hover { border-color: var(--nw-primary); }
+.desk-person-face { display: grid; flex: 0 0 56px; place-items: center; width: 56px; height: 56px; border: 1px solid var(--nw-primary-dim, var(--nw-border)); background: var(--nw-primary-deep); color: var(--nw-primary); font: 700 22px var(--nw-font); object-fit: cover; }
+.desk-person-text { display: grid; flex: 1 1 auto; gap: 3px; min-width: 0; }
+.desk-person-text b { overflow: hidden; font: 700 16px var(--nw-font); text-overflow: ellipsis; white-space: nowrap; }
+.desk-person-text small { color: var(--mu); font: 400 12px var(--nw-font-label); letter-spacing: .08em; text-transform: uppercase; }
+.desk-person-hp { display: flex; align-items: center; gap: 8px; }
+.desk-person-hp .nw-bar { flex: 1 1 auto; }
+.desk-person-hp small { flex: 0 0 auto; color: var(--nw-primary); }
+@media (max-width: 820px) {
+  .desk-head-actions { width: 100%; margin-left: 0; }
+  .desk-head-actions .nw-btn { flex: 1 1 0; justify-content: center; }
+  .desk-card { min-height: 0; }
+}
+
+/* ================= 11. As páginas: as ações do título e as abas sublinhadas (desenho de 2026-10-29) ================= */
+.page-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.page-head .page-actions .pin-page { margin: 0; }
+/* As abas da entrada do menu (Sessão 01: Resumo, Roteiro, Handouts...), logo abaixo do título: texto em caixa alta,
+   a aberta em ciano com o traço embaixo. O nome da entrada já está no título e no caminho de cima. */
+:root:not([data-casca="classica"]) .page-tabs { flex-wrap: nowrap; gap: 4px; margin: 4px 0 16px; padding: 0; overflow-x: auto; border-bottom: 1px solid var(--nw-border); scrollbar-width: none; }
+:root:not([data-casca="classica"]) .page-tabs::-webkit-scrollbar { display: none; }
+:root:not([data-casca="classica"]) .page-tabs-label { display: none; }
+:root:not([data-casca="classica"]) .page-tabs .page-tab { flex: 0 0 auto; margin-bottom: -1px; padding: 10px 14px 9px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--nw-primary); font: 400 14px var(--nw-font-label); letter-spacing: .1em; text-transform: uppercase; }
+:root:not([data-casca="classica"]) .page-tabs .page-tab:hover { color: var(--nw-primary-soft); background: none; }
+:root:not([data-casca="classica"]) .page-tabs .page-tab[aria-current="page"] { border-bottom-color: var(--nw-secondary); background: none; color: var(--nw-secondary); box-shadow: 0 6px 10px -8px var(--nw-secondary); }
+/* Com abas, o traço do título sai (as abas já fazem a linha). */
+:root[data-tema="2077"]:not([data-casca="classica"]) .page-head:has(+ .page-tabs)::after { display: none; }

@@ -1,17 +1,17 @@
-// Página inicial do mestre: "Na mesa agora" com atalhos, recentes e relógios.
+// Página inicial do mestre: o painel da mesa, com os quadros, os relógios, os recentes e os atalhos.
 const { abrir, clicarChip, ondeParou } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
   await edge.ir(`${servidores.local}/`);
   const bloco = () => edge.evaluate(`document.querySelector('#content .home-desk')?.textContent.replace(/\\s+/g, ' ') || ''`);
 
-  await r.passo('início mostra "Na mesa agora" com os atalhos', async () => {
+  await r.passo('início mostra os quadros (próxima sessão, mesa, Caixa) e os atalhos', async () => {
     const texto = await bloco();
-    return [/Na mesa agora/i.test(texto) && /Escudo do mestre/.test(texto) && /As páginas que você abrir aparecem aqui/.test(texto), texto.slice(0, 120)];
+    return [/Próxima sessão/.test(texto) && /Caixa do NetWire/.test(texto) && /Atalhos/.test(texto) && /Escudo do mestre/.test(texto) && /As páginas que você abrir aparecem aqui/.test(texto), texto.slice(0, 120)];
   });
   await r.passo('o bloco não vira seção da barra "Nesta página" nem entra na busca', async () => {
     const chips = await edge.evaluate(`[...document.querySelectorAll('.page-toc [data-toc-index]')].map(b => b.textContent)`);
-    return [!chips.includes('Na mesa agora'), chips.join(', ')];
+    return [!['Atalhos', 'Relógios', 'Próxima sessão'].some(nome => chips.includes(nome)), chips.join(', ')];
   });
   await r.passo('recentes: as últimas páginas, com a seção', async () => {
     await abrir(edge, 'combat');

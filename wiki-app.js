@@ -602,13 +602,13 @@
       const keepTarget = page.manterAlvo && target && target.section;
       writeHash(keepTarget ? `#${id}/${encodeURIComponent(target.section)}` : pageHash(id), historyMode);
       if (!page.manterAlvo) rememberRecent(id);
-      // As abas da entrada do menu (Sessão 01: Resumo, Roteiro completo, Handouts...), no topo da página.
+      // As abas da entrada do menu (Sessão 01: Resumo, Roteiro completo, Handouts...), logo abaixo do título.
       const host = tabHost(id);
       const tabs = host ? `<nav class="page-tabs" aria-label="Partes de ${escapeHtml(String(host.label).replace(/<[^>]+>/g, ''))}"><span class="page-tabs-label">${host.label}</span>${host.tabs.map(tab => `<button type="button" class="page-tab" data-page="${tab.id}"${tab.id === id ? ' aria-current="page"' : ''}>${tab.label}</button>`).join('')}</nav>` : '';
       // A linha em ciano (o eyebrow) em cima do título, como nos exemplos de 2026.
       // A coluna da direita troca junto (o índice volta quando a página monta o dela).
       side.innerHTML = '';
-      content.innerHTML = `${tabs}<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? pinButton(id) : ''}</header><p class="lede">${page.lede}</p>${page.html}`;
+      content.innerHTML = `<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? `<div class="page-actions">${pinButton(id)}<button type="button" class="pin-page" data-copy-link title="Copiar o endereço desta página (com a seção)">⧉ Copiar link</button></div>` : ''}</header>${tabs}<p class="lede">${page.lede}</p>${page.html}`;
       tocClicked = -1;
       // A página nova entra com um esmaecer curto (netwire.css; só a opacidade: as medidas da página não mudam).
       if (historyMode !== 'none') { content.classList.remove('nw-entra'); void content.offsetWidth; content.classList.add('nw-entra'); }
@@ -1810,6 +1810,13 @@
       if (rollButton) {
         const result = rollTable(rollButton.dataset.roll);
         if (result) showRoll(rollButton, `<span class="roll-value">${result.dado}: ${result.value}</span> ${result.html}`);
+        return;
+      }
+      // Copiar link: o endereço da página (com a seção, quando há); o botão confirma por um instante.
+      const copy = event.target.closest('[data-copy-link]');
+      if (copy) {
+        const done = text => { copy.textContent = text; setTimeout(() => { if (copy.isConnected) copy.textContent = '⧉ Copiar link'; }, 1600); };
+        (navigator.clipboard ? navigator.clipboard.writeText(location.href) : Promise.reject(new Error('sem área de transferência'))).then(() => done('✓ Link copiado'), () => done('Não deu para copiar'));
         return;
       }
       const pin = event.target.closest('[data-pin]');
