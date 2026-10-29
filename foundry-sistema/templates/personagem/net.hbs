@@ -1,0 +1,108 @@
+{{!-- A aba NET, no jeito da maquete "Net Tab" do usuário: à esquerda, a Interface em grande (o Rank, as Ações NET por
+turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interface em cartões e os programas. --}}
+<section class="tab net {{tab.cssClass}}" data-group="primary" data-tab="net">
+  <div class="aba-colunas">
+    <aside class="coluna-resumo">
+      <section class="painel corte ciano">
+        <div class="titulo">INTERFACE<span>NETRUNNER</span></div>
+        <p class="numero-grande"><b>{{#if net.rank}}{{net.rank}}{{else}}—{{/if}}</b><small>RANK</small></p>
+        <div class="medida"><span>AÇÕES NET POR TURNO</span><b class="destaque">{{#if net.rank}}{{net.acoes}}{{else}}—{{/if}}</b></div>
+        <div class="medida"><span>DECK EQUIPADO</span><b>{{#if net.deck}}{{net.deck}}{{#if net.naPorta}} · na porta{{/if}}{{else}}nenhum{{/if}}</b></div>
+        {{#if net.slots}}<div class="medida"><span>SLOTS</span><b data-tooltip="{{net.slots.usados}} de {{net.slots.total}} slots em uso"><span class="pontos-visuais slots" style="--pontos: {{net.slots.usados}}; --max: {{net.slots.total}}" aria-hidden="true"></span> {{net.slots.usados}}/{{net.slots.total}}</b></div>{{/if}}
+        {{#if net.rank}}
+        <div class="medida"><span>CONEXÃO</span><b class="conexao {{#if net.conexao}}conectado{{/if}}">{{#if net.conexao}}{{net.conexao.ponto}}{{else}}desconectado{{/if}}</b></div>
+        <div class="botoes-resumo">
+          {{#if net.conexao}}
+          <button type="button" class="acao" data-action="abrirNet" data-tile="{{net.conexao.tile}}" data-token="{{net.conexao.token}}">ABRIR A NET</button>
+          <button type="button" class="acao" data-action="desconectarDaNet" data-token="{{net.conexao.token}}" data-tooltip="Desconectar com segurança (em combate, 1 Ação NET)">DESCONECTAR</button>
+          {{else}}
+          <button type="button" class="acao" data-action="conectarNaNet" data-tooltip="Conecta o token no ponto de acesso mais perto, dentro do alcance (6 m; 8 com o upgrade de alcance)">CONECTAR</button>
+          {{/if}}
+        </div>
+        {{/if}}
+      </section>
+
+      {{#if net.conexao}}
+      <section class="painel corte ciano arquitetura-ao-vivo">
+        <div class="titulo">ARQUITETURA<span>AO VIVO · {{net.conexao.andares.length}} ANDARES</span></div>
+        <ol class="itens">
+          {{#each net.conexao.andares}}<li class="andar-{{estado}}"><b class="rotulo-andar">{{rotulo}}</b><span class="detalhe">{{texto}}</span><span class="estado-andar">{{estado}}</span></li>{{/each}}
+        </ol>
+      </section>
+      {{/if}}
+
+      <section class="painel corte">
+        <div class="titulo">CYBERDECKS<span>{{decks.length}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="cyberdeck" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar cyberdeck">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each decks}}
+          <li data-item-id="{{id}}" class="{{#if guardado}}guardada{{/if}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{detalhe}}</span>
+            <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado" aria-pressed="{{#if equipado}}true{{else}}false{{/if}}">{{usoNome}}</button>
+            {{#if porta}}<button type="button" class="alternar porta-do-deck {{#if naPorta}}ligado{{/if}}" data-action="portaDoDeck" data-tooltip="Encaixar ou tirar o deck da Neuroport Cyberdeck Port (uma Ação): na porta, 20 m contra arquiteturas e 50 m contra Neuroports, e o hardware do deck não vale" aria-pressed="{{#if naPorta}}true{{else}}false{{/if}}">{{#if naPorta}}Na porta{{else}}Externo{{/if}}</button>{{/if}}
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{else}}<li class="vazio">Sem cyberdeck.</li>{{/each}}
+        </ol>
+      </section>
+    </aside>
+
+    <div class="coluna-principal">
+      <section class="painel corte interface-net">
+        <div class="titulo">HABILIDADES DE INTERFACE<span>{{#if net.rank}}RANK {{net.rank}} · {{net.acoes}} AÇÕES NET POR TURNO{{else}}SÓ O NETRUNNER{{/if}}</span></div>
+        {{#if net.rank}}
+        {{#if net.deck}}
+        <ol class="habilidades-interface">
+          {{#each net.habilidades}}
+          <li data-habilidade="{{id}}">
+            <button type="button" class="acao" data-action="rolarInterface" data-habilidade="{{id}}" data-tooltip="{{dica}}">{{rotulo}} <b>{{valor}}</b></button>
+            <small>{{custo}}</small>
+            {{#if (eq id "zap")}}<button type="button" class="acao dano-zap" data-action="rolarDanoDoZap" data-tooltip="O dano do Zap: 1d6 no REZ de um programa ou direto no cérebro">1d6</button>{{/if}}
+          </li>
+          {{/each}}
+        </ol>
+        <p class="dica">Pelo {{net.deck}}: Interface + 1d10 contra a DV (RED p. 198–201); os programas ativos somam na habilidade deles. No turno, uma Ação Carnal ou até {{net.acoes}} Ações NET, além da Ação de Movimento. O ataque e o dano dos programas e a REZ ficam na lista de programas, e o dano se aplica pelos botões do mestre no cartão. O Black ICE e o demônio da arquitetura têm as fichas deles.</p>
+        {{else}}
+        <div class="caixa-vazia">EQUIPE UM CYBERDECK PARA USAR A INTERFACE</div>
+        {{/if}}
+        {{else}}
+        <p class="dica">Só o Netrunner tem Interface: o Rank da Role.</p>
+        {{/if}}
+      </section>
+
+      {{#if (or net.rank neuroport.invasores.length)}}
+      <section class="painel corte neuroports">
+        <div class="titulo">NEUROPORTS<span>{{#if net.rank}}JACK IN NO ALVO MARCADO · ATÉ {{neuroport.alcance}} M{{#if neuroport.acoes}} · AÇÕES NET {{neuroport.acoes.usadas}}/{{neuroport.acoes.max}}{{/if}}{{/if}}</span></div>
+        {{#if net.rank}}
+        <ol class="itens">
+          {{#each neuroport.ligacoes}}<li data-alvo="{{alvo}}"><span class="nome">{{nome}}</span><span class="detalhe">{{#if percebido}}percebeu{{else}}não percebeu{{/if}}</span>{{#if direta}}<span class="direta" data-tooltip="Pelo Personal Link: uma Ação NET a mais por turno; a mais de 2 m, ou com o cabo arrancado, cai à força">DIRETA</span>{{/if}}{{#if quantos}}<span class="passwalls" data-tooltip="Os Passwalls do Self-ICE do alvo: o Breach passa um por vez, e o quickhack só depois de todos">PASSWALLS {{passados}}/{{quantos}} · DV {{dv}}</span>{{#if faltam}}<button type="button" class="acao" data-action="breach" data-alvo="{{alvo}}" data-tooltip="Breach: Interface + 1d10 contra a DV do Passwall (1 Ação NET)">Breach</button>{{/if}}{{/if}}{{#unless faltam}}<button type="button" class="acao" data-action="quickhack" data-alvo="{{alvo}}" data-tooltip="Um quickhack do seu Rank: Interface + 1d10 contra a DV dele (1 Ação NET; um por alvo por turno)">Quickhack</button>{{/unless}}<button type="button" class="acao" data-action="jackOut" data-alvo="{{alvo}}" data-tooltip="Sai do Neuroport com segurança">Jack Out</button></li>{{#if andares}}<li class="andares-neuroport" data-tooltip="O Neuroport como arquitetura: o Black ICE do deck do alvo, os Passwalls do Self-ICE e o nó de controle do Holophone (o dono escolhe a ordem; quem chega ao fundo pode deixar um vírus)"><small>ANDARES: {{andares}}</small></li>{{/if}}
+          {{else}}<li class="vazio">Em nenhum Neuroport.</li>{{/each}}
+        </ol>
+        {{#if net.deck}}<button type="button" class="acao jack-in" data-action="jackIn" data-tooltip="Interface + 1d10 contra a WILL + 1d10 do alvo marcado (T), à vista e no alcance do deck">Jack In</button><button type="button" class="acao jack-in conexao-direta" data-action="conexaoDireta" data-tooltip="Pelo Personal Link (o cabo) no alvo marcado (T), a até 2 m: sem rolar, com o alvo inconsciente ou agarrado, ou se o dono aceitar">Conexão direta</button>{{/if}}
+        {{/if}}
+        {{#if neuroport.invasores.length}}<p class="no-meu">No seu Neuroport: {{#each neuroport.invasores}}<b>{{nome}}</b>{{#if percebido}} <button type="button" class="acao expulsar" data-action="expulsar" data-netrunner="{{netrunner}}" data-tooltip="Uma Ação: WILL + Concentração + 1d10 contra a Interface + 1d10 dele (o empate é dele)">Expulsar</button>{{else}} <small>(não percebeu)</small>{{/if}}{{#if direta}} <button type="button" class="acao arrancar-cabo" data-action="arrancarCabo" data-netrunner="{{netrunner}}" data-tooltip="Arranca o cabo do Personal Link: ele cai à força (o Jack Out inseguro)">Arrancar o cabo</button>{{/if}} {{/each}}</p>{{/if}}
+      </section>
+      {{/if}}
+
+      <section class="painel corte">
+        <div class="titulo">PROGRAMAS<span>{{programas.length}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="programa" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar programa">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each programas}}
+          <li data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{detalhe}}</span>
+            {{#if ataque}}<button type="button" class="acao" data-action="atacarComPrograma" data-tooltip="Interface + ATK + 1d10, contra a Interface + 1d10 do netrunner ou a DEF + 1d10 do programa">ATK +{{ataque.total}}</button>{{/if}}
+            {{#each danos}}<button type="button" class="acao" data-action="rolarDanoDePrograma" data-contra="{{id}}" data-tooltip="O dano {{rotulo}} (sem crítico na NET)">{{formula}} {{rotulo}}</button>{{/each}}
+            {{#if rez}}<span class="rez {{#unless rez.atual}}zerada{{/unless}}" data-tooltip="A REZ: os pontos de vida do programa; em 0, ele desativa">REZ {{rez.atual}}/{{rez.max}}</span><button type="button" data-action="perderRez" data-tooltip="Perde 1 de REZ" aria-label="Perder 1 de REZ de {{nome}}">−1</button><button type="button" data-action="restaurarRez" data-tooltip="A REZ volta ao máximo" aria-label="Restaurar a REZ de {{nome}}">↺</button>{{/if}}
+            <span class="estado-programa estado-{{estado}}">{{estado}}</span>
+            {{#if podeAtivar}}<button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="ativarPrograma" data-tooltip="{{dicaAtivo}}" aria-pressed="{{#if ativo}}true{{else}}false{{/if}}">{{#if ativo}}Ativo{{else}}Inativo{{/if}}</button>{{/if}}
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{else}}<li class="vazio">Sem programas.</li>{{/each}}
+        </ol>
+      </section>
+    </div>
+  </div>
+</section>

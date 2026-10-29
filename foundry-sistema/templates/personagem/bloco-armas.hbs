@@ -1,0 +1,33 @@
+{{!-- A tabela de armas, com os ataques: na aba Combate do personagem e na ficha do capanga. As de mão, as do cyberware
+instalado (o C11), que estão sempre prontas, e as dos acessórios, prontas com a arma onde estão equipada. A linha arrastada
+para a barra vira a macro do ataque (o C20). O pente recarrega, troca de munição e descarrega (o C32). --}}
+<section class="painel corte">
+  <div class="titulo">ARMAS<span>MARQUE O ALVO (T) E ATAQUE</span></div>
+  {{#if armasDeCombate.length}}
+  <table class="lista armas">
+    <thead><tr><th>Arma</th><th>Ataque</th><th>Dano</th><th>CDT</th><th>Pente</th><th></th></tr></thead>
+    <tbody>
+      {{#each armasDeCombate}}
+      <tr data-item-id="{{id}}" class="draggable {{#unless pronta}}guardada{{/unless}}">
+        <td class="nome"><img src="{{img}}" alt=""> <a data-action="editarItem" role="button" tabindex="0">{{nome}}</a>{{#if doCyberware}} <small class="do-cyberware" data-tooltip="A arma do cyberware instalado: não ocupa as mãos">Cyberware</small>{{/if}}{{#if doAcessorio}} <small class="do-acessorio" data-tooltip="A arma do acessório: pronta com {{doAcessorio}} equipada">Em {{doAcessorio}}</small>{{/if}}{{#if daCombinacao}} <small class="da-combinacao" data-tooltip="Combinação: um modo de {{daCombinacao}}, com o pente dele. Trocar de modo não gasta Ação; pronto com a arma equipada">Modo</small>{{/if}}{{#if qualidade}} <small>{{qualidade}}</small>{{/if}}{{#if classe2077}} <small class="classe-2077">{{classe2077}}</small>{{/if}}{{#each avisos2077}} <small class="aviso-2077" data-tooltip="{{dica}}">{{texto}}</small>{{/each}}</td>
+        <td class="num"{{#if dicaAtaque}} data-tooltip="{{dicaAtaque}}"{{/if}}>+{{ataque}}</td>
+        <td>{{dano}}</td>
+        <td class="num">{{sistema.cdt}}</td>
+        <td>{{#if sistema.pente.max}}{{sistema.pente.value}}/{{sistema.pente.max}}{{#if municao}} <small>{{municao}}</small>{{/if}}{{else}}—{{/if}}</td>
+        <td class="acoes"><div class="botoes">
+          <button type="button" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">Atacar</button>
+          {{#if podeArremessar}}<button type="button" data-action="atacar" data-modo="arremesso" data-tooltip="DEX + Atletismo, até 25 m; a armadura usa o SP inteiro">Arremessar</button>{{/if}}
+          <button type="button" data-action="mirar" data-tooltip="Mirado (−8): cabeça, perna ou item na mão">Mirar</button>
+          {{#if sistema.autofogo}}<button type="button" data-action="atacar" data-modo="autofogo" data-tooltip="Autofogo (×{{sistema.autofogo}}): {{balasAutofogo}} balas">Autofogo</button>{{/if}}
+          {{#if sistema.supressivo}}<button type="button" data-action="atacar" data-modo="supressivo" data-tooltip="Fogo supressivo: 10 balas, todos a até 25 m">Supressivo</button>{{/if}}
+          {{#each modos2077}}<button type="button" data-action="atacar" data-modo="{{modo}}" data-tooltip="{{dica}}">{{rotulo}}</button>{{/each}}
+          {{#each alternar2077}}<button type="button" data-action="{{acao}}" data-tooltip="{{dica}}">{{rotulo}}</button>{{/each}}
+          <button type="button" data-action="rolarDano" data-tooltip="Só rolar o dano">Dano</button>
+          {{#if sistema.pente.max}}<button type="button" data-action="recarregar" data-tooltip="Recarregar" aria-label="Recarregar {{nome}}">↻</button><button type="button" data-action="trocarMunicao" data-tooltip="Trocar a munição: o que sobrou no pente volta para a munição que estava nele" aria-label="Trocar a munição de {{nome}}"><i class="fa-solid fa-boxes-stacked" inert></i></button>{{#if sistema.pente.value}}<button type="button" data-action="descarregar" data-tooltip="Descarregar: as balas do pente voltam para a munição" aria-label="Descarregar {{nome}}"><i class="fa-solid fa-eject" inert></i></button>{{/if}}{{/if}}
+        </div></td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}<div class="caixa-vazia">SEM ARMAS: ARRASTE UMA ARMA PARA A FICHA</div>{{/if}}
+</section>

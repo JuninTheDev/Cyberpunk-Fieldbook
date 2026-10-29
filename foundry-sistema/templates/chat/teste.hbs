@@ -1,0 +1,9 @@
+<div class="cpr-fieldbook cartao teste {{#if critico}}critico-{{critico}}{{/if}}{{#if categoria}} tipo-{{categoria}}{{/if}}">
+  <header><h3>{{rotulo}}</h3>{{#if sabor}}<span class="sabor">{{sabor}}</span>{{/if}}</header>
+  <ol class="partes">
+    <li><span>{{#if dado}}{{dado}}{{else}}1d10{{/if}}</span></li>
+    {{#each partes}}<li><span>{{rotulo}}</span> <b>{{#if (gt valor 0)}}+{{/if}}{{valor}}</b></li>{{/each}}
+  </ol>
+  {{#if critico}}<p class="critico">{{#if (eq critico "sucesso")}}Sucesso crítico: mais um d10.{{else}}Falha crítica: menos um d10.{{/if}}</p>{{/if}}
+  {{{dados}}}
+</div>

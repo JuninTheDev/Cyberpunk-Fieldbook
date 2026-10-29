@@ -1,0 +1,36 @@
+<div class="corpo-capanga">
+  {{> "systems/cpr-fieldbook/templates/personagem/bloco-geral.hbs"}}
+  {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
+  {{> "systems/cpr-fieldbook/templates/personagem/bloco-armadura.hbs"}}
+  <section class="painel corte agarrao-capanga">
+    <div class="titulo">AGARRÃO<span>MARQUE O ALVO (T)</span></div>
+    {{> "systems/cpr-fieldbook/templates/personagem/bloco-agarrao.hbs"}}
+  </section>
+  {{> "systems/cpr-fieldbook/templates/personagem/bloco-artes-marciais.hbs"}}
+  <div class="duas-colunas">
+    <section class="painel corte itens-capanga">
+      <div class="titulo">ITENS<span>ARRASTE PARA A FICHA: ENTRA EQUIPADO</span></div>
+      <ol class="itens">
+        {{#each itensDoCapanga}}
+        <li data-item-id="{{id}}" class="{{#if acao}}{{#unless ligado}}guardada{{/unless}}{{/if}}">
+          <img src="{{img}}" alt="">
+          <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+          <span class="detalhe">{{tipo}}{{#if detalhe}} · {{detalhe}}{{/if}}</span>
+          {{#if divisivel}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
+          {{#if acao}}<button type="button" class="alternar {{#if ligado}}ligado{{/if}}" data-action="{{acao}}" aria-pressed="{{#if ligado}}true{{else}}false{{/if}}"{{#if dica}} data-tooltip="{{dica}}"{{/if}}>{{rotulo}}</button>{{/if}}
+          <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar {{nome}}">✕</button>
+        </li>
+        {{else}}<li class="vazio">Sem itens: arraste armas, armadura e cyberware para a ficha.</li>{{/each}}
+      </ol>
+    </section>
+
+    <section class="painel corte notas">
+      <div class="titulo">NOTAS<span>QUEM É, O QUE QUER</span></div>
+      {{#if editavel}}
+      <prose-mirror aria-label="Notas" name="system.notas" value="{{fonte.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+      {{else}}
+      <div class="texto">{{{notasRicas}}}</div>
+      {{/if}}
+    </section>
+  </div>
+</div>

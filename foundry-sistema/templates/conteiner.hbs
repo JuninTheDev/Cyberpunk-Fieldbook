@@ -1,0 +1,97 @@
+{{!-- A ficha do contêiner (ficha-conteiner.mjs; o cpr-container-sheet do CORE): à esquerda, a imagem, o nome, com quem
+trocar, os Eurodólares e as configurações do mestre; à direita, os itens por categoria, com a quantidade, o preço e os
+botões. --}}
+<div class="ficha-conteiner-corpo">
+<div class="conteiner-colunas aba-colunas">
+  <aside class="coluna-resumo">
+    <section class="painel corte identidade-conteiner">
+      <img class="retrato corte" src="{{ator.img}}" alt="{{ator.name}}" {{#if mestre}}data-action="editImage" data-edit="img" data-tooltip="Trocar a imagem"{{/if}}>
+      <p class="linha-id"><span>CONTÊINER://</span><span class="tipo-conteiner">{{lookup tipos sistema.tipo}}</span></p>
+      {{#if mestre}}
+      <input class="nome" type="text" name="name" value="{{ator.name}}" placeholder="Nome" aria-label="Nome">
+      {{else}}
+      <p class="nome">{{ator.name}}</p>
+      {{/if}}
+      {{#if naCena}}<p class="dica" data-tooltip="A ficha deste token: o que muda aqui não muda os outros tokens do mesmo ator">ESTE TOKEN</p>{{/if}}
+    </section>
+
+    <section class="painel corte trocar">
+      <div class="titulo">TROCAR COM<span>QUEM RECEBE</span></div>
+      <select class="parceiro" aria-label="Trocar com">
+        <option value="">--</option>
+        {{#each parceiros}}<option value="{{id}}" {{#if escolhido}}selected{{/if}}>{{nome}}</option>{{/each}}
+      </select>
+      {{#if compraDosJogadores}}<p class="dica vender">Para vender, arraste o item da sua ficha para cá: a loja oferece a porcentagem do preço de cada tipo.</p>{{/if}}
+    </section>
+
+    <section class="painel corte dinheiro">
+      <div class="titulo">EURODÓLARES<span>DO CONTÊINER</span></div>
+      {{#if comDinheiro}}
+      <p class="numero-grande"><b>{{sistema.dinheiro}}</b><small>eb</small></p>
+      {{#if mestre}}<div class="botoes-resumo"><button type="button" class="acao" data-action="abrirExtrato" data-tooltip="Somar, subtrair ou definir, com o motivo; e o histórico inteiro">EXTRATO</button></div>{{/if}}
+      {{else}}
+      <p class="numero-grande" data-tooltip="O saque não tem Eurodólares (o N/A do CORE)"><b>N/A</b></p>
+      {{/if}}
+    </section>
+
+    {{#if mestre}}
+    <section class="painel corte vermelho configuracoes-conteiner">
+      <div class="titulo">CONFIGURAÇÕES<span>DO MESTRE</span></div>
+      <label class="campo-conteiner">Tipo
+        <select name="system.tipo">{{selectOptions tipos selected=sistema.tipo}}</select>
+      </label>
+      {{#each gerais}}
+      <label class="permissao"><input type="checkbox" name="system.permissoes.{{chave}}" {{checked ligada}}> {{rotulo}}</label>
+      {{/each}}
+      {{#if configuraCompra}}<button type="button" class="acao configurar-compra" data-action="configurarCompra" data-tooltip="Que tipos a loja compra dos jogadores, e por quanto do preço">Configurar a compra</button>{{/if}}
+      {{#if dosJogadores.length}}
+      <p class="subtitulo">Os jogadores podem:</p>
+      {{#each dosJogadores}}
+      <label class="permissao"><input type="checkbox" name="system.permissoes.{{chave}}" {{checked ligada}}> {{rotulo}}</label>
+      {{/each}}
+      {{/if}}
+    </section>
+    {{/if}}
+  </aside>
+
+  <div class="coluna-principal">
+    {{#each categorias}}
+    <section class="painel corte categoria-conteiner" data-categoria="{{tipo}}">
+      <div class="titulo">{{rotulo}}<span>{{#if (eq itens.length 1)}}1 ITEM{{else}}{{itens.length}} ITENS{{/if}}</span>
+        {{#if @root.podeCriar}}<button type="button" class="criar" data-action="criarItem" data-tipo="{{tipo}}" data-tooltip="Criar um item deste tipo no contêiner">+</button>{{/if}}
+      </div>
+      <ol class="itens">
+        {{#each itens}}
+        <li class="draggable" data-item-id="{{id}}">
+          <img src="{{img}}" alt="">
+          <a class="nome" data-action="editarItem">{{nome}}</a>
+          <span class="detalhe">{{#if empilhavel}}<b class="quantidade">{{quantidade}}</b> · {{/if}}{{preco}}{{#if instalados}} · com {{instalados}}{{/if}}</span>
+          {{#if divisivel}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
+          {{#if @root.deGraca}}
+          {{#if emParte}}<button type="button" class="acao" data-action="pegarParte" data-tooltip="Pegar só uma parte da pilha">Pegar parte</button>{{/if}}
+          <button type="button" class="acao" data-action="pegarTudo" data-tooltip="Levar para quem está em Trocar com">Pegar{{#if emParte}} tudo{{/if}}</button>
+          {{else}}
+          {{#if emParte}}<button type="button" class="acao" data-action="pegarParte" data-tooltip="Comprar só uma parte da pilha, pelo preço da unidade">Comprar parte</button>{{/if}}
+          <button type="button" class="acao" data-action="pegarTudo" data-tooltip="Comprar para quem está em Trocar com: {{custo}} eb">Comprar{{#if emParte}} tudo{{/if}}</button>
+          {{/if}}
+          {{#if @root.podeApagar}}<button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar">✕</button>{{/if}}
+        </li>
+        {{else}}<li class="vazio">Nada aqui.</li>{{/each}}
+      </ol>
+    </section>
+    {{else}}
+    <section class="painel corte"><p class="vazio">O contêiner está vazio.</p></section>
+    {{/each}}
+
+    <section class="painel corte notas">
+      <div class="titulo">NOTAS</div>
+      {{#if mestre}}
+      <prose-mirror name="system.notas" value="{{sistema.notas}}" toggled="true" compact="false">{{{notasRicas}}}</prose-mirror>
+      {{else}}
+      <div class="texto">{{{notasRicas}}}</div>
+      {{/if}}
+    </section>
+  </div>
+</div>
+<footer class="rodape"><span>NIGHT CITY // CYBERPUNK RED — FIELDBOOK</span><span>FICHA DE CONTÊINER · v{{versao}}</span></footer>
+</div>

@@ -1,0 +1,194 @@
+{{!-- A ficha do item, no jeito da maquete "Item Sheets" do usuário: o tipo na cor dele, o nome, o resumo e as etiquetas
+no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
+<div class="item-ficha ficha-de-item tipo-{{item.type}}">
+  <header class="cabecalho">
+    <p class="linha-tipo"><span class="tipo">{{tipoRotulo}}</span><span>FICHA DO ITEM</span></p>
+    <div class="identidade">
+      <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img" role="button" tabindex="0" aria-label="Trocar a imagem do item">
+      <div class="nome-e-resumo">
+        <input class="nome" type="text" name="name" aria-label="Nome do item" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
+        {{#if resumo}}<p class="resumo">{{resumo}}</p>{{/if}}
+        {{#if etiquetas.length}}<p class="etiquetas">{{#each etiquetas}}<span class="etiqueta {{classe}}">{{texto}}</span>{{/each}}</p>{{/if}}
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs abas-do-item" data-group="item" role="tablist" aria-label="Ficha do item">
+    {{#each tabs}}<a class="{{cssClass}}" data-action="tab" data-group="item" data-tab="{{id}}" role="tab" tabindex="0" aria-selected="{{#if active}}true{{else}}false{{/if}}">{{label}}</a>{{/each}}
+  </nav>
+
+  <section class="tab detalhes {{tabs.detalhes.cssClass}}" data-group="item" data-tab="detalhes">
+    <div class="campos">
+      {{#if temEletronica}}<label class="caixa"><input type="checkbox" name="system.eletronico" {{checked fonte.eletronico}}> Eletrônico</label><label class="caixa"><input type="checkbox" name="system.endurecido" {{checked fonte.endurecido}}> Protege contra EMP</label>{{/if}}
+      {{#if eh.arma}}
+      <label class="celula"><span>Perícia</span><select name="system.pericia">{{selectOptions pericias selected=fonte.pericia}}</select></label>
+      <label class="celula"><span>Dano</span><input type="text" name="system.dano" value="{{fonte.dano}}"></label>
+      <label class="celula"><span>Crítico em quantos seis</span><input type="number" name="system.critico.seis" value="{{fonte.critico.seis}}" min="0" step="1" data-tooltip="0: nunca causa crítico"></label>
+      <label class="celula"><span>Bônus do crítico</span><input type="number" name="system.critico.bonus" value="{{fonte.critico.bonus}}" placeholder="{{bonusCriticoPadrao}}" min="0" step="1"></label>
+      <p class="nota">Crítico: 0 seis nunca causa; bônus vazio usa +{{bonusCriticoPadrao}} do perfil, e 0 não acrescenta dano.</p>
+      {{#if desarmada}}<label class="caixa" data-tooltip="A tabela do BODY de quem bate (com cyberbraço, a Briga dá pelo menos 2d6)"><input type="checkbox" name="system.danoPeloBody" {{checked fonte.danoPeloBody}}> Dano pelo BODY</label>{{#if (and fonte.danoPeloBody danoDoBody)}}<p class="nota dano-do-body">Pelo BODY do dono: {{danoDoBody}}.</p>{{/if}}{{/if}}
+      <label class="celula"><span>CDT</span><input type="number" name="system.cdt" value="{{fonte.cdt}}"></label>
+      <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.bonusAtaque" value="{{fonte.bonusAtaque}}"></label>
+      <label class="celula"><span>Pente</span><span class="par"><input type="number" name="system.pente.value" aria-label="Munição atual no pente" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" aria-label="Capacidade do pente" value="{{fonte.pente.max}}"></span></label>
+      <label class="celula"><span>Tabela de DV</span><input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
+      <label class="celula"><span>Qualidade</span><select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
+      {{#if (eq fonte.qualidade "poor")}}<label class="celula"><span>Na falha crítica</span><select name="system.falhaCritica">{{selectOptions falhasDaArma selected=fonte.falhaCritica}}</select></label>{{/if}}
+      <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
+      <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
+      {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
+      <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
+      {{#if armaDe}}<div class="celula arma-do-cyberware"><span>{{armaDe.rotulo}}</span><b>{{armaDe.nome}}</b></div><p class="nota">Os dados desta arma vêm de {{armaDe.nome}}: mude-os na ficha dele.</p>
+      {{else if armaDeAtor}}<label class="celula"><span>Montada no veículo</span><select name="system.instaladoEm">{{selectOptions veiculosDaArma selected=fonte.instaladoEm}}</select></label>{{/if}}
+      {{#unless armaMontada}}<label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Equipada</label>{{/unless}}
+      {{#if armaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T); Ctrl + clique, direto">{{#if soAutofogo}}AUTOFOGO{{else}}ATACAR{{/if}}</button>{{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Encher o pente">RECARREGAR</button>{{/if}}</div>{{/if}}
+      {{/if}}
+      {{#if eh.armadura}}
+      <label class="celula"><span>SP cabeça</span><span class="par"><input type="number" name="system.sp.cabeca.value" aria-label="SP atual da cabeça" value="{{fonte.sp.cabeca.value}}"> / <input type="number" name="system.sp.cabeca.max" aria-label="SP máximo da cabeça" value="{{fonte.sp.cabeca.max}}"></span></label>
+      <label class="celula"><span>SP corpo</span><span class="par"><input type="number" name="system.sp.corpo.value" aria-label="SP atual do corpo" value="{{fonte.sp.corpo.value}}"> / <input type="number" name="system.sp.corpo.max" aria-label="SP máximo do corpo" value="{{fonte.sp.corpo.max}}"></span></label>
+      <label class="celula"><span>Penalidade</span><input type="number" name="system.penalidade" value="{{fonte.penalidade}}"></label>
+      <label class="celula" data-tooltip="A aparência de moda do Black Chrome: a armadura parece roupa deste estilo"><span>Parece</span><select name="system.moda"><option value="">— (armadura à vista)</option>{{selectOptions estilosDaModa selected=fonte.moda}}</select></label>
+      {{#if perceberModa}}<div class="acoes-do-item perceber-moda"><button type="button" class="acao" data-action="perceberArmadura" data-pericia="perception" data-tooltip="Quem você controla (ou o seu personagem) tenta perceber que é armadura: Percepção contra DV15">PERCEBER (PERCEPÇÃO DV15)</button><button type="button" class="acao" data-action="perceberArmadura" data-pericia="wardrobe-style" data-tooltip="Guarda-roupa e Estilo contra DV13">PERCEBER (GUARDA-ROUPA DV13)</button></div>{{/if}}
+      <label class="caixa"><input type="checkbox" name="system.equipada" {{checked fonte.equipada}}> Vestida</label>
+      {{#each trilhas}}<div class="trilha-sp" data-local="{{local}}"><span>SP {{rotulo}}</span><span class="pontos-visuais" style="--pontos: {{valor}}; --max: {{max}}" aria-hidden="true"></span><b>{{valor}}/{{max}}</b>{{#if ../editavel}}<button type="button" data-action="ablar" data-local="{{local}}" data-tooltip="Um ponto de SP a menos ({{rotulo}})" aria-label="Um ponto de SP a menos ({{rotulo}})">−1</button>{{/if}}</div>{{/each}}
+      {{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="consertar" data-tooltip="O SP volta ao máximo; o mestre narra o conserto">CONSERTAR</button></div>{{/if}}
+      {{/if}}
+      {{#if eh.municao}}
+      <label class="celula"><span>Tipo</span><input type="text" name="system.tipo" value="{{fonte.tipo}}"></label>
+      <label class="celula"><span>Quantidade</span><input type="number" name="system.quantidade" value="{{fonte.quantidade}}"></label>
+      <label class="celula"><span>Ablação</span><input type="number" name="system.ablacao" value="{{fonte.ablacao}}"></label>
+      <label class="caixa"><input type="checkbox" name="system.critico.substitui" {{checked fonte.critico.substitui}}> Mudar o crítico da arma</label>
+      {{#if fonte.critico.substitui}}
+      <label class="celula"><span>Crítico em quantos seis</span><input type="number" name="system.critico.seis" value="{{fonte.critico.seis}}" min="0" step="1" data-tooltip="0: nunca causa crítico"></label>
+      <label class="celula"><span>Bônus do crítico</span><input type="number" name="system.critico.bonus" value="{{fonte.critico.bonus}}" min="0" step="1"></label>
+      {{/if}}
+      {{/if}}
+      {{#if eh.lesao}}
+      <label class="celula"><span>Local</span><select name="system.local">{{selectOptions locaisLesao selected=fonte.local}}</select></label>
+      <label class="celula"><span>Paliativo: Primeiros Socorros DV</span><input type="number" name="system.paliativo.primeirosSocorros" value="{{fonte.paliativo.primeirosSocorros}}"></label>
+      <label class="celula"><span>Paliativo: Paramédico DV</span><input type="number" name="system.paliativo.paramedico" value="{{fonte.paliativo.paramedico}}"></label>
+      <label class="celula"><span>Tratamento: Paramédico DV</span><input type="number" name="system.tratamento.paramedico" value="{{fonte.tratamento.paramedico}}"></label>
+      <label class="celula"><span>Tratamento: Cirurgia DV</span><input type="number" name="system.tratamento.cirurgia" value="{{fonte.tratamento.cirurgia}}"></label>
+      <label class="caixa"><input type="checkbox" name="system.aumentaDeathSave" {{checked fonte.aumentaDeathSave}}> Death Save base +1</label>
+      {{#if lesaoDeAtor}}<div class="acoes-do-item">{{#if lesaoDeAtor.corrigida}}<button type="button" class="acao" data-action="voltou" data-tooltip="O dia acabou: o efeito volta">VOLTOU</button>{{else}}{{#if lesaoDeAtor.correcao}}<button type="button" class="acao" data-action="corrigir" data-tooltip="Correção rápida: tira o efeito até o fim do dia">CORREÇÃO RÁPIDA</button>{{/if}}{{/if}}{{#if lesaoDeAtor.tratamento}}<button type="button" class="acao" data-action="tratar" data-tooltip="Tratamento: tira de vez (não em si mesmo)">TRATAR</button>{{/if}}</div>{{/if}}
+      {{/if}}
+      {{#if eh.cyberware}}
+      <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposCyberware selected=fonte.tipo}}</select></label>
+      {{#if lados}}<label class="celula"><span>Lado</span><select name="system.lado">{{selectOptions lados selected=fonte.lado}}</select></label>{{/if}}
+      {{#if ladoDaFundacao}}<div class="celula lado-da-fundacao"><span>Lado</span><b>{{ladoDaFundacao}} (o da fundação)</b></div>{{/if}}
+      <label class="celula"><span>Perda de Humanidade</span><span class="par"><input type="text" name="system.perdaHumanidade.formula" aria-label="Fórmula da perda de Humanidade" value="{{fonte.perdaHumanidade.formula}}"> média <input type="number" name="system.perdaHumanidade.media" aria-label="Média da perda de Humanidade" value="{{fonte.perdaHumanidade.media}}"></span></label>
+      <label class="caixa"><input type="checkbox" name="system.fundacional" {{checked fonte.fundacional}}> Base (fundacional)</label>
+      {{#if fonte.fundacional}}<label class="celula"><span>Slots de opção</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
+      {{else}}<label class="celula"><span>Slots que ocupa</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>{{/if}}
+      {{#if fundacoes}}<label class="celula"><span>Fundação</span><select name="system.instaladoEm">{{selectOptions fundacoes selected=fonte.instaladoEm}}</select></label>{{/if}}
+      <label class="caixa"><input type="checkbox" name="system.instalado" {{checked fonte.instalado}}> Instalado</label>
+      {{#if rolaHumanidade}}<div class="acoes-do-item"><button type="button" class="acao" data-action="rolarHumanidade" data-tooltip="Rola a perda de Humanidade sem instalar; o mestre aplica pelo cartão">ROLAR HUMANIDADE</button></div>{{/if}}
+      {{/if}}
+      {{#if temQuantidade}}<label class="celula"><span>{{#if eh.droga}}Doses{{else}}Quantidade{{/if}}</span><input type="number" name="system.quantidade" value="{{fonte.quantidade}}" min="0"></label>{{/if}}
+      {{#if eh.cyberdeck}}
+      <label class="celula"><span>Slots</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
+      <label class="celula"><span>Qualidade</span><select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
+      <label class="celula"><span>RAM (2077)</span><input type="number" name="system.ram" value="{{fonte.ram}}" min="0"></label>
+      <label class="celula"><span>Cooling (2077)</span><input type="number" name="system.resfriamento" value="{{fonte.resfriamento}}" min="0"></label>
+      <p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso{{#if instalados}}: {{instalados}}{{/if}}.</p>
+      {{/if}}
+      {{#if eh.programa}}
+      <label class="celula"><span>Classe</span><select name="system.classe">{{selectOptions classesPrograma selected=fonte.classe}}</select></label>
+      {{#if blackIce}}
+      <label class="celula"><span>Tipo de Black ICE</span><select name="system.tipoDeIce">{{selectOptions classesDoIce selected=fonte.tipoDeIce}}</select></label>
+      <label class="celula"><span>PER</span><input type="number" name="system.per" value="{{fonte.per}}" min="0"></label>
+      <label class="celula"><span>SPD</span><input type="number" name="system.spd" value="{{fonte.spd}}" min="0"></label>
+      {{/if}}
+      <label class="celula"><span>ATK</span><input type="number" name="system.atk" value="{{fonte.atk}}"></label>
+      <label class="celula"><span>DEF</span><input type="number" name="system.def" value="{{fonte.def}}"></label>
+      <label class="celula"><span>REZ</span><input type="number" name="system.rez" value="{{fonte.rez}}" min="0"></label>
+      <label class="celula"><span>RAM (quickhack)</span><input type="number" name="system.ram" value="{{fonte.ram}}" min="0"></label>
+      <label class="celula larga"><span>Dano · contra Black ICE</span><span class="par"><input type="text" name="system.dano.padrao" aria-label="Dano padrão" value="{{fonte.dano.padrao}}"> · <input type="text" name="system.dano.blackIce" aria-label="Dano contra Black ICE" value="{{fonte.dano.blackIce}}"></span></label>
+      <label class="celula"><span>Slots no deck</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
+      <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+      {{#if rezDoPrograma}}<p class="nota rez-do-programa">REZ {{rezDoPrograma.atual}}/{{rezDoPrograma.max}}</p>{{/if}}
+      {{#if editavel}}{{#if (or rodavel rezDoPrograma)}}<div class="acoes-do-item">{{#if rodavel}}<button type="button" class="acao" data-action="rodar" aria-pressed="{{#if sistema.ativo}}true{{else}}false{{/if}}" data-tooltip="Liga ou desliga o programa no deck">{{#if sistema.ativo}}DESLIGAR{{else}}RODAR{{/if}}</button>{{/if}}{{#if rezDoPrograma}}<button type="button" class="acao" data-action="restaurarRez" data-tooltip="A REZ volta ao máximo">RESTAURAR REZ</button>{{/if}}</div>{{/if}}{{/if}}
+      {{/if}}
+      {{#if eh.veiculo}}
+      {{#if podePorVeiculoNaCena}}<div class="acoes-do-item"><button type="button" class="acao" data-action="porVeiculoNaCena" data-tooltip="Pôr o token do veículo na cena aberta; o mestre cria para o dono">PÔR NA CENA</button></div>{{/if}}
+      <label class="celula"><span>SDP</span><span class="par"><input type="number" name="system.sdp.value" aria-label="SDP atual" value="{{fonte.sdp.value}}" min="0"> / <input type="number" name="system.sdp.max" aria-label="SDP máximo" value="{{fonte.sdp.max}}" min="0"></span></label>
+      <label class="celula"><span>Assentos</span><input type="number" name="system.assentos" value="{{fonte.assentos}}" min="0"></label>
+      <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposDeVeiculo selected=fonte.tipo}}</select></label>
+      <label class="celula"><span>SP base</span><input type="number" name="system.sp" value="{{fonte.sp}}" min="0"></label>
+      <label class="celula" data-tooltip="Os vidros à prova de balas que o veículo já traz (contam como o upgrade instalado)"><span>Vidros de fábrica</span><input type="number" name="system.vidros" value="{{fonte.vidros}}" min="0" max="2"></label>
+      <label class="celula" data-tooltip="Black Chrome: o Rank de Moto a partir do qual o Nomad põe o veículo na frota da família (0: sem)"><span>Acesso Nômade</span><input type="number" name="system.acessoNomade" value="{{fonte.acessoNomade}}" min="0"></label>
+      <label class="celula"><span>Ablação</span><input type="number" name="system.ablacao" value="{{fonte.ablacao}}" min="0"></label>
+      <p class="nota">Blindagem atual: SP {{sistema.blindagem.sp}}/{{sistema.blindagem.max}}. Vidro blindado: {{sistema.vidroMax}} HP por janela.</p>
+      {{#if instalados}}<p class="nota">Com os upgrades ({{instalados}}): SDP máximo {{sistema.sdp.max}}, {{sistema.assentos}} assentos.</p>{{/if}}
+      <label class="celula"><span>MOVE (combate)</span><input type="number" name="system.velocidade.combate" value="{{fonte.velocidade.combate}}" min="0"></label>
+      <label class="celula"><span>Velocidade narrativa</span><input type="text" name="system.velocidade.narrativa" value="{{fonte.velocidade.narrativa}}"></label>
+      <label class="caixa"><input type="checkbox" name="system.familia" {{checked fonte.familia}}> Da família (Nomad)</label>
+      <div class="acoes-do-item">{{#if editavel}}<button type="button" class="acao" data-action="adicionarJanela">ADICIONAR JANELA</button><button type="button" class="acao" data-action="ajustarVidros" data-tooltip="Atualizar a proteção dos vidros pelos upgrades instalados">AJUSTAR VIDROS</button>{{/if}}</div>
+      {{#each janelas}}
+      <div class="celula larga" data-janela-id="{{id}}">
+        <label><span>Janela</span><input type="text" name="system.janelas.{{id}}.nome" value="{{nome}}"></label>
+        <label><span>HP atual / máximo</span><span class="par"><input type="number" name="system.janelas.{{id}}.hp.value" aria-label="HP atual da janela {{nome}}" value="{{hp.value}}" min="0"> / <input type="number" name="system.janelas.{{id}}.hp.max" aria-label="HP máximo da janela {{nome}}" value="{{hp.max}}" min="0"></span></label>
+        {{#if ../editavel}}<button type="button" class="apagar" data-action="removerJanela" data-janela-id="{{id}}" data-tooltip="Remover esta janela" aria-label="Remover a janela {{nome}}">✕</button>{{/if}}
+      </div>
+      {{else}}<p class="nota">Sem janelas registradas. Cada janela conserva seu próprio HP.</p>{{/each}}
+      {{/if}}
+      {{#if eh.upgrade}}
+      <label class="celula"><span>Para</span><select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
+      <label class="celula"><span>Slots</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
+      <label class="celula" data-tooltip="O pente que o carregador dá à arma: troca o da arma, não soma"><span>Pente (carregador)</span><input type="number" name="system.modificadores.pente" value="{{fonte.modificadores.pente}}" min="0"></label>
+      <label class="celula"><span>Ataque (+ ou −)</span><input type="number" name="system.modificadores.ataque" value="{{fonte.modificadores.ataque}}"></label>
+      <label class="celula"><span>SDP do veículo (+ ou −)</span><input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
+      <label class="celula"><span>Assentos do veículo (+ ou −)</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
+      <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+      {{#if prepararArma}}{{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="prepararArmaVeicular">PREPARAR ARMA</button></div>{{/if}}{{/if}}
+      {{/if}}
+      {{!-- O cyberware e o acessório de arma que são arma (o C11): instalados, atacam pela aba Combate, com a arma ligada a eles. --}}
+      {{#if editaArma}}
+      <label class="caixa"><input type="checkbox" name="system.arma.ataca" {{checked fonte.arma.ataca}}> É arma</label>
+      {{#if fonte.arma.ataca}}
+      <label class="celula"><span>Perícia da arma</span><select name="system.arma.pericia">{{selectOptions periciasDaArma selected=fonte.arma.pericia}}</select></label>
+      <label class="celula"><span>Dano</span><input type="text" name="system.arma.dano" value="{{fonte.arma.dano}}"></label>
+      <label class="celula"><span>CDT</span><input type="number" name="system.arma.cdt" value="{{fonte.arma.cdt}}" min="0"></label>
+      <label class="celula"><span>Bônus de ataque</span><input type="number" name="system.arma.bonusAtaque" value="{{fonte.arma.bonusAtaque}}"></label>
+      <label class="celula"><span>Pente</span><input type="number" name="system.arma.pente" value="{{fonte.arma.pente}}" min="0"></label>
+      <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.arma.ignorarArmadura" value="{{fonte.arma.ignorarArmadura}}" min="0" max="100"></label>
+      <label class="caixa"><input type="checkbox" name="system.arma.aDistancia" {{checked fonte.arma.aDistancia}}> À distância</label>
+      {{#if armaNaFicha}}<p class="nota arma-na-ficha">{{armaNaFicha}}</p>{{/if}}
+      {{/if}}
+      {{/if}}
+      {{#if eh.equipamento}}
+      <label class="celula"><span>Os efeitos valem</span><select name="system.ativacao">{{selectOptions ativacoes selected=fonte.ativacao}}</select></label>
+      <label class="caixa"><input type="checkbox" name="system.ocultavel" {{checked fonte.ocultavel}}> Ocultável</label>
+      {{#if usavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="usar" aria-pressed="{{#if emUso}}true{{else}}false{{/if}}" data-tooltip="Liga ou desliga os efeitos (ativação à mão)">{{#if emUso}}DESLIGAR{{else}}USAR{{/if}}</button></div>{{/if}}
+      {{/if}}
+      {{#if eh.roupa}}
+      <label class="celula"><span>Tipo</span><select name="system.tipo">{{selectOptions tiposRoupa selected=fonte.tipo}}</select></label>
+      <label class="celula"><span>Estilo</span><select name="system.estilo">{{selectOptions estilosRoupa selected=fonte.estilo}}</select></label>
+      {{/if}}
+      {{#if drogaDeAtor}}<div class="acoes-do-item"><button type="button" class="acao" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação): o efeito primário vale">USAR</button>{{#if drogaDeAtor.sobEfeito}}<button type="button" class="acao" data-action="acabouDroga" data-tooltip="O efeito acabou: o teste do efeito secundário">O EFEITO ACABOU</button>{{/if}}</div>{{#if drogaDeAtor.viciado}}<p class="nota">Viciado: o efeito secundário fica até a terapia.</p>{{/if}}{{/if}}
+      {{#unless eh.lesao}}<label class="celula"><span>Preço (eb)</span><input type="number" name="system.preco" value="{{fonte.preco}}"></label>{{/unless}}
+    </div>
+    {{#if temUso}}
+    <div class="uso" role="radiogroup" aria-label="Uso">
+      {{#each usosLista}}<label class="segmento {{#if ativo}}ativo{{/if}}"><input type="radio" name="system.uso" value="{{id}}" {{checked ativo}}>{{rotulo}}</label>{{/each}}
+    </div>
+    {{/if}}
+  </section>
+
+  <section class="tab descricao {{tabs.descricao.cssClass}}" data-group="item" data-tab="descricao">
+    {{#if editavel}}
+    <prose-mirror aria-label="Descrição" name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
+    {{else}}<div class="texto">{{{descricaoRica}}}</div>{{/if}}
+    {{#if sistema.fonte.livro}}<p class="fonte">{{sistema.fonte.livro}}, p. {{sistema.fonte.pagina}}</p>{{/if}}
+  </section>
+
+  <section class="tab efeitos-do-item {{tabs.efeitos.cssClass}}" data-group="item" data-tab="efeitos">
+    <ol class="efeitos">
+      {{#each efeitos}}
+      <li class="{{#unless ativo}}inativo{{/unless}}">
+        <b>{{nome}}</b> {{mudancas}}{{#unless ativo}} <small>(sem efeito agora)</small>{{/unless}}
+        {{#if ligavel}}<button type="button" class="alternar {{#unless desligado}}ligado{{/unless}}" data-action="alternarEfeito" data-efeito="{{id}}" aria-pressed="{{#unless desligado}}true{{else}}false{{/unless}}">{{#if desligado}}Ligar{{else}}Desligar{{/if}}</button>{{/if}}
+      </li>
+      {{else}}<li class="vazio">Sem efeitos.</li>{{/each}}
+    </ol>
+  </section>
+</div>

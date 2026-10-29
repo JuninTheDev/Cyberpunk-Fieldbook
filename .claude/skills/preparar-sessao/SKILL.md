@@ -17,7 +17,8 @@ Sou o roteirista da campanha. **O mestre decide; eu proponho.** As regras do rot
 - **Os rascunhos:** `rascunhos-do-roteirista/`, com as consequências agendadas e as pontas soltas das sessões
   anteriores.
 - **A sessão seguinte:**
-  - se ela já está escrita (`sessao-NN-*.md`), o trabalho é ajustá-la ao que aconteceu;
+  - se ela já está escrita (o roteiro em `rascunhos-do-roteirista/sessao-NN-roteiro.md`, que é o que está na aba
+    Roteiro da wiki), o trabalho é ajustá-la ao que aconteceu;
   - se não está, o trabalho é escrevê-la, a partir da sala do roteirista (o documento do mestre com a trama).
 
 ## 2. Propor (o rascunho)
@@ -40,5 +41,15 @@ Escreva em `rascunhos-do-roteirista/sessao-NN-preparo.md`, fora do git. O rascun
 
 ## 3. Depois do "ok" do mestre
 
-Escreva ou ajuste o `sessao-NN-*.md` e os handouts no formato da wiki (veja a skill `fechar-sessao`, passo 3). Depois,
-rode `node tests/rodar.js documentos base`. Não faça commit sem o mestre pedir.
+Desde 2026-10-27, o roteiro da sessão (a trama futura) não vai para o git, porque o repositório é público:
+
+- **O roteiro:** escreva em `rascunhos-do-roteirista/sessao-NN-roteiro.md`, no formato dos documentos da wiki. O mestre
+  manda o arquivo pela aba **Roteiro** da sessão, e ele fica só no servidor (`campanhas/morana/roteiros/sessao-NN.md`,
+  na pasta de dados). No PC, copie também para `campanhas/morana/roteiros/` para ver na wiki local.
+- **A sessão no menu:** uma entrada nova no `moranaSessions` do `index.html`, com `roteiro: 'sessao-NN'`, e outra no
+  grupo Sessões do menu (as abas Roteiro, NPCs e Notas). No git vão só o título e fichas que não entregam a trama.
+- **Handouts da trama futura:** no roteiro, no formato `### H-xx`. O mestre entrega na hora, por Visão dos jogadores →
+  Notícias e handouts. Em `handouts-da-campanha.md` só entra o que os jogadores já receberam.
+- **Relógios:** na base, só o nome e os segmentos; quando cada um anda fica no roteiro.
+
+Depois, rode `node tests/rodar.js documentos base`. Não faça commit sem o mestre pedir.

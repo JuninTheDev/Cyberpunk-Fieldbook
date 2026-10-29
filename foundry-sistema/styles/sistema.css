@@ -1,0 +1,48 @@
+/* Cyberpunk RED — Fieldbook: a ficha, os itens e os cartões do chat (camada "system" do Foundry 14).
+   Tudo fica dentro de .cpr-fieldbook; as cores seguem o tema do Foundry (claro ou escuro) com o vermelho do RED. As
+   fichas e os cartões do chat, no visual do modelo da mesa, ficam em styles/tema.css. */
+.cpr-fieldbook {
+  --cprf-vermelho: #d7263d;
+  --cprf-ciano: #2fd6d6;
+  --cprf-borda: var(--color-border, #6b6b6b);
+  --cprf-fundo-suave: color-mix(in srgb, var(--cprf-vermelho) 8%, transparent);
+  --cprf-texto-fraco: var(--color-text-secondary, #9a9a9a);
+}
+
+.cpr-fieldbook.ficha-item .cabecalho { display: grid; grid-template-columns: 96px 1fr; gap: 0.5rem 0.75rem; padding: 0.75rem; border-bottom: 2px solid var(--cprf-vermelho); }
+.cpr-fieldbook.ficha-item .cabecalho .retrato { width: 96px; height: 96px; object-fit: cover; border: 1px solid var(--cprf-borda); border-radius: 4px; cursor: pointer; grid-row: span 2; }
+.cpr-fieldbook.ficha-item .cabecalho .nome { font-size: 1.5rem; font-weight: 700; height: auto; border: none; border-bottom: 1px solid var(--cprf-borda); border-radius: 0; background: none; }
+
+.cpr-fieldbook .vazio, .cpr-fieldbook .dica { color: var(--cprf-texto-fraco); font-style: italic; }
+
+.cpr-fieldbook small { color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .itens { list-style: none; margin: 0; padding: 0; }
+.cpr-fieldbook .itens li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; border-top: 1px solid var(--cprf-borda); }
+.cpr-fieldbook .itens .nome { flex: 0 1 auto; font-weight: 600; }
+.cpr-fieldbook .itens .detalhe { flex: 1; color: var(--cprf-texto-fraco); font-size: 0.85rem; }
+.cpr-fieldbook .itens button { flex: 0 0 auto; width: auto; padding: 0 0.5rem; line-height: 1.6rem; }
+.cpr-fieldbook .alternar.ligado { border-color: var(--cprf-ciano); color: var(--cprf-ciano); }
+.cpr-fieldbook .apagar { color: var(--cprf-texto-fraco); }
+.cpr-fieldbook .campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.5rem 1rem; }
+.cpr-fieldbook .campos label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.cpr-fieldbook .campos label.caixa { justify-content: flex-start; }
+.cpr-fieldbook .campos input[type="number"] { width: 4.5rem; }
+
+/* ---------- Ficha do item ---------- */
+.cpr-fieldbook.ficha-item .item-ficha { display: flex; flex-direction: column; gap: 0.5rem; }
+.cpr-fieldbook.ficha-item .cabecalho { grid-template-columns: 64px 1fr; padding: 0 0 0.5rem; }
+.cpr-fieldbook.ficha-item .cabecalho .retrato { width: 64px; height: 64px; grid-row: auto; }
+.cpr-fieldbook .efeitos { margin: 0; padding-left: 1rem; }
+.cpr-fieldbook .efeitos .inativo { opacity: 0.6; }
+.cpr-fieldbook .fonte { color: var(--cprf-texto-fraco); font-size: 0.8rem; }
+
+/* Janelas da defesa e do tiro mirado (DialogV2). */
+.cpr-fieldbook.defesa .form-footer button, .cpr-fieldbook.mirar .form-footer button { font-weight: 700; }
+.cpr-fieldbook.defesa .total { color: var(--cprf-vermelho); }
+
+/* Janela "Personagens da wiki" */
+.cpr-fieldbook.janela-wiki .barra { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; }
+.cpr-fieldbook.janela-wiki .aviso { border: 1px solid var(--cprf-borda); border-radius: 4px; padding: 0.4rem 0.6rem; margin: 0.4rem 0; }
+.cpr-fieldbook.janela-wiki .aviso.erro { border-color: #b33; }
+.cpr-fieldbook.janela-wiki .aviso ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+.cpr-fieldbook.janela-wiki .itens select { flex: 0 0 auto; width: auto; max-width: 9rem; }

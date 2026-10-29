@@ -600,9 +600,21 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         return json(response, 201, { campanha: gmCard(campaign) });
       }
       if (!gm) return json(response, 403, { erro: 'Só o mestre.' });
-      const [id, part] = pathname.slice('/api/campanhas/'.length).split('/');
+      const [id, part, name] = pathname.slice('/api/campanhas/'.length).split('/');
       const campaign = campaigns.get(id);
       if (!campaign) return json(response, 404, { erro: 'Campanha não encontrada.' });
+      // O roteiro de uma sessão: o .md que fica só na pasta de dados (fora do git), para a aba Roteiro. PUT { texto }:
+      // o mestre manda (ou troca) o arquivo pela aba.
+      if (part === 'roteiros' && name) {
+        if (method === 'PUT') {
+          campaigns.writeScript(id, name, (await readJson(request, 1024 * 1024)).texto);
+          return json(response, 200, { ok: true });
+        }
+        if (method !== 'GET') return json(response, 405, { erro: 'Use GET ou PUT.' });
+        const text = campaigns.readScript(id, name);
+        if (text === null) return json(response, 404, { erro: 'Roteiro não encontrado.' });
+        return send(response, 200, text, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'private, no-store' });
+      }
       // O Publicar da campanha: o mestre lê tudo (com o que está escondido) e grava. O que vai para os jogadores o
       // servidor calcula: só os itens revelados, sem as notas do mestre.
       // A mesa do mestre: relógios, bloco de notas e quais relógios os jogadores veem.

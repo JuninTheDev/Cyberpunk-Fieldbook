@@ -1,0 +1,6 @@
+<div class="cpr-fieldbook cartao death-save {{#if passou}}passou{{else}}falhou{{/if}}">
+  <header><h3>Death Save de {{nome}}</h3><span class="sabor">precisa de menos que BODY {{body}}</span></header>
+  <p>1d10{{#if base}} + {{base}} (lesões){{/if}}{{#if penalidade}} + {{penalidade}} (Death Saves anteriores){{/if}}{{#if mestre}} {{mestre}} (mestre){{/if}} = <b>{{total}}</b>.</p>
+  <p class="resultado">{{#if passou}}Passou: continua vivo, e o próximo fica 1 mais difícil.{{else if (eq natural 10)}}Falhou: o 10 natural sempre falha.{{else}}Falhou.{{/if}}</p>
+  {{{dados}}}
+</div>

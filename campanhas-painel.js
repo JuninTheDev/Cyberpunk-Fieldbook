@@ -377,12 +377,46 @@
     templateButton.onclick = () => { area.value = area.value.trim() ? `${area.value.trimEnd()}\n\n${template}` : template; area.focus(); persist(); };
   }
 
-  // defs: [{ kind: 'handouts' | 'npcs' | 'notas', id, title, ... }] → { pages, pageSetup, markdownDocs } para juntar à wiki.
+  // A aba Roteiro: o mestre manda o .md (ou troca o que está lá) daqui, de qualquer aparelho. scriptDocs: id da aba → endereço.
+  const scriptDocs = {};
+  const scriptUpload = (file, label) => `<p class="roteiro-enviar" data-roteiro="${escapeHtml(file)}"><button class="action" type="button" data-roteiro-escolher>${label}</button><input type="file" accept=".md,.txt,text/markdown,text/plain" data-roteiro-arquivo hidden> <span class="note-status" data-roteiro-status></span></p>`;
+  document.addEventListener('wiki:documento', event => {
+    const file = scriptDocs[event.detail.id];
+    if (file) event.detail.container.insertAdjacentHTML('beforeend', `<hr>${scriptUpload(file, 'Trocar o roteiro (.md)')}`);
+  });
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-roteiro-escolher]');
+    if (button) button.parentElement.querySelector('[data-roteiro-arquivo]').click();
+  });
+  document.addEventListener('change', async event => {
+    const input = event.target.closest('[data-roteiro-arquivo]');
+    if (!input || !input.files.length) return;
+    const row = input.closest('[data-roteiro]');
+    const status = row.querySelector('[data-roteiro-status]');
+    const chosen = input.files[0];
+    input.value = '';
+    const replacing = !row.closest('.callout');
+    if (replacing && !(await window.wikiPopup.confirm({ title: 'Trocar o roteiro', message: `O roteiro desta sessão passa a ser o de ${chosen.name}. O de agora sai (o backup diário do servidor guarda as versões anteriores).`, ok: 'Trocar' }))) return;
+    status.textContent = 'Enviando…';
+    const answer = await api(row.dataset.roteiro, { method: 'PUT', body: { texto: await chosen.text() } });
+    if (answer.status !== 200) { status.textContent = answer.data.erro || 'Não consegui enviar.'; return; }
+    status.textContent = 'Enviado. Recarregando…';
+    location.reload();
+  });
+
+  // defs: [{ kind: 'roteiro' | 'handouts' | 'npcs' | 'notas', id, title, ... }] → { pages, pageSetup, markdownDocs } para juntar à wiki.
+  // roteiro: o .md da sessão que fica só no servidor (api/campanhas/<id>/roteiros/<nome>), fora do git público. Fora da
+  // busca, como as outras abas da sessão: só é lido quando a aba abre (sem o arquivo, a wiki não dá erro ao carregar).
   function extraPages(campaign, defs) {
     const pages = {};
     const pageSetup = {};
     const docs = {};
     for (const def of defs) {
+      if (def.kind === 'roteiro') {
+        const file = `api/campanhas/${encodeURIComponent(campaign)}/roteiros/${def.roteiro}`;
+        scriptDocs[def.id] = file;
+        docs[def.id] = { file, eyebrow: def.eyebrow || 'Mesa do mestre / só você vê', title: def.title, lede: def.lede || 'O roteiro da sessão. Fica só no servidor, fora do repositório público, e só o mestre abre.', semBusca: true, erro: `<p>O roteiro ainda não está no servidor. Mande o arquivo .md por aqui: ele fica só na pasta de dados (<code>campanhas/${escapeHtml(campaign)}/roteiros/${escapeHtml(def.roteiro)}.md</code>), fora do git.</p>${scriptUpload(file, 'Enviar o roteiro (.md)')}` };
+      }
       if (def.kind === 'handouts') docs[def.id] = { file: def.file, eyebrow: def.eyebrow || 'Para entregar / handouts da sessão', title: def.title, lede: def.lede || 'Os documentos que o grupo pode encontrar nesta sessão, prontos para entregar.', transform: text => pickHandouts(text, def.handouts), semBusca: true, vista: true, entregar: campaign };
       if (def.kind === 'npcs') { pages[def.id] = npcPage(def); pageSetup[def.id] = content => setupNpcPage(content, campaign, def); }
       if (def.kind === 'notas') { pages[def.id] = sessionNotesPage(def); pageSetup[def.id] = content => setupSessionNotes(content, campaign, def); }

@@ -1,0 +1,227 @@
+/* O tema do sistema no resto do Foundry (o C43, parte 3; o "Theme Foundry" do CORE 0.93,
+   fvtt-cyberpunk-red-core-dev/src/css/variables/foundry.css): com a configuração "O tema do sistema no Foundry" ligada
+   (o atributo data-cprf-tema-foundry no <html>, tema-foundry.mjs), as variáveis de tema do Foundry 14 recebem a paleta do
+   tema.css: a barra lateral, o chat, os controles, a barra de macros e as janelas ApplicationV2. As janelas antigas
+   (ApplicationV1, .window-app) ficam com o visual do Foundry, como no CORE. A paleta é sempre a escura do modelo de ficha.
+   Este arquivo está na camada "system", que vem depois das de variáveis e de aplicações do Foundry: a troca das variáveis
+   vale sem depender da especificidade. */
+:where(html[data-cprf-tema-foundry] :is(.themed, .application):not(.window-app, .window-app *)) {
+  --color-scheme: dark;
+  --font-body: var(--cp-titulo);
+  --font-primary: var(--cp-titulo);
+  --color-text-emphatic: var(--cp-texto);
+  --color-text-primary: var(--cp-texto);
+  --color-text-secondary: var(--cp-fraco);
+  --color-text-subtle: var(--cp-fraco);
+  --color-text-accent: var(--cp-amarelo);
+  --color-text-selection: var(--cp-fundo);
+  --color-text-selection-bg: var(--cp-ciano);
+  --color-shadow-primary: var(--cp-amarelo);
+  --color-shadow-highlight: var(--cp-ciano);
+  --color-scrollbar: var(--cp-fraco);
+  --fa-inverse: var(--cp-fundo);
+  --hr-border: 0;
+  --hr-gradient: linear-gradient(90deg, transparent 0%, var(--cp-fraco) 50%, transparent 100%);
+  --content-link-background: var(--cp-painel);
+  --content-link-border-color: var(--cp-linha);
+  --content-link-icon-color: var(--cp-ciano);
+  --content-link-text-color: var(--cp-texto);
+  --table-background-color: var(--cp-painel);
+  --table-header-bg-color: var(--cp-fundo);
+  --table-header-border-color: var(--cp-amarelo);
+  --table-header-text-color: var(--cp-amarelo);
+  --table-row-color-even: var(--cp-painel);
+  --table-row-color-odd: var(--cp-poco);
+  --table-row-color-highlight: var(--cp-linha);
+  --sidebar-background: var(--cp-fundo);
+  --sidebar-separator: 1px solid var(--cp-linha);
+  --sidebar-entry-hover-bg: var(--cp-painel);
+  --sidebar-folder-color: var(--cp-painel);
+
+  &.application,
+  .application {
+    --background: var(--cp-fundo);
+    --color-header-background: var(--cp-fundo);
+    --color-border: var(--cp-linha);
+    --color-tabs-border: var(--cp-linha);
+    --color-fieldset-border: var(--cp-linha);
+    --color-form-label: var(--cp-texto);
+    --color-form-label-hover: var(--cp-amarelo);
+    --color-form-hint: var(--cp-fraco);
+    --color-form-hint-hover: var(--cp-texto);
+    --color-select-option-bg: var(--cp-fundo);
+    --color-data-border: var(--cp-linha);
+    --color-data-background: var(--cp-painel);
+  }
+
+  /* Os campos no poço escuro, com o foco em ciano, como nas fichas do sistema. */
+  input,
+  select,
+  textarea,
+  code-mirror,
+  label.icon {
+    --input-background-color: var(--cp-poco);
+    --input-border-color: var(--cp-linha);
+    --input-box-shadow: none;
+    --input-text-color: var(--cp-texto);
+    --input-placeholder-color: var(--cp-fraco);
+    --input-focus-outline-color: var(--cp-ciano);
+  }
+
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
+  code-mirror:disabled,
+  label.icon:has(> input:disabled),
+  input[readonly] {
+    --input-background-color: var(--cp-painel);
+    --input-border-color: var(--cp-linha);
+    --input-box-shadow: none;
+    --input-text-color: var(--cp-fraco);
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    --checkbox-background-color: var(--cp-fraco);
+    --checkbox-checked-color: var(--cp-amarelo);
+    --checkbox-checkmark-color: var(--cp-fundo);
+    --checkbox-disabled-color: var(--cp-linha);
+  }
+
+  input[type="checkbox"]:is(:disabled, [readonly]),
+  input[type="radio"]:is(:disabled, [readonly]) {
+    --checkbox-background-color: var(--checkbox-disabled-color);
+    --checkbox-checked-color: var(--checkbox-disabled-color);
+  }
+
+  input[type="range"] {
+    --range-track-color: var(--cp-poco);
+    --range-track-border-color: var(--cp-linha);
+    --range-thumb-background-color: var(--cp-amarelo);
+    --range-thumb-border-color: var(--cp-linha);
+  }
+
+  :is(.prosemirror, prose-mirror, #prosemirror-dropdown, .menu-dialog.prosemirror) {
+    --menu-background: var(--cp-painel);
+    --dropdown-background: var(--cp-painel);
+    --dropdown-border: var(--cp-linha);
+    --dialog-background: var(--cp-fundo);
+    --dialog-border: var(--cp-linha);
+    --color-control-hover: var(--cp-linha);
+  }
+
+  #context-menu,
+  &#context-menu {
+    --background-color: var(--cp-fundo);
+    --border-color: var(--cp-amarelo);
+    --text-color: var(--cp-texto);
+    --hover-text-color: var(--cp-amarelo);
+    --group-separator: var(--cp-linha);
+    --hover-entry-border: var(--cp-linha);
+    --hover-entry-background: var(--cp-painel);
+  }
+
+  /* Os controles da cena, o HUD do token e o rótulo da régua. */
+  .ui-control,
+  .placeable-hud,
+  #measurement .waypoint-label {
+    --control-bg-color: var(--cp-fundo);
+    --control-border-color: var(--cp-linha);
+    --control-icon-color: var(--cp-texto);
+    --control-hover-bg-color: var(--cp-painel);
+    --control-hover-border-color: var(--cp-amarelo);
+    --control-hover-icon-color: var(--cp-amarelo);
+    --control-active-bg-color: var(--cp-painel);
+    --control-active-border-color: var(--cp-amarelo);
+    --control-active-icon-color: var(--cp-amarelo);
+    --control-button-border-color: var(--cp-linha);
+    --control-button-hover-bg-color: var(--cp-painel);
+    --control-button-hover-border-color: var(--cp-amarelo);
+    --toggle-bg-color: var(--cp-poco);
+    --toggle-border-color: var(--cp-linha);
+    --toggle-active-bg-color: var(--cp-painel);
+    --toggle-active-border-color: var(--cp-amarelo);
+  }
+
+  #hotbar {
+    --slot-color: var(--cp-fundo);
+    --key-bg-color-empty: var(--cp-poco);
+    --key-bg-color-full: var(--cp-painel);
+    --key-text-color: var(--cp-texto);
+    --page-control-color: var(--cp-painel);
+  }
+
+  #chat-message {
+    --text-color: var(--cp-texto);
+    --placeholder-color: var(--cp-fraco);
+    --background-color: var(--cp-poco);
+    --border-color: var(--cp-linha);
+    --chat-input-border: 1px solid var(--cp-linha);
+  }
+
+  #players {
+    --background-color: var(--cp-fundo);
+    --border-color: var(--cp-linha);
+    --player-name-idle-color: var(--cp-fraco);
+    --player-name-self-color: var(--cp-amarelo);
+  }
+
+  .combat-tracker {
+    --active-input-bg-color: var(--cp-poco);
+    --entry-hover-bg: var(--cp-painel);
+    --entry-active-bg: var(--cp-linha);
+  }
+
+  #camera-views,
+  &#camera-views {
+    --av-background-color: var(--cp-fundo);
+    --av-border-color: var(--cp-linha);
+  }
+
+  #autocomplete,
+  &#autocomplete {
+    --background-color: var(--cp-fundo);
+    --border-color: var(--cp-linha);
+    --active-background-color: var(--cp-painel);
+    --active-color: var(--cp-amarelo);
+  }
+}
+
+/* As peças que o Foundry pinta com cor direta, não pelas variáveis acima (as mesmas do CORE). */
+html[data-cprf-tema-foundry] #hotbar #action-bar .slot .slot-icon { color: var(--cp-texto); }
+html[data-cprf-tema-foundry] #hotbar #action-bar .slot:hover { border-color: var(--cp-amarelo); }
+html[data-cprf-tema-foundry] .directory li.folder > .folder-header { color: var(--cp-texto); }
+html[data-cprf-tema-foundry] .directory li.folder > .folder-header .create-button {
+  --button-background-color: transparent;
+  --button-border-color: transparent;
+  --button-text-color: var(--cp-texto);
+  --button-hover-background-color: transparent;
+  --button-hover-border-color: transparent;
+  --button-hover-text-color: var(--cp-amarelo);
+}
+html[data-cprf-tema-foundry] .directory li.folder > .folder-header .create-button.icon-plus::after { color: inherit; background-color: transparent; }
+
+/* Os botões do conteúdo, como os das fichas: a borda e o texto em amarelo ao passar o mouse. Os do cabeçalho da janela
+   ficam transparentes em repouso. */
+:where(html[data-cprf-tema-foundry] :is(.themed, .application):not(.window-app, .window-app *)) :is(a.button, button, kbd):not(.window-header *) {
+  --button-background-color: var(--cp-painel);
+  --button-border-color: var(--cp-linha);
+  --button-text-color: var(--cp-texto);
+  --button-focus-outline-color: var(--cp-ciano);
+  --button-hover-background-color: var(--cp-painel);
+  --button-hover-border-color: var(--cp-amarelo);
+  --button-hover-text-color: var(--cp-amarelo);
+}
+:where(html[data-cprf-tema-foundry] .application:not(.window-app, .window-app *)) .window-header button.header-control {
+  --button-hover-background-color: var(--cp-painel);
+  --button-hover-border-color: var(--cp-amarelo);
+  --button-hover-text-color: var(--cp-amarelo);
+}
+:where(html[data-cprf-tema-foundry] :is(.themed, .application):not(.window-app, .window-app *)) :is(a.button[disabled], button[disabled], kbd[disabled]):not(.window-header *) {
+  --button-background-color: var(--cp-poco);
+  --button-border-color: var(--cp-linha);
+  --button-text-color: var(--cp-fraco);
+  --button-hover-background-color: var(--button-background-color);
+  --button-hover-border-color: var(--button-border-color);
+  --button-hover-text-color: var(--button-text-color);
+}

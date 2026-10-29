@@ -138,8 +138,8 @@ async function tableStatus() {
   return tableCache.result;
 }
 
-// Saúde do servidor, para o mestre (só no modo hospedado): último backup, disco livre, módulo do Foundry esperando a
-// mesa esvaziar e as últimas linhas do registro de publicações (servidor/atualizar.sh).
+// Saúde do servidor, para o mestre (só no modo hospedado): último backup, disco livre, módulo do Foundry 12 e sistema do
+// Foundry 14 esperando a mesa esvaziar e as últimas linhas do registro de publicações (servidor/atualizar.sh).
 function serverHealth() {
   if (!hosted) return null;
   let backup = null;
@@ -151,7 +151,7 @@ function serverHealth() {
   try { const s = fs.statfsSync(dataDir); disco = { livre: s.bavail * s.bsize, total: s.blocks * s.bsize }; } catch { /* sistema sem statfs */ }
   let registro = [];
   try { registro = fs.readFileSync(path.join(dataDir, 'atualizacoes.log'), 'utf8').trim().split('\n').slice(-6).reverse(); } catch { /* ainda sem publicações */ }
-  return { backup, disco, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), registro, mesas: tablesInstalled() };
+  return { backup, disco, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), sistemaPendente: fs.existsSync(path.join(dataDir, '.sistema-pendente')), registro, mesas: tablesInstalled() };
 }
 
 // ---------------- Troca de mesa: o Foundry 12 ou o 14 (só no servidor) ----------------

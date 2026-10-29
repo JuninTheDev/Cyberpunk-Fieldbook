@@ -1,0 +1,101 @@
+// Constantes, tokens e destinos compartilhados pelo ataque, pelos modos e pelo cartão.
+
+import { SISTEMA } from '../config.mjs';
+import * as R from '../regras.mjs';
+import { techAtravessaVidro } from '../regras-veiculos.mjs';
+import { assentoDaArma, protecaoDoOcupante, veiculoDaTripulacao } from '../tripulacao.mjs';
+
+export const CANAL = `system.${SISTEMA}`;
+export const STATUS_SUPRIMIDO = `${SISTEMA}-suprimido`;
+// "Em cobertura" (o "Proteger-se" das maquetes; a wiki, p. 182: atrás de algo que para a bala e fora da linha de visão):
+// só a marca, a decisão do usuário de 2026-10-16. O tiro contra quem a tem avisa o mestre no cartão, e o mestre decide.
+export const STATUS_COBERTURA = `${SISTEMA}-em-cobertura`;
+
+export const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
+export const renderizar = (arquivo, dados) => foundry.applications.handlebars.renderTemplate(`systems/${SISTEMA}/templates/chat/${arquivo}`, dados);
+export const souOMestreAtivo = () => game.user.isGM && game.users.activeGM?.id === game.user.id;
+
+// "resistir": a resistência ao agarrão (agarrao.mjs); "vontade": a WILL + 1d10 contra o Jack In; "interface": a Interface
+// + 1d10 do netrunner contra a expulsão (neuroport.mjs). Todas pela mesma janela de reação.
+export const ROTULO = { esquivar: 'esquivou', aguentar: 'aguentou', escudo: 'usou o escudo', escudoHumano: 'interpôs o escudo humano', concentrar: 'rolou a Concentração', resistir: 'rolou a resistência', vontade: 'rolou a Vontade', interface: 'rolou a Interface' };
+export const precisaRolar = escolha => ['esquivar', 'concentrar', 'resistir', 'vontade', 'interface'].includes(escolha);
+
+// ---------------- Tokens e distância ----------------
+// O token de um ator na cena (o do próprio ataque, se o ator é de um token).
+export const tokenNaCena = (ator, cena = canvas.scene) => ator.token ?? cena?.tokens.find(token => token.actorId === ator.id) ?? null;
+export const centroDe = token => ({ x: token.x + (token.width * token.parent.grid.size) / 2, y: token.y + (token.height * token.parent.grid.size) / 2 });
+// Distância em metros entre dois tokens da mesma cena, pela grade da cena, com a diferença de elevação.
+export function distancia(a, b) {
+  if (!a || !b || a.parent !== b.parent) return null;
+  const plano = a.parent.grid.measurePath([centroDe(a), centroDe(b)]).distance;
+  const altura = (Number(a.elevation) || 0) - (Number(b.elevation) || 0);
+  return Math.round(Math.sqrt(plano * plano + altura * altura) * 10) / 10;
+}
+
+// O jogador que responde por um ator: o dono ativo (de preferência quem tem o ator como personagem).
+export function jogadorDe(ator) {
+  const donos = game.users.filter(usuario => usuario.active && !usuario.isGM && ator.testUserPermission(usuario, 'OWNER'));
+  return donos.find(usuario => usuario.character?.id === ator.id) ?? donos[0] ?? null;
+}
+
+// O C46, parte 4: a arma montada no veículo do dono (o item veiculo, o C15), a única que quem não é o dono usa.
+export const montadaNoVeiculo = arma => arma?.actor?.items?.get(arma.system?.instaladoEm)?.type === 'veiculo';
+
+// A instalação pode mudar enquanto a janela de rolagem está aberta. A mesma conferência vale no cliente e no mestre.
+// quem: { atacante, tokenAtq } (o contexto do ataque): na arma do veículo, o assento de quem atira, pelo token dele (o C46,
+// parte 4); o dono sem token na cena e o dano avulso do cartão ficam com o C15. Quem não é o dono sempre precisa do assento,
+// e só a arma montada no veículo tem assento.
+export function conferirArmaVeicular(arma, modo, quem = null) {
+  const atacante = quem?.atacante ?? arma.actor, alheia = atacante?.uuid !== arma.actor?.uuid;
+  const assento = quem && (quem.tokenAtq || alheia) ? assentoDaArma(arma, atacante, quem.tokenAtq ?? null) : null;
+  const motivo = alheia && !assento ? 'de outro dono, só a arma montada do veículo em que se dirige.' : arma.motivoVeicular(modo, assento);
+  if (motivo) ui.notifications.warn(`${arma.name}: ${motivo}`);
+  return !motivo;
+}
+
+// O ator Veículo é a própria estrutura; no token de uma pessoa, o destino explícito conserva o C15.
+export function conferirDestinos(alvos, destinos, { modo, local } = {}) {
+  if (!destinos || typeof destinos !== 'object' || Array.isArray(destinos)) { ui.notifications.warn('Escolha um destino válido para o ataque.'); return false; }
+  if (alvos.some(token => token.actor?.type === 'veiculo')) {
+    if (modo === 'supressivo') { ui.notifications.warn('Fogo supressivo afeta pessoas; escolha a pessoa como destino.'); return false; }
+    if (R.LOCAIS_MIRADOS[local]) { ui.notifications.warn('Cabeça, perna e item na mão são locais da pessoa; escolha o corpo para atingir o veículo.'); return false; }
+  }
+  for (const [uuid, destino] of Object.entries(destinos)) {
+    const token = alvos.find(alvo => alvo.uuid === uuid);
+    const veiculo = veiculoDoDestino(token, destino);
+    if (!token || !['veiculo', 'vidro'].includes(destino?.tipo) || veiculo?.type !== 'veiculo'
+      || (destino.tipo === 'vidro' && !Object.hasOwn(veiculo.system.janelas ?? {}, destino.janela))) {
+      ui.notifications.warn('O veículo ou vidro escolhido não está mais na ficha do alvo. Escolha o destino novamente.');
+      return false;
+    }
+    if (modo === 'supressivo') { ui.notifications.warn('Fogo supressivo afeta pessoas; escolha a pessoa como destino.'); return false; }
+    if (destino.tipo === 'veiculo' && R.LOCAIS_MIRADOS[local]) { ui.notifications.warn('Cabeça, perna e item na mão são locais da pessoa; escolha o corpo para atingir o veículo.'); return false; }
+  }
+  return true;
+}
+
+export function destinoVeicular(ctx, token) {
+  if (token.actor?.type === 'veiculo') return { tipo: 'veiculo', item: token.actor };
+  const destino = ctx.pedido.destinos?.[token.uuid];
+  return destino ? { ...destino, item: veiculoDoDestino(token, destino) } : null;
+}
+
+// O token e o item escolhidos precisam continuar sendo os de dentro depois da janela de ataque.
+function veiculoDoDestino(token, destino) {
+  const dentro = veiculoDaTripulacao(token);
+  if (dentro) {
+    const veiculo = protecaoDoOcupante(token);
+    return destino?.tokenVeiculo === dentro.id && destino.veiculo === veiculo?.id ? veiculo : null;
+  }
+  return destino?.tokenVeiculo ? null : token?.actor.items.get(destino?.veiculo);
+}
+
+// Vidro destruído ou atravessado pela carga Tech não substitui a defesa da pessoa. A espessura é a original (max).
+export function destinoEstrutural(ctx, token) {
+  const destino = destinoVeicular(ctx, token);
+  if (destino?.tipo === 'veiculo') return destino;
+  const vidro = destino?.item?.system.janelas[destino.janela];
+  return vidro?.hp.value > 0 && !techAtravessaVidro({ carga: ctx.pedido.carga, grossa: ctx.arma.getFlag(SISTEMA, 'arma2077')?.cargaGrossa, max: vidro.hp.max }) ? destino : null;
+}
+
+export const combateDe = ator => game.combats.find(combate => combate.started && combate.combatants.some(c => c.actor === ator)) ?? null;

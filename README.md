@@ -13,7 +13,7 @@ A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre liga
 - **Mestre:** entra por `https://wiki.SEUDOMINIO/mestre`, com a senha. O aparelho fica lembrado por um ano.
   - No menu da conta (o botão **Mestre**, no canto de cima) ficam **Sair do modo mestre**, **Baixar backup** (o servidor faz um por dia) e a versão no ar.
 - **Mesa:** a barra lateral das duas wikis mostra se a mesa está aberta e quantos estão conectados, e tem o botão **Entrar na mesa**. Com o mundo ligado a uma campanha, diz de qual campanha é a mesa, e só quem joga nela a vê aberta.
-- **Servidor, para o mestre:** a barra lateral resume o último backup, o disco livre, se o módulo do Foundry está esperando a mesa vazia e as últimas publicações. Fica em vermelho com backup de mais de 2 dias ou disco com menos de 10% livre.
+- **Servidor, para o mestre:** a barra lateral resume o último backup, o disco livre, se o módulo do Foundry 12 ou o sistema do Foundry 14 está esperando a mesa vazia e as últimas publicações. Fica em vermelho com backup de mais de 2 dias ou disco com menos de 10% livre.
 - **No celular, como app:** no menu da conta (canto de cima) aparece **Instalar no celular** (Android e computador; no iPhone, Compartilhar → Adicionar à Tela de Início).
   - Instalada ou não, a wiki guarda no aparelho as regras e o que o mestre publicou nas campanhas do jogador, e abre sem internet. Os personagens e a loja precisam de rede.
   - Com rede, ela sempre busca a versão nova primeiro.
@@ -159,11 +159,13 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `personagem-cyberware.js` | Locais de instalação de cyberbraços, cyberpernas e cyberolhos, com os lados separados e validação compartilhada entre a wiki e a API. |
 | `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
 | `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
-| `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). |
+| `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). Os do sistema do Foundry 14: `tests/sistema/` (`node --test`), `tests/cenarios/v14.js`. |
+| `eslint.config.mjs` | Lint só do sistema do Foundry 14 e dos testes dele (`npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/cenarios/v14.js`). |
 | `foundry-2077/` | Módulo do Foundry VTT "Cyberpunk RED: 2077", gerado a partir dos dados da wiki. Veja o README da pasta. |
 | `foundry-net-architect/` | Módulo do Foundry VTT "NET Architect": pontos de acesso à NET nos Tiles, com a janela do netrunner e o mapa da arquitetura. Veja o README da pasta. |
 | `foundry-fluxo-de-combate/` | Módulo do Foundry VTT "Fluxo de Combate": ataque, esquiva às cegas e dano na ficha, com área, cartucho, fogo supressivo, lesão crítica e Death Save. Substitui o Evasion Workflow. Veja o README da pasta. |
 | `foundry-painel-tatico/` | Módulo do Foundry VTT "Painel Tático": o HUD de combate com o retrato grande do personagem (um PNG por estado de ferimento) e o estilo de cada jogador, ligado ao cpr-2077, ao Fluxo de Combate e ao NET Architect. Veja o README da pasta. |
+| `foundry-sistema/` | Protótipo do sistema próprio "Cyberpunk RED — Fieldbook" para o Foundry VTT 14: ficha, crítico do d10, o combate do Fluxo de Combate (tiro, mirado, autofogo, supressivo, cartucho e explosivo, com a esquiva às cegas e o dano na ficha), Lesão Crítica, Death Save, as habilidades do Solo, cyberware e importação da wiki. A mesa continua no Foundry 12 por enquanto. Veja o README da pasta. |
 
 Os arquivos de mapa em resolução máxima (`Map_*_Full.png`) e o `.zip` do cyberpunk-css foram movidos para `C:\Users\kouar\CyberpunkRPG-arquivos-grandes`, fora do OneDrive.
 
@@ -440,6 +442,17 @@ são compartilhadas entre worktrees. O `tests/validar.js` pode rodar em paralelo
 - **O que confere:** STATs, Role e sub-habilidades, cyberware instalado, armas, moradia, veículos e o crossover entre campanhas (o mundo antigo manda a ficha; o novo cria o ator igual).
 - **Licença:** ela vale para uma mesa por vez, então o teste confere antes, na wiki online, se a mesa do servidor está vazia. Se houver alguém, o teste é pulado.
 - **Módulo:** os scripts do módulo são copiados a cada rodada. Os compêndios só são gerados de novo na primeira vez ou com `$env:FOUNDRY_BUILD=1`.
+
+**Teste do sistema no Foundry 14** (`node tests/rodar.js v14`): o protótipo `foundry-sistema/` num Foundry 14 de verdade.
+- **Onde roda:** o Foundry 14 do PC (`%LOCALAPPDATA%\Programs\Foundry Virtual Tabletop`), sem janela, na porta 31014, numa pasta própria (`%LOCALAPPDATA%\FieldbookTeste\foundry14`). O mundo começa vazio a cada rodada.
+- **O que confere:**
+  - ficha e crítico do d10, com os dados fixos;
+  - cyberware que só vale instalado e recarga;
+  - os modos de ataque (tiro, mirado, autofogo, explosivo, cartucho e supressivo), com Lesão Crítica, Desfazer e os turnos (Suprimido e Death Save);
+  - as habilidades do Solo (Consciência de Combate) e o MOVE do mortalmente ferido;
+  - um segundo navegador fazendo o jogador que esquiva e que ataca rolando o próprio dano (e que, sem mestre na mesa, não gasta bala);
+  - importação de um personagem do criador.
+- **Licença:** só a licença sai da pasta de dados do Foundry do PC. Como no teste do Foundry 12, o teste é pulado com a mesa do servidor ocupada.
 
 - Para rodar uma parte só, passe o nome: `node tests/rodar.js busca`. Os nomes são os arquivos de `tests/cenarios/`.
 - `$env:DETALHES=1` mostra o detalhe de cada checagem.

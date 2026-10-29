@@ -1,0 +1,28 @@
+<div class="defesa-conteudo">
+  <header class="duelo">
+    <figure><img src="{{atacante.img}}" alt=""><figcaption>{{atacante.nome}}</figcaption></figure>
+    <i class="fa-solid fa-angles-right" inert></i>
+    <figure><img src="{{alvo.img}}" alt=""><figcaption>{{alvo.nome}}</figcaption></figure>
+  </header>
+  <p class="arma"><b>{{arma}}</b> · {{descricao}}{{#if metrosTexto}} · {{metrosTexto}} m{{/if}}</p>
+  {{#if verTotal}}
+  <p class="total">Total do ataque: <b>{{total}}</b>{{#if dv}} · DV {{dv}}{{/if}}</p>
+  {{else}}
+  <p class="nota">Você não vê o total do ataque: decida antes.</p>
+  {{/if}}
+  {{#if mestre}}
+  <p class="nota">Fechada sem escolher, o sistema escolhe (como na defesa automática).</p>
+  {{/if}}
+  <div class="opcoes">
+    {{#each opcoes}}
+    <button type="button" class="opcao {{escolha}}{{#if padrao}} padrao{{/if}}" data-action="escolher" data-escolha="{{escolha}}">
+      <i class="fa-solid {{icone}}" inert></i>
+      <span><b>{{titulo}}</b> <small>{{{texto}}}</small></span>
+    </button>
+    {{/each}}
+  </div>
+  {{#if tempo}}
+  <div class="tempo"><span></span></div>
+  <p class="nota">Sem resposta em {{tempo}} s: {{padraoTexto}}.</p>
+  {{/if}}
+</div>

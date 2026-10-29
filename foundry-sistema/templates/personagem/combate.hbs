@@ -1,0 +1,85 @@
+{{!-- A aba Combate, no jeito da maquete "Fight Tab" do usuário: à esquerda, os números (a iniciativa, os vitais e a
+defesa); à direita, os favoritos (o C20), as armas, a armadura, as lesões críticas e a munição. --}}
+<section class="tab combate {{tab.cssClass}}" data-group="primary" data-tab="combate">
+  <div class="aba-colunas">
+    <aside class="coluna-resumo">
+      <section class="painel corte">
+        <div class="titulo">INICIATIVA<span>REF {{sistema.atributos.ref.valor}}</span></div>
+        <p class="numero-grande" data-tooltip="{{iniciativa.dica}}"><b>{{iniciativa.valor}}</b><small>+ 1d10</small></p>
+        <div class="botoes-resumo"><button type="button" class="acao" data-action="rolarIniciativa" data-tooltip="Entra no combate (o mestre cria um, se não houver) e rola a iniciativa na fila">ROLAR INICIATIVA</button></div>
+      </section>
+
+      <section class="painel corte vitais">
+        <div class="titulo">VITAIS<span>AO VIVO</span></div>
+        <div class="medida"><span>PONTOS DE VIDA</span><b class="destaque">{{sistema.hp.value}} / {{sistema.hp.max}}</b></div>
+        <div class="barra"><div class="hp" style="width: {{vitais.hp}}%"></div></div>
+        <div class="medida"><span>GRAVEMENTE FERIDO</span><b data-tooltip="Abaixo da metade do HP: −2 em tudo">&lt; {{vitais.grave}}</b></div>
+        <div class="medida"><span>PENALIDADE</span><b>{{#if sistema.penalidade}}{{sistema.penalidade}} em tudo{{else}}nenhuma{{/if}}</b></div>
+        <div class="medida death-save">
+          <span>DEATH SAVE</span>
+          <b>
+            <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY" role="button" tabindex="0" aria-label="Rolar o Death Save">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
+            {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves" role="button" tabindex="0">zerar</a>{{/if}}
+            {{#if editavel}}<a class="subir" data-action="subirDeathSave" data-tooltip="Somar 1 à penalidade dos Death Saves, à mão (como o CORE)" role="button" tabindex="0" aria-label="Somar 1 à penalidade dos Death Saves">+1</a>{{/if}}
+          </b>
+        </div>
+        <div class="medida"><span>MOVE</span><b>{{sistema.atributos.move.valor}}</b></div>
+        <div class="medida movimento"><span>AÇÃO DE MOVIMENTO</span> <b>{{movimento.metros}} m</b></div>
+        {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="correr" data-tooltip="{{#if corrida.bloqueio}}{{corrida.bloqueio}}{{else}}Depois de usar o Movimento normal, gasta a Ação para mais um Movimento{{/if}}"{{#if corrida.bloqueio}} disabled{{/if}}>CORRER (1 AÇÃO)</button></div>{{/if}}
+        {{#if corrida.bloqueio}}<p class="dica corrida">{{corrida.bloqueio}}</p>{{else}}<p class="dica corrida">+{{corrida.metros}} m · {{corrida.total}} m no turno.</p>{{/if}}
+        <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.semPerna}} · SEM A PERNA: NÃO ESQUIVA{{/if}}</div>
+        {{#if cura.mostrar}}<div class="botoes-resumo cura">{{#if cura.estabilizado}}<span class="estabilizado" data-tooltip="Recupera HP pelo descanso; o dano novo tira a marca">ESTABILIZADO</span>{{/if}}{{#if cura.estabilizar}}<button type="button" class="acao" data-action="estabilizar" data-tooltip="Uma Ação: TECH + Primeiros Socorros ou Paramédico + 1d10, superando a DV do ferimento (10, 13 ou 15)">ESTABILIZAR</button>{{/if}}{{#if cura.descansar}}<button type="button" class="acao" data-action="descansar" data-tooltip="Dias inteiros de descanso: o estabilizado recupera HP igual ao BODY por dia">DESCANSAR</button>{{/if}}</div>{{/if}}
+        {{#if estase.mostrar}}<div class="botoes-resumo estase">{{#if estase.ativa}}<span class="estabilizado" data-tooltip="{{#if estase.protege}}Sem Death Saves enquanto a cobertura tiver HP; o dano chega nela antes{{else}}A cobertura acabou: o Death Save volta{{/if}}">EM ESTASE · {{estase.rotulo}} {{estase.hp}}/{{estase.max}}</span>{{/if}}{{#if estase.entrar}}<button type="button" class="acao" data-action="porEmEstase" data-tooltip="O Cryopump (uma Ação, 1 carga) ou o Cryotank (Tecnologia Médica DV13) de um Medtech: sem Death Saves enquanto a bolsa ou o tanque tiver HP">ESTASE</button>{{/if}}{{#if estase.sair}}<button type="button" class="acao" data-action="sairDaEstase" data-tooltip="Tirar da bolsa ou do tanque">SAIR DA ESTASE</button>{{/if}}</div>{{/if}}
+      </section>
+
+      <section class="painel corte">
+        <div class="titulo">DEFESA<span>DEX {{sistema.atributos.dex.valor}}</span></div>
+        <div class="medida"><span>ESQUIVA</span><b data-tooltip="DEX + Evasão + 1d10, contra o ataque: corpo a corpo sempre; tiros, só com REF 8+">{{esquiva}} + 1d10{{#unless podeEsquivarTiro}} <small>(tiro: só com REF 8+)</small>{{/unless}}</b></div>
+        <div class="medida rolavel"><span>FACEDOWN</span><b><a data-action="rolarFacedown" data-tooltip="{{facedown.dica}}" role="button" tabindex="0" aria-label="Rolar Facedown">{{facedown.valor}} + 1d10</a></b></div>
+        {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="rolarReputacao" data-tooltip="Ao conhecer alguém: 1d10 abaixo do nível de Reputação indica que já ouviu falar de você. Má fama conta sem o sinal: −5 conta como 5.">RECONHECIMENTO</button></div>{{/if}}
+        <div class="botoes-resumo"><button type="button" class="acao {{#if emCobertura}}ligado{{/if}}" data-action="protegerSe" data-tooltip="Atrás de algo que para a bala e fora da linha de visão (a Ação de Movimento até lá; wiki, p. 182): o cartão do tiro avisa o mestre" aria-pressed="{{#if emCobertura}}true{{else}}false{{/if}}">{{#if emCobertura}}EM COBERTURA{{else}}PROTEGER-SE{{/if}}</button></div>
+        {{#if movimento.caido}}<div class="botoes-resumo"><button type="button" class="acao" data-action="levantar" data-tooltip="Caído: não usa Movimento até levantar-se (1 Ação)">LEVANTAR-SE (1 AÇÃO)</button></div>{{/if}}
+        {{> "systems/cpr-fieldbook/templates/personagem/bloco-agarrao.hbs"}}
+      </section>
+    </aside>
+
+    <div class="coluna-principal">
+      {{!-- Os favoritos (o C20): as perícias e os itens com a estrela, para rolar e usar daqui; arraste para a barra de macros. --}}
+      <section class="painel corte favoritos">
+        <div class="titulo">FAVORITOS<span>★ NA FICHA</span></div>
+        {{#each favoritos.pericias}}
+        <div class="medida rolavel"><span><a class="estrela ligada" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Tirar dos favoritos" role="button" tabindex="0" aria-label="Perícia favorita: {{nome}}" aria-pressed="true"><i class="fa-solid fa-star"></i></a> {{nome}}</span><b><a class="draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros" role="button" tabindex="0" aria-label="Rolar {{nome}}">{{total}} + 1d10</a></b></div>
+        {{/each}}
+        {{#each favoritos.itens}}
+        <div class="item-linha draggable" data-item-id="{{id}}">
+          <a class="estrela ligada" data-action="favoritarItem" data-tooltip="Tirar dos favoritos" role="button" tabindex="0" aria-label="Item favorito: {{nome}}" aria-pressed="true"><i class="fa-solid fa-star"></i></a>
+          <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+          {{#if arma}}<button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">ATACAR</button>{{/if}}
+          {{#if droga}}<button type="button" class="acao" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação)">USAR</button>{{/if}}
+          {{#if usavel}}<button type="button" class="acao {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)" aria-pressed="{{#if emUso}}true{{else}}false{{/if}}">{{#if emUso}}EM USO{{else}}USAR{{/if}}</button>{{/if}}
+        </div>
+        {{/each}}
+        {{#unless (or favoritos.pericias.length favoritos.itens.length)}}<div class="caixa-vazia">MARQUE A ★ NAS PERÍCIAS E NO EQUIPAMENTO</div>{{/unless}}
+      </section>
+
+      {{> "systems/cpr-fieldbook/templates/personagem/bloco-armas.hbs"}}
+      {{> "systems/cpr-fieldbook/templates/personagem/bloco-artes-marciais.hbs"}}
+
+      {{> "systems/cpr-fieldbook/templates/personagem/bloco-armadura.hbs"}}
+
+      {{> "systems/cpr-fieldbook/templates/personagem/bloco-lesoes.hbs"}}
+
+      <section class="painel corte">
+        <div class="titulo">MUNIÇÃO<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}</span></div>
+        <ol class="itens">
+          {{#each municoes}}
+          <li data-item-id="{{id}}">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{name}}</a>
+            <span class="detalhe">{{system.quantidade}} tiros{{#if system.ablacao}}{{#unless (eq system.ablacao 1)}} · ablação {{system.ablacao}}{{/unless}}{{else}} · não abla{{/if}}</span>
+          </li>
+          {{else}}<li class="vazio">Sem munição.</li>{{/each}}
+        </ol>
+      </section>
+    </div>
+  </div>
+</section>

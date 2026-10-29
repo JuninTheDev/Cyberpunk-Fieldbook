@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Gera o módulo cpr-2077 direto na pasta do Foundry do servidor e instala os outros módulos da wiki
-# (foundry-*/instalar.mjs, como o NET Architect e o Fluxo de Combate): o mesmo que o atualizar-modulo.bat faz no PC.
+# (foundry-*/instalar.mjs, como o NET Architect e o Fluxo de Combate, menos o foundry-sistema/, que é do Foundry 14):
+# o mesmo que o atualizar-modulo.bat faz no PC.
 # O instalar do Fluxo de Combate também apaga o Evasion Workflow (cpred-evasion-workflow), que fazia o mesmo.
 # Os compêndios ficam travados com o Foundry aberto: para o Foundry, gera e liga de novo. Por isso só roda
 # com ninguém conectado, a não ser com --agora (derruba quem estiver na mesa). Com o Foundry 14 no ar (a mesa trocada
@@ -36,8 +37,10 @@ if [ "$sistema" != "$copia" ] || [ build/extract-core.mjs -nt .cache/core/versao
 como_mesa node build/build.mjs
 # O build também regrava o catálogo da loja; no servidor vale o do GitHub.
 como_mesa git -C "$WIKI" checkout -q -- loja-catalogo.js 2>/dev/null || true
-# Módulos só de scripts (sem compêndio compilado): instalar é copiar.
+# Módulos só de scripts (sem compêndio compilado): instalar é copiar. O foundry-sistema/ fica de fora: é o sistema para o
+# Foundry 14 (protótipo), e a mesa do servidor é Foundry 12.
 for instalar in "$WIKI"/foundry-*/instalar.mjs; do
+  case "$instalar" in */foundry-sistema/*) continue ;; esac
   [ -f "$instalar" ] && como_mesa node "$instalar"
 done
 echo "Módulos atualizados."

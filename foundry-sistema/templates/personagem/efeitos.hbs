@@ -1,0 +1,38 @@
+{{!-- A aba Efeitos (o C34; a aba de efeitos do CORE, cpr-effects.hbs): à esquerda, a conta e o "+ EFEITO"; à direita, os
+três grupos do CORE (os que valem, os situacionais e os que estão sem efeito agora), cada efeito com as mudanças, a origem
+(o personagem, ou o item e o uso que o liga), o estado e os botões. O nome abre a ficha do efeito. --}}
+<section class="tab efeitos {{tab.cssClass}}" data-group="primary" data-tab="efeitos">
+  <div class="aba-colunas">
+    <aside class="coluna-resumo">
+      <section class="painel corte ciano">
+        <div class="titulo">EFEITOS<span>DO PERSONAGEM E DOS ITENS</span></div>
+        {{#each efeitos}}<div class="medida"><span>{{titulo}}</span><b class="destaque">{{linhas.length}}</b></div>{{/each}}
+        {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="criarEfeito" data-tooltip="Criar um efeito em branco no personagem e abrir a ficha dele">+ EFEITO</button></div>{{/if}}
+        <p class="dica">O efeito de um item vale com o item em uso: o cyberware instalado, a arma equipada, a armadura vestida, o programa ativo num deck, o equipamento pela ativação dele. Aqui se liga e desliga o efeito do personagem e o do item ligado à mão (a droga, o equipamento manual). O situacional não soma sozinho: a janela de rolagem o oferece no teste certo.</p>
+      </section>
+    </aside>
+
+    <div class="coluna-principal">
+      {{#each efeitos}}
+      <section class="painel corte lista-efeitos efeitos-{{grupo}}">
+        <div class="titulo">{{titulo}}<span>{{sub}}</span></div>
+        <ol class="itens">
+          {{#each linhas}}
+          <li class="efeito estado-{{chave}}" data-efeito="{{uuid}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarEfeito" data-tooltip="Abrir a ficha do efeito" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{#if mudancas}}{{mudancas}}{{else}}sem mudanças{{/if}}</span>
+            <span class="origem" data-tooltip="{{#if tipo}}O item que dá o efeito e o uso que o liga{{else}}Do próprio personagem{{/if}}">{{origem}}{{#if tipo}} · {{tipo}}, vale {{uso}}{{/if}}</span>
+            <span class="estado-efeito">{{rotulo}}</span>
+            {{#if @root.editavel}}
+            {{#if ligar}}<button type="button" class="alternar {{#unless desligado}}ligado{{/unless}}" data-action="alternarEfeito" aria-pressed="{{#unless desligado}}true{{else}}false{{/unless}}" aria-label="{{#if desligado}}Ligar{{else}}Desligar{{/if}} {{nome}}">{{#if desligado}}Ligar{{else}}Desligar{{/if}}</button>{{/if}}
+            {{#if apagar}}<button type="button" class="apagar" data-action="apagarEfeito" data-tooltip="Apagar o efeito" aria-label="Apagar {{nome}}">✕</button>{{/if}}
+            {{/if}}
+          </li>
+          {{else}}<li class="vazio">{{vazio}}</li>{{/each}}
+        </ol>
+      </section>
+      {{/each}}
+    </div>
+  </div>
+</section>

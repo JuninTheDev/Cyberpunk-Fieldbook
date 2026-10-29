@@ -1,0 +1,3 @@
+{{!-- Um tristate do navegador (navegador.mjs): o clique passa de incluídos para só estes e para excluídos (o
+cpr-browser-tristate do CORE 0.93). O estado vem no data-estado, desenhado pelo CSS. --}}
+<button type="button" class="navegador-tristate" data-action="tristate" data-grupo="{{grupo}}" data-tipo="{{tipo}}"{{#if filtro}} data-filtro="{{filtro}}"{{/if}}{{#if valor}} data-valor="{{valor}}"{{/if}} data-estado="{{estado}}" data-tooltip="{{rotuloDoEstado}}" aria-label="{{rotulo}}: {{rotuloDoEstado}}"><span class="navegador-marca" aria-hidden="true"></span>{{rotulo}}</button>

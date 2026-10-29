@@ -1,0 +1,160 @@
+{{!-- A janela da NET (netrun/janela.mjs), no jeito de um terminal: no topo, a conexão, a arquitetura e o netrunner (a
+Interface, a Sorte preparada, as Ações NET e a desconexão insegura); os avisos; no meio, o mapa (um cabo de cada andar
+até o andar de onde se chega) e, ao lado, quem está na NET, o painel do mestre, o andar escolhido e o deck; embaixo, as
+habilidades de Interface e o registro. Os rótulos decorativos (o tipo do andar, a hora do registro) vêm do CSS, para
+o texto de cada parte continuar o mesmo. --}}
+<div class="janela-net-corpo{{#if ocupado}} ocupada{{/if}}{{#if gm}} do-mestre{{/if}}">
+  <header class="net-cabecalho">
+    <div class="identidade">
+      <span class="selo{{#unless netrunner}} sem-conexao{{/unless}}"><i class="pulso"></i>{{#if gm}}MESTRE{{else if netrunner}}CONEXÃO ATIVA{{else}}SEM CONEXÃO{{/if}}</span>
+      <div class="titulo">
+        <h2>{{nome}}</h2>
+        <p class="arquitetura">{{#if arquitetura}}{{arquitetura}} · DV {{dv}}{{#if gm}} · {{andares}} andares{{/if}}{{#if mapaRevelado}} · mapa revelado{{/if}}{{else}}Ninguém conectou ainda.{{/if}}</p>
+      </div>
+    </div>
+    {{#if netrunner}}
+    <button type="button" data-action="desconectarInseguro" class="perigo sair" {{#if ocupado}}disabled{{/if}} data-tooltip="Sai na hora, sem Ação NET"><i class="fa-solid fa-plug-circle-xmark"></i> {{#if gm}}Derrubar da NET{{else}}Desconexão insegura{{/if}}</button>
+    <section class="netrunner">
+      <div class="quem"><i class="fa-solid fa-user-astronaut"></i> <b>{{netrunner.nome}}</b> <small>{{netrunner.onde}}</small></div>
+      <div class="numero"><small>Interface</small> <b>{{netrunner.rank}}</b></div>
+      <div class="numero" data-tooltip="Os pontos de Sorte preparados na ficha entram na próxima rolagem"><small>Sorte preparada</small> <b>{{netrunner.sorte}}</b></div>
+      {{#if netrunner.combate}}
+      <span class="acoes em-combate"><span class="rotulo">Ações NET:</span> <span class="pips">{{#each netrunner.pips}}<i class="{{this}}"></i>{{/each}}</span> <span class="frase">sobram <b>{{netrunner.sobram}}</b> de {{netrunner.max}} neste turno</span></span>
+      {{else}}
+      <span class="acoes"><span class="rotulo">Ações NET</span> <span class="pips">{{#each netrunner.pips}}<i class="{{this}}"></i>{{/each}}</span> <span class="frase">livres fora de combate ({{netrunner.max}} por turno em combate)</span></span>
+      {{/if}}
+    </section>
+    {{/if}}
+  </header>
+
+  {{#if netrunner.avisos}}
+  <div class="avisos">
+    {{#if netrunner.emChamas}}<div class="aviso-net fogo"><span><i class="fa-solid fa-fire"></i> Em chamas: 2 no HP no fim de cada turno.</span><button type="button" data-action="apagarFogo" {{#if ocupado}}disabled{{/if}}>Apagar o fogo (Ação Carnal)</button></div>{{/if}}
+    {{#if netrunner.preso}}<div class="aviso-net"><span><i class="fa-solid fa-link"></i> Preso pelo Kraken: não avança nem desconecta com segurança até o fim do próximo turno.</span></div>{{/if}}
+    {{#if netrunner.skunk}}<div class="aviso-net"><span><i class="fa-solid fa-biohazard"></i> Skunk: {{netrunner.skunk}} no Slide enquanto ele estiver ativo.</span></div>{{/if}}
+    {{#if netrunner.menosAcoes}}<div class="aviso-net"><span><i class="fa-solid fa-hourglass-half"></i> Wisp: 1 Ação NET a menos no próximo turno.</span></div>{{/if}}
+  </div>
+  {{/if}}
+
+  <div class="net-meio">
+    <section class="mapa">
+      <div class="mapa-net" style="--colunas: {{ramos.length}}">
+        <span class="canto"></span>
+        {{#each ramos}}<span class="ramo">RAMO {{this}}</span>{{/each}}
+        <div class="entrada {{entrada.classes}}" data-action="selecionar" data-no="entrada"><i class="fa-solid fa-plug"></i> PONTO DE ACESSO{{#if naEntrada.length}}: {{#each naEntrada}}<b>{{this}}</b> {{/each}}{{/if}}</div>
+        {{#each mapa}}
+        <span class="andar">{{andar}}</span>
+        {{#each celulas}}
+        {{#if this}}
+        <div class="no {{classes}}" data-action="selecionar" data-no="{{id}}" style="--salto: {{salto}}">
+          <span class="cabo"></span>
+          <div class="topo"><b class="rotulo">{{rotulo}}</b><span class="tag"></span></div>
+          {{#if visto}}
+          <ul>{{#each conteudos}}<li class="{{classe}}"><i class="fa-solid {{icone}}"></i> {{texto}}{{#if rez}}<span class="barra" style="--rez: {{rez}}%"></span>{{/if}}</li> {{/each}}</ul>
+          {{else}}
+          <span class="interrogacao">?</span>
+          {{/if}}
+          {{#if corredores.length}}<p class="aqui">{{#each corredores}}<b>{{this}}</b> {{/each}}</p>{{/if}}
+        </div>
+        {{else}}<span class="sem-no"></span>{{/if}}
+        {{/each}}
+        {{/each}}
+      </div>
+    </section>
+
+    <aside class="net-lado">
+      <section class="corredores">
+        <h3>NA NET</h3>
+        <ul>
+          {{#each corredores}}
+          <li data-token="{{token}}" class="{{#if eu}}eu{{/if}}"{{#if @root.gm}} data-action="escolherCorredor" data-tooltip="O mestre age por este netrunner"{{/if}}>
+            <img src="{{img}}" alt=""> <b>{{nome}}</b> <span>{{onde}}</span>
+            {{#if podeDesconectar}}<button type="button" data-action="desconectar" data-token="{{token}}" data-tooltip="Desconectar com segurança (1 Ação NET em combate)">Desconectar</button>{{/if}}
+          </li>
+          {{else}}
+          <li class="vazio">Ninguém conectado.</li>
+          {{/each}}
+        </ul>
+      </section>
+
+      {{#if mestre}}
+      <section class="mestre">
+        <h3>MESTRE</h3>
+        <div class="botoes">
+          {{#if mestre.revelarAndar}}<button type="button" data-action="revelar" data-no="{{andar.id}}"><i class="fa-solid fa-eye"></i> Revelar este andar</button>{{/if}}
+          {{#if mestre.revelarMapa}}<button type="button" data-action="revelar" data-tudo="1"><i class="fa-solid fa-map"></i> Revelar o mapa</button>{{/if}}
+          {{#if mestre.comCorredor}}<button type="button" data-action="zerarAcoes" data-tooltip="O começo do turno do netrunner: as Ações NET voltam"><i class="fa-solid fa-rotate"></i> Zerar as Ações NET</button>{{/if}}
+          {{#if mestre.semNinguem}}<button type="button" data-action="reiniciar" class="perigo"><i class="fa-solid fa-power-off"></i> Reiniciar a arquitetura</button>{{/if}}
+        </div>
+        {{#if mestre.ataques.length}}<div class="botoes ataques">{{#each mestre.ataques}}<button type="button" data-action="inimigoAtaca" data-alvo="{{chave}}" class="perigo" data-tooltip="A vez dele: ataca {{contra}}"><i class="fa-solid fa-skull-crossbones"></i> {{nome}} ataca</button>{{/each}}</div>{{/if}}
+        {{#each mestre.inimigos}}
+        <div class="rez-inimigo" data-alvo="{{chave}}"><span><b>{{nome}}</b> <small>{{situacao}}</small>{{#if rez}}<span class="barra" style="--rez: {{rez}}%"></span>{{/if}}</span>
+          <span class="ajuste"><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="-5">−5</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="-1">−1</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-delta="1">+1</button><button type="button" data-action="ajustarRez" data-alvo="{{chave}}" data-cheia="1">REZ cheia</button></span>
+        </div>
+        {{/each}}
+      </section>
+      {{/if}}
+
+      <section class="andar-escolhido">
+        <h3>{{andar.titulo}}{{#if andar.escondido}} <small>escondido dos jogadores</small>{{/if}}</h3>
+        {{#if andar.entrada}}
+        <p class="dica">Onde a conexão começa. Andar pela arquitetura não é Ação NET; desconectar com segurança é 1 em combate.</p>
+        {{else if andar.visto}}
+        <ul>
+          {{#each andar.conteudos}}
+          <li class="{{tipoId}}{{#if inimigo}} inimigo{{/if}}{{#if feito}} feito{{/if}}"><i class="fa-solid {{icone}}"></i> <div class="linha"><b>{{nome}}</b>{{#if dv}} <small>DV {{dv}}</small>{{/if}}{{#if tipo}} <small>{{tipo}}</small>{{/if}}{{#if situacao}} <span class="situacao">{{situacao}}</span>{{/if}}</div>{{#if rez}}<span class="barra" style="--rez: {{rez}}%"></span>{{/if}}{{#if oQue}} <p>{{oQue}}</p>{{/if}}{{#if diario}}<button type="button" class="abrir-arquivo" data-action="abrirArquivo" data-uuid="{{diario}}"><i class="fa-solid fa-book-open" inert></i> Abrir o arquivo</button>{{/if}}</li>
+          {{else}}
+          <li class="vazio">Andar vazio.</li>
+          {{/each}}
+        </ul>
+        {{else}}
+        <p class="dica">Ainda não revelado: chegue até ele ou use o Pathfinder.</p>
+        {{/if}}
+        {{#if andar.ir}}<button type="button" class="ir" data-action="mover" data-no="{{andar.id}}" {{#if ocupado}}disabled{{/if}}><i class="fa-solid fa-route"></i> Ir para cá</button>{{/if}}
+      </section>
+
+      {{#if netrunner}}
+      <section class="deck">
+        <h3>DECK{{#if netrunner.deck}} <small>{{netrunner.deck}}</small>{{/if}}</h3>
+        {{#each netrunner.programas}}
+        <div class="programa{{#if ativo}} ativo{{/if}}" data-programa="{{id}}">
+          <span><b>{{nome}}</b> <small>{{classe}}{{#if numeros}} · {{numeros}}{{/if}}</small></span>
+          <span class="botoes">
+            {{#if podeAtacar}}<button type="button" class="atacar" data-action="programa" data-programa="{{id}}" data-acao="atacar" data-tooltip="1 Ação NET: Interface + ATK + 1d10 contra a defesa do alvo; desativa depois">Atacar</button>{{/if}}
+            <button type="button" data-action="programa" data-programa="{{id}}" data-acao="{{#if ativo}}desativar{{else}}ativar{{/if}}" {{#unless podeMudar}}disabled{{/unless}} data-tooltip="1 Ação NET (em combate, uma vez por rodada)">{{#if ativo}}Desativar{{else}}Ativar{{/if}}</button>
+          </span>
+        </div>
+        {{else}}
+        <p class="dica">Nenhum programa instalado no cyberdeck equipado.</p>
+        {{/each}}
+      </section>
+      {{/if}}
+    </aside>
+  </div>
+
+  <footer class="net-rodape{{#unless netrunner}} so-registro{{/unless}}">
+    {{#if netrunner}}
+    <section class="habilidades">
+      <h3>HABILIDADES DE INTERFACE</h3>
+      {{#unless netrunner.pronto}}<p class="dica">Sem cyberdeck equipado ou sem Interface: as habilidades não rolam.</p>{{/unless}}
+      {{#if netrunner.alvos.length}}<label class="alvo">Alvo (o Zap, o Slide e os programas) <select data-texto="alvo">{{#each netrunner.alvos}}<option value="{{chave}}" {{#if escolhido}}selected{{/if}}>{{nome}}</option>{{/each}}</select></label>{{/if}}
+      <div class="botoes">
+        {{#each netrunner.habilidades}}<button type="button" class="habilidade{{#if combate}} combate{{/if}}" data-action="habilidade" data-habilidade="{{id}}" data-tooltip="{{dica}}" {{#unless pode}}disabled{{/unless}}><i class="fa-solid {{icone}}"></i><span>{{rotulo}}</span>{{#if base}}<small>{{base}}</small>{{/if}}</button>{{/each}}
+      </div>
+      {{#if netrunner.fundo}}<input type="text" data-texto="virus" maxlength="200" value="{{netrunner.textos.virus}}" placeholder="O que o vírus faz (o mestre define a DV e as Ações NET)">{{/if}}
+      {{#if netrunner.controle}}
+      <div class="comando"><input type="text" data-texto="comando" maxlength="200" value="{{netrunner.textos.comando}}" placeholder="Comando para o nó de controle tomado (o mestre narra)"><button type="button" data-action="comandar" {{#if ocupado}}disabled{{/if}}>Comandar</button></div>
+      {{#if netrunner.ligacoes.length}}
+      <ul class="ligacoes" data-tooltip="O que o nó de controle comanda na cena: 1 Ação NET por comando">
+        {{#each netrunner.ligacoes}}<li><i class="fa-solid {{icone}}" inert></i><b>{{nome}}</b><small>{{texto}}</small>{{#each acoes}}<button type="button" data-action="acionar" data-controle="{{../controle}}" data-indice="{{../indice}}" data-acao="{{this.[0]}}" {{#if @root.ocupado}}disabled{{/if}}>{{this.[1]}}</button>{{/each}}</li>{{/each}}
+      </ul>
+      {{/if}}
+      {{/if}}
+    </section>
+    {{/if}}
+    <section class="registro">
+      <h3>REGISTRO</h3>
+      <ol>{{#each registro}}<li class="{{tipo}}" data-hora="{{hora}}">{{texto}}</li>{{/each}}</ol>
+    </section>
+  </footer>
+</div>

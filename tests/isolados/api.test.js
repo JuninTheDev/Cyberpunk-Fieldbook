@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const { criarServidorIsolado } = require('../lib/servidor-isolado');
 
@@ -95,6 +97,37 @@ test('instâncias de teste não compartilham dados ou sessões', async t => {
   assert.equal((await segunda.pedir('/api/eu', { cookie: jogador.cookie })).json.papel, 'visitante');
   const contas = await segunda.pedir('/api/contas', { cookie: await segunda.entrarComoMestre() });
   assert.deepEqual(contas.json.contas, []);
+});
+
+test('o roteiro da sessão fica na pasta de dados e só o mestre lê', async t => {
+  const servidor = criarServidorIsolado(t);
+  const mestre = await servidor.entrarComoMestre();
+  const pasta = path.join(servidor.dados, 'campanhas', 'morana', 'roteiros');
+  fs.mkdirSync(pasta, { recursive: true });
+  fs.writeFileSync(path.join(pasta, 'sessao-02.md'), '# Sessão 2\n\nSó o mestre.\n');
+  const lido = await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02', { cookie: mestre });
+  assert.equal(lido.status, 200);
+  assert.match(lido.headers['content-type'], /text\/markdown/);
+  assert.equal(lido.headers['cache-control'], 'private, no-store');
+  assert.equal(lido.text, '# Sessão 2\n\nSó o mestre.\n');
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-03', { cookie: mestre })).status, 404);
+  // Nome fora do padrão (um caminho para fora da pasta) não lê nada.
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/..%2Fmesa', { cookie: mestre })).status, 404);
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02', { method: 'DELETE', cookie: mestre })).status, 405);
+  // O mestre manda (ou troca) o roteiro pela aba; vazio ou nome fora do padrão, não.
+  const enviado = await servidor.pedir('/api/campanhas/morana/roteiros/sessao-03', { method: 'PUT', cookie: mestre, body: { texto: '# Sessão 3\n' } });
+  assert.equal(enviado.status, 200);
+  assert.equal(fs.readFileSync(path.join(pasta, 'sessao-03.md'), 'utf8'), '# Sessão 3\n');
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-03', { cookie: mestre })).text, '# Sessão 3\n');
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-03', { method: 'PUT', cookie: mestre, body: { texto: '  ' } })).status, 400);
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/..%2Fmesa', { method: 'PUT', cookie: mestre, body: { texto: 'x' } })).status, 400);
+  assert.ok(!fs.existsSync(path.join(servidor.dados, 'campanhas', 'morana', 'mesa.md')));
+  // Jogador e visitante: não.
+  const jogador = await criarJogador(servidor, mestre, 'Ana');
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02', { cookie: jogador.cookie })).status, 403);
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02', { method: 'PUT', cookie: jogador.cookie, body: { texto: 'x' } })).status, 403);
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02')).status, 403);
+  assert.equal(fs.readFileSync(path.join(pasta, 'sessao-02.md'), 'utf8'), '# Sessão 2\n\nSó o mestre.\n');
 });
 
 test('o resumo do personagem traz a Humanidade (EMP × 10 sem ficha da mesa), para o cartão do Início', async t => {

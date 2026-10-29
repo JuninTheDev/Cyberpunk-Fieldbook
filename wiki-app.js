@@ -1250,7 +1250,9 @@
         if (unit) focusUnit(unit, target.term);
       }).catch(() => {
         const container = document.getElementById('md-doc');
-        if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
+        // erro: o aviso próprio do documento (o roteiro que ainda não foi para o servidor).
+        if (container && markdownDocs[id].erro) container.innerHTML = `<div class="callout">${markdownDocs[id].erro}</div>`;
+        else if (container) container.innerHTML = `<div class="callout"><b>Não foi possível ler ${escapeHtml(markdownDocs[id].file)}.</b> Os documentos completos são lidos direto dos arquivos .md, e o navegador bloqueia isso quando a wiki é aberta com dois cliques. Abra pelo servidor local: rode <code>node server.js</code> nesta pasta e acesse <code>http://localhost:8000</code>.</div>`;
       });
     }
 
@@ -2065,7 +2067,7 @@
         const days = health.backup ? (Date.now() - new Date(health.backup.data)) / 86400000 : Infinity;
         const free = health.disco && health.disco.total ? health.disco.livre / health.disco.total : 1;
         const when = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.moduloPendente ? 'módulo esperando a mesa vazia' : ''].filter(Boolean).join(' · ');
+        const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.moduloPendente ? 'módulo esperando a mesa vazia' : '', health.sistemaPendente ? 'sistema do Foundry 14 esperando a mesa vazia' : ''].filter(Boolean).join(' · ');
         server = `<details class="side-server${days > 2 || free < 0.1 ? ' side-server-bad' : ''}"><summary>Servidor: ${escapeHtml(summary)}</summary>${health.backup ? `<p>${escapeHtml(health.backup.nome)}, ${(health.backup.tamanho / 1048576).toFixed(1)} MB</p>` : ''}${health.registro.length ? `<ul>${health.registro.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '<p>Nenhuma publicação ainda.</p>'}</details>`;
       }
       box.innerHTML = `${table}${server}`;

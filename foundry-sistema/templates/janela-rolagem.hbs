@@ -1,0 +1,28 @@
+<div class="janela-rolagem-conteudo">
+  <ul class="partes">
+    {{#each partes}}<li>{{rotulo}} <b>{{texto}}</b></li>{{/each}}
+    <li class="dado">1d10</li>
+  </ul>
+
+  {{#if situacionais.length}}
+  <fieldset class="situacionais">
+    <legend>Situacionais</legend>
+    {{#each situacionais}}
+    <label><input type="checkbox" name="situacional" value="{{indice}}" {{#if ligado}}checked{{/if}}> <span>{{rotulo}}</span> <b>{{texto}}</b></label>
+    {{/each}}
+  </fieldset>
+  {{/if}}
+
+  <fieldset class="comuns">
+    <legend>Modificadores comuns · RED p. 130</legend>
+    {{#each comuns}}
+    <label><input type="checkbox" name="comum" value="{{indice}}"> <span>{{rotulo}}</span> <b>{{texto}}</b></label>
+    {{/each}}
+  </fieldset>
+
+  <div class="linha">
+    <label>Modificador do mestre <input type="number" name="outro" value="0" step="1"></label>
+    <label>Sorte <input type="number" name="sorte" value="{{sorte}}" min="0" max="{{sorteMax}}" step="1"> <small>de {{sorteMax}}</small></label>
+  </div>
+  <p class="total">TOTAL SEM O DADO <b class="total-sem-dado">{{base}}</b></p>
+</div>

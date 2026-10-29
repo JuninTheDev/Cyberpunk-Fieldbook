@@ -160,7 +160,25 @@ Não abre: o grupo tentou, e um protocolo de proteção soltou um pulso que derr
 
 ## Relógios
 
-Os relógios da nova trama entram aqui quando o mestre aprovar.
+Os três relógios da nova trama, aprovados pelo mestre em 2026-10-27. Quando cada um anda, e o que acontece em cada marca, está no roteiro de cada sessão: ele fica só no servidor, porque o repositório é público.
+
+### Kabuki adoece
+- **Chave:** kabuki
+- **Segmentos:** Os vizinhos do prédio; O mercado; A NCPD chama de ciberpsicose; A MaxTac mata o primeiro; Os Claws culpam o consultório; A MaxTac fecha o quarteirão
+
+O bairro paga pelo que saiu da maleta. Anda uma vez por sessão, e mais nas cenas que o roteiro marca.
+
+### A limpeza
+- **Chave:** limpeza
+- **Segmentos:** Vega entrega os rostos; O preço nas cabeças circula; Alguém próximo é sondado; A primeira tentativa, no meio da rua; Descobrem o consultório; O prédio cercado de madrugada
+
+Quem viu o que não devia vira alvo. Anda quando o grupo é visto, usa o nome verdadeiro ou deixa uma testemunha.
+
+### Relógio do Morty
+- **Chave:** morty
+- **Segmentos:** Lembranças que não são dele; Lembra do Ricky melhor do que o constructo lembrava; Fala com a voz de outra pessoa; O corpo se mexe sozinho; Os infectados vêm até ele; Morty escolhe, ou Morana escolhe por ele
+
+Começa com 1 marcado: a marca que ficou da Sessão 1. Anda nas cenas que o roteiro marca.
 
 ## Segredos
 

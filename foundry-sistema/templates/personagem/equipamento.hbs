@@ -1,0 +1,153 @@
+{{!-- A aba Equipamento, no jeito da maquete "Gear Tab" do usuário: à esquerda, o dinheiro (com o histórico recente) e a
+munição; à direita, as armas, as armaduras, o inventário, os upgrades e os veículos. O "+" de cada lista cria um item em
+branco do tipo dela (o C32), e o nome dela a recolhe e expande (o C34). --}}
+<section class="tab equipamento {{tab.cssClass}}" data-group="primary" data-tab="equipamento">
+  <div class="aba-colunas">
+    <aside class="coluna-resumo">
+      <section class="painel corte dinheiro">
+        <div class="titulo">EURODÓLARES<span>SALDO</span></div>
+        <p class="numero-grande"><b>{{sistema.dinheiro}}</b><small>eb</small></p>
+        <div class="botoes-resumo"><button type="button" class="acao" data-action="abrirExtrato" data-campo="dinheiro" data-tooltip="Somar, subtrair ou definir, com o motivo; e o histórico inteiro">EXTRATO</button></div>
+        <ol class="itens extrato-recente">
+          {{#each extratoRecente}}
+          <li class="{{classe}}">
+            <span class="mudanca">{{mudanca}}</span>
+            <span class="detalhe">{{quando}} · {{#if motivo}}{{motivo}}{{else}}mudança direta{{/if}}{{#if usuario}} · {{usuario}}{{/if}} · saldo {{saldo}}</span>
+          </li>
+          {{else}}<li class="vazio">Nada no histórico ainda: o botão Extrato soma, subtrai ou define, com o motivo.</li>{{/each}}
+        </ol>
+      </section>
+
+      <section class="painel corte{{#if recolhida.municao}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="municao" titulo="MUNIÇÃO"}}<span>{{municoes.length}} TIPO{{#unless (eq municoes.length 1)}}S{{/unless}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="municao" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar munição">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each municoes}}
+          <li class="draggable" data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{name}}</a>
+            <span class="detalhe">{{system.quantidade}} tiros</span>
+            {{#if (gt system.quantidade 1)}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{else}}<li class="vazio">Sem munição.</li>{{/each}}
+        </ol>
+      </section>
+    </aside>
+
+    <div class="coluna-principal">
+      <section class="painel corte{{#if recolhida.arma}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="arma" titulo="ARMAS"}}<span>EQUIPADA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="arma" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar arma">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each armas}}
+          <li data-item-id="{{id}}" class="draggable {{#unless sistema.equipada}}guardada{{/unless}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if classe2077}} · {{classe2077}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
+            <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar" aria-pressed="{{#if sistema.equipada}}true{{else}}false{{/if}}">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate" aria-pressed="{{#if favorito}}true{{else}}false{{/if}}" aria-label="Item favorito: {{nome}}"><i class="fa-solid fa-star"></i></button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{else}}<li class="vazio">Sem armas.</li>{{/each}}
+        </ol>
+        {{#if armasSemVeiculo.length}}
+        <p class="nota">Veículo ausente: abra a arma para corrigir a montagem.</p>
+        <ol class="itens">
+          {{#each armasSemVeiculo}}
+          <li data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">Montada · veículo ausente</span>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{/each}}
+        </ol>
+        {{/if}}
+      </section>
+
+      <section class="painel corte vermelho{{#if recolhida.armadura}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="armadura" titulo="ARMADURAS"}}<span>VESTIDA OU GUARDADA{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="armadura" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar armadura">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each armaduras}}
+          <li data-item-id="{{id}}" class="draggable {{#unless equipada}}guardada{{/unless}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{detalhe}}</span>
+            <button type="button" class="alternar {{#if equipada}}ligado{{/if}}" data-action="equipar" aria-pressed="{{#if equipada}}true{{else}}false{{/if}}">{{#if equipada}}Vestida{{else}}Guardada{{/if}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate" aria-pressed="{{#if favorito}}true{{else}}false{{/if}}" aria-label="Item favorito: {{nome}}"><i class="fa-solid fa-star"></i></button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{else}}<li class="vazio">Sem armaduras.</li>{{/each}}
+        </ol>
+      </section>
+
+      {{#each inventario}}
+      <section class="painel corte{{#if (lookup @root.recolhida tipo)}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista=tipo titulo=titulo}}<span>EQUIPADO, CARREGANDO OU GUARDADO{{#if @root.podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="{{tipo}}" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar {{tipo}}">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each itens}}
+          <li data-item-id="{{id}}" class="draggable {{#if guardado}}guardada{{/if}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{detalhe}}</span>
+            {{#if (ne quantidade null)}}<span class="quantidade" data-tooltip="{{unidade}}"><button type="button" data-action="mudarQuantidade" data-delta="-1" aria-label="Um a menos">−</button><b>{{quantidade}}</b><button type="button" data-action="mudarQuantidade" data-delta="1" aria-label="Um a mais">+</button></span>{{/if}}
+            {{#if divisivel}}<button type="button" class="acao" data-action="dividirPilha">Dividir</button>{{/if}}
+            {{#if ehDroga}}{{#if viciado}}<span class="viciado" data-tooltip="O efeito secundário fica até a terapia">VICIADO</span>{{/if}}<button type="button" class="alternar {{#if sobEfeito}}ligado{{/if}}" data-action="usarDroga" data-tooltip="Tomar uma dose (uma Ação): o efeito primário vale; sob efeito, estende" aria-label="Usar {{nome}}{{#if sobEfeito}}; sob efeito{{/if}}">Usar</button>{{#if sobEfeito}}<button type="button" class="acao" data-action="acabouDroga" data-tooltip="O efeito acabou: o teste do efeito secundário">ACABOU</button>{{/if}}{{/if}}
+            {{#if usavel}}<button type="button" class="alternar {{#if emUso}}ligado{{/if}}" data-action="usarItem" data-tooltip="Liga ou desliga o efeito (ativação à mão)" aria-pressed="{{#if emUso}}true{{else}}false{{/if}}">{{#if emUso}}Em uso{{else}}Usar{{/if}}</button>{{/if}}
+            <button type="button" class="alternar {{#if equipado}}ligado{{/if}}" data-action="mudarUso" data-tooltip="Equipado, carregando ou guardado" aria-pressed="{{#if equipado}}true{{else}}false{{/if}}">{{usoNome}}</button>
+            <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate" aria-pressed="{{#if favorito}}true{{else}}false{{/if}}" aria-label="Item favorito: {{nome}}"><i class="fa-solid fa-star"></i></button>
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{else}}<li class="vazio">{{vazio}}</li>{{/each}}
+        </ol>
+      </section>
+      {{/each}}
+
+      {{#if upgrades.length}}
+      <section class="painel corte{{#if recolhida.upgrade}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="upgrade" titulo="UPGRADES E ACESSÓRIOS"}}<span>ONDE ESTÁ INSTALADO{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="upgrade" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar upgrade">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each upgrades}}
+          <li data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{detalhe}}</span>
+            {{#if prepararArma}}<button type="button" class="acao" data-action="prepararArmaVeicular" data-tooltip="Preparar a arma montada neste veículo">Preparar arma</button>{{/if}}
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{/each}}
+        </ol>
+      </section>
+      {{/if}}
+
+      {{#if veiculos.length}}
+      <section class="painel corte{{#if recolhida.veiculo}} recolhida{{/if}}">
+        <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="veiculo" titulo="VEÍCULOS"}}<span>UM EM USO POR VEZ{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="veiculo" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar veículo">+</button>{{/if}}</span></div>
+        <ol class="itens">
+          {{#each veiculos}}
+          <li class="draggable" data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
+            <span class="detalhe">{{detalhe}}</span>
+            {{#if ../podePorVeiculoNaCena}}<button type="button" class="acao" data-action="porVeiculoNaCena" data-tooltip="Pôr o token do veículo na cena aberta; o mestre cria para o dono">Pôr na cena</button>{{/if}}
+            <button type="button" class="alternar {{#if ativo}}ligado{{/if}}" data-action="usarVeiculo" data-tooltip="Escolher o veículo em uso; o anterior fica na frota" aria-pressed="{{#if ativo}}true{{else}}false{{/if}}">{{#if ativo}}Em uso{{else}}Usar{{/if}}</button>
+            {{#if ativo}}<button type="button" class="alternar {{#if dirigindo}}ligado{{/if}}" data-action="dirigirVeiculo" aria-pressed="{{#if dirigindo}}true{{else}}false{{/if}}">{{#if dirigindo}}Parar de dirigir{{else}}Dirigir{{/if}}</button>{{/if}}
+            {{#if dirigindo}}<button type="button" class="acao" data-action="manobra" data-tooltip="Uma manobra: usa a Ação e a Ação de Movimento; falhar é perder o controle">Manobra</button>{{/if}}
+            <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
+          </li>
+          {{#each armas}}
+          <li data-item-id="{{id}}">
+            <img src="{{img}}" alt="">
+            <a class="nome" data-action="editarItem" role="button" tabindex="0">└ {{nome}}</a>
+            <span class="detalhe">Montada · {{resumo}}</span>
+            {{#unless soAutofogo}}<button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T)">Atacar</button>{{/unless}}
+            {{#if sistema.autofogo}}<button type="button" class="acao" data-action="atacar" data-modo="autofogo" data-tooltip="Autofogo (×{{sistema.autofogo}})">Autofogo</button>{{/if}}
+            {{#if sistema.pente.max}}<button type="button" class="acao" data-action="recarregar" data-tooltip="Recarregar a arma montada">Recarregar</button>{{/if}}
+          </li>
+          {{/each}}
+          {{/each}}
+        </ol>
+      </section>
+      {{/if}}
+    </div>
+  </div>
+</section>

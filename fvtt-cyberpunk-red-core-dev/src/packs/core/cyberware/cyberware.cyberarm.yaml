@@ -1,0 +1,253 @@
+_id: RT4NU0EbvmkgoSpZ
+_key: "!items!RT4NU0EbvmkgoSpZ"
+effects: []
+flags:
+  cyberpunk-red-core:
+    _migration:
+      current: 42
+      previous: "41"
+    cprInstallTree:
+      - _id: V3W535GMuJ0DvrXo
+        _stats:
+          compendiumSource: Compendium.cyberpunk-red-core.core_cyberware.Item.SbWFgD5rlVtQoadd
+          coreVersion: "13.351"
+          createdTime: 1785101113195
+          duplicateSource: null
+          exportSource: null
+          lastModifiedBy: aeZ1eHbUQsohUjKc
+          modifiedTime: 1785101113195
+          systemId: cyberpunk-red-core
+          systemVersion: DUMMY_VALUE
+        effects: []
+        flags:
+          cyberpunk-red-core:
+            _migration:
+              current: 42
+              previous: "41"
+        folder: null
+        img: >-
+          systems/cyberpunk-red-core/icons/compendium/cyberware/exposed_covering.svg
+        name: Exposed Covering (Cyber Arm)
+        ownership:
+          default: 0
+        sort: 0
+        system:
+          ammoVariety: []
+          attackmod: 0
+          brand: ""
+          canIgnoreArmor: true
+          concealable:
+            concealable: false
+            isConcealed: false
+          core: false
+          critFailEffect: jammed
+          damage: 1d6
+          damageCrit:
+            bonus: 5
+            count: 2
+            threshold: 0
+          description:
+            value: |-
+              <p>
+                                Your cybernetics are exposed, maybe you should purchase a covering for your
+                                arm?
+                              </p>
+          dvTable: ""
+          favorite: false
+          fireModes:
+            autoFire: 0
+            suppressiveFire: false
+          humanityLoss:
+            roll: "0"
+            static: 0
+          ignoreArmorPercent: 50
+          ignoreBelowSP: 0
+          ignoredByBrowser: true
+          installLocation: notApplicable
+          installedItems:
+            allowed: false
+            allowedTypes:
+              - itemUpgrade
+            list: []
+            slots: 0
+            usedSlots: 0
+          isElectronic: false
+          isFoundational: false
+          isRanged: false
+          isWeapon: false
+          magazine:
+            ammoData: null
+            max: 0
+            value: 0
+          price:
+            market: 0
+          providesHardening: false
+          revealed: true
+          rof: 1
+          size: 0
+          source: null
+          sources:
+            - book: Cyberpunk RED
+              page: 364
+          type: cyberArm
+          unarmedAutomaticCalculation: true
+          usage: toggled
+          usesType: magazine
+          weaponSkill: Archery
+          weaponType: assaultRifle
+        type: cyberware
+      - _id: S6OQfGxIPudaR8vz
+        _stats:
+          compendiumSource: Compendium.cyberpunk-red-core.core_cyberware.Item.BUKAOysOkAkwaRqo
+          coreVersion: "13.351"
+          createdTime: 1785101113195
+          duplicateSource: null
+          exportSource: null
+          lastModifiedBy: aeZ1eHbUQsohUjKc
+          modifiedTime: 1785101113195
+          systemId: cyberpunk-red-core
+          systemVersion: DUMMY_VALUE
+        effects: []
+        flags:
+          cyberpunk-red-core:
+            _migration:
+              current: 42
+              previous: "41"
+        folder: null
+        img: >-
+          systems/cyberpunk-red-core/icons/compendium/cyberware/standard_hand.svg
+        name: Standard Hand
+        ownership:
+          default: 0
+        sort: 125000
+        system:
+          ammoVariety: []
+          attackmod: 0
+          brand: ""
+          canIgnoreArmor: true
+          concealable:
+            concealable: false
+            isConcealed: false
+          core: false
+          critFailEffect: jammed
+          damage: 1d6
+          damageCrit:
+            bonus: 5
+            count: 2
+            threshold: 0
+          description:
+            value: <p>Looks like a normal hand for the most part.</p>
+          dvTable: ""
+          favorite: false
+          fireModes:
+            autoFire: 0
+            suppressiveFire: false
+          humanityLoss:
+            roll: "0"
+            static: 0
+          ignoreArmorPercent: 50
+          ignoreBelowSP: 0
+          ignoredByBrowser: false
+          installLocation: clinic
+          installedItems:
+            allowed: false
+            allowedTypes:
+              - cyberware
+            list: []
+            slots: 0
+            usedSlots: 0
+          isElectronic: false
+          isFoundational: false
+          isRanged: false
+          isWeapon: false
+          magazine:
+            ammoData: null
+            max: 0
+            value: 0
+          price:
+            market: 100
+          providesHardening: false
+          revealed: true
+          rof: 1
+          size: 0
+          source: null
+          sources:
+            - book: Cyberpunk RED
+              page: 364
+          type: cyberArm
+          unarmedAutomaticCalculation: true
+          usage: toggled
+          usesType: magazine
+          weaponSkill: Archery
+          weaponType: assaultRifle
+        type: cyberware
+folder: null
+img: systems/cyberpunk-red-core/icons/compendium/cyberware/cyberarm.svg
+name: Cyberarm
+ownership:
+  default: 0
+sort: 0
+system:
+  ammoVariety: []
+  attackmod: 0
+  brand: ""
+  canIgnoreArmor: true
+  concealable:
+    concealable: false
+    isConcealed: false
+  core: false
+  critFailEffect: jammed
+  damage: 1d6
+  damageCrit:
+    bonus: 5
+    count: 2
+    threshold: 0
+  description:
+    value: |
+      <p>A cybernetical replacement arm. Comes with a free hand.</p>
+  dvTable: ""
+  favorite: false
+  fireModes:
+    autoFire: 0
+    suppressiveFire: false
+  humanityLoss:
+    roll: 2d6
+    static: 7
+  ignoreArmorPercent: 50
+  ignoreBelowSP: 0
+  ignoredByBrowser: false
+  installLocation: hospital
+  installedItems:
+    allowed: true
+    allowedTypes:
+      - cyberware
+    list:
+      - V3W535GMuJ0DvrXo
+      - S6OQfGxIPudaR8vz
+    slots: 4
+    usedSlots: 0
+  isElectronic: true
+  isFoundational: true
+  isRanged: false
+  isWeapon: false
+  magazine:
+    ammoData: null
+    max: 0
+    value: 0
+  price:
+    market: 500
+  providesHardening: false
+  revealed: true
+  rof: 1
+  size: 0
+  source: null
+  sources:
+    - book: Cyberpunk RED
+      page: 364
+  type: cyberArm
+  unarmedAutomaticCalculation: true
+  usage: toggled
+  usesType: magazine
+  weaponSkill: Archery
+  weaponType: assaultRifle
+type: cyberware

@@ -1,0 +1,27 @@
+{
+  "TYPES": {
+    "Actor": {
+      "personagem": "Personagem",
+      "capanga": "Capanga",
+      "veiculo": "Veículo",
+      "blackice": "Black ICE",
+      "demonio": "Demônio",
+      "conteiner": "Contêiner"
+    },
+    "Item": {
+      "arma": "Arma",
+      "armadura": "Armadura",
+      "municao": "Munição",
+      "cyberware": "Cyberware",
+      "lesao": "Lesão crítica",
+      "equipamento": "Equipamento",
+      "roupa": "Roupa",
+      "droga": "Droga",
+      "cyberdeck": "Cyberdeck",
+      "programa": "Programa",
+      "upgrade": "Upgrade",
+      "veiculo": "Veículo",
+      "arquitetura": "Arquitetura da NET"
+    }
+  }
+}

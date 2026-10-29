@@ -1,0 +1,109 @@
+{{!-- O painel geral: atributos, vitais, perícias, armadura vestida, armas equipadas, cyberware instalado e lesões. Na aba
+Perícias do personagem e na ficha do capanga (lá, sem as armas: a tabela delas vem logo abaixo). --}}
+<div class="geral">
+  <div class="coluna">
+    <section class="painel corte">
+      <div class="titulo">ATRIBUTOS<span>CLIQUE PARA ROLAR</span></div>
+      <ol class="atributos">
+        {{#each atributos}}
+        <li class="atributo" data-atributo="{{chave}}">
+          <input type="number" name="system.atributos.{{chave}}.valor" value="{{base}}" min="0" max="20" aria-label="{{sigla}}">
+          {{#if (ne valor base)}}<span class="efetivo" data-tooltip="Com a armadura, as lesões e os efeitos: {{valor}}">{{valor}}</span>{{/if}}
+          <button type="button" class="rolar" data-action="rolarAtributo" data-atributo="{{chave}}" data-tooltip="Rolar {{sigla}} + 1d10">{{sigla}}</button>
+        </li>
+        {{/each}}
+      </ol>
+    </section>
+
+    <section class="painel corte vitais crescer">
+      <div class="titulo">VITAIS<span>AO VIVO</span></div>
+      <div class="medida"><span>PONTOS DE VIDA</span><b>{{sistema.hp.value}} / {{sistema.hp.max}}</b></div>
+      <div class="barra"><div class="hp" style="width: {{vitais.hp}}%"></div></div>
+      <div class="medida"><span>HUMANIDADE</span><b><input type="number" name="system.humanidade.value" value="{{sistema.humanidade.value}}" aria-label="Humanidade atual"> / {{sistema.humanidade.max}}</b></div>
+      <div class="barra"><div class="hum" style="width: {{vitais.humanidade}}%"></div></div>
+      <div class="medida"><span>EMP ATUAL</span><b>{{sistema.empAtual}}</b></div>
+      <div class="medida"><span>GRAVEMENTE FERIDO</span><b data-tooltip="Abaixo da metade do HP: −2 em tudo">&lt; {{vitais.grave}}</b></div>
+      <div class="medida death-save">
+        <span>DEATH SAVE</span>
+        <b>
+          <a data-action="deathSave" data-tooltip="Rolar o Death Save: 1d10 + penalidades, menos que BODY" role="button" tabindex="0" aria-label="Rolar o Death Save">&lt; {{sistema.deathSave.body}}{{#if deathSavePenalidade}} (+{{deathSavePenalidade}}){{/if}}</a>
+          {{#if sistema.deathSave.penalidade}}<a class="zerar" data-action="zerarDeathSave" data-tooltip="Estabilizou: zerar a penalidade dos Death Saves" role="button" tabindex="0">zerar</a>{{/if}}
+          {{#if editavel}}<a class="subir" data-action="subirDeathSave" data-tooltip="Somar 1 à penalidade dos Death Saves, à mão (como o CORE)" role="button" tabindex="0" aria-label="Somar 1 à penalidade dos Death Saves">+1</a>{{/if}}
+        </b>
+      </div>
+      <div class="estado-caixa estado-{{sistema.ferimento.chave}}">ESTADO: {{sistema.ferimento.rotulo}}{{#if sistema.penalidade}} ({{sistema.penalidade}} em tudo){{/if}}</div>
+      {{#if capanga}}{{#if cura.mostrar}}<div class="botoes-resumo cura">{{#if cura.estabilizado}}<span class="estabilizado" data-tooltip="Recupera HP pelo descanso; o dano novo tira a marca">ESTABILIZADO</span>{{/if}}{{#if cura.estabilizar}}<button type="button" class="acao" data-action="estabilizar" data-tooltip="Uma Ação: TECH + Primeiros Socorros ou Paramédico + 1d10, superando a DV do ferimento (10, 13 ou 15)">ESTABILIZAR</button>{{/if}}{{#if cura.descansar}}<button type="button" class="acao" data-action="descansar" data-tooltip="Dias inteiros de descanso: o estabilizado recupera HP igual ao BODY por dia">DESCANSAR</button>{{/if}}</div>{{/if}}{{/if}}
+      <div class="medida movimento"><span>AÇÃO DE MOVIMENTO</span> <b>{{movimento.metros}} m</b></div>
+      {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="correr" data-tooltip="{{#if corrida.bloqueio}}{{corrida.bloqueio}}{{else}}Depois de usar o Movimento normal, gasta a Ação para mais um Movimento{{/if}}"{{#if corrida.bloqueio}} disabled{{/if}}>CORRER (1 AÇÃO)</button></div>{{/if}}
+      {{#if corrida.bloqueio}}<p class="dica corrida">{{corrida.bloqueio}}</p>{{else}}<p class="dica corrida">+{{corrida.metros}} m · {{corrida.total}} m no turno.</p>{{/if}}
+      {{#if editavel}}{{#unless capanga}}<div class="botoes-resumo"><button type="button" class="acao" data-action="rolarReputacao" data-tooltip="Ao conhecer alguém: 1d10 abaixo do nível de Reputação indica que já ouviu falar de você. Má fama conta sem o sinal: −5 conta como 5.">RECONHECIMENTO</button></div>{{/unless}}{{/if}}
+      {{#if capanga}}{{#if movimento.caido}}<div class="botoes-resumo"><button type="button" class="acao" data-action="levantar" data-tooltip="Caído: não usa Movimento até levantar-se (1 Ação)">LEVANTAR-SE (1 AÇÃO)</button></div>{{/if}}{{/if}}
+    </section>
+  </div>
+
+  <section class="painel corte pericias-painel">
+    <div class="titulo">
+      PERÍCIAS
+      <span>{{#if todasAsPericias}}TODAS AS {{periciasTotal}}{{else}}{{periciasComNivel}} COM NÍVEL{{/if}}
+        <button type="button" class="alternar-pericias" data-action="alternarPericias" data-tooltip="{{periciasComNivel}} com nível e {{periciasSemNivel}} sem">{{#if todasAsPericias}}SÓ COM NÍVEL{{else}}VER TODAS{{/if}}</button>
+      </span>
+    </div>
+    <div class="linha-pericia cabeca"><span>NOME</span><span>ATRIB</span><span>NÍV</span><span>{{#if capanga}}{{rotuloColunaPericias}}{{else}}BASE{{/if}}</span></div>
+    <ol class="lista-pericias">
+      {{#each linhasDePericia}}
+      {{#if grupo}}
+      <li class="grupo-pericias">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista=lista titulo=grupo}}</li>
+      {{else}}
+      <li class="pericia linha-pericia {{#if nivel}}tem{{/if}} {{#if alta}}alta{{/if}}{{#if recolhida}} recolhida{{/if}}" data-pericia="{{id}}">
+        <span class="celula-nome">
+          <a class="estrela {{#if favorita}}ligada{{/if}}" data-action="favoritarPericia" data-pericia="{{id}}" data-tooltip="Favorita: fica no painel Favoritos da aba Combate e na barra do Painel Tático" role="button" tabindex="0" aria-label="Perícia favorita: {{nome}}" aria-pressed="{{#if favorita}}true{{else}}false{{/if}}"><i class="fa-solid fa-star"></i></a>
+          <a class="nome draggable" data-action="rolarPericia" data-pericia="{{id}}" data-tooltip="{{dica}}. Arraste para a barra de macros" role="button" tabindex="0" aria-label="Rolar {{nome}}">{{nome}}{{#if dificil}} <small>×2</small>{{/if}}</a>
+          {{#if tirar}}<a class="tirar" data-action="tirarPericia" data-pericia="{{id}}" data-tooltip="Tirar esta perícia da ficha" role="button" tabindex="0" aria-label="Tirar {{nome}} da ficha">✕</a>{{/if}}
+          {{#if (eq @root.ator.type "personagem")}}{{#if @root.editavel}}{{#if (lt nivel 10)}}<a class="subir-ip" data-action="avancarComIp" data-pericia="{{id}}" data-tooltip="Subir um nível gastando IP" role="button" tabindex="0" aria-label="Gastar IP para subir {{nome}}">+IP</a>{{/if}}{{/if}}{{/if}}
+        </span>
+        <span class="sigla">{{sigla}}</span>
+        <input type="number" name="system.pericias.{{id}}.nivel" value="{{nivel}}" min="0" max="10" aria-label="Nível de {{nome}}">
+        <span class="total" data-tooltip="{{#if @root.capanga}}{{dicaExibida}}{{else}}{{dicaTotal}}{{/if}}">{{#if @root.capanga}}{{valorExibido}}{{else}}{{total}}{{/if}}</span>
+      </li>
+      {{/if}}
+      {{else}}
+      <li class="vazio caixa-vazia">NENHUMA PERÍCIA COM NÍVEL: VER TODAS</li>
+      {{/each}}
+    </ol>
+    {{#if todasAsPericias}}<button type="button" class="acao novo" data-action="novaPericia" data-tooltip="De família (Linguagem, Especialista Local, Ciências, Artes Marciais ou Tocar Instrumento) ou própria (o nome e o STAT, como no CORE)">+ PERÍCIA</button>{{/if}}
+  </section>
+
+  <div class="coluna">
+    <section class="painel corte vermelho">
+      <div class="titulo">ARMADURA<span>SP</span></div>
+      <div class="sp-caixas">
+        <div><b>{{sistema.armadura.cabeca.sp}}</b>CABEÇA</div>
+        <div><b>{{sistema.armadura.corpo.sp}}</b>CORPO</div>
+      </div>
+      {{#each armadurasVestidas}}
+      <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}<small>{{detalhe}}</small></a></div>
+      {{else}}<div class="caixa-vazia">NENHUMA ARMADURA VESTIDA</div>{{/each}}
+    </section>
+
+    {{#unless capanga}}
+    <section class="painel corte">
+      <div class="titulo">ARMAS<span>{{armasEquipadas.length}} EQUIPADA{{#unless (eq armasEquipadas.length 1)}}S{{/unless}}</span></div>
+      {{#each armasEquipadas}}
+      <div class="item-linha" data-item-id="{{id}}">
+        <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}<small>{{resumo}}</small></a>
+        <button type="button" class="acao" data-action="atacar" data-tooltip="Atacar os alvos marcados (T): +{{ataque}}{{#if dicaAtaque}}. {{dicaAtaque}}{{/if}}">ATACAR</button>
+      </div>
+      {{else}}<div class="caixa-vazia">NENHUMA ARMA EQUIPADA</div>{{/each}}
+    </section>
+    {{/unless}}
+
+    <section class="painel corte">
+      <div class="titulo">CYBERWARE<span>{{cyberInstalado.length}} INSTALADO{{#unless (eq cyberInstalado.length 1)}}S{{/unless}}</span></div>
+      {{#each cyberInstalado}}
+      <div class="item-linha" data-item-id="{{id}}"><a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}<small>{{detalhe}}</small></a></div>
+      {{else}}<div class="caixa-vazia">NENHUM CYBERWARE INSTALADO</div>{{/each}}
+    </section>
+
+    {{> "systems/cpr-fieldbook/templates/personagem/bloco-lesoes.hbs" crescer=true}}
+  </div>
+</div>

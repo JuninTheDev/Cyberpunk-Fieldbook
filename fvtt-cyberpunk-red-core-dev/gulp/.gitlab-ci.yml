@@ -1,0 +1,21 @@
+image: alpine:latest
+
+default-branch-signal:
+  before_script:
+    - apk add --no-cache bash curl git
+  script:
+    - ./scripts/create-signal-tag.sh
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+remove-tag:
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - |
+      TOKEN="${TAG_API_TOKEN:-${CHOOM_BOT_API:?CHOOM_BOT_API must be set}}"
+      curl --fail --request DELETE \
+        --header "PRIVATE-TOKEN: ${TOKEN}" \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/repository/tags/${CI_COMMIT_TAG}"
+  rules:
+    - if: $CI_COMMIT_TAG == "signal"
