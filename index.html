@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0d0f">
+  <meta name="theme-color" content="#191a1e">
   <title>Night City Fieldbook</title>
   <link rel="stylesheet" href="cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css">
   <link rel="stylesheet" href="wiki.css">
@@ -12,9 +12,10 @@
     // O tema e a casca escolhidos no menu da conta (wikiApp.prefs "tema" e "casca"), antes de desenhar: sem piscar.
     try {
       const dono = localStorage.getItem('night-city-dono') || 'aparelho';
-      if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') === '2077') document.documentElement.dataset.tema = '2077';
+      // O 2077 é o padrão das duas wikis: só a escolha "fieldbook" (gravada) fica no amarelo.
+      if ((JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') || '2077') === '2077') document.documentElement.dataset.tema = '2077';
       if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-casca`) || 'null') === 'classica') document.documentElement.dataset.casca = 'classica';
-    } catch { /* sem armazenamento: fica o Fieldbook */ }
+    } catch { /* sem armazenamento: fica o padrão do CSS */ }
   </script>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icones/icone-192.png">
@@ -263,13 +264,14 @@
         // A Caixa do NetWire (netwire.js): as mensagens dentro do jogo, para revisar, agendar e responder.
         netwire: 'mestre',
         // As abas do topo (a casca NetWire), pelos nomes dos grupos: valem para o Protocolo Morana e para as campanhas
-        // criadas na página Campanhas (campanhas-painel.js). Mensagens, por enquanto, é a Visão dos jogadores.
+        // criadas na página Campanhas (campanhas-painel.js). Mensagens, por enquanto, é a Visão dos jogadores. No celular, a
+        // barra de baixo leva as abas com "celular" (Sessões, Personagens e Sistema ficam no Menu).
         topTabs: [
-          { id: 'inicio', label: 'Início', inicio: true },
-          { id: 'campanha', label: 'Campanha', grupos: ['Campanha ativa', 'Campanha', 'Documentos', 'Outros documentos', 'Night City (todas as campanhas)'] },
+          { id: 'inicio', label: 'Início', inicio: true, celular: 1 },
+          { id: 'campanha', label: 'Campanha', celular: 2, grupos: ['Campanha ativa', 'Campanha', 'Documentos', 'Outros documentos', 'Night City (todas as campanhas)'] },
           { id: 'sessoes', label: 'Sessões', grupos: ['Sessões'] },
-          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['caixa', 'playerView'] },
-          { id: 'mesa', label: 'Mesa', grupos: ['Mesa'] },
+          { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', celular: 3, paginas: ['caixa', 'playerView'] },
+          { id: 'mesa', label: 'Mesa', celular: 4, grupos: ['Mesa'] },
           { id: 'personagens', label: 'Personagens', curto: 'PCs', grupos: ['Personagens dos jogadores'] },
           { id: 'sistema', label: 'Sistema', area: 'system', pagina: 'screen' }
         ],

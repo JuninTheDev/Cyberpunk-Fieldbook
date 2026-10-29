@@ -39,8 +39,8 @@ async function buscarEAbrir(edge, consulta, espera = 1100) {
 
 const semRolagemLateral = edge => edge.evaluate('document.documentElement.scrollWidth <= innerWidth');
 
-// Clica num chip da barra "Nesta página" e espera a rolagem terminar.
-// Devolve o chip ativo e a distância da seção até o topo da janela.
+// Clica num item do "Nesta página" (a lista da barra de cima, ou a da coluna da direita nas telas largas) e espera a
+// rolagem terminar. Devolve o item ativo, a distância da seção até o topo da janela e o fim das barras fixas de cima.
 async function clicarChip(edge, texto) {
   return edge.evaluate(`(async () => {
     const chip = [...document.querySelectorAll('.page-toc [data-toc-index]')].find(b => b.textContent === ${js(texto)});
@@ -54,7 +54,7 @@ async function clicarChip(edge, texto) {
       anterior = Math.round(scrollY);
     }
     await new Promise(r => setTimeout(r, 300));
-    return { ativo: document.querySelector('.page-toc .active')?.textContent || '', topo: Math.round(secao().getBoundingClientRect().top), barra: Math.round(document.querySelector('.page-toc').getBoundingClientRect().bottom) };
+    return { ativo: document.querySelector('.page-toc .active')?.textContent || '', topo: Math.round(secao().getBoundingClientRect().top), barra: Math.round(Math.max(document.querySelector('.page-toc').getBoundingClientRect().bottom, document.querySelector('.topbar').getBoundingClientRect().bottom)) };
   })()`);
 }
 

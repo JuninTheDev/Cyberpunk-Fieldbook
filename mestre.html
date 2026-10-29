@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0d0f">
+  <meta name="theme-color" content="#191a1e">
   <title>Entrar como mestre · Night City Fieldbook</title>
   <link rel="stylesheet" href="cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css">
   <link rel="stylesheet" href="wiki.css">
@@ -12,8 +12,9 @@
     // O tema escolhido no menu da conta (wikiApp.prefs "tema"), antes de desenhar: sem piscar o outro tema.
     try {
       const dono = localStorage.getItem('night-city-dono') || 'aparelho';
-      if (JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') === '2077') document.documentElement.dataset.tema = '2077';
-    } catch { /* sem armazenamento: fica o Fieldbook */ }
+      // O 2077 é o padrão das duas wikis: só a escolha "fieldbook" (gravada) fica no amarelo.
+      if ((JSON.parse(localStorage.getItem(`night-city-pref-${dono}-tema`) || 'null') || '2077') === '2077') document.documentElement.dataset.tema = '2077';
+    } catch { /* sem armazenamento: fica o padrão do CSS */ }
   </script>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icones/icone-192.png">
