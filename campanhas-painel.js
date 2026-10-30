@@ -257,8 +257,11 @@
   const readPageData = async (campaign, key) => ((await api(tableUrl(campaign))).data.paginas || {})[key] || {};
   const savePageData = (campaign, key, data) => api(tableUrl(campaign), { method: 'PUT', body: { paginas: { [key]: data } } });
 
-  // Os H-xx pedidos, na ordem pedida, como seções (##) da página (a barra "Nesta página" lista cada um).
-  function pickHandouts(source, codes) {
+  // Os H-xx pedidos, na ordem pedida, como seções (##) da página (a barra "Nesta página" lista cada um). intro: o texto
+  // de cima da aba (os handouts que estão no roteiro, no servidor, dizem de onde vêm).
+  const HANDOUTS_INTRO = '# Handouts\n\nOs documentos desta sessão. Todos estão em [Handouts e textos](handouts-da-campanha.md), com os textos para ler em voz alta e a tabela de por onde cada informação chega. Embaixo de cada citação, os botões entregam aos jogadores.';
+  const SCRIPT_HANDOUTS_INTRO = '# Handouts\n\nOs documentos desta sessão. Eles estão no roteiro (aba Roteiro), que fica só no servidor, porque são trama futura e o repositório é público: para mudar um texto, mude o roteiro e mande o arquivo de novo. Embaixo de cada citação, os botões entregam aos jogadores.';
+  function pickHandouts(source, codes, intro = HANDOUTS_INTRO) {
     const sections = {};
     let current = null;
     for (const line of source.replace(/\r/g, '').split('\n')) {
@@ -267,7 +270,6 @@
       if (/^#{1,3}\s/.test(line)) { current = null; continue; }
       if (current) sections[current].push(line);
     }
-    const intro = '# Handouts\n\nOs documentos desta sessão. Todos estão em [Handouts e textos](handouts-da-campanha.md), com os textos para ler em voz alta e a tabela de por onde cada informação chega. Embaixo de cada citação, os botões entregam aos jogadores.';
     return [intro, ...codes.filter(code => sections[code]).map(code => sections[code].join('\n'))].join('\n\n');
   }
 
@@ -417,7 +419,10 @@
         scriptDocs[def.id] = file;
         docs[def.id] = { file, eyebrow: def.eyebrow || 'Mesa do mestre / só você vê', title: def.title, lede: def.lede || 'O roteiro da sessão. Fica só no servidor, fora do repositório público, e só o mestre abre.', semBusca: true, erro: `<p>O roteiro ainda não está no servidor. Mande o arquivo .md por aqui: ele fica só na pasta de dados (<code>campanhas/${escapeHtml(campaign)}/roteiros/${escapeHtml(def.roteiro)}.md</code>), fora do git.</p>${scriptUpload(file, 'Enviar o roteiro (.md)')}` };
       }
-      if (def.kind === 'handouts') docs[def.id] = { file: def.file, eyebrow: def.eyebrow || 'Para entregar / handouts da sessão', title: def.title, lede: def.lede || 'Os documentos que o grupo pode encontrar nesta sessão, prontos para entregar.', transform: text => pickHandouts(text, def.handouts), semBusca: true, vista: true, entregar: campaign };
+      // Os handouts de uma sessão que ainda não foi jogada ficam no roteiro dela (def.roteiro), no servidor; os das outras,
+      // no arquivo público de Handouts e textos.
+      const fromScript = def.kind === 'handouts' && def.roteiro ? `api/campanhas/${encodeURIComponent(campaign)}/roteiros/${def.roteiro}` : '';
+      if (def.kind === 'handouts') docs[def.id] = { file: fromScript || def.file, eyebrow: def.eyebrow || 'Para entregar / handouts da sessão', title: def.title, lede: def.lede || 'Os documentos que o grupo pode encontrar nesta sessão, prontos para entregar.', transform: text => pickHandouts(text, def.handouts, fromScript ? SCRIPT_HANDOUTS_INTRO : HANDOUTS_INTRO), semBusca: true, vista: true, entregar: campaign, ...(fromScript ? { erro: '<p>O roteiro desta sessão ainda não está no servidor, e os handouts dela estão nele. Mande o arquivo pela aba Roteiro.</p>' } : {}) };
       if (def.kind === 'npcs') { pages[def.id] = npcPage(def); pageSetup[def.id] = content => setupNpcPage(content, campaign, def); }
       if (def.kind === 'notas') { pages[def.id] = sessionNotesPage(def); pageSetup[def.id] = content => setupSessionNotes(content, campaign, def); }
     }
