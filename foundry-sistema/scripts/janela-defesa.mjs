@@ -30,6 +30,7 @@ function textoDaEscolha(escolha, d) {
   if (escolha === 'resistir') {
     const briga = d.briga ? `${esc(d.briga.texto)} (média ${numero(d.briga.media)})` : 'DEX + Briga + 1d10';
     if (d.modo === 'escapar') return `${briga} contra a fuga. Empate é seu. Perdeu: o agarrão acaba.`;
+    if (d.modo === 'tomar') return `${briga} contra quem quer tomar o que está na sua mão. Empate é seu. Perdeu: a arma fica com ele.`;
     return `${briga} contra o agarrão. Empate é seu. Perdeu: os dois ficam agarrados (−2 em todas as ações), e você não usa a Ação de Movimento.`;
   }
   if (escolha === 'vontade') {
@@ -77,6 +78,7 @@ export class JanelaDeDefesa extends HandlebarsApplicationMixin(ApplicationV2) {
   get title() {
     if (this.dados.modo === 'agarrar') return this.dados.mestre ? `Agarrão em ${this.dados.alvo.nome}` : 'Estão agarrando você!';
     if (this.dados.modo === 'escapar') return this.dados.mestre ? `Fuga do agarrão de ${this.dados.alvo.nome}` : 'Estão escapando do seu agarrão!';
+    if (this.dados.modo === 'tomar') return this.dados.mestre ? `Tomar o objeto de ${this.dados.alvo.nome}` : 'Estão tomando o que está na sua mão!';
     if (this.dados.modo === 'jackin') return this.dados.mestre ? `Jack In em ${this.dados.alvo.nome}` : 'Estão entrando no seu Neuroport!';
     if (this.dados.modo === 'expulsar') return this.dados.mestre ? `Expulsão de ${this.dados.alvo.nome}` : 'Estão expulsando você de um Neuroport!';
     return this.dados.mestre ? `Ataque em ${this.dados.alvo.nome}` : 'Você está sendo atacado!';

@@ -1,10 +1,12 @@
 // O que os botões do Painel Tático (o C25) fazem: o mesmo caminho da ficha do personagem (FichaPersonagem). As
 // rolagens são as do ator e as dos itens, com a janela de rolagem (Ctrl, ou o "Rolar direto" deste navegador, inverte,
 // como na ficha). O ataque vai pelo combate do sistema, com os alvos marcados (o mestre resolve e pede a defesa), e os
-// modos de 2077 são os da ficha (combate.acoesDe2077).
+// modos de 2077 são os da ficha (combate.acoesDe2077). O desarmado e o agarrão (o C51) também: desarmado.mjs e agarrao.mjs.
 import { SISTEMA, STATUS_AGARRAO, USOS } from '../config.mjs';
 import { config } from '../configuracoes.mjs';
 import { STATUS_SUPRIMIDO } from '../combate.mjs';
+import * as D from '../desarmado.mjs';
+import * as G from '../agarrao.mjs';
 
 const limitar = (valor, min, max) => Math.min(Math.max(valor, min), max);
 export const comJanela = evento => Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto'));
@@ -81,6 +83,20 @@ export function acao2077(actor, id, acao) {
   if (acao === 'alternarCoronha') return arma.setFlag(SISTEMA, 'coronhaRecolhida', !arma.coronhaRecolhida);
   return null;
 }
+
+// ---------------- Desarmado e agarrão (o C51) ----------------
+// qual: 'briga' ou 'artes' (desarmado.DESARMADOS). Sem a arma na ficha, ela entra na primeira vez.
+export const atacarDesarmado = (evento, actor, qual) => D.atacarDesarmado(actor, qual, { perguntar: comJanela(evento) });
+export const rolarDanoDesarmado = (evento, actor, qual) => D.rolarDanoDesarmado(actor, qual, { perguntar: comJanela(evento) });
+// Os botões do agarrão, os da ficha (bloco-agarrao.hbs): agarrar e tomar (o alvo marcado), escapar (as três rolam pela
+// janela), estrangular, derrubar, o escudo humano e soltar.
+const NO_AGARRAO = {
+  agarrar: (actor, perguntar) => G.agarrar(actor, { perguntar }), tomar: (actor, perguntar) => G.tomar(actor, { perguntar }),
+  escapar: (actor, perguntar) => G.escapar(actor, { perguntar }), estrangular: actor => G.estrangular(actor), derrubar: actor => G.derrubar(actor),
+  escudoHumano: actor => G.usarEscudoHumano(actor), soltar: actor => G.soltar(actor)
+};
+export const PEDEM_ALVO = ['agarrar', 'tomar'];
+export const noAgarrao = (evento, actor, golpe) => NO_AGARRAO[golpe]?.(actor, comJanela(evento)) ?? null;
 
 // ---------------- Combate ----------------
 export const combatenteDe = (actor, token) => game.combat?.combatants.find(c => (token ? c.tokenId === token.id : c.actorId === actor.id)) || null;

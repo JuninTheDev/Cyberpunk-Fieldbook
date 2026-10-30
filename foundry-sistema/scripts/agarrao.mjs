@@ -9,10 +9,13 @@
 // pela janela de reação do dono dele, e o empate é de quem segura.
 // As marcas são os efeitos de status "Agarrando" e "Agarrado", cada um com o outro ator: apagada uma (o "Soltar", a fuga,
 // o "Derrubar" ou o mestre pelo HUD do token), o mestre ativo apaga a outra.
+// Quem vence também pode, em vez de agarrar, tomar o objeto na mão do outro (a wiki: "Quem vence agarra ou toma um
+// objeto"; o C51): o mesmo teste, e o objeto fica com quem tomou. Agarrar e tomar pedem uma mão livre (os punhos
+// equipados não contam). Com duas Gorilla Arms do Kit, uma em cada cyberbraço, o Estrangular e o Derrubar valem BODY 11.
 import { SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { combateDe, defesaContra, destinatarios, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
-import { APERTO_DE_FERRO, danoDoAgarrao, venceuOAgarrao, vezesEstrangulando } from './regras.mjs';
+import { APERTO_DE_FERRO, bodyDoAgarrao, danoDoAgarrao, objetoNaMao, venceuOAgarrao, vezesEstrangulando } from './regras.mjs';
 import { escudoHumanoDe, parParaEscudoHumano } from './escudo-humano.mjs';
 
 const CANAL = `system.${SISTEMA}`;
@@ -21,14 +24,39 @@ const avisar = texto => { ui.notifications.warn(texto); return null; };
 const efeitoDe = (ator, papel) => ator?.effects.find(e => e.statuses.has(STATUS_AGARRAO[papel])) ?? null;
 const SEM_MESTRE = 'Sem mestre na mesa: o agarrão precisa do mestre para a resistência e para o dano.';
 
-// O agarrão de um ator: { papel: 'agarrando' ou 'agarrado', outro: o nome de quem está com ele } ou null. A marca posta
-// à mão (pelo HUD do token) não diz o outro.
+// O agarrão de um ator: { papel: 'agarrando' ou 'agarrado', outro: o nome de quem está com ele, escudoHumano: o outro já
+// é o escudo } ou null. A marca posta à mão (pelo HUD do token) não diz o outro.
 export function agarraoDe(ator) {
   for (const papel of ['agarrando', 'agarrado']) {
     const efeito = efeitoDe(ator, papel);
-    if (efeito) return { papel, outro: efeito.getFlag(SISTEMA, 'agarrao')?.nome ?? '' };
+    if (efeito) return { papel, outro: efeito.getFlag(SISTEMA, 'agarrao')?.nome ?? '', escudoHumano: efeito.getFlag(SISTEMA, 'escudoHumano') === true };
   }
   return null;
+}
+
+// O objeto na mão de um ator (regras.objetoNaMao): o item, ou null.
+export function objetoDe(ator) {
+  const itens = [...(ator?.items ?? [])].map(item => ({ id: item.id, type: item.type, sort: item.sort, equipada: item.system.equipada, instaladoEm: item.system.instaladoEm, tipo: item.system.tipo, veicular: Boolean(item.getFlag(SISTEMA, 'armaVeicular')) }));
+  const escolhido = objetoNaMao(itens);
+  return escolhido ? ator.items.get(escolhido.id) : null;
+}
+
+// Tomar o objeto na mão de "de" (o agarrão vencido, o Desarme combinado): fica com "para" (os acessórios instalados e a
+// munição de reserva ficam com o dono) ou, com ficar = false, cai (fica guardado na ficha do dono). Devolve { nome, ficou },
+// ou null sem nada na mão.
+export async function tomarObjeto(de, para, { ficar = true } = {}) {
+  const item = objetoDe(de);
+  if (!item) return null;
+  if (!ficar) {
+    await item.update({ 'system.equipada': false });
+    return { nome: item.name, ficou: false };
+  }
+  const dados = item.toObject();
+  delete dados._id;
+  Object.assign(dados.system, { equipada: false, carregada: '' });
+  await para.createEmbeddedDocuments('Item', [dados]);
+  await item.delete();
+  return { nome: item.name, ficou: true };
 }
 
 // ---------------- No cliente de quem age ----------------
@@ -44,21 +72,25 @@ const rolarBriga = (ator, { rotulo, contra, acao, perguntar, extras = [] }) => a
   perguntar, rotulo, extras, sabor: `contra ${contra}`, modo: config('escondeAtaque') ? 'gm' : 'public', dados: { [acao]: true }, categoria: 'ataque'
 });
 
-// "Agarrar": o alvo marcado (T), um só.
-export async function agarrar(ator, { alvo = null, perguntar = false } = {}) {
+// "Agarrar": o alvo marcado (T), um só. objetivo: 'agarrar' (o agarrão) ou 'tomar' (o objeto na mão do alvo, sem agarrar;
+// vale também dentro de um agarrão).
+export async function agarrar(ator, { alvo = null, perguntar = false, objetivo = 'agarrar' } = {}) {
+  const tomando = objetivo === 'tomar';
   const marcados = alvo ? [alvo] : [...game.user.targets];
   const token = marcados.length === 1 ? (marcados[0].document ?? marcados[0]) : null;
-  if (!['personagem', 'capanga'].includes(token?.actor?.type)) return avisar('Marque um alvo (tecla T sobre o token), um só, para agarrar.');
-  if (token.actor === ator) return avisar('Ninguém agarra a si mesmo.');
-  if (agarraoDe(ator)) return avisar(`${ator.name} já está num agarrão.`);
-  if (agarraoDe(token.actor)) return avisar(`${token.name} já está num agarrão.`);
+  if (!['personagem', 'capanga'].includes(token?.actor?.type)) return avisar(`Marque um alvo (tecla T sobre o token), um só, para ${tomando ? 'tomar o objeto dele' : 'agarrar'}.`);
+  if (token.actor === ator) return avisar(tomando ? 'Ninguém toma um objeto de si mesmo.' : 'Ninguém agarra a si mesmo.');
+  if (!tomando && agarraoDe(ator)) return avisar(`${ator.name} já está num agarrão.`);
+  if (!tomando && agarraoDe(token.actor)) return avisar(`${token.name} já está num agarrão.`);
+  if (ator.maosParaAgarrar < 1) return avisar(`${ator.name} precisa de uma mão livre para ${tomando ? 'tomar um objeto' : 'agarrar'}.`);
+  if (tomando && !objetoDe(token.actor)) return avisar(`${token.name} não tem nada na mão para tomar.`);
   if (!game.user.isGM && !game.users.activeGM) return avisar(SEM_MESTRE);
   const meus = [...token.parent.tokens].filter(t => t.actor?.uuid === ator.uuid);
   const proprio = ator.token?.parent === token.parent ? ator.token : meus.length === 1 ? meus[0] : null;
-  if (!proprio) return avisar(`Ponha um único token de ${ator.name} na cena do alvo para identificar quem vai agarrar.`);
-  const teste = await rolarBriga(ator, { rotulo: 'Agarrar', contra: token.name, acao: 'agarrar', perguntar });
+  if (!proprio) return avisar(`Ponha um único token de ${ator.name} na cena do alvo para identificar quem vai ${tomando ? 'tomar o objeto' : 'agarrar'}.`);
+  const teste = await rolarBriga(ator, { rotulo: tomando ? 'Tomar objeto' : 'Agarrar', contra: token.name, acao: tomando ? 'tomar' : 'agarrar', perguntar });
   if (!teste) return null;
-  return pedirAoMestre('agarrar', { ator: ator.uuid, token: proprio.uuid, alvo: token.uuid, total: teste.total, mensagem: teste.mensagem?.id ?? null });
+  return pedirAoMestre(tomando ? 'tomar' : 'agarrar', { ator: ator.uuid, token: proprio.uuid, alvo: token.uuid, total: teste.total, mensagem: teste.mensagem?.id ?? null });
 }
 
 // "Escapar": quem é agarrado rola; quem agarra resiste (o token dele precisa estar na cena, para a janela de reação).
@@ -84,6 +116,8 @@ const agindoAgarrando = (ator, acao) => {
 };
 export const estrangular = ator => agindoAgarrando(ator, 'estrangular');
 export const derrubar = ator => agindoAgarrando(ator, 'derrubar');
+// "Tomar objeto": o mesmo teste do agarrar, contra o alvo marcado.
+export const tomar = (ator, opcoes = {}) => agarrar(ator, { ...opcoes, objetivo: 'tomar' });
 
 // Tornar quem se agarra um escudo custa uma Ação, sem rolagem. O mestre confere o par e as mãos de novo na fila.
 export async function usarEscudoHumano(ator) {
@@ -157,6 +191,27 @@ async function resolverAgarrao(ator, pedido, usuario) {
   return cartao({ usuario, atores: [alvo.actor], falante: nomeAtq, frase, notas, resumo: { resultado, ataque: pedido.total, defesa, atacante: nomeAtq, alvo: alvo.name, notas } });
 }
 
+// Tomar o objeto: o mesmo teste resistido; vencendo, o que está na mão do alvo na hora fica com quem tomou.
+async function resolverTomada(ator, pedido, usuario) {
+  const [tokenAtq, alvo] = await Promise.all([pedido.token, pedido.alvo].map(uuid => (uuid ? fromUuid(uuid) : null)));
+  if (!alvo?.actor) return null;
+  const nomeAtq = tokenAtq?.name ?? ator.name;
+  const { resposta, notas } = await defesaContra({ atacante: ator, tokenAtq, alvo, total: pedido.total, modo: 'tomar', rotulo: 'Tomar objeto', descricao: 'DEX + Briga + 1d10', opcoes: ['resistir'] });
+  const defesa = resposta?.defesa ?? null;
+  const venceu = defesa !== null && venceuOAgarrao(pedido.total, defesa);
+  const tomado = venceu ? await tomarObjeto(alvo.actor, ator) : null;
+  const resultado = tomado ? 'tomou' : venceu ? 'semObjeto' : 'resistiu';
+  if (tomado) notas.push('Os acessórios instalados e a munição de reserva ficaram com o dono.');
+  await mostrarTotal(pedido);
+  const [a, b] = [nomeAtq, alvo.name].map(nome => `<b>${esc(nome)}</b>`);
+  const frase = {
+    tomou: `${a} tomou ${esc(tomado?.nome)} da mão de ${b} (${pedido.total} contra ${defesa}).`,
+    semObjeto: `${a} venceu ${b} (${pedido.total} contra ${defesa}), mas não havia mais nada na mão dele.`,
+    resistiu: `${b} não deixou ${a} tomar o que tem na mão (${defesa ?? '—'} contra ${pedido.total}${defesa === pedido.total ? ': o empate é do defensor' : ''}).`
+  }[resultado];
+  return cartao({ usuario, atores: [alvo.actor], falante: nomeAtq, frase, notas, resumo: { resultado, ataque: pedido.total, defesa, atacante: nomeAtq, alvo: alvo.name, objeto: tomado?.nome ?? null, notas } });
+}
+
 // A fuga: quem agarra resiste como o alvo do agarrão; vencendo quem foge, as marcas saem.
 async function resolverFuga(ator, pedido, usuario) {
   const dados = efeitoDe(ator, 'agarrado')?.getFlag(SISTEMA, 'agarrao');
@@ -178,13 +233,15 @@ async function resolverFuga(ator, pedido, usuario) {
 }
 
 // Estrangular e Derrubar: o BODY de quem agarra direto no HP do outro (regras.danoDoAgarrao). As rodadas seguidas do
-// estrangular ficam na marca de quem agarra.
+// estrangular ficam na marca de quem agarra. Com duas Gorilla Arms, o BODY é pelo menos 11 (regras.bodyDoAgarrao).
 async function resolverDano(ator, pedido, usuario, acao) {
   const efeito = efeitoDe(ator, 'agarrando');
   const dados = efeito?.getFlag(SISTEMA, 'agarrao');
   const outro = dados?.outro ? await fromUuid(dados.outro) : null;
   if (!outro) return null;
-  const body = ator.system.atributos.body.valor;
+  const proprio = ator.system.atributos.body.valor;
+  const body = bodyDoAgarrao({ body: proprio, gorillas: ator.gorillasNosBracos });
+  const pelasGorillas = body !== proprio;
   const hpAntes = outro.system.hp.value;
   const estrangulando = acao === 'estrangular';
   const combate = combateDe(ator);
@@ -200,13 +257,13 @@ async function resolverDano(ator, pedido, usuario, acao) {
   }
   const nome = tokenNaCena(ator)?.name ?? ator.name;
   const [a, b] = [nome, dados.nome].map(texto => `<b>${esc(texto)}</b>`);
-  const conta = `${body} de dano direto no HP, sem a armadura (${hpAntes} → ${hp})`;
+  const conta = `${body} de dano direto no HP${pelasGorillas ? ' (o BODY 11 das duas Gorilla Arms)' : ''}, sem a armadura (${hpAntes} → ${hp})`;
   const fim = {
     abaixoDeZero: `: o dano o levaria abaixo de 0, então fica com ${hp} e desmaia.`,
     tresRodadas: `: é a ${vezes}ª rodada seguida, e ${b} desmaia.`
   }[motivo] ?? (vezes > 1 ? ` (${vezes}ª rodada seguida; na 3ª, desmaia).` : '.');
   const frase = estrangulando ? `${a} estrangulou ${b}: ${conta}${fim}` : `${a} derrubou ${b}: ${conta}; ${b} caiu, e o agarrão acabou.`;
-  return cartao({ usuario, atores: [outro], falante: nome, frase, resumo: { resultado: estrangulando ? 'estrangulou' : 'derrubou', dano: body, hpAntes, hp, desmaiou, vezes, alvo: dados.nome } });
+  return cartao({ usuario, atores: [outro], falante: nome, frase, resumo: { resultado: estrangulando ? 'estrangulou' : 'derrubou', dano: body, gorillas: pelasGorillas, hpAntes, hp, desmaiou, vezes, alvo: dados.nome } });
 }
 
 async function resolverEscudoHumano(ator, pedido, usuario) {
@@ -233,7 +290,7 @@ async function resolverEscudoHumano(ator, pedido, usuario) {
     resumo: { resultado: 'escudoHumano', acao: 'escudoHumano', acoes: 1, alvo: par.token.name, vitima: par.ator.uuid, token: par.token.uuid } });
 }
 
-const RESOLVER = { agarrar: resolverAgarrao, escapar: resolverFuga, estrangular: resolverDano, derrubar: resolverDano, escudoHumano: resolverEscudoHumano };
+const RESOLVER = { agarrar: resolverAgarrao, tomar: resolverTomada, escapar: resolverFuga, estrangular: resolverDano, derrubar: resolverDano, escudoHumano: resolverEscudoHumano };
 
 // A marca de um lado do agarrão: o efeito de status, com o outro ator (para apagar junto) e o nome dele (para a ficha).
 async function marcar(ator, papel, outro, nome, token, tokenOutro) {

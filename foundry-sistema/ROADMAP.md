@@ -506,6 +506,15 @@ Foundry 14 e termine"; o plano C1–C49 está feito, menos o C28, do usuário):
   em vez de ×2) e as Costelas quebradas (no fim do turno em que andou mais de 4 m a pé, o dano bônus da lesão de novo,
   direto no HP), pela tabela de lesões da wiki (`system-rules.js:33` e `:50`). O README as tinha em "Ainda não faz".
 
+**Pedido do usuário de 2026-10-30** (pela sessão que abriu a sessão Junin: "implemente o combate desarmado e coloque-o no
+HUD de combate, junto com o agarrar"):
+- [x] **C51. O combate desarmado e o agarrão no Painel Tático:** feito no ciclo 196 (sessão Junin, 2026-10-30): a Briga e
+  as Artes Marciais sem precisar do item na ficha (`desarmado.mjs`), a mão livre do agarrão, o "tomar um objeto" (a wiki,
+  p. 177: "Quem vence agarra ou toma um objeto"), o BODY 11 das duas Gorilla Arms no Estrangular e no Derrubar (o Kit) e,
+  no Painel Tático, a linha do desarmado com os botões do agarrão de cada lado.
+  - [ ] a revisão do HUD inteiro (o que falta, o que está quebrado ou confuso): a lista vai ao usuário, e só entra o que
+    ele aprovar.
+
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
 - o MIGRATION_STATUS com o ciclo.

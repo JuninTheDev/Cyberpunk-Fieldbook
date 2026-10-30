@@ -60,3 +60,10 @@ test('Painel Tático: estilo sempre válido, tema, código PT1 de ida e volta (s
   // O estilo sem a posição (o código e o padrão da mesa).
   assert.deepEqual(Object.keys(L.semPosicao(e)).filter(chave => ['posicao', 'x', 'y', 'base'].includes(chave)), []);
 });
+
+test('Painel Tático: o desarmado e o agarrão (o C51) aparecem por padrão, e cada jogador pode esconder', () => {
+  assert.ok(L.PECAS.desarmado);
+  assert.equal(L.normalizarEstilo({}).ocultos.includes('desarmado'), false);
+  assert.equal(L.normalizarEstilo({ ocultos: ['desarmado', 'sorte'] }).ocultos.join(), 'desarmado,sorte');
+  assert.equal(L.lerCodigo(L.codigoDoEstilo(L.normalizarEstilo({ ocultos: ['desarmado'] })), { posicao: 'base' }).ocultos.join(), 'desarmado');
+});

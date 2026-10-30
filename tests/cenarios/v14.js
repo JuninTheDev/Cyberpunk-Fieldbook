@@ -6813,6 +6813,9 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // O C51: agarrar pede uma mão livre (wiki, p. 177). Nos passos do agarrão, a Atiradora (com o rifle de duas mãos) guarda
+    // as armas de mão no começo e as equipa de volta no fim.
+    const guardarAsArmas = `async ator => { const ids = ator.items.filter(i => i.type === 'arma' && i.system.equipada && !i.system.instaladoEm).map(i => i.id); await ator.updateEmbeddedDocuments('Item', ids.map(_id => ({ _id, 'system.equipada': false }))); return () => ator.updateEmbeddedDocuments('Item', ids.filter(id => ator.items.has(id)).map(_id => ({ _id, 'system.equipada': true }))); }`;
     await r.passo('Agarrar (wiki, p. 177; as maquetes): DEX + Briga + 1d10 contra o do Capanga (NPC: o mestre rola, sem janela); empate é dele; pelo botão da aba Combate, vence: os dois agarrados, com −2 em todas as ações, e a ficha mostra; "Soltar" tira as duas marcas', async () => {
       // Atiradora: DEX 7 + Briga 3. 1º (pela API): d10 3 → 13 contra o Capanga, DEX 5 + Briga 2 + d10 6 = 13: empate,
       // resistiu. 2º (pelo botão, com o Capanga marcado): d10 8 → 18 contra 5 + 2 + 2 = 9: agarrou.
@@ -6823,6 +6826,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const botao = acao => a.sheet.element?.querySelector('.tab.combate [data-action="' + acao + '"]');
         const cartoes = () => game.messages.contents.filter(m => m.getFlag('${S}', 'agarrao')).map(m => m.getFlag('${S}', 'agarrao'));
         const antes = { atiradora: a.system.pericia('brawling').nivel, capanga: capanga.system.pericia('brawling').nivel, cartoes: cartoes().length };
+        const devolverArmas = await (${guardarAsArmas})(a);
         await a.update({ 'system.pericias.brawling.nivel': 3 });
         await capanga.update({ 'system.pericias.brawling.nivel': 2 });
         try {
@@ -6852,6 +6856,7 @@ module.exports = async ({ edge, servidores, r }) => {
           for (const ator of [a, capanga]) for (const papel of marcas(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false }).catch(() => {});
           await a.update({ 'system.pericias.brawling.nivel': antes.atiradora });
           await capanga.update({ 'system.pericias.brawling.nivel': antes.capanga });
+          await devolverArmas();
         }
       })()`);
       const { empate, agarrados: g } = info;
@@ -6876,6 +6881,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const estado = () => ({ hp: capanga.system.hp.value, desmaiado: capanga.statuses.has('unconscious'), caido: capanga.statuses.has('prone'), marcas: [...marcas(a), ...marcas(capanga)].join() });
         const tirar = async status => { if (capanga.statuses.has(status)) await capanga.toggleStatusEffect(status, { active: false }); };
         const agarrar = async () => { window.__fila = [[8, 10], [2, 10]]; return (await api.agarrar(a, { alvo: __token('Capanga') }))?.resultado; };
+        const devolverArmas = await (${guardarAsArmas})(a);
         const antes = { body: a.system.atributos.body.valor, briga: [a.system.pericia('brawling').nivel, capanga.system.pericia('brawling').nivel], hp: capanga.system.hp.value };
         await a.update({ 'system.pericias.brawling.nivel': 3 });
         await capanga.update({ 'system.pericias.brawling.nivel': 2, 'system.hp.value': 20 });
@@ -6909,13 +6915,14 @@ module.exports = async ({ edge, servidores, r }) => {
           window.__fila = [[9, 10], [2, 10]];
           const escapou = await api.escapar(capanga);
           r.escapou = { resultado: escapou.resultado, ataque: escapou.ataque, defesa: escapou.defesa, cartao: ultimo() };
-          await __esperar(() => !marcas(a).length && botoes(capanga) === 'agarrar');
+          await __esperar(() => !marcas(a).length && botoes(capanga) === 'agarrar,tomar');
           Object.assign(r.escapou, { marcas: estado().marcas, botoes: botoes(capanga) });
           return r;
         } finally {
           for (const ator of [a, capanga]) await ator.sheet.close();
           for (const ator of [a, capanga]) for (const papel of marcas(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false }).catch(() => {});
           for (const status of ['unconscious', 'prone']) await tirar(status);
+          await devolverArmas();
           await a.update({ 'system.pericias.brawling.nivel': antes.briga[0] });
           await capanga.update({ 'system.pericias.brawling.nivel': antes.briga[1], 'system.hp.value': antes.hp });
         }
@@ -6929,7 +6936,7 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.deNovo === 'agarrou' && info.botoes.capanga === 'escapar' && info.botoes.atiradora === 'estrangular,derrubar,usarEscudoHumano,soltar'
         && info.segurou.resultado === 'segurou' && info.segurou.ataque === 11 && info.segurou.defesa === 11 && info.segurou.marcas === 'agarrando,agarrado'
         && info.segurou.cartao === 'Atiradora segurou Capanga (11 contra 11: o empate é de quem segura): o agarrão continua.'
-        && info.escapou.resultado === 'escapou' && info.escapou.ataque === 14 && info.escapou.defesa === 10 && !info.escapou.marcas && info.escapou.botoes === 'agarrar'
+        && info.escapou.resultado === 'escapou' && info.escapou.ataque === 14 && info.escapou.defesa === 10 && !info.escapou.marcas && info.escapou.botoes === 'agarrar,tomar'
         && info.escapou.cartao === 'Capanga escapou do agarrão de Atiradora (14 contra 10): o agarrão acabou.';
       return [ok, JSON.stringify(info)];
     });
@@ -7023,6 +7030,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const a = __ator('Atiradora');
         const capanga = __ator('Capanga');
         const antes = { briga: a.system.pericia('brawling').nivel, hp: a.system.hp.value, hpCapanga: capanga.system.hp.value };
+        const devolverArmas = await (${guardarAsArmas})(a);
         const avisos = [];
         ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
         const criados = [];
@@ -7106,6 +7114,7 @@ module.exports = async ({ edge, servidores, r }) => {
             if (ator.statuses.has('prone')) await ator.toggleStatusEffect('prone', { active: false });
           }
           for (const item of criados) if (item.parent?.items.get(item.id)) await item.delete();
+          await devolverArmas();
           const apagar = new foundry.data.operators.ForcedDeletion();
           await a.update({ 'system.pericias.brawling.nivel': antes.briga, 'system.pericias.martial-arts-karate': apagar, 'system.pericias.martial-arts-aikido': new foundry.data.operators.ForcedDeletion(), 'system.pericias.martial-arts-judo': new foundry.data.operators.ForcedDeletion() });
           await a.update({ 'system.hp.value': antes.hp });
@@ -7589,6 +7598,7 @@ module.exports = async ({ edge, servidores, r }) => {
       // Mestre: Atiradora DEX 7 + Briga 3 + d10 9 = 19. Jogador: Alvo DEX 7 + Briga 1 + d10 4 = 12.
       await edge.evaluate(`(async () => {
         window.__briga = [__ator('Atiradora').system.pericia('brawling').nivel, __ator('Alvo').system.pericia('brawling').nivel];
+        window.__devolverArmas = await (${guardarAsArmas})(__ator('Atiradora'));
         await __ator('Atiradora').update({ 'system.pericias.brawling.nivel': 3 });
         await __ator('Alvo').update({ 'system.pericias.brawling.nivel': 1 });
         return true;
@@ -7633,6 +7643,8 @@ module.exports = async ({ edge, servidores, r }) => {
           for (const ator of [__ator('Atiradora'), __ator('Alvo')]) for (const papel of ${marcas}(ator)) await ator.toggleStatusEffect('${S}-' + papel, { active: false }).catch(() => {});
           await __ator('Atiradora').update({ 'system.pericias.brawling.nivel': window.__briga[0] });
           await __ator('Alvo').update({ 'system.pericias.brawling.nivel': window.__briga[1] });
+          await window.__devolverArmas?.();
+          delete window.__devolverArmas;
           return true;
         })()`);
       }
@@ -15145,6 +15157,133 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       const ok = info.arasaka === '#ff1f3d' && info.padrao && info.padrao !== '#ff1f3d' && info.codigo === 'PT1:' && info.doCodigo === '#ff1f3d'
         && info.recolhido.mini && !info.recolhido.barra && /\d+\/\d+/.test(info.recolhido.hp) && info.aberto;
+      return [ok, JSON.stringify(info)];
+    });
+
+    // O C51: o desarmado e o agarrão na barra, pelo mesmo caminho da ficha (desarmado.mjs e agarrao.mjs).
+    await r.passo('Painel Tático, o desarmado e o agarrão (o C51; wiki, p. 176–178): sem a arma na ficha, a Briga está na barra com o dano pelo BODY, e o ATK cria a "Unarmed" guardada e ataca pelo combate (a segunda vez, com a mesma); com 1 ponto no Karatê, as Artes Marciais aparecem; com as mãos ocupadas, Agarrar avisa sem rolar; agarrou pelo botão, a barra troca para Estrangular, Derrubar, Escudo e Soltar, e Soltar solta; Tomar leva a pistola do alvo, guardada (sem nada na mão, avisa sem rolar); com duas Gorilla Arms, o Estrangular vale BODY 11, e com uma, o BODY de quem agarra', async () => {
+      await fixar(edge, []);
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const S = '${S}';
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = (id, mudar = {}) => { const d = foundry.utils.deepClone(cat[id]); Object.assign(d.system, mudar); return d; };
+        const a = game.actors.get(window.__painel.ator);
+        const tokenAlvo = canvas.tokens.get(window.__painel.tokenAlvo);
+        const alvo = tokenAlvo.actor;
+        const golpes = () => [...el().querySelectorAll('.pt-golpes [data-acao="agarrao"]')].map(b => b.dataset.golpe).join();
+        const marcas = ator => ['agarrando', 'agarrado'].filter(papel => ator.statuses.has(S + '-' + papel));
+        const cartoes = () => game.messages.contents.filter(m => m.getFlag(S, 'agarrao')).map(m => m.getFlag(S, 'agarrao'));
+        const ataques = n => game.messages.contents.slice(n).filter(m => m.getFlag(S, 'ataque')).map(m => m.getFlag(S, 'ataque'));
+        const rifle = a.items.getName('Assault Rifle');
+        const antes = { body: a.system.atributos.body.valor, dex: a.system.atributos.dex.valor, briga: a.system.pericia('brawling').nivel, hpAlvo: alvo.system.hp.value };
+        // Os avisos esperados (as recusas) ficam só aqui, fora do console.
+        const avisos = [], warn = ui.notifications.warn;
+        const criados = [];
+        const r = {};
+        try {
+          ui.notifications.warn = texto => { avisos.push(String(texto)); return null; };
+          await a.update({ 'system.atributos.body.valor': 8, 'system.atributos.dex.valor': 6, 'system.pericias.brawling.nivel': 3 });
+          await esperar(() => texto('.pt-mao[data-golpe="briga"] .pt-mao-nome') === 'Briga 3d6');
+          r.antes = { briga: texto('.pt-mao[data-golpe="briga"] .pt-mao-nome'), artes: Boolean(el().querySelector('.pt-mao[data-golpe="artes"]')), punhos: a.items.filter(i => i.system.tipo === 'unarmed').length, golpes: golpes() };
+          // O ATK da Briga com o alvo marcado (Ctrl: sem a janela): a arma entra guardada, e o ataque sai pelo combate.
+          tokenAlvo.setTarget(true, { releaseOthers: true });
+          let n = game.messages.size;
+          clicar('.pt-atk[data-acao="desarmado"][data-golpe="briga"]', true);
+          await esperar(() => ataques(n).length, 150);
+          const punho = a.items.find(i => i.system.tipo === 'unarmed');
+          r.briga = { arma: ataques(n)[0]?.arma ?? null, modo: ataques(n)[0]?.modo ?? null, criada: punho ? { equipada: punho.system.equipada, marca: punho.getFlag(S, 'desarmado') === true, pericia: punho.system.pericia } : null };
+          n = game.messages.size;
+          clicar('.pt-atk[data-acao="desarmado"][data-golpe="briga"]', true);
+          await esperar(() => ataques(n).length, 150);
+          Object.assign(r.briga, { deNovo: ataques(n)[0]?.arma ?? null, punhos: a.items.filter(i => i.system.tipo === 'unarmed').length });
+          await alvo.update({ 'system.hp.value': alvo.system.hp.max });
+          await a.update({ 'system.pericias.martial-arts-karate': { nivel: 1, familia: 'martial-arts', nome: 'Karatê' } });
+          await esperar(() => el().querySelector('.pt-mao[data-golpe="artes"]'));
+          r.artes = texto('.pt-mao[data-golpe="artes"] .pt-mao-nome');
+          // O rifle (duas mãos) e a Lexington: nenhuma mão livre.
+          n = game.messages.size;
+          clicar('[data-acao="agarrao"][data-golpe="agarrar"]', true);
+          await esperar(() => avisos.length);
+          r.semMao = { aviso: avisos.at(-1) ?? null, mensagens: game.messages.size - n };
+          // Teste Painel: DEX 6 + Briga 3 + d10 8 = 17 contra o Alvo do Painel com d10 2.
+          // Sem o rifle, com a Lexington e o punho equipado (as duas mãos, na conta da equipagem): o punho fica na linha do
+          // desarmado, fora das armas, e não ocupa a mão de quem agarra. (O passo do painel de Equipamento pode ter guardado
+          // a Lexington: ela volta aqui.)
+          await rifle.update({ 'system.equipada': false });
+          await a.items.getName('Militech M-10AF Lexington').update({ 'system.equipada': true });
+          await punho.update({ 'system.equipada': true });
+          r.maos = a.maosLivres;
+          await esperar(() => !texto('.pt-lista-armas').includes('Assault Rifle') && texto('.pt-lista-armas').includes('Lexington'));
+          r.lista = [...el().querySelectorAll('.pt-lista-armas .pt-arma-nome')].map(b => b.textContent.trim()).join();
+          window.__fila = [[8, 10], [2, 10]];
+          let k = cartoes().length;
+          clicar('[data-acao="agarrao"][data-golpe="agarrar"]', true);
+          await esperar(() => marcas(a).join() === 'agarrando' && cartoes().length === k + 1 && golpes() === 'estrangular,derrubar,escudoHumano,soltar', 150);
+          r.agarrou = { resultado: cartoes().at(-1)?.resultado ?? null, golpes: golpes(), alvo: marcas(alvo).join(), selo: texto('.pt-selo-alerta') };
+          // A barra do agarrado (o alvo fixado no painel): só Escapar.
+          game.system.api.painel.fixar(tokenAlvo.document);
+          await esperar(() => texto('.pt-barra .pt-nome') === 'Alvo do Painel' && golpes() === 'escapar');
+          r.agarrado = golpes();
+          game.system.api.painel.fixar(null);
+          await esperar(() => texto('.pt-barra .pt-nome') === 'Teste Painel' && golpes() === 'estrangular,derrubar,escudoHumano,soltar');
+          clicar('[data-acao="agarrao"][data-golpe="soltar"]');
+          await esperar(() => !marcas(a).length && !marcas(alvo).length && golpes() === 'agarrar,tomar');
+          r.soltou = { golpes: golpes(), marcas: marcas(a).length + marcas(alvo).length };
+          // Tomar: a pistola na mão do alvo.
+          await alvo.createEmbeddedDocuments('Item', [pegar('core_weapons:medium-pistol', { equipada: true })]);
+          window.__fila = [[8, 10], [2, 10]];
+          k = cartoes().length;
+          clicar('[data-acao="agarrao"][data-golpe="tomar"]', true);
+          await esperar(() => cartoes().length === k + 1 && a.items.getName('Medium Pistol'), 150);
+          const tomada = a.items.getName('Medium Pistol');
+          r.tomou = { resultado: cartoes().at(-1)?.resultado ?? null, objeto: cartoes().at(-1)?.objeto ?? null, comQuem: Boolean(tomada), equipada: tomada?.system.equipada ?? null, noAlvo: Boolean(alvo.items.getName('Medium Pistol')), marcas: marcas(a).length + marcas(alvo).length };
+          n = game.messages.size;
+          const avisados = avisos.length;
+          clicar('[data-acao="agarrao"][data-golpe="tomar"]', true);
+          await esperar(() => avisos.length > avisados);
+          r.semObjeto = { aviso: avisos.at(-1) ?? null, mensagens: game.messages.size - n };
+          // Duas Gorilla Arms, uma em cada cyberbraço: o Estrangular vale BODY 11; com uma, o BODY 8 de quem agarra.
+          const bracos = await a.createEmbeddedDocuments('Item', ['braco-direito', 'braco-esquerdo'].map(lado => pegar('core_cyberware:cyberarm', { instalado: true, lado })));
+          criados.push(...bracos);
+          const gorilas = await a.createEmbeddedDocuments('Item', bracos.map(braco => pegar('cyberware-2077:gorilla-arm', { instalado: true, instaladoEm: braco.id })));
+          criados.push(...gorilas);
+          await alvo.update({ 'system.hp.value': alvo.system.hp.max });
+          window.__fila = [[8, 10], [2, 10]];
+          await game.system.api.agarrao.agarrar(a, { alvo: tokenAlvo.document });
+          await esperar(() => marcas(a).join() === 'agarrando');
+          const hp = alvo.system.hp.value;
+          const duas = await game.system.api.agarrao.estrangular(a);
+          r.duas = { dano: duas?.dano ?? null, gorillas: duas?.gorillas ?? null, noAtor: a.gorillasNosBracos, tirou: hp - alvo.system.hp.value };
+          await a.deleteEmbeddedDocuments('Item', [gorilas[1].id]);
+          const uma = await game.system.api.agarrao.estrangular(a);
+          r.uma = { dano: uma?.dano ?? null, gorillas: uma?.gorillas ?? null, noAtor: a.gorillasNosBracos };
+          await game.system.api.agarrao.soltar(a);
+          return r;
+        } finally {
+          ui.notifications.warn = warn;
+          tokenAlvo.setTarget(false, { releaseOthers: true });
+          for (const ator of [a, alvo]) for (const papel of marcas(ator)) await ator.toggleStatusEffect(S + '-' + papel, { active: false }).catch(() => {});
+          const tirar = a.items.filter(i => criados.some(c => c.id === i.id) || ['unarmed', 'martialArts'].includes(i.system.tipo) || i.name === 'Medium Pistol').map(i => i.id);
+          await a.deleteEmbeddedDocuments('Item', tirar);
+          await alvo.deleteEmbeddedDocuments('Item', alvo.items.filter(i => i.name === 'Medium Pistol').map(i => i.id));
+          await a.update({ 'system.atributos.body.valor': antes.body, 'system.atributos.dex.valor': antes.dex, 'system.pericias.brawling.nivel': antes.briga, 'system.pericias.martial-arts-karate': new foundry.data.operators.ForcedDeletion() });
+          // O rifle fica guardado: o Teste Painel nasceu com ele e a Lexington (três mãos), e a conferência das mãos não o
+          // deixa voltar; os passos daqui em diante só usam o nome do ator, que se apaga no passo do jogador.
+          await alvo.update({ 'system.hp.value': antes.hpAlvo });
+        }
+      })()`);
+      const ok = info.antes.briga === 'Briga 3d6' && !info.antes.artes && info.antes.punhos === 0 && info.antes.golpes === 'agarrar,tomar'
+        && info.briga.arma === 'Unarmed' && info.briga.modo === 'corpo' && info.briga.criada?.equipada === false && info.briga.criada.marca && info.briga.criada.pericia === 'brawling' && info.briga.deNovo === 'Unarmed' && info.briga.punhos === 1
+        && info.artes === 'Karatê 3d6'
+        && info.semMao.aviso === 'Teste Painel precisa de uma mão livre para agarrar.' && info.semMao.mensagens === 0
+        && info.lista === 'Militech M-10AF Lexington' && info.maos === 0
+        && info.agarrou.resultado === 'agarrou' && info.agarrou.golpes === 'estrangular,derrubar,escudoHumano,soltar' && info.agarrou.alvo === 'agarrado' && /Agarrando/.test(info.agarrou.selo) && info.agarrado === 'escapar'
+        && info.soltou.golpes === 'agarrar,tomar' && info.soltou.marcas === 0
+        && info.tomou.resultado === 'tomou' && info.tomou.objeto === 'Medium Pistol' && info.tomou.comQuem && info.tomou.equipada === false && !info.tomou.noAlvo && info.tomou.marcas === 0
+        && info.semObjeto.aviso === 'Alvo do Painel não tem nada na mão para tomar.' && info.semObjeto.mensagens === 0
+        && info.duas.dano === 11 && info.duas.gorillas === true && info.duas.noAtor === 2 && info.duas.tirou === 11
+        && info.uma.dano === 8 && info.uma.gorillas === false && info.uma.noAtor === 1;
       return [ok, JSON.stringify(info)];
     });
 

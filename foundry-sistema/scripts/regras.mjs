@@ -697,6 +697,18 @@ export function escolhaAutomatica({ opcoes, modo, dv = null, mediaEsquiva = 0 })
 // resistência (o teste resistido: empate é do defensor, p. 128). Agarrados, os dois têm −2 em todas as ações.
 export const AGARRAO = { penalidade: -2 };
 export const venceuOAgarrao = (ataque, defesa) => Number(ataque) > Number(defesa);
+// O agarrão "precisa de mão livre" (a mesma página). Os punhos (as armas Unarmed e Martial Arts, que o CORE deixa
+// equipar) não ocupam a mão de quem agarra. armas: as system das armas do ator, como em maosLivres.
+export const maosParaAgarrar = ({ armas = [], ...resto } = {}) => maosLivres({ ...resto, armas: armas.filter(arma => !ehDesarmada(arma.tipo)) });
+// "Quem vence agarra ou toma um objeto" (a mesma página), e o Desarme combinado do Aikido: o que está na mão é a primeira
+// arma equipada solta (nem a do cyberware, nem a montada, nem os punhos). itens: [{ type, sort, equipada, instaladoEm,
+// tipo, veicular }].
+export const objetoNaMao = itens => [...itens].filter(i => i.type === 'arma' && i.equipada && !i.instaladoEm && !i.veicular && !ehDesarmada(i.tipo))
+  .sort((x, y) => x.sort - y.sort)[0] ?? null;
+// A Gorilla Arm do Kit (a wiki, system-2077.js: "Com dois, um em cada cyberbraço, [...] estrangula e derruba (Choke e
+// Slam) como se tivesse BODY 11"): o BODY do Estrangular e do Derrubar. gorillas: os cyberbraços com uma Gorilla Arm.
+export const BODY_DAS_GORILLAS = 11;
+export const bodyDoAgarrao = ({ body, gorillas = 0 }) => (Number(gorillas) >= 2 ? Math.max(Number(body) || 0, BODY_DAS_GORILLAS) : Number(body) || 0);
 
 // O Jack In (a wiki, "Quickhacks no Neuroport", Kit p. 16–17 e 26–27): entra no Neuroport de um alvo à vista, no alcance,
 // com Interface + 1d10 contra WILL + 1d10 do alvo. Falhando (o teste resistido: o empate é do alvo), entra assim mesmo,

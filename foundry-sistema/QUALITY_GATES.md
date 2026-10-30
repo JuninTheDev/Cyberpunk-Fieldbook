@@ -426,6 +426,12 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   tudo antes do cartão, e o dano de quem já tinha passado ficava sem Desfazer. Proteja cada pessoa (`try/catch`, com a nota
   na linha), grave o Desfazer logo depois de cada dano e crie o cartão sempre. E o que se escolhe numa janela envelhece com
   ela aberta: confira de novo o estado (o veículo, o "Dirigir") antes e depois de rolar.
+- **Uma regra que passa a recusar** (ciclo 196, a mão livre do agarrão): os passos antigos do G4 usavam a regra frouxa (a
+  Atiradora agarrava com o rifle de duas mãos) e quebraram. Ajuste o preparo do passo (ela guarda as armas no começo e
+  as equipa de volta no fim), nunca a regra nem o que o passo confere. E o que se equipa no `create` passa da conta das
+  mãos, mas o `update` não: o ator de teste que nasceu com três mãos ocupadas não volta ao que era.
+- **G4 focado com uma cena nova** (ciclo 196): crie a cena com `active: false`, espere o `canvasReady` depois do
+  `activate()` e só então ponha os tokens; sem isso, o primeiro `control()` dá "setting 'visible'" de null.
 
 ## Build
 

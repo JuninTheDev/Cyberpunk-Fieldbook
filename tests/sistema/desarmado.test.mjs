@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { artesMarciaisLiberadas, DANO_PELO_BODY, danoDesarmado, ehDesarmada, formaDasArtesMarciais } from '../../foundry-sistema/scripts/regras.mjs';
+import { artesMarciaisLiberadas, BODY_DAS_GORILLAS, bodyDoAgarrao, DANO_PELO_BODY, danoDesarmado, ehDesarmada, formaDasArtesMarciais, maosLivres, maosParaAgarrar, objetoNaMao } from '../../foundry-sistema/scripts/regras.mjs';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const catalogo = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'dados', 'catalogo.json'), 'utf8')).itens;
@@ -67,4 +67,44 @@ test('as armas do catálogo trazem o resto da regra: a Briga não ignora armadur
   assert.deepEqual([briga.system.pericia, briga.system.ignorarArmadura, briga.system.aDistancia], ['brawling', 0, false]);
   assert.deepEqual([artes.system.pericia, artes.system.ignorarArmadura, artes.system.cdt, artes.system.aDistancia], ['martial-arts', 50, 2, false]);
   assert.equal(ehDesarmada('medMelee'), false);
+});
+
+// O C51: o agarrão com a mão livre, o "tomar um objeto" e as duas Gorilla Arms (a wiki, "Agarrar e arremessar", p. 177, e
+// a Gorilla Arm do Kit, system-2077.js).
+test('agarrar pede uma mão livre, e os punhos equipados não ocupam a mão', () => {
+  const pistola = { tipo: 'medPistol', maos: 1, aDistancia: true, equipada: true };
+  const rifle = { tipo: 'assaultRifle', maos: 2, aDistancia: true, equipada: true };
+  const punhos = { tipo: 'unarmed', maos: 1, aDistancia: false, equipada: true };
+  const artes = { tipo: 'martialArts', maos: 1, aDistancia: false, equipada: true };
+  assert.equal(maosParaAgarrar({ armas: [] }), 2);
+  assert.equal(maosParaAgarrar({ armas: [pistola] }), 1);
+  assert.equal(maosParaAgarrar({ armas: [rifle] }), 0);
+  assert.equal(maosParaAgarrar({ armas: [pistola, punhos, artes] }), 1, 'os punhos não contam');
+  assert.equal(maosLivres({ armas: [pistola, punhos] }), 0, 'na equipagem, o CORE conta o punho equipado');
+  assert.equal(maosParaAgarrar({ armas: [pistola], escudos: 1 }), 0, 'o escudo ocupa uma mão');
+  assert.equal(maosParaAgarrar({ armas: [rifle], bonus: 1 }), 1, 'o braço a mais (bônus de mãos)');
+  assert.equal(maosParaAgarrar({ armas: [{ ...rifle, equipada: false }] }), 2, 'a guardada não ocupa');
+});
+
+test('o objeto na mão (tomar e o Desarme combinado): a primeira arma equipada solta, sem o cyberware, a montada e os punhos', () => {
+  const arma = (sort, extra = {}) => ({ type: 'arma', sort, equipada: true, instaladoEm: '', tipo: 'medPistol', veicular: false, ...extra });
+  const itens = [
+    arma(1, { tipo: 'unarmed' }), arma(2, { instaladoEm: 'cyber' }), arma(3, { veicular: true }), arma(4, { equipada: false }),
+    { type: 'armadura', sort: 0, equipada: true }, arma(9, { nome: 'faca', tipo: 'lightMelee' }), arma(6, { nome: 'pistola' })
+  ];
+  assert.equal(objetoNaMao(itens).nome, 'pistola');
+  assert.equal(objetoNaMao(itens.slice(0, 5)), null);
+  assert.equal(objetoNaMao([]), null);
+});
+
+test('com duas Gorilla Arms, Estrangular e Derrubar valem BODY 11 (a wiki); com uma, o BODY de quem agarra', () => {
+  const texto = fs.readFileSync(path.join(raiz, 'system-2077.js'), 'utf8');
+  const gorilla = texto.split('\n').find(linha => linha.includes("ware('Gorilla Arm'"));
+  assert.match(gorilla, /Com dois, um em cada cyberbraço, .*estrangula e derruba \(Choke e Slam\) como se tivesse BODY (\d+)/);
+  assert.equal(Number(gorilla.match(/Choke e Slam\) como se tivesse BODY (\d+)/)[1]), BODY_DAS_GORILLAS);
+  assert.equal(bodyDoAgarrao({ body: 6, gorillas: 2 }), 11);
+  assert.equal(bodyDoAgarrao({ body: 6, gorillas: 1 }), 6);
+  assert.equal(bodyDoAgarrao({ body: 6 }), 6);
+  assert.equal(bodyDoAgarrao({ body: 13, gorillas: 2 }), 13, 'quem já tem mais fica com o seu');
+  assert.equal(bodyDoAgarrao({ body: 11, gorillas: 3 }), 11);
 });

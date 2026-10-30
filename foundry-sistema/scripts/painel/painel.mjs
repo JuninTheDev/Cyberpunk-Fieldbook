@@ -1,16 +1,19 @@
 // O Painel Tático (o C25; o módulo painel-tatico da mesa do Foundry 12, dentro do sistema): a barra na base da tela com
 // o retrato do personagem (um PNG por estado de ferimento), HP, armadura, Humanidade, Sorte, Death Save, atributos,
-// armas (com os modos da ficha e os de 2077), iniciativa, Facedown e os painéis de perícias, Role, NET e equipamento.
+// armas (com os modos da ficha e os de 2077), o desarmado e o agarrão (o C51), iniciativa, Facedown e os painéis de
+// perícias, Role, NET e equipamento.
 // Mostra o token controlado (de quem é dono) ou, sem nenhum, o personagem do jogador. É um elemento solto no <body>
 // (não uma janela): desenha de novo quando o ator, os itens, o combate, os alvos ou a conexão na NET mudam.
 import { ATRIBUTOS, CLASSES_2077, SIGLA, SISTEMA } from '../config.mjs';
 import { acoesDe2077 } from '../combate.mjs';
 import { armaMontadaPronta } from '../armas-cyberware.mjs';
+import { agarraoDe } from '../agarrao.mjs';
+import { desarmadoDe } from '../desarmado.mjs';
 // A estrela das perícias é a mesma da ficha (o C20): a flag do ator.
 import { alternarPericiaFavorita, FLAG_FAVORITAS } from '../macros.mjs';
 import { FAMILIAS, PERICIAS } from '../gerado.mjs';
 import { FLAG_CONEXAO } from '../netrun/constantes.mjs';
-import { HABILIDADES_DE_INTERFACE, ROLAGENS_DE_ROLE } from '../regras.mjs';
+import { ehDesarmada, HABILIDADES_DE_INTERFACE, ROLAGENS_DE_ROLE } from '../regras.mjs';
 import { NOMES_DOS_ESTADOS, passosDeHp, variaveisDoEstilo, classesDoEstilo, dentroDaTela } from './logica.mjs';
 import { estiloAtual, salvarEstilo, JanelaDeEstilo } from './estilo.mjs';
 import { vistaDoRetrato, htmlDoRetrato, JanelaDoRetrato } from './retrato.mjs';
@@ -375,21 +378,58 @@ export class PainelTatico {
 
   // ---------------- Armas ----------------
   // As de mão equipadas, as do cyberware instalado e as dos acessórios da arma equipada (o C11; a montada num veículo fica
-  // com ele, na ficha).
-  #armasEquipadas() {
-    return this.actor.items.filter(item => item.type === 'arma' && ((item.system.equipada && !item.system.instaladoEm) || armaMontadaPronta(item)));
+  // com ele, na ficha). Com a linha do desarmado à mostra, os punhos equipados ficam nela.
+  #armasEquipadas(semPunhos = false) {
+    return this.actor.items.filter(item => item.type === 'arma' && ((item.system.equipada && !item.system.instaladoEm) || armaMontadaPronta(item)) && !(semPunhos && ehDesarmada(item.system.tipo)));
   }
 
   #armas(mostra) {
-    const linhas = this.#armasEquipadas().map(arma => this.#arma(arma, mostra)).join('');
+    const desarmado = mostra('desarmado');
+    const linhas = this.#armasEquipadas(desarmado).map(arma => this.#arma(arma, mostra)).join('');
     return `<section class="pt-secao pt-armas">
       <header class="pt-armas-topo">
         <span class="pt-titulo">Armas</span>
         ${mostra('alvo') ? this.#alvo() : ''}
         <button type="button" class="pt-icone" data-acao="painel" data-painel="equipamento" data-tooltip="Equipar e guardar"><i class="fa-solid fa-screwdriver-wrench"></i></button>
       </header>
-      <div class="pt-lista-armas">${linhas || '<p class="pt-vazio-texto">Nenhuma arma equipada: equipe pelo <i class="fa-solid fa-screwdriver-wrench"></i>.</p>'}</div>
+      <div class="pt-lista-armas">${linhas || `<p class="pt-vazio-texto">Nenhuma arma equipada: equipe pelo <i class="fa-solid fa-screwdriver-wrench"></i>${desarmado ? ' ou bata com as mãos' : ''}.</p>`}</div>
+      ${desarmado ? this.#desarmado() : ''}
     </section>`;
+  }
+
+  // ---------------- Desarmado e agarrão (o C51) ----------------
+  // A Briga e as Artes Marciais (com pelo menos 1 ponto numa forma) sem precisar do item (desarmado.mjs), e os botões do
+  // agarrão de cada lado, os da ficha (agarrao.mjs): sem agarrão, Agarrar e Tomar; agarrando, Estrangular, Derrubar, o
+  // escudo humano e Soltar; agarrado, Escapar.
+  #desarmado() {
+    const a = this.actor;
+    const d = desarmadoDe(a);
+    const mao = (qual, nome, dano, dica) => `<span class="pt-mao" data-golpe="${qual}">
+        <span class="pt-mao-nome" data-tooltip="${esc(dica)}"><i class="fa-solid fa-hand-fist"></i> ${esc(nome)} <small>${esc(dano)}</small></span>
+        <button type="button" class="pt-atk" data-acao="desarmado" data-golpe="${qual}" data-tooltip="${esc(`${nome}: atacar o alvo marcado`)}">ATK</button>
+        <button type="button" class="pt-dmg" data-acao="danoDesarmado" data-golpe="${qual}" data-tooltip="Só rolar o dano">DMG</button>
+      </span>`;
+    const maos = [mao('briga', 'Briga', d.briga.dano, `DEX + Briga + 1d10 contra a esquiva; ${d.briga.dano} pelo BODY, CDT 2, a armadura inteira (wiki, p. 176)`)];
+    if (d.artes) maos.push(mao('artes', d.artes.forma, d.artes.dano, `Artes Marciais: DEX + ${d.artes.forma} + 1d10 contra a esquiva; ${d.artes.dano} pelo BODY, CDT 2, ignora metade do SP (wiki, p. 176–178)`));
+    const g = agarraoDe(a);
+    const golpe = (chave, icone, rotulo, dica, classe = '') => `<button type="button" class="pt-golpe${classe}" data-acao="agarrao" data-golpe="${chave}" data-tooltip="${esc(dica)}"><i class="fa-solid ${icone}"></i><span>${rotulo}</span></button>`;
+    let golpes;
+    if (g?.papel === 'agarrando') {
+      golpes = [
+        golpe('estrangular', 'fa-hands', 'Estrangular', 'Uma Ação: o seu BODY direto no HP, sem a armadura; abaixo de 0, fica com 1 e desmaia; três rodadas seguidas, desmaia'),
+        golpe('derrubar', 'fa-person-falling', 'Derrubar', 'Uma Ação: o seu BODY direto no HP, sem a armadura; ele cai, e o agarrão acaba'),
+        ...(g.escudoHumano ? [] : [golpe('escudoHumano', 'fa-person-shield', 'Escudo', 'Uma Ação: usar quem você agarra como escudo humano (sem outro escudo equipado)')]),
+        golpe('soltar', 'fa-hand', 'Soltar', 'Soltar a pessoa viva é livre; o escudo de cadáver, 1 Ação', ' pt-ativa')
+      ];
+    } else if (g?.papel === 'agarrado') {
+      golpes = [golpe('escapar', 'fa-person-running', 'Escapar', 'Uma Ação: DEX + Briga + 1d10 contra o de quem agarra; empate é dele')];
+    } else {
+      golpes = [
+        golpe('agarrar', 'fa-hand-fist', 'Agarrar', 'Uma Ação, com uma mão livre: DEX + Briga + 1d10 contra o do alvo marcado; empate é dele. Agarrados, os dois têm −2 em tudo'),
+        golpe('tomar', 'fa-hand-holding', 'Tomar', 'Uma Ação, com uma mão livre: o mesmo teste; vencendo, a arma na mão do alvo marcado fica com você')
+      ];
+    }
+    return `<div class="pt-desarmado">${maos.join('')}<span class="pt-golpes">${golpes.join('')}</span></div>`;
   }
 
   #alvo() {
@@ -601,6 +641,9 @@ export class PainelTatico {
         case 'acao2077': return A.acao2077(a, id, el.dataset.chave);
         case 'atacar': return this.#atacar(evento, id);
         case 'dano': return A.rolarDano(evento, a, id);
+        case 'desarmado': return (await this.#alvoAntes()) ? A.atacarDesarmado(evento, a, el.dataset.golpe) : null;
+        case 'danoDesarmado': return A.rolarDanoDesarmado(evento, a, el.dataset.golpe);
+        case 'agarrao': return !A.PEDEM_ALVO.includes(el.dataset.golpe) || (await this.#alvoAntes()) ? A.noAgarrao(evento, a, el.dataset.golpe) : null;
         case 'iniciativa': return A.iniciativa(a, t);
         case 'encerrarTurno': return A.encerrarTurno(a, t);
         case 'facedown': return A.rolarFacedown(evento, a);
@@ -622,17 +665,18 @@ export class PainelTatico {
     }
   }
 
-  // Sem alvo marcado, o cursor vira mira (configurável); o supressivo não precisa de alvo (pega a área).
+  // O supressivo não precisa de alvo (pega a área).
   async #atacar(evento, id) {
     const a = this.actor;
-    const quando = config('painelAlvoAntes');
-    const modo = A.modoDaArma(a, id);
-    const precisa = modo !== 'supressivo' && canvas?.ready && (quando === 'sempre' || (quando === 'semAlvo' && game.user.targets.size === 0));
-    if (precisa) {
-      const escolha = await escolherAlvo({ atacante: this.token?.id });
-      if (!escolha) return null;
-    }
+    if (A.modoDaArma(a, id) !== 'supressivo' && !(await this.#alvoAntes())) return null;
     return A.atacar(evento, a, id);
+  }
+
+  // Sem alvo marcado, o cursor vira mira (configurável): false se a escolha foi cancelada (Esc).
+  async #alvoAntes() {
+    const quando = config('painelAlvoAntes');
+    const precisa = canvas?.ready && (quando === 'sempre' || (quando === 'semAlvo' && game.user.targets.size === 0));
+    return !precisa || Boolean(await escolherAlvo({ atacante: this.token?.id }));
   }
 
   async #desconectar() {

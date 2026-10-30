@@ -9438,6 +9438,62 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   (S5: para o 14 a cada minuto), a versão sem o documento das arquiteturas (S6) e o "esperando" para sempre sem o
   Foundry 14 (S7). Cada uma derrubou só o teste dela.
 
+### Ciclo 196 (2026-10-30): C51, o combate desarmado e o agarrão no Painel Tático (sessão Junin)
+
+- **Pedido (2026-10-30, pela sessão que me abriu, para o usuário):** implementar o que falta do combate desarmado, pelas
+  regras do RED com o Mission Kit por cima, e pôr o desarmado e o agarrão no HUD de combate do token (o Painel Tático),
+  como ações próprias, com o fluxo de rolagem dos outros ataques.
+- **O que já havia:** o C10 (ciclos 131 e 141) fez o dano pelo BODY, o cyberbraço na Briga, a forma das Artes Marciais,
+  a metade do SP e os movimentos; o agarrão (ciclos 80, 81 e 163) fez Agarrar, Soltar, Estrangular, Derrubar, Escapar e o
+  escudo humano. Faltava:
+  - **bater sem item:** a Briga e as Artes Marciais só atacavam com as armas "Unarmed" e "Martial Arts" na ficha (como
+    no CORE, que pede arrastar do compêndio). Agora `desarmado.mjs` acha a da ficha ou, sem ela, cria a do catálogo,
+    guardada (os punhos não ocupam a mão), com a marca `flags.cpr-fieldbook.desarmado`, e ataca pelo fluxo do combate
+    (o fluxo pede a arma pelo uuid). Dois cliques seguidos criam uma só. As Artes Marciais só aparecem com pelo menos 1
+    ponto numa forma;
+  - **a mão livre do agarrão** (a wiki, p. 177: "Ação, precisa de mão livre"; o comentário do `agarrao.mjs` dizia, mas o
+    sistema não conferia): `regras.maosParaAgarrar`, as mãos livres sem contar os punhos equipados (o CORE deixa
+    equipar a "Unarmed", e ela ocupava a mão). Sem mão livre, Agarrar e Tomar avisam sem rolar;
+  - **"Quem vence agarra ou toma um objeto"** (a mesma página): "Tomar", o mesmo teste resistido (o alvo resiste na
+    janela de reação, "Estão tomando o que está na sua mão!"), e vencendo, a arma na mão do alvo (`regras.objetoNaMao`: a
+    primeira equipada solta, sem a do cyberware, a montada e os punhos) fica com quem tomou, guardada; os acessórios
+    instalados e a munição de reserva ficam com o dono. Sem nada na mão do alvo, avisa sem rolar. O Desarme combinado do
+    Aikido passou a usar o mesmo `agarrao.tomarObjeto` (era o mesmo código). O botão "Tomar" entrou também na ficha,
+    ao lado de "Agarrar";
+  - **as duas Gorilla Arms do Kit** (`system-2077.js`: "Com dois, um em cada cyberbraço, [...] estrangula e derruba
+    (Choke e Slam) como se tivesse BODY 11"): `regras.bodyDoAgarrao` e `ator.gorillasNosBracos` (as Gorilla Arms
+    instaladas e funcionando, por cyberbraço). O cartão diz "(o BODY 11 das duas Gorilla Arms)".
+- **O Painel Tático:** embaixo das armas, uma linha que não rola com elas: a Briga (o dano pelo BODY) e as Artes Marciais
+  (a forma e o dano), cada uma com ATK e DMG, e os botões do agarrão de cada lado, os mesmos da ficha (sem agarrão,
+  Agarrar e Tomar; agarrando, Estrangular, Derrubar, Escudo e Soltar; agarrado, Escapar). O ATK, o Agarrar e o Tomar
+  escolhem o alvo no mapa como o ATK das armas (a configuração "escolher o alvo antes do ataque"); Ctrl inverte a janela
+  de rolagem. Os punhos equipados saem da lista de armas (ficam na linha). A peça "Desarmado e agarrão" do estilo deixa
+  cada jogador esconder a linha. API: `game.system.api.desarmado` (`atacarDesarmado(ator, 'briga' | 'artes')`,
+  `armaDesarmada`, `desarmadoDe`) e `game.system.api.agarrao.tomar(ator, { alvo })`.
+- **O que não entrou (fora do desarmado ou sem regra no sistema):** o +dano corpo a corpo do Berserk e o +1 do
+  Microgenerator no segundo ataque (o Kit; nenhum dos dois tem efeito no sistema hoje), o BODY 11 da Gorilla Arm para
+  empunhar e para a cobertura (fica com o mestre, como antes) e o aço que só a Briga com cyberbraço ou BODY 10+ danifica.
+- **Testes:** G3, três testes novos no `desarmado.test.mjs` (a mão livre, o objeto na mão e as Gorilla Arms, com o texto
+  da wiki) e um no `painel.test.mjs` (a peça do estilo). G4, o passo "Painel Tático, o desarmado e o agarrão" e, no passo
+  do resto do agarrão, a ficha com "agarrar,tomar".
+  Nos passos antigos do agarrão (o Agarrar, o resto do agarrão, os movimentos das Artes Marciais e o do jogador), a
+  Atiradora guarda as armas de mão no começo e as equipa de volta no fim: ela agarrava com o rifle de duas mãos, o que a
+  regra nova recusa (QUALITY_GATES). O que os passos conferem não mudou.
+- **Portões:** G1, 234 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 741/741; G4, 317/317 em 678 s (o passo novo e a
+  conferência dos botões da ficha; antes, uma rodada deu 310/317: os passos do agarrão sem a mão livre, que o preparo
+  agora resolve, e duas instáveis, as Costelas quebradas do C50 e os tokens dinâmicos, que passaram na seguinte).
+- **Mutações:** as 27 caíram, e os arquivos voltaram exatos (md5). No G3 (9): os punhos contando na mão livre (U1); o
+  objeto na mão com a arma do cyberware (U2), com os punhos (U3), na ordem inversa (U4) e com a montada (U5); as Gorilla
+  Arms com uma só (U6), o BODY 11 por cima de quem tem mais (U7) e o BODY 10 (U8); a peça do estilo (U9). No G4 focado
+  (18; só a abertura, uma cena, o preparo do Painel e o passo novo, cerca de 50 s cada): a arma criada equipada (H1), uma
+  arma nova a cada clique (H2), sem a marca (H3), o dano antes da arma fixo em 1d6 (H4), sem a conferência da mão livre
+  (H5), o Tomar sem objeto rolando (H6), o objeto que não sai do alvo (H7), que chega equipado (H8) ou que fica nos dois
+  (H9), o Estrangular sem as Gorilla Arms (H10), as Gorilla Arms sem contar os cyberbraços (H11), a mão livre contando os
+  punhos (H12), o Escudo sempre escondido (H13), sem o Tomar (H14), os punhos equipados na lista das armas (H15), sem as
+  Artes Marciais (H16), o Escapar trocado (H17) e os botões de quem agarra no agarrado (H18).
+- **Instalação:** só no branch `junin/desarmado`, sem push: o push no `master` instala o sistema no Foundry 14 da mesa
+  sozinho (C28), e isso fica com o usuário.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

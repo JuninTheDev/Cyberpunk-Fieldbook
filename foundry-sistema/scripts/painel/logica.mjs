@@ -97,7 +97,8 @@ export const PECAS = {
   identidade: 'Nome, Role e estado',
   favoritos: 'Perícias favoritas',
   alvo: 'Alvo marcado',
-  imagensDasArmas: 'Imagem das armas'
+  imagensDasArmas: 'Imagem das armas',
+  desarmado: 'Desarmado e agarrão'
 };
 export const CANTOS = { chanfrado: 'Chanfrados', reto: 'Retos', arredondado: 'Arredondados' };
 export const LADOS = { esquerda: 'Esquerda', direita: 'Direita' };

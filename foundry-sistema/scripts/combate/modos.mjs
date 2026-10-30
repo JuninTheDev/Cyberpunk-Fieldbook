@@ -182,7 +182,7 @@ async function defender(ctx, alvo, { opcoes, dv = null }) {
   // O total só vai para o jogador quando ele está à vista ("Esconder o total do ataque" desligado).
   const pacote = {
     alvo: alvo.token.uuid, arma: ctx.arma?.uuid ?? null, rotulo: ctx.rotulo ?? null, atacante: ctx.nomeAtq, imgAtq: ctx.tokenAtq?.texture?.src || ctx.atacante.img, modo: ctx.modo,
-    descricao: ctx.descricao, metros: ['corpo', 'agarrar', 'escapar'].includes(ctx.modo) ? null : alvo.metros, dv, opcoes, padrao, ...(config('escondeAtaque') ? {} : { total: ctx.pedido.total })
+    descricao: ctx.descricao, metros: ['corpo', 'agarrar', 'tomar', 'escapar'].includes(ctx.modo) ? null : alvo.metros, dv, opcoes, padrao, ...(config('escondeAtaque') ? {} : { total: ctx.pedido.total })
   };
   if (alvo.dono) {
     const promessa = pedir(alvo.dono, 'defesa', pacote);

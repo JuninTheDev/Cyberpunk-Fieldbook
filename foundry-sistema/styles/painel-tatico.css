@@ -287,6 +287,17 @@
 #painel-tatico .pt-dmg:hover { background: rgba(var(--pt-acento2-rgb), 0.18); }
 #painel-tatico .pt-vazio-texto { margin: 4px 0; color: var(--pt-apagado); font-size: 11px; font-style: italic; }
 
+/* Desarmado e agarrão (o C51): uma linha embaixo das armas, que não rola com elas */
+#painel-tatico .pt-desarmado { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--pt-linha-fraca); }
+#painel-tatico .pt-mao { display: inline-flex; align-items: center; gap: 2px; padding-left: 5px; border-left: 2px solid rgba(var(--pt-acento-rgb), 0.45); }
+#painel-tatico .pt-mao-nome { margin-right: 3px; font-weight: 700; font-size: 11px; white-space: nowrap; }
+#painel-tatico .pt-mao-nome i { color: var(--pt-acento); font-size: 10px; }
+#painel-tatico .pt-mao-nome small { color: var(--pt-apagado); font-weight: 400; }
+#painel-tatico .pt-golpes { display: inline-flex; flex-wrap: wrap; gap: 2px; margin-left: auto; }
+#painel-tatico .pt-golpe { gap: 4px; height: 22px; padding: 0 6px; border: 1px solid rgba(var(--pt-acento-rgb), 0.3); background: rgba(var(--pt-acento-rgb), 0.06); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+#painel-tatico .pt-golpe i { color: var(--pt-acento); }
+#painel-tatico .pt-golpe:hover, #painel-tatico .pt-golpe.pt-ativa { border-color: var(--pt-acento); background: rgba(var(--pt-acento-rgb), 0.17); }
+
 /* Ações */
 #painel-tatico .pt-acoes { display: grid; grid-template-columns: repeat(2, minmax(84px, auto)); align-content: center; gap: 3px; }
 #painel-tatico .pt-acao { justify-content: flex-start; gap: 6px; height: 27px; padding: 0 8px; border: 1px solid rgba(var(--pt-acento-rgb), 0.3); background: rgba(var(--pt-acento-rgb), 0.06); font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }

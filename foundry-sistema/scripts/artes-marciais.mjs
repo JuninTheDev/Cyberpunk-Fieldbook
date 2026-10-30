@@ -9,7 +9,8 @@ import { SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { destinatarios, distancia, naFila, souOMestreAtivo, tokenNaCena } from './combate.mjs';
 import { lesaoCritica } from './lesoes.mjs';
-import { ehDesarmada, FAMILIA_ARTES_MARCIAIS, FORMAS_DAS_ARTES_MARCIAIS, formaDaPericia, LESOES_DOS_GOLPES, MOVIMENTOS, movimentosDisponiveis, passouNoMovimento } from './regras.mjs';
+import { tomarObjeto } from './agarrao.mjs';
+import { FAMILIA_ARTES_MARCIAIS, FORMAS_DAS_ARTES_MARCIAIS, formaDaPericia, LESOES_DOS_GOLPES, MOVIMENTOS, movimentosDisponiveis, passouNoMovimento } from './regras.mjs';
 
 const CANAL = `system.${SISTEMA}`;
 const { DialogV2 } = foundry.applications.api;
@@ -116,21 +117,13 @@ async function cartao({ usuario, atores, falante, resumo, frase, notas = [] }) {
 // O efeito de cada movimento que passou. Devolve a frase do cartão (a e b: os nomes, em negrito; conta: o total e a DV).
 const EFEITOS = {
   recuperacao: async ({ a, conta }) => `${a} se levantou sem gastar a Ação (${conta}).`,
+  // O objeto na mão é o mesmo do "Tomar objeto" do agarrão (agarrao.tomarObjeto).
   desarmeCombinado: async ({ ator, alvo, a, b, conta, pedido, notas }) => {
-    const item = alvo.items.filter(i => i.type === 'arma' && i.system.equipada && !i.system.instaladoEm && !i.getFlag(SISTEMA, 'armaVeicular') && !ehDesarmada(i.system.tipo))
-      .sort((x, y) => x.sort - y.sort)[0];
-    if (!item) return `${a} desarmou ${b} (${conta}), mas não havia nada na mão dele.`;
-    if (!pedido.ficar) {
-      await item.update({ 'system.equipada': false });
-      return `${a} desarmou ${b} (${conta}): ${esc(item.name)} caiu.`;
-    }
-    const dados = item.toObject();
-    delete dados._id;
-    Object.assign(dados.system, { equipada: false, carregada: '' });
-    await ator.createEmbeddedDocuments('Item', [dados]);
-    await item.delete();
+    const tomado = await tomarObjeto(alvo, ator, { ficar: pedido.ficar });
+    if (!tomado) return `${a} desarmou ${b} (${conta}), mas não havia nada na mão dele.`;
+    if (!tomado.ficou) return `${a} desarmou ${b} (${conta}): ${esc(tomado.nome)} caiu.`;
     notas.push('Os acessórios instalados e a munição de reserva ficaram com o dono.');
-    return `${a} desarmou ${b} (${conta}): ${esc(item.name)} ficou com ${a}.`;
+    return `${a} desarmou ${b} (${conta}): ${esc(tomado.nome)} ficou com ${a}.`;
   },
   apertoDeFerro: async ({ ator, a, conta }) => {
     const outro = await fromUuid(efeitoDoAgarrao(ator, 'agarrando').getFlag(SISTEMA, 'agarrao').outro);

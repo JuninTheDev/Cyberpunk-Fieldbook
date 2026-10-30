@@ -8,6 +8,7 @@ import { registrarArvoreItens } from './arvore-itens.mjs';
 import { registrarNavegador } from './navegador.mjs';
 import { registrarDiceSoNice } from './dice-so-nice.mjs';
 import * as artesMarciais from './artes-marciais.mjs';
+import * as desarmado from './desarmado.mjs';
 import * as avanco from './avanco.mjs';
 import { registrarArmasDoCyberware, sincronizarArmaMontada } from './armas-cyberware.mjs';
 import * as neuroport from './neuroport.mjs';
@@ -135,7 +136,7 @@ Hooks.once('init', () => {
   reguaDv.registrarReguaDv();
   // Os perigos do ambiente (o C38): os estados novos, o /perigo, o botão do HUD do token e os botões dos cartões.
   perigos.registrarPerigos();
-  game.system.api = { agarrao, escudoHumano, reputacao, artesMarciais, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, perigos: perigos.API, hospital: hospital.API, cryo: cryo.API, veiculos: direcao.API, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada }, blackChrome: { perceberArmadura } };
+  game.system.api = { agarrao, escudoHumano, reputacao, artesMarciais, desarmado, avanco, neuroport, combate, drogas, estados, lesoes, macros, migracao, municoes, perigos: perigos.API, hospital: hospital.API, cryo: cryo.API, veiculos: direcao.API, regras, reguaDv, terapia, testar, executarComandoRed, rolarDano, wiki, abrirJanelaDaWiki, abrirExtrato, conteiner: { levarItem, pegarDoConteiner }, armasMontadas: { sincronizarArmaMontada }, blackChrome: { perceberArmadura } };
   // A NET na mesa (o NET Architect dentro do sistema): o ponto de acesso nos Tiles, a conexão e a janela da NET.
   registrarNet();
   // Estabilizar e a cura natural (o C36): o dano novo tira a marca de estabilizado; a API para as macros e os testes.

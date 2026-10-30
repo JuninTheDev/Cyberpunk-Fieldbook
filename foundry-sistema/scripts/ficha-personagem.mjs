@@ -4,7 +4,7 @@
 // (o Lifepath e as notas) e Efeitos (os do personagem e os dos itens dele). Rola pela ficha: clique no atributo, na perícia
 // ou nos botões da arma.
 import { ALVOS_UPGRADE, ATRIBUTOS, caminho, CLASSES_2077, CLASSES_BLACK_ICE, CLASSES_PROGRAMA, ESTILOS_ROUPA, EXTRATOS, LIFEPATH, QUALIDADES, SIGLA, SISTEMA, TIPOS_CYBERWARE, TIPOS_ROUPA, USOS } from './config.mjs';
-import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar, usarEscudoHumano } from './agarrao.mjs';
+import { agarraoDe, agarrar, derrubar, escapar, estrangular, soltar, tomar, usarEscudoHumano } from './agarrao.mjs';
 import { escudoHumanoDe } from './escudo-humano.mjs';
 import { movimentosDe, usarMovimento } from './artes-marciais.mjs';
 import { acoesNetDe, andaresDe, arrancarCabo, breach, conexaoDireta, expulsar, jackIn, jackOut, neuroportDe, quickhack, selfIcesDe } from './neuroport.mjs';
@@ -108,7 +108,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       levantar: FichaPersonagem.#levantar,
       correr: FichaPersonagem.#correr,
       estabilizar: FichaPersonagem.#estabilizar, descansar: FichaPersonagem.#descansar, porEmEstase: FichaPersonagem.#porEmEstase, sairDaEstase: FichaPersonagem.#sairDaEstase,
-      agarrar: FichaPersonagem.#agarrar, movimento: FichaPersonagem.#movimento,
+      agarrar: FichaPersonagem.#agarrar, tomar: FichaPersonagem.#tomar, movimento: FichaPersonagem.#movimento,
       soltar: FichaPersonagem.#soltar,
       usarEscudoHumano: FichaPersonagem.#usarEscudoHumano,
       estrangular: FichaPersonagem.#estrangular,
@@ -618,7 +618,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #sairDaEstase() { return this.isEditable ? sairDaEstase(this.actor) : null; }
   // O agarrão (as maquetes do usuário; a wiki, p. 177; agarrao.mjs): "Agarrar" (o alvo marcado, T, resiste pela janela
   // de reação do dono); agarrando, "Estrangular", "Derrubar" e "Soltar"; agarrado, "Escapar" (quem agarra resiste).
+  // "Tomar" (o C51): o mesmo teste, pelo objeto na mão do alvo.
   static #agarrar(evento) { return agarrar(this.actor, { perguntar: comJanela(evento) }); }
+  static #tomar(evento) { return tomar(this.actor, { perguntar: comJanela(evento) }); }
   static #soltar() { return soltar(this.actor); }
   static #usarEscudoHumano() { return this.isEditable ? usarEscudoHumano(this.actor) : null; }
   static #estrangular() { return estrangular(this.actor); }

@@ -10,7 +10,7 @@ import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
   acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
-  tipoDeTeleOptics, maosDaArma, maosLivres, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao, hpDepoisDoMaximo,
+  tipoDeTeleOptics, maosDaArma, maosLivres, maosParaAgarrar, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao, hpDepoisDoMaximo,
   classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild, BALAS_RAJADA
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
@@ -74,6 +74,21 @@ export class AtorCPR extends Actor {
     const armas = this.items.filter(item => item.type === 'arma' && !item.system.instaladoEm).map(item => item.system);
     const escudos = this.items.filter(item => item.type === 'armadura' && item.system.escudo && item.system.equipada).length;
     return maosLivres({ armas, escudos, bonus: this.system.bonus.maos, body: this.system.atributos.body.valor });
+  }
+  // As mãos para agarrar (regras.maosParaAgarrar): as livres, sem contar os punhos equipados.
+  get maosParaAgarrar() {
+    const armas = this.items.filter(item => item.type === 'arma' && !item.system.instaladoEm).map(item => item.system);
+    const escudos = this.items.filter(item => item.type === 'armadura' && item.system.escudo && item.system.equipada).length;
+    return maosParaAgarrar({ armas, escudos, bonus: this.system.bonus.maos, body: this.system.atributos.body.valor });
+  }
+  // Um cyberbraço (a fundação) instalado: a Briga dá pelo menos 2d6 (regras.danoDesarmado).
+  get temCyberbraco() {
+    return this.items.some(item => item.type === 'cyberware' && item.system.instalado && item.system.fundacional && item.system.tipo === 'cyberArm');
+  }
+  // Os cyberbraços com uma Gorilla Arm instalada e funcionando (regras.bodyDoAgarrao).
+  get gorillasNosBracos() {
+    const gorillas = this.items.filter(item => item.type === 'cyberware' && item.system.instalado && !item.inoperante && item.getFlag(SISTEMA, 'catalogo') === 'cyberware-2077:gorilla-arm');
+    return new Set(gorillas.map(item => item.system.instaladoEm || item.id)).size;
   }
   // O canHoldWeapon do CORE: cabe no que ainda sobra das mãos do ator.
   podeEmpunhar(arma) {
@@ -985,8 +1000,7 @@ export class ItemCPR extends Item {
     if (pelaMunicao) return pelaMunicao.dano;
     const body = this.actor?.system.atributos?.body?.valor;
     if (this.type !== 'arma' || !ehDesarmada(s.tipo) || !s.danoPeloBody || body === undefined) return s.dano;
-    const cyberbraco = this.actor.items.some(item => item.type === 'cyberware' && item.system.instalado && item.system.fundacional && item.system.tipo === 'cyberArm');
-    return danoDesarmado({ body, tipo: s.tipo, cyberbraco });
+    return danoDesarmado({ body, tipo: s.tipo, cyberbraco: this.actor.temCyberbraco });
   }
   // A perícia com que a arma ataca: a dela ou, na arma de Artes Marciais da família toda, a forma do dono (o C10).
   get periciaDaArma() {
