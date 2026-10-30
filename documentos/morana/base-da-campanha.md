@@ -104,6 +104,26 @@ Competentes, não invencíveis: querem o objeto, não lutar até a morte.
 
 Criado na mesa, na Sessão 1. Odeia o grupo e tem medo da maleta. O que ele sabe, e para quem vai contar, fica para a nova trama.
 
+### Taro
+- **Quem é:** Vizinho do prédio do consultório do Ricky, segurança de boate
+- **Lado:** Ele mesmo
+- **Onde:** Prédio do consultório do Ricky, Kabuki
+- **Aparece:** Sessão 2
+- **Situação:** Ativo
+- **Para os jogadores:** Vizinho do prédio do consultório. O braço cibernético dele se mexeu sozinho e quebrou a mesa da casa dele.
+
+Criado na mesa, na Sessão 2. O braço é de um lote de 2070: o Ricky o atendeu e não achou a causa, e o braço continua nele.
+
+### Mercenários da van
+- **Quem é:** Os mercenários que abordaram o grupo numa van, na volta do pachinko de Wakako
+- **Lado:** Desconhecido
+- **Onde:** Kabuki
+- **Aparece:** Sessão 2
+- **Situação:** Ativo
+- **Para os jogadores:** Mercenários numa van que abordaram o grupo na volta do pachinko de Wakako e recuaram depois de uma troca de tiros.
+
+Criados na mesa, na Sessão 2. Recuaram sem dizer quem os mandou.
+
 ## Facções
 
 ### Arasaka
