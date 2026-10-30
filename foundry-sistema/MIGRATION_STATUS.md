@@ -9494,6 +9494,37 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Instalação:** só no branch `junin/desarmado`, sem push: o push no `master` instala o sistema no Foundry 14 da mesa
   sozinho (C28), e isso fica com o usuário.
 
+### Ciclo 197 (2026-10-30): C51, a revisão do Painel Tático, itens 1 a 3 (sessão Junin)
+
+- **Pedido do usuário (2026-10-30):** "Itens 1 a 3", da lista da revisão do HUD que fechou o ciclo 196: os ícones neon no
+  painel, os estados e o movimento da Defesa, e os movimentos das Artes Marciais.
+- **Os ícones neon** (o C49 ficou fora do painel: o `#painel-tatico` não tem a classe do sistema): o `build/icones.mjs`
+  põe o painel entre os lugares do mapa da ficha (o `FA_PARA_GLIFO`) e ganha um mapa só dele, o `FA_DO_PAINEL`, com 35
+  glifos novos no mesmo molde (os estados de ferimento, a armadura, o escudo, a Humanidade, a Sorte, a alça, o fixar, o
+  estilo, o recolher, o turno, os modos das armas, o pente, o fim do turno, o Facedown, as perícias, a janela da NET, os
+  botões do agarrão, o Correr, o Levantar, a Cobertura, a estase, o inconsciente e o cadeado). O mapa do painel não vale
+  na ficha nem nas janelas, e o fechar (`fa-xmark`) continua o do Font Awesome em todo lugar, como o passo do C49 confere.
+  Os glifos agora são 82.
+- **Os estados e o movimento** (os da Defesa da aba Combate, ciclos 79 e 162, e o C26): no topo, os selos Caído,
+  Inconsciente, Em cobertura e Estase (com a cobertura que resta, como "Estase 10/15"); nas Ações, Levantar (só caído:
+  1 Ação), Correr (a mesma confirmação da ficha e o cartão; apagado, com o motivo na dica, quando não vale: caído,
+  agarrado, dirigindo) e Cobertura (liga e desliga a marca "Em cobertura"; ligada, "Coberto").
+- **Os movimentos das Artes Marciais:** com pelo menos 1 ponto numa forma, o botão Golpes abre o painel com os movimentos
+  da ficha (a forma, a DV ou "golpe"; o que falta de WILL ou MOVE deixa a linha apagada, com o cadeado). O clique usa o
+  `usarMovimento` da ficha: o requisito "neste turno" na janela, e o alvo escolhido no mapa nos que pedem alvo.
+- **O modo compacto** esconde também os nomes dos botões do agarrão (o achado da revisão).
+- **Testes:** G3, o `icones.test.mjs` confere os dois mapas (cada classe usada no código, cada glifo usado) e que o do
+  painel vale só nele, com o fechar fora dos dois. G4, o passo "Painel Tático, a revisão" (os glifos e o brilho no painel,
+  os selos, o Levantar, o Correr com a confirmação, a Cobertura, os Golpes e a Recuperação pelo painel); no passo dos
+  glifos do C49, 82 em vez de 47.
+- **Portões:** G1, 234 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 742/742; G4, 318/318 em 705 s.
+- **Mutações:** as 18 caíram, e os arquivos voltaram exatos (md5). No G3 (3): o mapa do painel valendo na ficha (R1), o
+  painel fora dos lugares do mapa da ficha (R2) e o fechar com glifo (R3). No G4 focado (15): o glifo do painel tirado da
+  folha (R4); sem o selo Caído (R5), Inconsciente (R6), Estase (R7) ou Em cobertura (R8); sem o Levantar (R9); o Correr
+  aceso caído (R10, R18); o Levantar (R11) e o Correr (R12) sem efeito; a Cobertura sem o realce (R13) ou sem desligar
+  (R14); os Golpes sem forma (R15); a linha travada sem o cadeado (R16); o clique do movimento sem efeito (R17).
+- **Instalação:** como o ciclo 196, só no branch `junin/desarmado`, sem push.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -15287,6 +15287,95 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // O ciclo 197 (a revisão do HUD, itens 1 a 3): os glifos neon no painel, os estados e o movimento da Defesa e os golpes
+    // das Artes Marciais.
+    await r.passo('Painel Tático, a revisão (o C51, ciclo 197): os glifos neon no painel (o do mapa da ficha e os só dele; o brilho); os selos Caído, Inconsciente, Em cobertura e Estase; caído, o Correr fica apagado e o Levantar levanta; o Correr pergunta e registra; a Cobertura liga e desliga a marca; sem forma, nada de Golpes; com o Karatê, o painel lista os movimentos (o Golpe quebra-ossos travado sem WILL 8), e a Recuperação pelo painel levanta', async () => {
+      await fixar(edge, []);
+      const info = await edge.evaluate(`(async () => {
+        ${naBarra}
+        const S = '${S}';
+        const a = game.actors.get(window.__painel.ator);
+        const glifo = elemento => elemento ? (getComputedStyle(elemento, '::before').maskImage || getComputedStyle(elemento, '::before').webkitMaskImage || '') : '';
+        const selos = () => [...el().querySelectorAll('.pt-topo .pt-selo')].map(s => s.textContent.replace(/\\s+/g, ' ').trim()).join(',');
+        // Sem o painel de Role (o passo do Equipamento dá a Role Rockerboy) e o da NET.
+        const acoes = () => [...el().querySelectorAll('.pt-acoes .pt-acao')].map(b => b.dataset.acao === 'painel' ? b.dataset.painel : b.dataset.acao).filter(acao => !['roles', 'net'].includes(acao)).join();
+        const correr = () => el().querySelector('.pt-acao[data-acao="correr"]');
+        const efeitos = [];
+        const antes = { dex: a.system.atributos.dex.valor, will: a.system.atributos.will.valor };
+        const r = {};
+        try {
+          await a.update({ 'system.atributos.dex.valor': 6, 'system.atributos.will.valor': 4 });
+          // O Karatê do passo de antes sai com um redesenho que pode chegar agora.
+          await esperar(() => el().querySelector('.pt-estado i') && !el().querySelector('.pt-acao[data-painel="golpes"]'));
+          // O estado de ferimento depende dos passos de antes (o HP digitado): qualquer um dos quatro glifos.
+          r.glifos = { estado: ['ileso', 'ferido', 'sangrando', 'caveira'].some(nome => glifo(el().querySelector('.pt-estado i')).includes('glifos/' + nome + '.svg')), vida: glifo(el().querySelector('.pt-hp-texto i')).includes('glifos/vida.svg'), colete: glifo(el().querySelector('.pt-ficha .fa-shirt')).includes('glifos/colete.svg'), brilho: getComputedStyle(el().querySelector('.pt-estado i')).filter.includes('drop-shadow') };
+          r.antes = { selos: selos(), acoes: acoes(), correr: correr()?.disabled ?? null };
+          // Caído: o selo, o Levantar e o Correr apagado; o Levantar levanta.
+          await a.toggleStatusEffect('prone', { active: true });
+          await esperar(() => el().querySelector('.pt-acao[data-acao="levantar"]'));
+          r.caido = { selos: selos(), acoes: acoes(), correr: correr()?.disabled ?? null, dica: correr()?.dataset.tooltip ?? '' };
+          let n = game.messages.size;
+          clicar('.pt-acao[data-acao="levantar"]');
+          await esperar(() => !a.statuses.has('prone') && !el().querySelector('.pt-acao[data-acao="levantar"]'));
+          r.levantou = { caido: a.statuses.has('prone'), cartao: game.messages.size > n, correr: correr()?.disabled ?? null };
+          // O Correr: a confirmação da ficha e o cartão.
+          n = game.messages.size;
+          clicar('.pt-acao[data-acao="correr"]');
+          const pergunta = () => document.querySelector('.application.correr:not(.minimizing)');
+          await esperar(() => pergunta()?.querySelector('button[data-action="yes"]'));
+          pergunta()?.querySelector('button[data-action="yes"]')?.click();
+          await esperar(() => game.messages.contents.slice(n).some(m => m.getFlag(S, 'estado')?.acao === 'correr'));
+          r.correu = game.messages.contents.slice(n).find(m => m.getFlag(S, 'estado')?.acao === 'correr')?.getFlag(S, 'estado') ?? null;
+          // A Cobertura liga e desliga.
+          clicar('.pt-acao[data-acao="cobertura"]');
+          await esperar(() => a.statuses.has(S + '-em-cobertura') && el().querySelector('.pt-acao[data-acao="cobertura"].pt-ativa'));
+          r.coberto = { marca: a.statuses.has(S + '-em-cobertura'), selos: selos(), rotulo: el().querySelector('.pt-acao[data-acao="cobertura"]')?.textContent.trim(), ativa: Boolean(el().querySelector('.pt-acao[data-acao="cobertura"].pt-ativa')) };
+          clicar('.pt-acao[data-acao="cobertura"]');
+          await esperar(() => !a.statuses.has(S + '-em-cobertura') && !el().querySelector('.pt-acao[data-acao="cobertura"].pt-ativa'));
+          r.descoberto = { marca: a.statuses.has(S + '-em-cobertura'), selos: selos() };
+          // Inconsciente e a estase (o efeito do Cryopump, como o cryo.mjs grava).
+          await a.toggleStatusEffect('unconscious', { active: true });
+          const [estase] = await a.createEmbeddedDocuments('ActiveEffect', [{ name: 'Em estase (teste)', flags: { [S]: { estase: { tipo: 'cryopump', hp: 10, max: 15, dispositivo: '', medico: 'Teste' } } } }]);
+          efeitos.push(estase.id);
+          await esperar(() => selos().includes('Estase 10/15') && selos().includes('Inconsciente'));
+          r.estados = { selos: selos(), glifoEstase: glifo(el().querySelector('.pt-selo-estase i')).includes('glifos/estase.svg') };
+          await a.toggleStatusEffect('unconscious', { active: false });
+          await a.deleteEmbeddedDocuments('ActiveEffect', efeitos.splice(0));
+          // Os Golpes: com o Karatê, a lista, o Golpe quebra-ossos travado (WILL 4) e a Recuperação, que levanta.
+          await a.update({ 'system.pericias.martial-arts-karate': { nivel: 3, familia: 'martial-arts', nome: 'Karatê' } });
+          await esperar(() => el().querySelector('.pt-acao[data-painel="golpes"]'));
+          clicar('.pt-acao[data-painel="golpes"]');
+          await esperar(() => el().querySelector('.pt-painel-golpes .pt-linha'));
+          const linhas = [...el().querySelectorAll('.pt-painel-golpes .pt-linha')];
+          r.golpes = { nomes: linhas.map(l => l.querySelector('.pt-linha-nome').textContent.trim()).join(','), travados: linhas.filter(l => l.classList.contains('pt-travado')).map(l => l.querySelector('.pt-linha-nome').textContent.trim()).join(','), cadeado: glifo(el().querySelector('.pt-painel-golpes .pt-travado i')).includes('glifos/cadeado.svg') };
+          await a.toggleStatusEffect('prone', { active: true });
+          await esperar(() => a.statuses.has('prone') && el().querySelector('.pt-painel-golpes [data-movimento="recuperacao"]'));
+          // DEX 6 + Karatê 3 + d10 9 = 18 contra DV 13.
+          window.__fila = [[9, 10]];
+          n = game.messages.size;
+          clicar('.pt-painel-golpes [data-movimento="recuperacao"]', true);
+          await esperar(() => game.messages.contents.slice(n).some(m => m.getFlag(S, 'movimento')) && !a.statuses.has('prone'), 150);
+          r.recuperacao = { resumo: game.messages.contents.slice(n).find(m => m.getFlag(S, 'movimento'))?.getFlag(S, 'movimento') ?? null, caido: a.statuses.has('prone') };
+          clicar('[data-acao="fecharPainel"]');
+          return r;
+        } finally {
+          for (const status of ['prone', 'unconscious', S + '-em-cobertura']) if (a.statuses.has(status)) await a.toggleStatusEffect(status, { active: false });
+          if (efeitos.length) await a.deleteEmbeddedDocuments('ActiveEffect', efeitos);
+          await a.update({ 'system.atributos.dex.valor': antes.dex, 'system.atributos.will.valor': antes.will, 'system.pericias.martial-arts-karate': new foundry.data.operators.ForcedDeletion() });
+        }
+      })()`);
+      const ok = info.glifos.estado && info.glifos.vida && info.glifos.colete && info.glifos.brilho
+        && info.antes.selos === '' && info.antes.acoes === 'iniciativa,correr,cobertura,facedown,pericias' && info.antes.correr === false
+        && info.caido.selos === 'Caído' && info.caido.acoes === 'iniciativa,levantar,correr,cobertura,facedown,pericias' && info.caido.correr === true && /caído/i.test(info.caido.dica)
+        && !info.levantou.caido && info.levantou.cartao && info.levantou.correr === false
+        && info.correu?.acoes === 1 && info.correu.metros > 0
+        && info.coberto.marca && info.coberto.selos === 'Em cobertura' && info.coberto.rotulo === 'Coberto' && info.coberto.ativa && !info.descoberto.marca && info.descoberto.selos === ''
+        && info.estados.selos === 'Inconsciente,Estase 10/15' && info.estados.glifoEstase
+        && info.golpes.nomes === 'Recuperação,Combinação quebra-armadura,Golpe quebra-ossos' && info.golpes.travados === 'Golpe quebra-ossos' && info.golpes.cadeado
+        && info.recuperacao.resumo?.movimento === 'recuperacao' && info.recuperacao.resumo.resultado === 'passou' && !info.recuperacao.caido;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('Painel Tático no navegador do jogador: sem selecionar nada, a barra mostra o personagem dele (o Alvo); a do mestre continua no token controlado', async () => {
       try {
         const doJogador = await jogador.evaluate(`(async () => {
@@ -20163,7 +20252,7 @@ module.exports = async ({ edge, servidores, r }) => {
       const v = info;
       const ok = v.ficha.estrela.includes('glifos/favorito.svg') && v.ficha.brilho.includes('drop-shadow')
         && v.hud.glifo.includes('glifos/perigo.svg') && v.hud.cor === 'rgb(2, 215, 242)' && (v.generico === 'none' || v.generico === '')
-        && v.folha && v.glifos === 47 && v.servidos === 47;
+        && v.folha && v.glifos === 82 && v.servidos === 82;
       return [ok, JSON.stringify(info)];
     });
 

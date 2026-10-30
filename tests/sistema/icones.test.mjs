@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { CORES, cssDosGlifos, DESENHOS, FA_PARA_GLIFO, GLIFOS, svgDoGlifoNomeado, svgDoIcone } from '../../foundry-sistema/build/icones.mjs';
+import { CORES, cssDosGlifos, DESENHOS, FA_DO_PAINEL, FA_PARA_GLIFO, GLIFOS, svgDoGlifoNomeado, svgDoIcone } from '../../foundry-sistema/build/icones.mjs';
 import * as I from '../../foundry-sistema/scripts/regras-icones.mjs';
 import { PASSOS } from '../../foundry-sistema/scripts/migracao.mjs';
 
@@ -93,8 +93,22 @@ test('Glifos dos botões (o C49, parte 2): os SVGs e o styles/icones.css iguais 
   const andar = pasta => { for (const nome of fs.readdirSync(new URL(pasta, sistema))) { const caminho = `${pasta}${nome}`; if (fs.statSync(new URL(caminho, sistema)).isDirectory()) andar(`${caminho}/`); else if (/\.(mjs|hbs)$/.test(nome)) textos.push(ler(caminho)); } };
   andar('scripts/'); andar('templates/');
   const tudo = textos.join('\n');
-  for (const classe of Object.keys(FA_PARA_GLIFO)) assert.match(tudo, new RegExp(`['" ]${classe}['" ]`), classe);
-  assert.deepEqual([...new Set(Object.values(FA_PARA_GLIFO))].sort(), Object.keys(GLIFOS).sort());
+  for (const classe of [...Object.keys(FA_PARA_GLIFO), ...Object.keys(FA_DO_PAINEL)]) assert.match(tudo, new RegExp(`['" ]${classe}['" ]`), classe);
+  assert.deepEqual([...new Set([...Object.values(FA_PARA_GLIFO), ...Object.values(FA_DO_PAINEL)])].sort(), Object.keys(GLIFOS).sort());
   // Os botões do HUD do sistema: o do perigo, o da régua, o do token dinâmico, o do scanner e os da tripulação.
   for (const classe of ['fa-triangle-exclamation', 'fa-bullseye', 'fa-person-walking-arrow-right', 'fa-satellite-dish', 'fa-right-to-bracket', 'fa-right-from-bracket', 'fa-car', 'fa-car-burst', 'fa-crosshairs']) assert.ok(FA_PARA_GLIFO[classe], classe);
+});
+
+test('Glifos do Painel Tático (o C51, ciclo 197): o mapa da ficha vale também no painel, e o do painel só nele; o fechar continua o do Font Awesome', () => {
+  const css = cssDosGlifos();
+  for (const classe of Object.keys(FA_DO_PAINEL)) {
+    assert.equal(FA_PARA_GLIFO[classe], undefined, `${classe} já está no mapa da ficha`);
+    assert.ok(css.includes(`#painel-tatico i.${classe}::before`), classe);
+    assert.ok(!css.includes(`.cpr-fieldbook i.${classe}::before`), `${classe} fora do painel`);
+  }
+  for (const classe of Object.keys(FA_PARA_GLIFO)) assert.ok(css.includes(`#painel-tatico i.${classe}::before`) && css.includes(`.cpr-fieldbook i.${classe}::before`), classe);
+  assert.ok(css.includes('#painel-tatico i[class*="fa-"]'), 'o brilho no painel');
+  assert.equal(FA_PARA_GLIFO['fa-xmark'] ?? FA_DO_PAINEL['fa-xmark'], undefined);
+  // Os ícones do painel que mostram estado e golpe têm glifo (os do topo, dos vitais, das ações e do agarrão).
+  for (const classe of ['fa-heart', 'fa-skull', 'fa-shirt', 'fa-clover', 'fa-flag-checkered', 'fa-person-running', 'fa-person-shelter', 'fa-person-arrow-up-from-line', 'fa-hands', 'fa-hand-holding']) assert.ok(FA_DO_PAINEL[classe], classe);
 });

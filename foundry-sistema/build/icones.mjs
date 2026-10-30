@@ -138,7 +138,43 @@ export const GLIFOS = {
   entrar: { tracos: ['M36 10h14v44H36', 'M10 32h28M28 22l10 10-10 10'] },
   descer: { tracos: ['M28 10H14v44h14', 'M24 32h28M42 22l10 10-10 10'] },
   dirigir: { tracos: [C(32, 32, 20), C(32, 32, 5), 'M12 32h15M37 32h15M32 37v15'] },
-  manobra: { tracos: ['M10 40v-8l6-10h24l6 10v8z', C(18, 44, 4), C(38, 44, 4), 'M46 12l4 8M54 18l-6 4M40 10l2 8'] }
+  manobra: { tracos: ['M10 40v-8l6-10h24l6 10v8z', C(18, 44, 4), C(38, 44, 4), 'M46 12l4 8M54 18l-6 4M40 10l2 8'] },
+  // ---- Os do Painel Tático (o C51, ciclo 197; FA_DO_PAINEL) ----
+  ileso: { tracos: [CORACAO] },
+  ferido: { tracos: [CORACAO, 'M33 21l-5 9 7 6-5 9'] },
+  sangrando: { tracos: ['M32 10C24 22 18 30 18 38a14 14 0 0 0 28 0c0-8-6-16-14-28z'] },
+  caveira: { tracos: ['M18 30c0-10 6-17 14-17s14 7 14 17c0 5-2 8-5 10v7H23v-7c-3-2-5-5-5-10z', 'M28 47v5M36 47v5'], cheios: [C(26, 31, 3.5), C(38, 31, 3.5)] },
+  capacete: { tracos: ['M14 42v-4a18 18 0 0 1 36 0v4z', 'M8 46h48', 'M27 22v10M37 22v10'] },
+  colete: { tracos: ['M24 12l-12 8 5 10 5-3v25h20V27l5 3 5-10-12-8c-1 4-4 6-8 6s-7-2-8-6z'] },
+  escudo: { tracos: [ESCUDO, 'M32 12v40'] },
+  cerebro: { tracos: ['M32 14c-4-4-12-3-14 3c-6 1-8 8-5 12c-3 4-1 11 5 12c2 6 10 7 14 3z', 'M32 14c4-4 12-3 14 3c6 1 8 8 5 12c3 4 1 11-5 12c-2 6-10 7-14 3z', 'M32 14v30'] },
+  trevo: { tracos: [C(25, 24, 7), C(39, 24, 7), C(25, 38, 7), C(39, 38, 7), 'M32 45c1 4 3 7 7 10'] },
+  alca: { cheios: [C(25, 16, 3.5), C(39, 16, 3.5), C(25, 32, 3.5), C(39, 32, 3.5), C(25, 48, 3.5), C(39, 48, 3.5)] },
+  tachinha: { tracos: ['M22 10h20', 'M26 10v14l-8 10h28l-8-10V10', 'M32 34v20'] },
+  paleta: { tracos: ['M32 10C18 10 10 20 10 32s10 22 22 22c4 0 5-3 3-6s0-6 4-6h6c6 0 9-4 9-10c0-12-10-22-22-22z'], cheios: [C(21, 30, 3), C(28, 20, 3), C(40, 21, 3)] },
+  recolher: { tracos: ['M14 24l18 18 18-18'] },
+  subir: { tracos: ['M14 40l18-18 18 18'] },
+  turno: { tracos: ['M20 12l28 20-28 20z'] },
+  autofogo: { tracos: ['M10 18h34M20 32h34M10 46h34'] },
+  ricochete: { tracos: ['M12 52V36a12 12 0 0 1 12-12h28', 'M42 14l10 10-10 10'] },
+  doisCanos: { tracos: ['M24 12v40M40 12v40'] },
+  desligado: { tracos: ['M30 20l5-5a9 9 0 0 1 13 13l-5 5M34 44l-5 5a9 9 0 0 1-13-13l5-5', 'M12 12l40 40'] },
+  pente: { tracos: ['M10 14h44v10H10z', 'M14 24v28h36V24', 'M26 34h12'] },
+  bandeira: { tracos: ['M16 56V10', 'M16 12h32v22H16'], cheios: ['M16 12h8v6h-8zM32 12h8v6h-8zM24 18h8v6h-8zM40 18h8v6h-8zM16 24h8v5h-8zM32 24h8v5h-8z'] },
+  encarada: { tracos: [C(32, 22, 10), 'M14 54c2-11 9-17 18-17s16 6 18 17', 'M22 21h20'] },
+  lista: { tracos: ['M10 18l4 4 7-8M10 34l4 4 7-8M10 50l4 4 7-8', 'M30 18h22M30 34h22M30 50h22'] },
+  janela: { tracos: ['M28 14H14v36h36V36', 'M36 10h18v18', 'M54 10L30 34'] },
+  estrangular: { tracos: ['M14 54V28a4 4 0 0 1 8 0v8M22 36V20a4 4 0 0 1 8 0v18', 'M50 54V28a4 4 0 0 0-8 0v8M42 36V20a4 4 0 0 0-8 0v18'] },
+  derrubar: { tracos: [C(42, 14, 5), 'M40 20l-8 14 10 6 4 12M32 34l-12 4M38 26l12-2', 'M10 54h44'] },
+  escudoHumano: { tracos: [C(22, 16, 6), 'M8 54c1-12 6-20 14-20c4 0 7 2 9 5', 'M42 28l12 4v8c0 7-5 11-12 14c-7-3-12-7-12-14v-8z'] },
+  soltar: { tracos: ['M20 34V18a4 4 0 0 1 8 0v12M28 28V14a4 4 0 0 1 8 0v14M36 28V18a4 4 0 0 1 8 0v18c0 10-6 18-14 18c-6 0-10-3-13-8l-6-10a4 4 0 0 1 6-5l3 4'] },
+  correr: { tracos: [C(38, 12, 5), 'M36 18l-8 14 8 6-4 16M28 32l-10 8M34 24l10 6 6-4M24 26l6-6'] },
+  tomar: { tracos: ['M24 10h16v14H24z', 'M8 44h10l10 6h14l12-8a4 4 0 0 0-4-6l-10 6H30', 'M18 44v-8h8l10 4h8'] },
+  levantar: { tracos: [C(26, 14, 5), 'M26 20v16M18 26h16M26 36l-6 10M26 36l6 10', 'M10 54h44', 'M48 40V14M42 20l6-6 6 6'] },
+  cobertura: { tracos: ['M8 28L32 10l24 18', 'M14 24v30h36V24', C(32, 32, 5), 'M24 54c1-8 4-12 8-12s7 4 8 12'] },
+  estase: { tracos: [FLOCO] },
+  desmaiado: { tracos: ['M10 16v38M10 44h44v10M10 36h44', 'M54 36v-6a6 6 0 0 0-6-6H30v12'], cheios: [C(20, 29, 5)] },
+  cadeado: { tracos: ['M18 30h28v24H18z', 'M24 30v-8a8 8 0 0 1 16 0v8', 'M32 40v6'] }
 };
 // O glifo de cada classe do Font Awesome nos botões do sistema.
 export const FA_PARA_GLIFO = {
@@ -152,20 +188,34 @@ export const FA_PARA_GLIFO = {
   'fa-triangle-exclamation': 'perigo', 'fa-person-walking-arrow-right': 'tokenDinamico', 'fa-satellite-dish': 'scanner', 'fa-right-to-bracket': 'entrar',
   'fa-right-from-bracket': 'descer', 'fa-car': 'dirigir', 'fa-car-burst': 'manobra'
 };
+// O Painel Tático (o C51, ciclo 197) usa o mapa de cima e mais estes, que valem só dentro dele (#painel-tatico): a ficha e
+// as janelas ficam como estavam. O fechar (fa-xmark) continua o do Font Awesome, como em todo lugar.
+export const FA_DO_PAINEL = {
+  'fa-heart': 'ileso', 'fa-heart-crack': 'ferido', 'fa-droplet': 'sangrando', 'fa-skull': 'caveira',
+  'fa-helmet-safety': 'capacete', 'fa-shirt': 'colete', 'fa-shield-halved': 'escudo', 'fa-brain': 'cerebro', 'fa-clover': 'trevo',
+  'fa-grip-vertical': 'alca', 'fa-thumbtack': 'tachinha', 'fa-palette': 'paleta', 'fa-chevron-down': 'recolher', 'fa-chevron-up': 'subir', 'fa-play': 'turno',
+  'fa-bars-staggered': 'autofogo', 'fa-arrows-turn-right': 'ricochete', 'fa-grip-lines-vertical': 'doisCanos', 'fa-link-slash': 'desligado', 'fa-box-archive': 'pente',
+  'fa-flag-checkered': 'bandeira', 'fa-user-ninja': 'encarada', 'fa-list-check': 'lista', 'fa-up-right-from-square': 'janela',
+  'fa-hands': 'estrangular', 'fa-person-falling': 'derrubar', 'fa-person-shield': 'escudoHumano', 'fa-hand': 'soltar', 'fa-person-running': 'correr', 'fa-hand-holding': 'tomar',
+  'fa-person-arrow-up-from-line': 'levantar', 'fa-person-shelter': 'cobertura', 'fa-snowflake': 'estase', 'fa-bed': 'desmaiado', 'fa-lock': 'cadeado'
+};
+const PAINEL = '#painel-tatico';
 const svgDoGlifo = ({ tracos = [], cheios = [] }) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">${tracos.map(d => `<path d="${d}" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`).join('')}${cheios.map(d => `<path d="${d}" fill="#000"/>`).join('')}</svg>
 `;
 export const svgDoGlifoNomeado = nome => svgDoGlifo(GLIFOS[nome]);
 // Onde o glifo vale: os botões do sistema (a ficha, os cartões e as janelas, com a classe do sistema) e os do HUD do token
-// que o sistema põe (o prefixo da classe) e o da régua de DV.
-const ONDE = ['.cpr-fieldbook', '#token-hud .control-icon[class*="cpr-fieldbook-"]', '#token-hud .dv-table-selector'];
+// que o sistema põe (o prefixo da classe), o da régua de DV e o Painel Tático (o C51, ciclo 197).
+const ONDE = ['.cpr-fieldbook', '#token-hud .control-icon[class*="cpr-fieldbook-"]', '#token-hud .dv-table-selector', PAINEL];
 export function cssDosGlifos() {
-  const em = classe => ONDE.map(onde => `${onde} i.${classe}::before`).join(',\n');
+  const em = (classe, onde = ONDE) => onde.map(lugar => `${lugar} i.${classe}::before`).join(',\n');
   const glifo = nome => `url("../icones/neon/glifos/${nome}.svg") center / contain no-repeat`;
+  const regra = onde => ([classe, nome]) => `${em(classe, onde)} {\n  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;\n  -webkit-mask: ${glifo(nome)}; mask: ${glifo(nome)};\n}`;
   return [
-    '/* Gerado por build/icones.mjs (o C49, parte 2): os glifos neon no lugar dos do Font Awesome nos botões do sistema. Não edite à mão. */',
+    '/* Gerado por build/icones.mjs (o C49, parte 2, e o C51): os glifos neon no lugar dos do Font Awesome nos botões do sistema e no Painel Tático. Não edite à mão. */',
     `${ONDE.map(onde => `${onde} i[class*="fa-"]`).join(',\n')} { filter: drop-shadow(0 0 2px currentColor); }`,
     '#token-hud .control-icon[class*="cpr-fieldbook-"] i, #token-hud .dv-table-selector i { color: #02d7f2; }',
-    ...Object.entries(FA_PARA_GLIFO).map(([classe, nome]) => `${em(classe)} {\n  content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background-color: currentColor;\n  -webkit-mask: ${glifo(nome)}; mask: ${glifo(nome)};\n}`),
+    ...Object.entries(FA_PARA_GLIFO).map(regra(ONDE)),
+    ...Object.entries(FA_DO_PAINEL).map(regra([PAINEL])),
     ''
   ].join('\n');
 }

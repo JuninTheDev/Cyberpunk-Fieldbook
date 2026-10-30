@@ -361,6 +361,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     agarrando, Estrangular, Derrubar, Escudo e Soltar; agarrado, Escapar. O ATK, o Agarrar e o Tomar escolhem o alvo no
     mapa como o ATK das armas. Os punhos equipados saem da lista das armas. A peça "Desarmado e agarrão" do estilo esconde
     a linha;
+  - **os estados e o movimento** (ciclo 197): os selos Caído, Inconsciente, Em cobertura e Estase (com a cobertura que
+    resta); nas ações, Levantar (só caído, 1 Ação), Correr (a confirmação e o cartão da ficha; apagado quando não vale) e
+    Cobertura (a marca "Em cobertura", que liga e desliga); e, com pelo menos 1 ponto numa forma, **Golpes**: os movimentos
+    especiais das Artes Marciais, como na ficha (o que falta de WILL ou MOVE fica com o cadeado);
+  - **os glifos neon** (ciclo 197): os do mapa da ficha e mais 35 só do painel, no estilo do C49; o fechar continua o do
+    Font Awesome;
   - **o alvo:** o painel mostra o alvo marcado; sem alvo, o ATK vira mira no mapa (Esc cancela);
   - **o estilo de cada jogador** (Configurações → Sistema → Estilo do Painel Tático): o tema, as cores, a fonte, o
     tamanho, a posição (arrastar pela alça), as seções e os botões de HP; o código PT1 leva o visual de um para outro; o

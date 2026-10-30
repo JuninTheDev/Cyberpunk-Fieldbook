@@ -294,6 +294,12 @@ export class PainelTatico {
     if (A.suprimido(a)) selos.push('<span class="pt-selo pt-selo-alerta" data-tooltip="Suprimido pelo fogo supressivo: sai no fim do seu próximo turno."><i class="fa-solid fa-water"></i> Suprimido</span>');
     const agarrao = A.agarrao(a);
     if (agarrao) selos.push(`<span class="pt-selo pt-selo-alerta" data-tooltip="${agarrao}: −2 em todas as ações"><i class="fa-solid fa-hand-fist"></i> ${agarrao}</span>`);
+    // Os estados que mudam o turno (o C51, ciclo 197): o caído (levantar custa 1 Ação), o inconsciente, a cobertura e a estase.
+    if (A.caido(a)) selos.push('<span class="pt-selo pt-selo-alerta pt-selo-caido" data-tooltip="Caído: sem a Ação de Movimento; levantar-se custa 1 Ação"><i class="fa-solid fa-person-falling"></i> Caído</span>');
+    if (A.inconsciente(a)) selos.push('<span class="pt-selo pt-selo-alerta pt-selo-inconsciente" data-tooltip="Inconsciente"><i class="fa-solid fa-bed"></i> Inconsciente</span>');
+    if (A.emCobertura(a)) selos.push('<span class="pt-selo pt-selo-cobertura" data-tooltip="Em cobertura: o tiro que ela para fica nela (o mestre decide)"><i class="fa-solid fa-person-shelter"></i> Em cobertura</span>');
+    const estase = A.estase(a);
+    if (estase) selos.push(`<span class="pt-selo pt-selo-estase" data-tooltip="Em estase: sem Death Saves enquanto a cobertura tiver HP"><i class="fa-solid fa-snowflake"></i> Estase ${estase.hp}/${estase.max}</span>`);
     const net = naNet(this.token);
     if (net) selos.push(`<button type="button" class="pt-selo pt-selo-net" data-acao="abrirNet" data-tooltip="Conectado em ${esc(net.nome)}: abrir a janela da NET"><i class="fa-solid fa-network-wired"></i> NET${net.contaAcoes ? ` · ${net.sobram}/${net.max}` : ''}</button>`);
     const fixado = Boolean(this.fixo);
@@ -489,11 +495,19 @@ export class PainelTatico {
 
   #acoes(combatente) {
     const ini = combatente?.initiative;
-    const botao = (acao, icone, rotulo, dica, extra = '', classe = '') => `<button type="button" class="pt-acao ${classe}${extra && extra === this.aberto ? ' pt-ativa' : ''}" data-acao="${acao}"${extra ? ` data-painel="${extra}"` : ''} data-tooltip="${esc(dica)}"><i class="fa-solid ${icone}"></i><span>${rotulo}</span></button>`;
+    const botao = (acao, icone, rotulo, dica, extra = '', classe = '', desligado = false) => `<button type="button" class="pt-acao ${classe}${extra && extra === this.aberto ? ' pt-ativa' : ''}" data-acao="${acao}"${extra ? ` data-painel="${extra}"` : ''} data-tooltip="${esc(dica)}"${desligado ? ' disabled' : ''}><i class="fa-solid ${icone}"></i><span>${rotulo}</span></button>`;
+    const a = this.actor;
+    // O movimento da Defesa da aba Combate (o C51, ciclo 197): Levantar-se (caído), Correr e Proteger-se.
+    const semCorrer = A.semCorrer(a);
+    const coberto = A.emCobertura(a);
     return `<section class="pt-secao pt-acoes">
       ${botao('iniciativa', 'fa-bolt', ini !== null && ini !== undefined ? `Inic. ${ini}` : 'Iniciativa', game.combat ? 'Rolar a iniciativa (REF + 1d10)' : 'Rolar a iniciativa (entra no combate da cena)')}
       ${this.meuTurno ? botao('encerrarTurno', 'fa-flag-checkered', 'Fim do turno', 'Passar a vez', '', 'pt-turno') : ''}
+      ${A.caido(a) ? botao('levantar', 'fa-person-arrow-up-from-line', 'Levantar', 'Levantar-se: 1 Ação (a Recuperação das Artes Marciais, pelos Golpes, pode não gastar)', '', 'pt-alerta') : ''}
+      ${botao('correr', 'fa-person-running', 'Correr', semCorrer || 'Correr: 1 Ação, depois da Ação de Movimento, para mais MOVE × 2 m (a mesa confirma)', '', '', Boolean(semCorrer))}
+      ${botao('cobertura', 'fa-person-shelter', coberto ? 'Coberto' : 'Cobertura', coberto ? 'Em cobertura: clique para sair' : 'Proteger-se: marca o token "Em cobertura"; o cartão do tiro avisa o mestre, que decide', '', coberto ? 'pt-ativa' : '')}
       ${botao('facedown', 'fa-user-ninja', 'Facedown', 'Disputa de encarada: COOL + Reputação + 1d10')}
+      ${A.movimentos(a).length ? botao('painel', 'fa-hand-fist', 'Golpes', 'Os movimentos especiais das Artes Marciais', 'golpes') : ''}
       ${botao('painel', 'fa-list-check', 'Perícias', 'Todas as perícias (★ favorita fica na barra)', 'pericias')}
       ${this.#habilidades().length ? botao('painel', 'fa-star', 'Role', 'As rolagens de Role', 'roles') : ''}
       ${this.#temNet() ? botao('painel', 'fa-network-wired', 'NET', 'Interface, Scanner e a conexão na NET', 'net') : ''}
@@ -527,9 +541,9 @@ export class PainelTatico {
 
   // ---------------- Painéis ----------------
   #painel(qual) {
-    const corpo = { pericias: () => this.#painelPericias(), roles: () => this.#painelRoles(), net: () => this.#painelNet(), equipamento: () => this.#painelEquipamento() }[qual];
+    const corpo = { pericias: () => this.#painelPericias(), roles: () => this.#painelRoles(), net: () => this.#painelNet(), equipamento: () => this.#painelEquipamento(), golpes: () => this.#painelGolpes() }[qual];
     if (!corpo) return '';
-    const titulos = { pericias: 'Perícias', roles: 'Rolagens de Role', net: 'NET', equipamento: 'Equipamento' };
+    const titulos = { pericias: 'Perícias', roles: 'Rolagens de Role', net: 'NET', equipamento: 'Equipamento', golpes: 'Artes Marciais: movimentos especiais' };
     return `<div class="pt-painel pt-painel-${qual}">
       <header><span>${titulos[qual]}</span>${qual === 'pericias' ? `<input type="search" class="pt-busca" data-foco="busca" placeholder="Buscar…" value="${esc(this.busca)}">` : ''}<button type="button" class="pt-icone" data-acao="fecharPainel" data-tooltip="Fechar"><i class="fa-solid fa-xmark"></i></button></header>
       <div class="pt-painel-corpo">${corpo()}</div>
@@ -553,6 +567,14 @@ export class PainelTatico {
     return this.#habilidades().map(h => `<div class="pt-linha" data-acao="habilidade" data-rolagem="${h.id}">
         <span class="pt-linha-nome">${esc(h.nome)}</span><small>${esc(h.roleNome)} · rank ${h.rank ?? '–'} · ${esc(h.formula ?? '')}</small><b><i class="fa-solid fa-dice-d20"></i></b>
       </div>`).join('') || '<p class="pt-vazio-texto">Nenhuma rolagem de Role.</p>';
+  }
+
+  // Os movimentos especiais das Artes Marciais (o C10; os da ficha, bloco-artes-marciais.hbs): os das formas em que o
+  // personagem tem pelo menos 1 ponto e a Recuperação; o que falta de WILL ou MOVE deixa a linha apagada.
+  #painelGolpes() {
+    return A.movimentos(this.actor).map(m => `<div class="pt-linha pt-golpe-linha${m.bloqueio ? ' pt-travado' : ''}"${m.bloqueio ? '' : ` data-acao="movimento" data-movimento="${m.id}"`} data-tooltip="${esc([m.confirmar && `Requisito: ${m.confirmar}`, m.efeito, m.bloqueio].filter(Boolean).join(' '))}">
+        <span class="pt-linha-nome">${esc(m.nome)}</span><small>${esc(m.nomeDaForma)}${typeof m.teste === 'object' ? ` · DV ${m.teste.dv}` : ' · golpe'}${m.bloqueio ? ` · ${esc(m.bloqueio)}` : ''}</small><b><i class="fa-solid ${m.bloqueio ? 'fa-lock' : 'fa-dice-d10'}"></i></b>
+      </div>`).join('') || '<p class="pt-vazio-texto">Sem forma de Artes Marciais com pelo menos 1 ponto.</p>';
   }
 
   #painelNet() {
@@ -643,6 +665,10 @@ export class PainelTatico {
         case 'dano': return A.rolarDano(evento, a, id);
         case 'desarmado': return (await this.#alvoAntes()) ? A.atacarDesarmado(evento, a, el.dataset.golpe) : null;
         case 'danoDesarmado': return A.rolarDanoDesarmado(evento, a, el.dataset.golpe);
+        case 'levantar': return A.levantar(a);
+        case 'correr': return A.correr(a);
+        case 'cobertura': return A.alternarCobertura(a);
+        case 'movimento': return !A.movimentoPedeAlvo(el.dataset.movimento) || (await this.#alvoAntes()) ? A.usarMovimento(evento, a, el.dataset.movimento) : null;
         case 'agarrao': return !A.PEDEM_ALVO.includes(el.dataset.golpe) || (await this.#alvoAntes()) ? A.noAgarrao(evento, a, el.dataset.golpe) : null;
         case 'iniciativa': return A.iniciativa(a, t);
         case 'encerrarTurno': return A.encerrarTurno(a, t);

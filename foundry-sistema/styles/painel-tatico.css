@@ -189,6 +189,8 @@
 #painel-tatico .pt-selo { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border: 1px solid var(--pt-linha); background: rgba(var(--pt-acento-rgb), 0.08); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
 #painel-tatico .pt-selo-turno { border-color: var(--pt-destaque); color: var(--pt-destaque); }
 #painel-tatico .pt-selo-alerta { border-color: var(--pt-acento2); color: var(--pt-acento2); }
+#painel-tatico .pt-selo-cobertura { border-color: var(--pt-verde); color: var(--pt-verde); }
+#painel-tatico .pt-selo-estase { border-color: #5ec8ff; color: #9fdcff; }
 #painel-tatico .pt-selo-net { border-color: #b26bff; color: #d7b4ff; background: rgba(178, 107, 255, 0.12); }
 #painel-tatico .pt-selo-net:hover { box-shadow: 0 0 8px rgba(178, 107, 255, 0.5); }
 #painel-tatico .pt-ferramentas { display: flex; gap: 2px; margin-left: auto; padding-left: 10px; }
@@ -305,6 +307,10 @@
 #painel-tatico .pt-acao:hover, #painel-tatico .pt-acao.pt-ativa { border-color: var(--pt-acento); background: rgba(var(--pt-acento-rgb), 0.17); }
 #painel-tatico .pt-acao.pt-turno { border-color: var(--pt-destaque); color: var(--pt-destaque); }
 #painel-tatico .pt-acao.pt-turno i { color: var(--pt-destaque); }
+/* O movimento (o C51, ciclo 197): o Levantar do caído em alerta; o Correr que não vale agora, apagado */
+#painel-tatico .pt-acao.pt-alerta { border-color: var(--pt-acento2); color: var(--pt-acento2); }
+#painel-tatico .pt-acao.pt-alerta i { color: var(--pt-acento2); }
+#painel-tatico .pt-acao:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Perícias favoritas */
 #painel-tatico .pt-favoritas { display: flex; flex-wrap: wrap; gap: 3px; padding-top: 5px; border-top: 1px solid var(--pt-linha-fraca); }
@@ -342,6 +348,8 @@
 #painel-tatico .pt-linha-nome { flex: 1 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #painel-tatico .pt-linha small { color: var(--pt-apagado); font-size: 10px; white-space: nowrap; }
 #painel-tatico .pt-linha b { min-width: 22px; color: var(--pt-acento); text-align: right; }
+#painel-tatico .pt-linha.pt-travado { opacity: 0.5; cursor: default; }
+#painel-tatico .pt-linha.pt-travado:hover { background: none; }
 #painel-tatico .pt-estrela { width: 16px; height: 16px; color: rgba(var(--pt-texto-rgb), 0.22); font-size: 10px; }
 #painel-tatico .pt-estrela.pt-ativa, #painel-tatico .pt-estrela:hover { color: var(--pt-destaque); }
 #painel-tatico .pt-linha-equip img { width: 24px; height: 24px; object-fit: contain; }
@@ -376,7 +384,7 @@
 #painel-tatico.pt-compacto .pt-lista-armas { max-height: 66px; }
 #painel-tatico.pt-compacto .pt-arma-img { width: 22px; height: 22px; }
 #painel-tatico.pt-compacto .pt-acoes { grid-template-columns: repeat(3, auto); }
-#painel-tatico.pt-compacto .pt-acao span { display: none; }
+#painel-tatico.pt-compacto .pt-acao span, #painel-tatico.pt-compacto .pt-golpe span { display: none; }
 
 /* ---------- Sem animação ---------- */
 #painel-tatico.pt-sem-animacao *, #painel-tatico.pt-sem-animacao *::before, #painel-tatico.pt-sem-animacao *::after { animation: none !important; transition: none !important; }

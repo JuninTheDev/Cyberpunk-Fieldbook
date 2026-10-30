@@ -4,9 +4,13 @@
 // modos de 2077 são os da ficha (combate.acoesDe2077). O desarmado e o agarrão (o C51) também: desarmado.mjs e agarrao.mjs.
 import { SISTEMA, STATUS_AGARRAO, USOS } from '../config.mjs';
 import { config } from '../configuracoes.mjs';
-import { STATUS_SUPRIMIDO } from '../combate.mjs';
+import { STATUS_COBERTURA, STATUS_SUPRIMIDO } from '../combate.mjs';
 import * as D from '../desarmado.mjs';
 import * as G from '../agarrao.mjs';
+import * as AM from '../artes-marciais.mjs';
+import * as E from '../estados.mjs';
+import { estaseDe } from '../cryo.mjs';
+import { MOVIMENTOS } from '../regras.mjs';
 
 const limitar = (valor, min, max) => Math.min(Math.max(valor, min), max);
 export const comJanela = evento => Boolean(evento?.ctrlKey || evento?.metaKey) === Boolean(config('rolarDireto'));
@@ -97,6 +101,21 @@ const NO_AGARRAO = {
 };
 export const PEDEM_ALVO = ['agarrar', 'tomar'];
 export const noAgarrao = (evento, actor, golpe) => NO_AGARRAO[golpe]?.(actor, comJanela(evento)) ?? null;
+// Os movimentos especiais das Artes Marciais (artes-marciais.mjs, o C10): o requisito "neste turno" o jogador confirma na
+// janela, como na ficha.
+export const usarMovimento = (evento, actor, id) => AM.usarMovimento(actor, id, { perguntar: comJanela(evento) });
+// O que pede o alvo marcado: os contra outra pessoa e os golpes (os ataques).
+export const movimentoPedeAlvo = id => Boolean(MOVIMENTOS[id]?.alvo || MOVIMENTOS[id]?.teste === 'ataque');
+
+// ---------------- Estados e movimento (o C51, ciclo 197) ----------------
+// Os da Defesa da aba Combate: Levantar-se (1 Ação), Correr (1 Ação, com a confirmação) e Proteger-se (a marca "Em
+// cobertura"; de novo, tira).
+export const movimentos = actor => AM.movimentosDe(actor);
+// O Correr que não vale agora (caído, agarrado, dirigindo): o motivo, para o botão ficar apagado.
+export const semCorrer = actor => E.corridaDe(actor).bloqueio ?? '';
+export const levantar = actor => E.levantar(actor);
+export const correr = actor => E.correr(actor);
+export const alternarCobertura = actor => actor.toggleStatusEffect(STATUS_COBERTURA);
 
 // ---------------- Combate ----------------
 export const combatenteDe = (actor, token) => game.combat?.combatants.find(c => (token ? c.tokenId === token.id : c.actorId === actor.id)) || null;
@@ -117,9 +136,14 @@ export function encerrarTurno(actor, token) {
   return null;
 }
 
-// Os selos do topo: suprimido (o fogo supressivo) e agarrado ou agarrando.
+// Os selos do topo: suprimido (o fogo supressivo) e agarrado ou agarrando; e (o C51, ciclo 197) caído, inconsciente, em
+// cobertura e em estase (o Cryopump ou o Cryotank; cryo.mjs), com a cobertura que resta.
 export const suprimido = actor => Boolean(actor?.statuses?.has(STATUS_SUPRIMIDO));
 export const agarrao = actor => (actor?.statuses?.has(STATUS_AGARRAO.agarrado) ? 'Agarrado' : actor?.statuses?.has(STATUS_AGARRAO.agarrando) ? 'Agarrando' : '');
+export const caido = actor => Boolean(actor?.statuses?.has('prone'));
+export const inconsciente = actor => Boolean(actor?.statuses?.has('unconscious'));
+export const emCobertura = actor => Boolean(actor?.statuses?.has(STATUS_COBERTURA));
+export const estase = actor => estaseDe(actor);
 
 // ---------------- Recursos ----------------
 export const mudarHp = (actor, delta) => actor.update({ 'system.hp.value': limitar(actor.system.hp.value + delta, 0, actor.system.hp.max) });

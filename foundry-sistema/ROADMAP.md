@@ -512,8 +512,10 @@ HUD de combate, junto com o agarrar"):
   as Artes Marciais sem precisar do item na ficha (`desarmado.mjs`), a mão livre do agarrão, o "tomar um objeto" (a wiki,
   p. 177: "Quem vence agarra ou toma um objeto"), o BODY 11 das duas Gorilla Arms no Estrangular e no Derrubar (o Kit) e,
   no Painel Tático, a linha do desarmado com os botões do agarrão de cada lado.
-  - [ ] a revisão do HUD inteiro (o que falta, o que está quebrado ou confuso): a lista vai ao usuário, e só entra o que
-    ele aprovar.
+  - [x] a revisão do HUD inteiro, itens 1 a 3 (os que o usuário aprovou, 2026-10-30): feitos no ciclo 197: os glifos neon
+    no painel, os estados e o movimento da Defesa (Levantar, Correr, Cobertura) e os movimentos das Artes Marciais. Ficaram
+    de fora (não pedidos): Arremessar e Descarregar nas armas do painel, os botões de HP que param em 0 (o sistema aceita
+    HP negativo), a "Unarmed" criada sozinha no painel de Equipamento e o contador de Ação e Movimento do turno.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
