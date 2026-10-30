@@ -69,3 +69,28 @@ Das notas dos jogadores, antes da Sessão 1:
   - Dan, que viu o grupo;
   - Vega, que viu o que a maleta fez;
   - "I.", que mandava em Kobo.
+
+### Sessão 2: A manhã depois (data: 29/10/2026)
+
+- **Quem jogou:** Ricky "Mão Boba" e Brook "Aleksandr". O Qyan "Corvo" tinha voltado para casa, para resolver outras
+  coisas.
+- **O que aconteceu:**
+  - Ricky e Brook acordaram no consultório do Ricky. Morty já estava acordado, encarando a maleta e cochichando:
+    "Treze minutos. Ela fica nervosa quando eu me atraso." Ricky falou com ele, e ele voltou ao normal.
+  - Um vizinho do prédio bateu na porta: o braço cibernético dele se mexeu sozinho e quebrou a mesa da casa dele. Ricky
+    o atendeu e não achou a causa, mas viu que o braço é de um lote de 2070.
+  - Wakako mandou uma mensagem ao Brook, pedindo a maleta logo. O grupo foi falar com ela, e ela deu a escolha: ficar
+    com a maleta ou vendê-la a ela. O grupo ficou com a maleta.
+  - Na volta ao consultório, mercenários numa van abordaram o grupo. Houve uma troca de tiros, e os mercenários
+    recuaram.
+  - Ricky e Brook voltaram ao consultório muito feridos, e o Morty tinha sumido.
+- **Destino da maleta:** com o grupo, no consultório do Ricky, ainda presa ao braço de Endo.
+- **Morty:** sumiu do consultório enquanto o grupo estava fora.
+- **Handouts entregues:** nenhum.
+- **Pontas soltas para a próxima sessão:**
+  - o Morty, sumido;
+  - o vizinho, com o braço do lote de 2070 ainda no corpo;
+  - o Agent de Endo, ainda fechado;
+  - Wakako, que ofereceu comprar a maleta e ouviu um não;
+  - os mercenários da van, que recuaram sem dizer quem os mandou;
+  - o Qyan, que não estava lá.
