@@ -526,6 +526,14 @@ andando para que seja mais fluido e dê para ver realmente o token se movendo e 
   - [ ] (só se o usuário quiser desenhar) um segundo quadro de passo, o outro pé, para um andar de quatro tempos: uma
     linha nova na folha, no cortador e na janela.
 
+**Pedido do usuário de 2026-11-01** ("uma ferramenta para criar tokens padronizados dentro dos moldes que já existem
+usando a I.A do gpt [...] se encaixe perfeitamente nos cortes, tenham todos os msm lados [...] só mudaria o personagem";
+escolheu o ChatGPT, sem a API):
+- [~] **C53. A folha feita no ChatGPT e o encaixe no molde:** em andamento (sessão KouArt, 2026-11-01). O cortador acha
+  cada figura inteira (sem cortar pela grade), põe cada uma na sua posição, com a mesma escala e os pés na mesma linha,
+  em quadros do mesmo tamanho para todo personagem, tira o fundo liso e avisa do que falta ou está virado; e o kit do
+  ChatGPT: o prompt e o molde cinza para baixar.
+
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
 - o MIGRATION_STATUS com o ciclo.
