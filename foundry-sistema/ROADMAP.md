@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 196). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 198). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **A branch:** desde o C28 (ciclo 195, 2026-10-28), o `master`. O push de um ciclo põe o sistema no Foundry 14 da mesa
   sozinho, com a mesa vazia; a `sistema-v14` ficou parada no merge do C28.
@@ -516,6 +516,12 @@ HUD de combate, junto com o agarrar"):
     no painel, os estados e o movimento da Defesa (Levantar, Correr, Cobertura) e os movimentos das Artes Marciais. Ficaram
     de fora (não pedidos): Arremessar e Descarregar nas armas do painel, os botões de HP que param em 0 (o sistema aceita
     HP negativo), a "Unarmed" criada sozinha no painel de Equipamento e o contador de Ação e Movimento do turno.
+
+**Pedido do usuário de 2026-11-01** ("a animação dele andando é muito rápida [...] aprimorasse essa animação do token
+andando para que seja mais fluido e dê para ver realmente o token se movendo e trocando a animação"):
+- [~] **C52. O andar do token dinâmico** (sessão KouArt, 2026-11-01): o token com o conjunto ligado anda no ritmo de uma
+  caminhada (o Foundry 14 anima o movimento a 6 casas por segundo), com os passos (o Caminhando e o Parado alternados a
+  cada meia casa, com a folha que já existe) e um balanço leve, tudo na tela de cada um, sem gravar.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
