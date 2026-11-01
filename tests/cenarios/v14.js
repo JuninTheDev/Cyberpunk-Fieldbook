@@ -5309,21 +5309,28 @@ module.exports = async ({ edge, servidores, r }) => {
         const [costelas] = await alvo.createEmbeddedDocuments('Item', [pegar('core_critical-injuries-body:broken-ribs')]);
         const combate = await Combat.implementation.create({ scene: cena.id, active: true });
         for (const [ator, ini] of [[alvo, 20], [a, 10]]) await combate.createEmbeddedDocuments('Combatant', [{ actorId: ator.id, tokenId: cena.tokens.find(t => t.actorId === ator.id).id, sceneId: cena.id, initiative: ini }]);
-        await combate.startCombat();
+        // O começo de cada turno zera os históricos de movimento (o _clearMovementHistoryOnStartTurn do Foundry) depois de o
+        // startCombat e o nextTurn voltarem: mover antes disso perde o movimento para a limpeza (a corrida que derrubou este
+        // passo no G4 do ciclo 198). Cada turno espera a limpeza dele.
+        let limpezas = 0;
+        const limpar = combate._clearMovementHistoryOnStartTurn.bind(combate);
+        combate._clearMovementHistoryOnStartTurn = async (...args) => { await limpar(...args); limpezas++; };
+        const virar = async passar => { const antes = limpezas; await passar(); await esperar(() => limpezas > antes); };
+        await virar(() => combate.startCombat());
         const cartoes = () => game.messages.filter(m => m.getFlag(S, 'perigo')?.perigo === 'costelas');
         const mover = async (dx, dy, action = 'walk') => {
           await token.move([{ x: token.x + dx * 100, y: token.y + dy * 100, action }], { animate: false, autoRotate: false, constrainOptions: { ignoreWalls: true, ignoreCost: true } });
           return token.movementHistory.length;
         };
-        // A volta inteira: o turno do alvo acaba (o começo do turno do atirador zera os históricos, depois do fim do turno
-        // do alvo), o do atirador também, e o alvo começa outro, com o histórico zerado.
+        // A volta inteira: o turno do alvo acaba (o fim dele mede o andado, antes da limpeza do começo do turno do atirador),
+        // o do atirador também, e o alvo começa outro, com o histórico zerado.
         const umaVolta = async esperado => {
-          await combate.nextTurn();
+          await virar(() => combate.nextTurn());
           await esperar(() => token.movementHistory.length === 0);
           await P.esperarOsPerigos();
           if (esperado) await esperar(() => alvo.system.hp.value === esperado.hp && cartoes().length === esperado.cartoes);
           const lido = { hp: alvo.system.hp.value, cartoes: cartoes().length };
-          await combate.nextTurn();
+          await virar(() => combate.nextTurn());
           await esperar(() => combate.combatant?.actorId === alvo.id && token.movementHistory.length === 0);
           return lido;
         };
@@ -19640,7 +19647,8 @@ module.exports = async ({ edge, servidores, r }) => {
     });
 
     await r.passo('tokens dinâmicos (o C45, parte 2): a classe do token do sistema; a pré-carga das imagens; durante o movimento, o Caminhando de cada trecho desenhado na tela (no mestre e no jogador), sem gravar, e no fim a imagem gravada de volta; armado, o Mirando andando; a troca pela direção sem transição e a do estado com a da configuração (glitch, ou nenhuma)', async () => {
-      // A cena sem visão de token: o jogador vê o token do mestre e desenha o movimento dele.
+      // A cena sem visão de token: o jogador vê o token do mestre e desenha o movimento dele. Os passos ficam em "Só o
+      // Caminhando", o andar de antes do C52 (os passos alternados têm o passo deles, logo abaixo).
       const preparo = await edge.evaluate(`(async () => {
         const FP = foundry.applications.apps.FilePicker.implementation;
         const pasta = 'teste-c45b';
@@ -19656,7 +19664,8 @@ module.exports = async ({ edge, servidores, r }) => {
         const imagens = Object.fromEntries(nomes.map(nome => [nome.slice(4, -4).replace(/_(\\d+)$/, (m, a) => '-' + Number(a)), pasta + '/' + nome]));
         await game.system.api.tokenDinamico.salvarConjunto(ator, { ativo: true, pasta, imagens });
         const cena = await Scene.implementation.create({ name: 'C45 Caminhando', active: false, width: 2000, height: 1400, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
-        window.__c45b = { ator: ator.id, arma: arma.id, cena: cena.id, anterior: canvas.scene?.id, transicao: game.settings.get('${S}', 'transicaoDoToken') };
+        window.__c45b = { ator: ator.id, arma: arma.id, cena: cena.id, anterior: canvas.scene?.id, transicao: game.settings.get('${S}', 'transicaoDoToken'), passos: game.settings.get('${S}', 'passosDoToken') };
+        await game.settings.set('${S}', 'passosDoToken', 'caminhando');
         await cena.activate();
         await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
         const [token] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 1000, y: 800 })).toObject()]);
@@ -19732,6 +19741,7 @@ module.exports = async ({ edge, servidores, r }) => {
           CONFIG.Token.objectClass.prototype._onAnimationUpdate = original;
           Hooks.off('updateToken', gancho);
           await game.settings.set('${S}', 'transicaoDoToken', d.transicao);
+          await game.settings.set('${S}', 'passosDoToken', d.passos);
         }
       })()`);
       // O que o jogador desenhou no primeiro movimento (o ticker dele), e a limpeza.
@@ -19753,6 +19763,101 @@ module.exports = async ({ edge, servidores, r }) => {
         && info.transicoes.join('|') === '{"transition":"glitch"}|{"duration":0}'
         && info.movimentos.length >= 1 && info.movimentos.every(a => JSON.parse(a)?.duration === 0);
       return [ok, JSON.stringify({ preparo, jogadorPronto, info, doJogador })];
+    });
+
+    await r.passo('o andar do token dinâmico (o C52): no ritmo da configuração (3 casas por segundo; o token sem conjunto, nos 6 do Foundry), também no jogador; andando 3 casas, o Caminhando e o Parado da mesma direção alternados passo a passo, com o balanço no desenho, que volta a zero no fim; em "Só o Caminhando", sem alternar', async () => {
+      const preparo = await edge.evaluate(`(async () => {
+        const FP = foundry.applications.apps.FilePicker.implementation;
+        const pasta = 'teste-c52';
+        try { await FP.createDirectory('data', pasta); } catch { /* já existe */ }
+        const nomes = ['bia_parado_000.svg', 'bia_parado_090.svg', 'bia_parado_270.svg', 'bia_caminhando_090.svg', 'bia_caminhando_270.svg'];
+        for (const [i, nome] of nomes.entries()) {
+          const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect x="4" y="4" width="56" height="56" fill="hsl(' + (i * 70) + ',70%,45%)"/></svg>';
+          await FP.upload('data', pasta, new File([svg], nome, { type: 'image/svg+xml' }), {}, { notify: false });
+        }
+        const ator = await Actor.implementation.create({ name: 'Teste Andar', type: 'personagem', ownership: { default: 2 } });
+        const outro = await Actor.implementation.create({ name: 'Teste Sem Conjunto', type: 'personagem' });
+        const imagens = Object.fromEntries(nomes.map(nome => [nome.slice(4, -4).replace(/_(\\d+)$/, (m, a) => '-' + Number(a)), pasta + '/' + nome]));
+        await game.system.api.tokenDinamico.salvarConjunto(ator, { ativo: true, pasta, imagens });
+        const cena = await Scene.implementation.create({ name: 'C52 Andar', active: false, width: 2000, height: 1400, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+        window.__c52 = { ator: ator.id, outro: outro.id, cena: cena.id, anterior: canvas.scene?.id, velocidade: game.settings.get('${S}', 'velocidadeDoToken'), passos: game.settings.get('${S}', 'passosDoToken') };
+        await game.settings.set('${S}', 'passosDoToken', 'alternar');
+        await cena.activate();
+        await __esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        // O createEmbeddedDocuments não devolve os tokens na ordem pedida: cada um pelo ator.
+        const criados = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 1000, y: 600 })).toObject(), (await outro.getTokenDocument({ x: 400, y: 1000 })).toObject()]);
+        const token = criados.find(t => t.actorId === ator.id), semConjunto = criados.find(t => t.actorId === outro.id);
+        await __esperar(() => canvas.tokens.get(token.id) && canvas.tokens.get(semConjunto.id));
+        Object.assign(window.__c52, { token: token.id, semConjunto: semConjunto.id });
+        return { token: token.id, cena: cena.id, padrao: window.__c52.velocidade };
+      })()`);
+      // No jogador, o mesmo ritmo (a configuração é do mundo, e cada um anima na tela dele).
+      const doJogador = await jogador.evaluate(`(async () => {
+        for (let i = 0; i < 100 && !(canvas.ready && canvas.scene?.id === '${preparo.cena}' && canvas.tokens.get('${preparo.token}')); i++) await new Promise(r => setTimeout(r, 100));
+        return canvas.tokens.get('${preparo.token}')?._getAnimationMovementSpeed({}) ?? null;
+      })()`);
+      const info = await edge.evaluate(`(async () => {
+        const d = window.__c52;
+        const api = game.system.api.tokenDinamico;
+        const doc = () => game.scenes.get(d.cena)?.tokens.get(d.token);
+        const objeto = () => canvas.tokens.get(d.token);
+        const img = nome => 'teste-c52/bia_' + nome + '.svg';
+        // A duração da animação de 3 casas para a esquerda, pela conta do próprio Foundry (sem depender do relógio).
+        const duracao = token => { const de = token._getAnimationData(); return Math.round(token._getAnimationDuration(de, { x: de.x - 300 }, {})); };
+        const lido = {};
+        // A cada atualização da animação, o quadro desenhado; a cada posição, o quanto o desenho subiu (o balanço).
+        let quadros = [], subidas = [];
+        const proto = CONFIG.Token.objectClass.prototype;
+        const original = { animacao: proto._onAnimationUpdate, posicao: proto._refreshPosition };
+        proto._onAnimationUpdate = function (...args) { original.animacao.apply(this, args); if (this.document?.id === d.token) { const q = api.quadroDesenhado(this); if (q && quadros.at(-1) !== q) quadros.push(q); } };
+        proto._refreshPosition = function (...args) { original.posicao.apply(this, args); if (this.document?.id === d.token) subidas.push(Math.round((this.center.y - this.mesh.y) * 100) / 100); };
+        const andar = async waypoints => {
+          quadros = []; subidas = [];
+          await doc().move(waypoints, { autoRotate: true, constrainOptions: { ignoreWalls: true, ignoreCost: true } });
+          await __esperar(() => !objeto()?.animationContexts?.size, 150);
+          await __esperar(() => !api.quadroDesenhado(objeto()) && !api.balancoDesenhado(objeto()), 50);
+          await new Promise(r => setTimeout(r, 300));
+          return { quadros: [...quadros], maior: Math.max(0, ...subidas), fim: Math.round((objeto().center.y - objeto().mesh.y) * 100) / 100, balanco: api.balancoDesenhado(objeto()), gravada: doc().texture.src, altura: objeto().h };
+        };
+        try {
+          await __esperar(() => ['parado_090', 'caminhando_090', 'caminhando_270'].every(n => foundry.canvas.TextureLoader.loader.getCache(img(n))), 50);
+          // 1. O ritmo: 3 casas por segundo com o conjunto (3 casas em 1 s); o token sem conjunto, nos 6 do Foundry (0,5 s).
+          lido.ritmo = { comConjunto: objeto()._getAnimationMovementSpeed({}), semConjunto: canvas.tokens.get(d.semConjunto)._getAnimationMovementSpeed({}), duracao: duracao(objeto()), duracaoSem: duracao(canvas.tokens.get(d.semConjunto)) };
+          await game.settings.set('${S}', 'velocidadeDoToken', 1.5);
+          lido.ritmo.devagar = { velocidade: objeto()._getAnimationMovementSpeed({}), duracao: duracao(objeto()) };
+          await game.settings.set('${S}', 'velocidadeDoToken', d.velocidade);
+          // 2. Andar 3 casas para a esquerda (o giro a 90): os passos alternam o Caminhando e o Parado a 90, com o balanço.
+          lido.alternado = await andar([{ x: doc().x - 300, y: doc().y }]);
+          // 3. Só o Caminhando: para a direita (o giro a 270), sem alternar; o balanço continua.
+          await game.settings.set('${S}', 'passosDoToken', 'caminhando');
+          lido.soCaminhando = await andar([{ x: doc().x + 200, y: doc().y }]);
+          // 4. Uma casa na diagonal (1,41 casa): o movimento acaba no meio de um passo, com o desenho no alto; no fim, ele
+          // volta ao lugar.
+          lido.diagonal = await andar([{ x: doc().x - 100, y: doc().y - 100 }]);
+          return lido;
+        } finally {
+          proto._onAnimationUpdate = original.animacao;
+          proto._refreshPosition = original.posicao;
+          await game.settings.set('${S}', 'velocidadeDoToken', d.velocidade);
+          await game.settings.set('${S}', 'passosDoToken', d.passos);
+          if (d.anterior && game.scenes.has(d.anterior)) await game.scenes.get(d.anterior).activate();
+          await game.scenes.get(d.cena)?.delete();
+          await game.actors.get(d.ator)?.delete();
+          await game.actors.get(d.outro)?.delete();
+          delete window.__c52;
+        }
+      })()`);
+      const img = nome => `teste-c52/bia_${nome}.svg`;
+      const a = info.alternado, s = info.soCaminhando;
+      // Os quadros alternam estritamente, começando no Caminhando; 3 casas são 6 passos (o último pode cair no 7º).
+      const alterna = a.quadros.length >= 6 && a.quadros.every((q, i) => q === img(i % 2 === 0 ? 'caminhando_090' : 'parado_090'));
+      const ok = preparo.padrao === 3 && doJogador === 3
+        && info.ritmo.comConjunto === 3 && info.ritmo.semConjunto === 6 && info.ritmo.duracao === 1000 && info.ritmo.duracaoSem === 500
+        && info.ritmo.devagar.velocidade === 1.5 && info.ritmo.devagar.duracao === 2000
+        && alterna && a.maior > 0 && a.maior <= a.altura * 0.04 + 0.01 && a.fim === 0 && a.balanco === 0 && a.gravada === img('parado_090')
+        && s.quadros.join() === img('caminhando_270') && s.maior > 0 && s.fim === 0 && s.gravada === img('parado_270')
+        && info.diagonal.maior > 0 && info.diagonal.fim === 0 && info.diagonal.balanco === 0;
+      return [ok, JSON.stringify({ preparo, doJogador, info })];
     });
 
     await r.passo('tokens dinâmicos (o C45, parte 3): o cortador abre pela janela do token dinâmico, mostra a grade, corta a folha transparente (8 × 4, a disposição da folha de exemplo) em 28 quadros WebP com os nomes padronizados, todos do mesmo tamanho, sem a faixa do rótulo, e liga o conjunto; recusa a folha com fundo e o jogador sem permissão de enviar arquivos', async () => {

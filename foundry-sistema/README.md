@@ -334,6 +334,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     gravada (a do último trecho; parado e ferido, a pose de ferido). A troca pela direção é na hora; a troca pelo estado
     usa a transição da configuração "Token dinâmico: transição" (padrão: glitch; esmaecer, holograma ou nenhuma). As
     imagens dos conjuntos são pré-carregadas ao salvar, ao abrir a cena e com o token novo, para não piscar.
+  - **O andar** (o C52, ciclo 198; pedido do usuário): o token com o conjunto ligado anda no ritmo da configuração
+    **"Token dinâmico: velocidade do andar"** (casas por segundo, de 1 a 12; padrão 3; o Foundry anima os outros tokens a
+    6). A cada meia casa, um passo: com **"Token dinâmico: passos"** em "Caminhando e Parado alternados" (o padrão), o
+    Caminhando e o Parado da mesma direção se alternam (o andar de dois quadros, com a folha que já existe); em "Só o
+    Caminhando", fica o andar de antes. O desenho sobe e desce um pouco a cada passo (até 4% da altura do token) e volta
+    ao lugar no fim. Armado (o Mirando), caído ou incapacitado, não alterna. Tudo na tela de cada um, sem gravar.
   - **O cortador da folha** (a parte 3, ciclo 179): na janela do token dinâmico, "Cortar uma folha" abre o cortador. A
     folha (com fundo transparente: com os cantos opacos, ele recusa) vira uma grade de colunas e linhas; cada linha é
     Parado, Caminhando ou Mirando (as colunas são 0°, 45°... 315°, na ordem da folha) ou uma linha de poses (cada coluna

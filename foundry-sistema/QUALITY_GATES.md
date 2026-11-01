@@ -52,6 +52,13 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   põe as pastas dele (`/mingw64/bin`, `/usr/bin`) na frente do PATH: um comando de mentira com o mesmo nome de um que o
   Git traz (o `curl`) nunca é chamado. Para o `/api/status` do Foundry, use um `file://` que o `curl` de verdade lê. Os
   repositórios de mentira vão com `core.autocrlf=false`, senão os `.sh` saem com CRLF e o bash para no `$'\r'`.
+- **Mover o token logo depois de o turno começar (o C52, no passo do C50):** o `startCombat` e o `nextTurn` voltam antes de
+  o Foundry 14 terminar o começo do turno, e o `_clearMovementHistoryOnStartTurn` zera os históricos de movimento depois:
+  o movimento feito nesse meio some. Um passo que mede o andado no turno espera a limpeza (o passo das Costelas
+  quebradas conta as chamadas dela no próprio combate).
+- **A animação do movimento no G4 (o C52):** a duração sai da conta do próprio Foundry (`_getAnimationDuration`, com o
+  `_getAnimationData` do token), sem relógio: o Edge sem janela atrasa as animações. Os quadros desenhados se contam pela
+  atualização da animação, e o balanço pelo `_refreshPosition`.
 
 - **Reconhecimento por Reputação (C41):** um d10 simples abaixo do nível não passa pelo teste genérico, que acrescenta
   crítico e Sorte preparada. Confira 1 e 10 com um único dado, empate falho, má fama por magnitude e ficha intacta.

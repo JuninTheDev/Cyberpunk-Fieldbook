@@ -13,7 +13,7 @@
 import { SISTEMA } from './config.mjs';
 import { estaseDe } from './cryo.mjs';
 import { abrirCortador, cortarFolha } from './cortador-de-folha.mjs';
-import { ANIMACAO_DA_DIRECAO, animacaoDaTroca, CHAVES, chaveDaImagem, conjuntoValido, DIRECOES, imagemDoToken, imagensDaPasta, imagensDoConjunto, NOMES_DAS_POSES, POSES_COM_DIRECAO, POSES_SEM_DIRECAO, TRANSICOES } from './regras-token-dinamico.mjs';
+import { ANIMACAO_DA_DIRECAO, animacaoDaTroca, balancoDoPasso, CHAVES, chaveDaImagem, conjuntoValido, DIRECOES, imagemDoAndar, imagemDoToken, imagensDaPasta, imagensDoConjunto, NOMES_DAS_POSES, PASSOS, POSES_COM_DIRECAO, POSES_SEM_DIRECAO, TRANSICOES, VELOCIDADE_DO_ANDAR, velocidadeDoAndar } from './regras-token-dinamico.mjs';
 
 export const FLAG_TOKEN_DINAMICO = 'tokenDinamico';
 const esc = texto => foundry.utils.escapeHTML(String(texto ?? ''));
@@ -227,9 +227,15 @@ function botaoNoHud(app, elemento) {
 // trecho (o giro que o Foundry anima por trecho, no próprio documento, mesmo com o lockRotation), sem gravar nada; armado,
 // o Mirando (a pose manda, como no estado). Acabou o movimento, o token é redesenhado com a imagem gravada. Troca o
 // desenho só quando o quadro muda (o getTexture cria uma textura nova a cada chamada).
+// O andar (o C52): os passos contam as casas andadas desde o começo do movimento (a posição animada de cada quadro, no
+// próprio documento); a cada passo, o Caminhando e o Parado se alternam (a configuração "Token dinâmico: passos"), e o
+// balanço (um arco por passo) sobe o desenho, sem mexer na posição do token.
 const quadros = new WeakMap();
 const andando = new WeakSet();
+const passos = new WeakMap();
+const balancos = new WeakMap();
 export const quadroDesenhado = token => quadros.get(token) ?? null;
+export const balancoDesenhado = token => balancos.get(token) ?? 0;
 
 function desenhar(token, src) {
   if (!src || quadros.get(token) === src || !token.mesh) return;
@@ -245,23 +251,45 @@ function quadroDoMovimento(token) {
   const documento = token.document;
   const conjunto = ativoEm(documento?.actor);
   if (!conjunto || token.destroyed) return;
-  desenhar(token, imagemDoToken(conjunto, { ...estadoDoAtor(documento.actor), andando: true }, documento.rotation)?.src);
+  const passo = passos.get(token) ?? { casas: 0, x: documento.x, y: documento.y };
+  passo.casas += Math.hypot(documento.x - passo.x, documento.y - passo.y) / (canvas.dimensions?.size || 100);
+  passo.x = documento.x;
+  passo.y = documento.y;
+  passos.set(token, passo);
+  balancos.set(token, balancoDoPasso(passo.casas, token.h));
+  token.renderFlags.set({ refreshPosition: true });
+  desenhar(token, imagemDoAndar(conjunto, estadoDoAtor(documento.actor), documento.rotation, passo.casas, game.settings.get(SISTEMA, 'passosDoToken'))?.src);
   if (andando.has(token)) return;
   andando.add(token);
   Promise.resolve(token.movementAnimationPromise).catch(() => null).finally(() => {
     andando.delete(token);
+    passos.delete(token);
+    if (balancos.delete(token) && !token.destroyed) token.renderFlags.set({ refreshPosition: true });
     if (!quadros.has(token)) return;
     quadros.delete(token);
     if (!token.destroyed) token.renderFlags.set({ redraw: true });
   });
 }
 
-// A classe do token do sistema: só acrescenta o Caminhando à atualização de cada quadro da animação.
+// A classe do token do sistema: acrescenta o Caminhando à atualização de cada quadro da animação, o ritmo do andar (o
+// C52: a velocidade da animação do movimento, só com o conjunto ligado; os outros tokens seguem os 6 do Foundry) e o
+// balanço do passo na posição do desenho (o mesh; o token e o documento não mudam).
 export function classeDoToken(Base) {
   return class TokenCPR extends Base {
     _onAnimationUpdate(mudancas, contexto) {
       super._onAnimationUpdate(mudancas, contexto);
       if (contexto?.name === this.movementAnimationName) quadroDoMovimento(this);
+    }
+
+    _getAnimationMovementSpeed(opcoes) {
+      if (!ativoEm(this.document?.actor)) return super._getAnimationMovementSpeed(opcoes);
+      return velocidadeDoAndar(game.settings.get(SISTEMA, 'velocidadeDoToken'));
+    }
+
+    _refreshPosition() {
+      super._refreshPosition();
+      const balanco = balancos.get(this);
+      if (balanco) this.mesh.y -= balanco;
     }
   };
 }
@@ -282,6 +310,15 @@ export function registrarTelaDoTokenDinamico() {
   game.settings.register(SISTEMA, 'transicaoDoToken', {
     name: 'Token dinâmico: transição', hint: 'Como a imagem do token dinâmico troca quando o estado muda (a arma, o ferimento, caído, morto). A troca pela direção é sempre na hora.',
     scope: 'world', config: true, type: String, choices: TRANSICOES, default: 'glitch'
+  });
+  // O andar (o C52).
+  game.settings.register(SISTEMA, 'velocidadeDoToken', {
+    name: 'Token dinâmico: velocidade do andar', hint: `Casas por segundo na animação do movimento do token dinâmico (o Foundry anima os outros a 6). Menos, mais devagar: dá para ver os passos. Padrão: ${VELOCIDADE_DO_ANDAR.padrao}.`,
+    scope: 'world', config: true, type: Number, range: { min: VELOCIDADE_DO_ANDAR.minimo, max: VELOCIDADE_DO_ANDAR.maximo, step: VELOCIDADE_DO_ANDAR.passo }, default: VELOCIDADE_DO_ANDAR.padrao
+  });
+  game.settings.register(SISTEMA, 'passosDoToken', {
+    name: 'Token dinâmico: passos', hint: 'Enquanto o token dinâmico anda: o Caminhando e o Parado da mesma direção alternados a cada meia casa (um passo cada), ou só o Caminhando.',
+    scope: 'world', config: true, type: String, choices: PASSOS, default: 'alternar'
   });
   CONFIG.Token.objectClass = classeDoToken(CONFIG.Token.objectClass);
 }
@@ -310,4 +347,4 @@ export function registrarTokenDinamico() {
   Hooks.on('renderTokenHUD', botaoNoHud);
 }
 
-export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe, preCarregar, quadroDesenhado, abrirCortador, cortarFolha };
+export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe, preCarregar, quadroDesenhado, balancoDesenhado, abrirCortador, cortarFolha };

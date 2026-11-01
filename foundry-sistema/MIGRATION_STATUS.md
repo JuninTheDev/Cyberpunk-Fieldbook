@@ -9525,6 +9525,63 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   (R14); os Golpes sem forma (R15); a linha travada sem o cadeado (R16); o clique do movimento sem efeito (R17).
 - **Instalação:** como o ciclo 196, só no branch `junin/desarmado`, sem push.
 
+### Ciclo 198 (2026-11-01): C52, o andar do token dinâmico (sessão KouArt)
+
+- **Pedido do usuário (2026-11-01):** "a animação dele andando é muito rápida [...] o que faz com que seja praticamente
+  impossível de ver a animação dele andando [...] aprimorasse essa animação do token andando para que seja mais fluido e
+  dê para ver realmente o token se movendo e trocando a animação".
+- **O que era:** o Foundry 14 anima o movimento a 6 casas por segundo (`client/config.mjs`,
+  `CONFIG.Token.movement.defaultSpeed`; o `Token#_getAnimationMovementSpeed` devolve esse número): 3 casas passam em
+  meio segundo. E o Caminhando é um quadro só por direção (o limite registrado no ciclo 178), trocado no começo do trecho:
+  o token deslizava parado, com o quadro do Caminhando por um instante.
+- **Entrega:**
+  - **o ritmo:** a classe do token do sistema (`TokenCPR`) devolve, no `_getAnimationMovementSpeed`, a configuração do
+    mundo "Token dinâmico: velocidade do andar" (casas por segundo, de 1 a 12, padrão 3) para o token com o conjunto
+    ligado; os outros seguem os 6 do Foundry. O Foundry usa o mesmo número no giro (`_getAnimationRotationSpeed`). Cada
+    computador anima na tela dele, com a configuração do mundo;
+  - **os passos:** o quadro do movimento conta as casas andadas desde o começo do movimento (a posição animada de cada
+    atualização da animação, no próprio documento) e, a cada meia casa, dá um passo. Com a configuração "Token dinâmico:
+    passos" em "Caminhando e Parado alternados" (o padrão), os passos pares desenham o Caminhando e os ímpares o Parado
+    da mesma direção (a do Caminhando desenhado): o andar de dois quadros, com a folha que já existe. Armado (o Mirando),
+    caído ou incapacitado, não alterna; sem o Caminhando, o andar já é o Parado. "Só o Caminhando" é o andar de antes;
+  - **o balanço:** o desenho sobe no meio de cada passo e volta no fim dele (um arco por passo, até 4% da altura do token),
+    no `_refreshPosition` (só o `mesh`; o token, o documento e a visão não mudam). No fim do movimento, volta a zero;
+  - nada é gravado: como o Caminhando do ciclo 178, tudo é na tela de cada um. Regras puras novas
+    (`regras-token-dinamico.mjs`): `VELOCIDADE_DO_ANDAR`, `velocidadeDoAndar`, `PASSOS_POR_CASA`, `PASSOS`,
+    `modoDosPassos`, `passoDoAndar`, `imagemDoAndar`, `BALANCO_DO_PASSO` e `balancoDoPasso`.
+- **Limites:** o andar alternado depende de o Parado e o Caminhando da folha terem o mesmo enquadramento (o cortador já
+  corta todos com a mesma caixa); se a pose parada for muito diferente da do passo, "Só o Caminhando" volta ao de antes.
+  Um segundo quadro de passo (o outro pé), para um andar de quatro tempos, pediria uma linha nova na folha, no cortador e
+  na janela: fica para quando o usuário quiser desenhar esse quadro.
+- **Testes:**
+  - **G3:** `token-dinamico-andar.test.mjs` (novo, 5 testes): o ritmo (3 por padrão, entre 1 e 12, o inválido no
+    padrão); um passo a cada meia casa (sem perder o passo na soma das distâncias); o Caminhando nos passos pares e o
+    Parado da mesma direção nos ímpares, também ferido, e "Só o Caminhando" igual ao `imagemDoToken` andando; o Mirando
+    sem alternar, o Parado da direção do Caminhando desenhado (a 135, o de 180), sem o Caminhando e sem o Parado; os
+    modos e o balanço (0 nas bordas do passo, 4 px no meio, num token de 100 px);
+  - **G4:** um passo novo, depois do da parte 2 do C45: o ritmo (3 com o conjunto e 6 sem ele, também no navegador do
+    jogador; a duração de 3 casas pela conta do próprio Foundry, `_getAnimationDuration`: 1.000 ms e 500 ms; com 1,5 casa
+    por segundo, 2.000 ms); andando 3 casas, os quadros alternando estritamente o Caminhando e o Parado a 90 (6 ou mais
+    trocas), o balanço no desenho (acima de 0 e até 4% da altura) e de volta a 0 no fim; em "Só o Caminhando", só o
+    Caminhando a 270; e uma casa na diagonal (1,41 casa, que acaba no meio de um passo), com o desenho de volta ao lugar.
+    O passo da parte 2 do C45 roda em "Só o Caminhando", com as mesmas checagens de antes.
+- **No caminho:** o passo das Costelas quebradas do C50 (ciclo 194) falhou na primeira rodada: o teste movia o token logo
+  depois do `startCombat` e do `nextTurn`, antes de o Foundry terminar a limpeza dos históricos do começo do turno
+  (`_clearMovementHistoryOnStartTurn`, que roda depois de o `nextTurn` voltar), e a limpeza apagava os 6 m. Na mesa isso
+  não acontece (ninguém anda no mesmo milissegundo em que o turno começa). O passo agora espera a limpeza de cada turno
+  (a conta das limpezas do combate). O passo novo do C52 também caiu na primeira rodada, pela ordem dos tokens do
+  `createEmbeddedDocuments` (a lição antiga): agora pega cada um pelo ator.
+- **Portões:** G1, 235 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 747/747; G4 completo, 319/319 em 642 s,
+  com a mesa do servidor vazia. A primeira rodada (317/319) é a do "No caminho", acima. Nos quadros registrados (a rodada
+  do M6): 3 casas viraram 6 passos, Caminhando e Parado a 90 alternados, com o balanço até 3,99 px num token de 100 px e
+  de volta a 0.
+- **Mutações:** as oito caíram, e os arquivos voltaram exatos (md5). No G3: o ritmo padrão nos 6 (M1), um passo por casa
+  (M2, 4 testes), os passos sem alternar (M3, 2), o balanço sem o arco (M4) e o Parado do passo pela direção do giro (M5;
+  sobreviveu na primeira vez, porque no caso de teste as duas direções davam o mesmo Parado: o teste ganhou o caso do
+  Caminhando só a 90, andando para cima). No G4, um G4 inteiro cada, só no passo do C52: o token dinâmico nos 6 do
+  Foundry (M6), o balanço fora do desenho (M7: o desenho nunca sobe) e o balanço que fica depois do movimento (M8: o desenho fica
+  acima no fim dos três movimentos, 1,16 px, 1,22 px e 3,33 px na diagonal).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

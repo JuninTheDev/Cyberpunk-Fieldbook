@@ -119,3 +119,37 @@ export const ANIMACAO_DA_DIRECAO = { duration: 0 };
 
 // As imagens do conjunto, sem repetir (a pré-carga, para a troca não piscar).
 export const imagensDoConjunto = conjunto => [...new Set(CHAVES.map(chave => imagem(conjunto?.imagens, chave)).filter(Boolean))];
+
+// ---------------- O andar (o C52; pedido do usuário, 2026-11-01) ----------------
+// O Foundry 14 anima o movimento a 6 casas por segundo (CONFIG.Token.movement.defaultSpeed): três casas passam em meio
+// segundo, e o Caminhando, um quadro só por direção, mal aparece. O token com o conjunto ligado anda no ritmo da
+// configuração "Token dinâmico: velocidade do andar" (casas por segundo), e os passos são contados pela distância andada,
+// para os pés não escorregarem quando o ritmo muda: a cada meia casa, um passo.
+export const VELOCIDADE_DO_ANDAR = { padrao: 3, minimo: 1, maximo: 12, passo: 0.5 };
+export const velocidadeDoAndar = valor => {
+  const numero = Number(valor);
+  return Number.isFinite(numero) && numero > 0 ? Math.min(VELOCIDADE_DO_ANDAR.maximo, Math.max(VELOCIDADE_DO_ANDAR.minimo, numero)) : VELOCIDADE_DO_ANDAR.padrao;
+};
+export const PASSOS_POR_CASA = 2;
+// Os passos (a configuração "Token dinâmico: passos"): o Caminhando e o Parado da mesma direção alternados, um quadro por
+// passo (o andar de dois quadros, com a folha que já existe); ou só o Caminhando, como antes do C52.
+export const PASSOS = { alternar: 'Caminhando e Parado alternados (um passo cada)', caminhando: 'Só o Caminhando (como antes)' };
+export const modoDosPassos = escolha => (escolha === 'caminhando' ? 'caminhando' : 'alternar');
+// O passo em que o token está (0, 1, 2...), pelas casas andadas desde o começo do movimento.
+export const passoDoAndar = casas => Math.max(0, Math.floor((Number(casas) || 0) * PASSOS_POR_CASA + 1e-9));
+
+// A imagem do quadro do movimento: a do estado andando (o Caminhando; armado, o Mirando, que não alterna; caído ou
+// incapacitado, a pose deles); com os passos alternados, nos passos ímpares, o Parado da direção do Caminhando desenhado
+// (sem ele, o da direção mais perto). Sem o Caminhando (a pose já caiu no Parado), não há o que alternar.
+export function imagemDoAndar(conjunto, estado, rotacao = 0, casas = 0, modo = 'alternar') {
+  const andando = imagemDoToken(conjunto, { ...estado, andando: true }, rotacao);
+  if (andando?.pose !== 'caminhando' || modoDosPassos(modo) !== 'alternar' || passoDoAndar(casas) % 2 === 0) return andando;
+  return daDirecao(conjunto?.imagens ?? {}, 'parado', andando.direcao) ?? andando;
+}
+
+// O balanço: o corpo sobe no meio de cada passo e volta no fim dele (um arco por passo), até 4% da altura do token.
+export const BALANCO_DO_PASSO = 0.04;
+export function balancoDoPasso(casas, altura) {
+  const fracao = ((Number(casas) || 0) * PASSOS_POR_CASA) % 1;
+  return Math.max(0, Number(altura) || 0) * BALANCO_DO_PASSO * Math.sin(Math.PI * fracao);
+}
