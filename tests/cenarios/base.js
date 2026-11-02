@@ -2,7 +2,8 @@
 // lugar, peça, relógio e segredo. No Node: o arquivo é lido sem erro, bate com as fichas de NPC, o mapa e o elenco, as
 // citações {{base:...}} e {{doc:...}} dos documentos existem e as cópias antigas saíram. Na wiki do mestre: Pessoas e
 // facções, Lugares e peças e as notas da Sessão 01 saem da base e do diário; o endereço antigo de Quem é quem abre a
-// tabela; os nomes viram links com cartão; o Estado da campanha grava no servidor e aparece nas páginas.
+// tabela; os nomes viram links com cartão; o Estado da campanha grava no servidor e aparece nas páginas, e mostra a
+// Conferência da base (os erros e os avisos).
 // Usa o servidor local de teste (o mestre) e devolve a mesa como estava.
 const { validarBase } = require('../lib/base-estatica');
 
@@ -233,6 +234,52 @@ module.exports = async ({ edge, servidores, r }) => {
           && claws && claws.texto === 'Relações de outros: Wakako Okada: respeitam' && JSON.stringify(claws.links) === '["wakako-okada #people/wakako-okada Wakako Okada"]'
           && /Guarda de Wakako/.test(cartao || '');
         return [ok, `Wakako ${JSON.stringify(wakako)} · Mina ${JSON.stringify(mina)} · Claws ${JSON.stringify(claws)} · cartão ${(cartao || '').slice(0, 40)}`];
+      } finally {
+        await edge.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injetado.result.identifier });
+      }
+    });
+
+    await r.passo('Conferência da base, no Estado da campanha: os erros (o [[link]] e a citação {{base:...}} sem registro num documento) e os avisos (a relação sem registro, o registro que nenhum documento cita), com os nomes em link', async () => {
+      // Só neste navegador: na base, uma relação da Wakako sem registro e uma pessoa que nenhum documento cita; na
+      // Sessão zero, um link e uma citação que não acham registro.
+      const injetado = await edge.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+        const trocar = {
+          'base-da-campanha.md': texto => texto.replace(/(### Wakako Okada[\\s\\S]*?- \\*\\*Relações:\\*\\*)[^\\r\\n]*/, '$1 Mina Kuroda (guarda); Ninguém aqui (sócio)') + '\\n## Outros nomes\\n### Fulana de Teste\\n- **Quem é:** Uma pessoa a mais\\n',
+          'sessao-zero.md': texto => texto + '\\n## Teste da conferência\\nCom [[Fulano de Lugar Nenhum]].\\n\\n{{base:item:nao-existe}}\\n'
+        };
+        const original = window.fetch;
+        window.fetch = (url, ...resto) => original(url, ...resto).then(resposta => {
+          const nome = Object.keys(trocar).find(arquivo => String(url).endsWith(arquivo));
+          return nome && resposta.ok ? resposta.text().then(texto => new Response(trocar[nome](texto), { status: resposta.status, headers: resposta.headers })) : resposta;
+        });
+      })()` });
+      try {
+        // A wiki abre direto no Estado (a primeira página, com a wiki ainda montando).
+        await edge.ir(`${local}/?conferencia#notes`, 1500);
+        const caixa = `document.querySelector('[data-bs-conferencia]')`;
+        const lido = await esperar(`/conferido/.test(${caixa}?.textContent || '')`);
+        const info = await edge.evaluate(`(() => {
+          const caixa = ${caixa};
+          return {
+            erros: [...caixa.querySelectorAll('.callout li')].map(li => li.textContent),
+            avisos: [...caixa.querySelectorAll(':scope > ul li')].map(li => li.textContent),
+            links: [...caixa.querySelectorAll('a.ent')].map(a => a.dataset.ent),
+            status: caixa.querySelector('.note-status').textContent
+          };
+        })()`);
+        await edge.evaluate(`${caixa}.scrollIntoView({ block: 'center' })`);
+        await edge.shot('conferencia');
+        // Outra página e de volta, sem recarregar (a wiki já montada): a seção nova se preenche de novo.
+        await edge.evaluate(`${caixa}.dataset.velha = '1'`);
+        await edge.ir(`${local}/?conferencia#people`, 1000);
+        await edge.ir(`${local}/?conferencia#notes`, 1000);
+        const devolta = await esperar(`(() => { const c = ${caixa}; return c && !c.dataset.velha && /conferido/.test(c.textContent) ? c.querySelectorAll('.callout li').length : null; })()`);
+        // A Wakako aparece no Diário: não é aviso. Os documentos lidos são os do "Citado em".
+        const ok = lido && JSON.stringify(info.erros) === JSON.stringify(['Sessão zero: o link [[Fulano de Lugar Nenhum]] não acha registro.', 'Sessão zero: a citação {{base:item:nao-existe}} não acha registro.'])
+          && info.avisos.includes('Wakako Okada: a relação com "Ninguém aqui" não acha registro.') && info.avisos.includes('Fulana de Teste: nenhum documento cita.')
+          && !info.avisos.includes('Wakako Okada: nenhum documento cita.') && info.links.includes('wakako-okada') && info.links.includes('fulana-de-teste')
+          && Number((info.status.match(/\d+/) || [])[0]) > 3 && devolta === 2;
+        return [ok, `${JSON.stringify(info)} · de volta ${devolta}`];
       } finally {
         await edge.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injetado.result.identifier });
       }

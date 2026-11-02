@@ -99,7 +99,7 @@ de partida.
   - **Mutações:** as 21 caíram (12 na regra pura e 9 na página), e os arquivos voltaram exatos (md5).
   - **A suíte da wiki:**
     - o `node tests/validar.js` passou: 458 verificações e as regressões;
-    - no `node tests/rodar.js`, sem o v14, passaram 29 dos 33 cenários;
+    - no `node tests/rodar.js`, sem o v14, passaram 27 dos 31 cenários;
     - os 4 que falham, falham igual sem a mudança, nesta worktree: o `ensaio`, o `fluxo` (sem o
       `foundry-2077/.cache`), o `reversao` e o `sistema` (sem os PDFs, que ficam fora do git).
 - [x] **B2 · O link explícito `[[Nome]]`:** feito (sessão KouArt, 2026-11-02). Nos `.md`, `[[Nome]]` e
@@ -135,7 +135,7 @@ de partida.
     do `&amp;` sobreviveu na primeira rodada: o link automático achava o "Bar & Grill" pelo nome. O teste passou a usar
     um texto que não é nome ("o bar").
   - **A suíte da wiki:** o `validar.js` passou (459 verificações e as regressões). No `rodar.js` sem o v14, passaram
-    29 dos 33 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
+    27 dos 31 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
 - [x] **B3 · As relações com nome e papel:** feito (sessão KouArt, 2026-11-02). No campo `Relações`, a forma
   `Nome (papel); Nome (papel)` liga os registros: `- **Relações:** Mina Kuroda (guarda); Tyger Claws (respeitam)`.
   - **No cartão:** cada nome vira o `[[Nome]]` do registro (o link do B2, com o cartão), com o papel ao lado.
@@ -163,11 +163,39 @@ de partida.
   - **Mutações:** as 28 caíram (25 na regra pura e 3 conferidas no passo da página), e os arquivos voltaram exatos
     (md5). O caso do parêntese antes do nome entrou no teste para pegar a do começo da parte (o `(^|;)` da regra).
   - **A suíte da wiki:** o `validar.js` passou (460 verificações e as regressões). No `rodar.js` sem o v14,
-    passaram 29 dos 33 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
-- [~] **B4 · A saúde da base:** em andamento (sessão KouArt, 2026-11-02). A conferência ganha:
-  - **erros**, que seguram o `validar.js`: o `[[link]]` quebrado (B2) e o `{{base:item:x}}` sem registro;
-  - **avisos**, numa seção "Conferência da base" no Estado da campanha, para o mestre: o registro que nenhum documento
-    cita e a relação com um nome que não existe (B3).
+    passaram 27 dos 31 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
+- [x] **B4 · A saúde da base:** feito (sessão KouArt, 2026-11-02). A conferência inteira fica no `saude(base,
+  documentos)` de `campanha-base.js`, que devolve os erros e os avisos.
+  - **Os erros** seguram o `validar.js`:
+    - os da conferência de antes (o `conferir`), com o `[[link]]` quebrado na base (B2);
+    - nos documentos, o `[[link]]` e a citação `{{base:...}}` que não acham registro. A citação é a linha sozinha,
+      como a página cita; o relógio que não existe também conta.
+  - **Os avisos** são para o mestre:
+    - a pessoa, a facção, o lugar ou a peça que nenhum documento cita. Os outros registros da base não contam, e o
+      relógio e o segredo, que não têm cartão, ficam de fora;
+    - a relação com um nome que não está na base. No B3, ela era erro do `conferir`; agora é aviso, como o plano pedia.
+  - **A seção "Conferência da base"** fica no fim do Estado da campanha:
+    - os erros em destaque, os avisos e quantos documentos foram lidos;
+    - os documentos são os mesmos do "Citado em", lidos uma vez para os dois;
+    - os nomes dos registros viram link, com o cartão.
+    - A wiki aberta direto no Estado ainda está montando quando a página aparece: a seção espera o `wiki:pronta`.
+  - **Na base de verdade:** nenhum erro, e 7 avisos com os documentos do repositório. Sem documento estão a Mina, a
+    equipe de Vega, o Taro, os mercenários da van e três lugares (o Pachinko, o Armazém de Kabuki e o Consultório do
+    Ricky). Na wiki, as sessões do servidor também contam.
+  - **Testes:**
+    - `tests/lib/base-estatica.js`: uma base pequena e dois documentos, com os valores exatos dos erros, dos avisos e
+      do HTML da seção. E a base de verdade, sem erro, com os documentos da campanha e os de Night City. O caso do B3
+      passou a conferir a relação sem registro como aviso;
+    - `tests/cenarios/base.js`: só no navegador do teste, uma relação sem registro e uma pessoa a mais na base, e um
+      link e uma citação quebrados na Sessão zero. O passo confere os dois erros, os avisos, os links e os documentos
+      lidos, com a wiki aberta direto no Estado e de volta a ele sem recarregar.
+  - **Mutações:** as 27 caíram, e o arquivo voltou exato (md5). Foram 20 na regra pura e 7 no navegador: a seção, os
+    documentos lidos, os links dos nomes, a leitura dividida com o "Citado em" e os dois caminhos (a wiki montando e
+    já montada). O primeiro teste no navegador achou o erro do `wiki:pronta`: a seção ficava em "Lendo os
+    documentos…".
+  - **A suíte da wiki:** o `validar.js` passou (461 verificações e as regressões). No `rodar.js` sem o v14, passaram
+    27 dos 31 cenários; falham os mesmos 4 do B1, com as mesmas mensagens. Os registros do B1 ao B3 diziam "29 dos
+    33": a conta estava errada, e os logs deles também têm 31 cenários.
 
 ## Fase 2: uma fonte só para o mestre, o mapa e os jogadores
 

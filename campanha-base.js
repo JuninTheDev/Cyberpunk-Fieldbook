@@ -337,7 +337,7 @@
     return `<h3>Na campanha</h3><p>${dados}</p>${paragrafos(item.texto)}`;
   }
 
-  // ---------------- Conferência (os testes usam) ----------------
+  // ---------------- Conferência (os testes e o Estado da campanha usam) ----------------
   // fichas: nomes das fichas de NPC que existem; marcadores: ids do mapa; elenco: nomes das fichas da campanha.
   function conferir(base, { fichas = [], marcadores = [], elenco = [] } = {}) {
     const problemas = [...base.erros];
@@ -353,13 +353,43 @@
       if (item.tipo === 'pessoa' && !item.campos.quem) problemas.push(`${item.nome}: falta "Quem é".`);
       if (item.tipo === 'peca' && !item.campos.onde) problemas.push(`${item.nome}: falta "Onde" (no começo da campanha).`);
       for (const alvo of linksQuebrados(base, [...Object.values(item.campos), item.texto].join('\n'))) problemas.push(`${item.nome}: o link [[${alvo}]] não acha registro.`);
-      for (const relacao of relacoes(base, item)) if (!relacao.item) problemas.push(`${item.nome}: a relação com "${relacao.nome}" não acha registro.`);
     }
     for (const nome of elenco) if (!base.pessoas.some(item => item.campos.ficha === nome)) problemas.push(`A ficha do elenco "${nome}" não tem registro na base.`);
     return problemas;
   }
+  // As linhas {{base:...}} sozinhas de um texto (as que a página cita) que não acham o que citam: na página, viram o
+  // aviso em itálico no lugar da tabela.
+  const citacoesQuebradas = (base, texto) => [...String(texto || '').matchAll(/^\{\{base:[a-z]+(?::[\w-]+)?\}\}[^\S\n]*$/gm)].map(([linha]) => linha.trim()).filter(linha => expandir(linha, base, vazio()).startsWith('*('));
+  // A saúde da base. Os erros seguram o validar.js: os da conferência e, nos documentos, o [[link]] e a citação
+  // {{base:...}} que não acham registro. Os avisos ficam para o mestre: o registro com cartão que nenhum documento cita
+  // (os outros registros não contam) e a relação com um nome que não está na base. documentos: [{ id, titulo, texto }],
+  // os mesmos do "Citado em".
+  function saude(base, documentos = [], opcoes = {}) {
+    const erros = conferir(base, opcoes);
+    for (const doc of documentos) {
+      for (const alvo of linksQuebrados(base, doc.texto)) erros.push(`${doc.titulo}: o link [[${alvo}]] não acha registro.`);
+      for (const linha of citacoesQuebradas(base, doc.texto)) erros.push(`${doc.titulo}: a citação ${linha} não acha registro.`);
+    }
+    const citado = citacoes(base, documentos);
+    const avisos = [];
+    for (const item of base.todos.values()) {
+      if (PAGINA_DO_TIPO[item.tipo] && !(citado.get(item.id) || { documentos: [] }).documentos.length) avisos.push(`${item.nome}: nenhum documento cita.`);
+      for (const relacao of relacoes(base, item)) if (!relacao.item) avisos.push(`${item.nome}: a relação com "${relacao.nome}" não acha registro.`);
+    }
+    return { erros, avisos };
+  }
+  // A seção "Conferência da base" do Estado da campanha, em HTML: os erros (em destaque), os avisos e quantos documentos
+  // foram lidos.
+  function conferenciaEmHtml({ erros, avisos }, documentos) {
+    const lista = itens => `<ul>${itens.map(texto => `<li>${esc(texto)}</li>`).join('')}</ul>`;
+    return [
+      erros.length ? `<div class="callout"><b>Erros (${erros.length})</b>${lista(erros)}</div>` : '<p><b>Erros:</b> nenhum.</p>',
+      avisos.length ? `<p><b>Avisos (${avisos.length})</b></p>${lista(avisos)}` : '<p><b>Avisos:</b> nenhum.</p>',
+      `<p class="note-status">${documentos === 1 ? '1 documento conferido' : `${documentos} documentos conferidos`}.</p>`
+    ].join('');
+  }
 
-  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, relacoes, relacoesDeVolta, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
+  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, relacoes, relacoesDeVolta, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, saude, conferenciaEmHtml, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
@@ -434,7 +464,9 @@
       return i === 0 ? tabela : `<details class="bs-mais"><summary>${esc(grupo)} (${base.pessoas.filter(item => item.grupo === grupo).length})</summary>${tabela}</details>`;
     }).join('')}</div>`;
     const reveladas = `<div class="section" data-toc="Segredos revelados"><h3>Segredos revelados</h3><p>Marque quando o grupo descobrir. Fica no Diário e serve de lembrete do que ainda pode surpreender.</p><ul class="bs-segredos">${base.segredos.map(item => `<li><label><input type="checkbox" data-bs-segredo="${item.id}"> <b>${esc(item.nome)}</b>${item.campos.revela ? ` <small>(${esc(item.campos.revela)})</small>` : ''}</label>${item.texto ? `<br><small>${inline(item.texto.replace(/\s+/g, ' '), href)}</small>` : ''}</li>`).join('')}</ul></div>`;
-    return `${relogios}${pecas}${pessoas}${reveladas}<p class="note-status" data-bs-status></p>`;
+    // A conferência precisa dos documentos: ligarEstado a preenche depois de lê-los.
+    const conferencia = '<div class="section" data-toc="Conferência da base"><h3>Conferência da base</h3><p>Os erros são o que está quebrado: um link <code>[[Nome]]</code> ou uma citação <code>{{base:...}}</code> que não acha o registro, na base ou num documento. Os avisos são o que vale olhar: o registro que nenhum documento cita e a relação com um nome que não está na base.</p><div data-bs-conferencia><p class="note-status">Lendo os documentos…</p></div></div>';
+    return `${relogios}${pecas}${pessoas}${reveladas}<p class="note-status" data-bs-status></p>${conferencia}`;
   }
   // Links dos textos da base nas páginas HTML: #pagina/secao e arquivo.md (a página daquele documento).
   let paginaDoArquivo = () => '';
@@ -457,6 +489,16 @@
       caixa.checked = Boolean(e.segredos[caixa.dataset.bsSegredo]);
       caixa.addEventListener('change', () => mudar({ segredos: { [caixa.dataset.bsSegredo]: caixa.checked } }));
     });
+    // A Conferência da base, com os documentos do "Citado em" (lidos pela wiki, que na primeira página ainda está
+    // montando); os nomes dos registros viram link, com o cartão.
+    const conferencia = content.querySelector('[data-bs-conferencia]');
+    const preencher = () => lerDocumentos().then(documentos => {
+      conferencia.innerHTML = conferenciaEmHtml(saude(navegador.base, documentos), documentos.length);
+      ligarNomes(conferencia);
+    });
+    if (conferencia && navegador.base) {
+      if (raiz.wikiApp) preencher(); else document.addEventListener('wiki:pronta', preencher, { once: true });
+    }
   }
 
   // ---------------- Links dos nomes e o cartão ao passar o mouse ----------------
@@ -552,9 +594,12 @@
   // vêm do wiki-app (os mesmos que a busca carrega), depois de a página abrir.
   const PAGINAS_DA_BASE = new Set(Object.values(PAGINA_DO_TIPO));
   let documentosACitar = [];
+  let documentosLidos = null;
   let citado = null;
-  const lerCitacoes = () => (citado = citado || Promise.allSettled(documentosACitar.map(doc => raiz.wikiApp.loadMarkdownDoc(doc.id).then(texto => ({ ...doc, texto }))))
-    .then(lidos => citacoes(navegador.base, lidos.filter(lido => lido.status === 'fulfilled').map(lido => lido.value))));
+  // Os documentos lidos uma vez (os que não abriram ficam de fora): servem ao "Citado em" e à Conferência da base.
+  const lerDocumentos = () => (documentosLidos = documentosLidos || Promise.allSettled(documentosACitar.map(doc => raiz.wikiApp.loadMarkdownDoc(doc.id).then(texto => ({ ...doc, texto }))))
+    .then(lidos => lidos.filter(lido => lido.status === 'fulfilled').map(lido => lido.value)));
+  const lerCitacoes = () => (citado = citado || lerDocumentos().then(documentos => citacoes(navegador.base, documentos)));
   async function mostrarCitacoes(container) {
     if (!navegador.base || !raiz.wikiApp || !raiz.wikiApp.loadMarkdownDoc) return;
     const mapa = await lerCitacoes();
