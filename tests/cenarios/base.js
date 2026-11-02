@@ -105,6 +105,53 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.evaluate(`(() => { const s = document.getElementById('search'); s.value = ''; s.dispatchEvent(new Event('input', { bubbles: true })); })()`);
       return [/Com Wakako/.test(tabela) && resultados.some(item => item === 'people:Endo'), `tabela ${/Com Wakako/.test(tabela)} · ${resultados.join(' | ')}`];
     });
+
+    // O "Citado em" de um cartão: os links da linha que fica no fim dele (antes do cartão seguinte).
+    const citadoEm = nome => `(() => {
+      const titulo = [...document.querySelectorAll('#md-doc > h4')].find(h => h.textContent.trim() === ${JSON.stringify(nome)});
+      for (let n = titulo && titulo.nextElementSibling; n && !n.matches('h3, h4'); n = n.nextElementSibling) if (n.matches('.bs-citado')) return { texto: n.textContent, links: [...n.querySelectorAll('a')].map(a => a.getAttribute('href')), rotulos: [...n.querySelectorAll('a')].map(a => a.textContent) };
+      return { texto: '', links: [], rotulos: [] };
+    })()`;
+    await r.passo('Citado em: o cartão diz onde o nome aparece (as seções dos documentos e os outros registros), e o link abre a seção', async () => {
+      // O título de um documento de todas as campanhas chega em HTML (escapado): com um "&" nele, o link mostra o texto.
+      const lore = '#doc-night-city-lore-dos-anos-2070';
+      const injetado = await edge.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+        const original = window.fetch;
+        window.fetch = (url, ...resto) => original(url, ...resto).then(resposta => (String(url).endsWith('api/campanhas') && resposta.ok ? resposta.clone().json().then(dados => {
+          for (const doc of dados.compartilhados || []) doc.titulo = doc.titulo.replace('nos anos', '& os anos');
+          return new Response(JSON.stringify(dados), { status: resposta.status, headers: resposta.headers });
+        }) : resposta));
+      })()` });
+      try {
+        // Outro endereço (não só outro #): a página carrega de novo, com o script.
+        await edge.ir(`${local}/?citado#people`, 1500);
+      } finally {
+        await edge.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injetado.result.identifier });
+      }
+      await esperar(`document.querySelectorAll('#md-doc .bs-citado').length > 0`);
+      const wakako = await edge.evaluate(citadoEm('Wakako Okada'));
+      const mina = await edge.evaluate(citadoEm('Mina Kuroda'));
+      // Os documentos citados (o link sem "/"; com "/", a seção ou o registro) são páginas inteiras da busca: nem as
+      // visões da base (Pessoas e facções, Lugares e peças), nem a Base, nem o roteiro.
+      const contagem = await edge.evaluate(`({ linhas: document.querySelectorAll('#md-doc .bs-citado').length, cartoes: document.querySelectorAll('#md-doc > h4').length,
+        visoes: [...document.querySelectorAll('#md-doc .bs-citado a')].map(a => a.getAttribute('href')).filter(h => !h.includes('/')).map(h => h.slice(1))
+          .filter(id => !wikiConfig.markdownDocs[id] || wikiConfig.markdownDocs[id].vista || wikiConfig.markdownDocs[id].semBusca) })`);
+      await edge.evaluate(`document.querySelector('#md-doc .bs-citado').scrollIntoView({ block: 'center' })`);
+      await edge.shot('citado-em');
+      // A seção do Diário onde a Wakako aparece abre já no título dela.
+      const alvo = wakako.links.find(href => /^#docDiario\/sessao-1/.test(href)) || '';
+      if (alvo) await edge.evaluate(`document.querySelector('#md-doc .bs-citado a[href="${alvo}"]').click()`);
+      const foco = alvo ? await esperar(`wikiApp.currentPage() === 'docDiario' && document.querySelector('#content .flash') ? campaignBase.slug(document.querySelector('#content .flash').textContent) : null`) : null;
+      await edge.ir(`${local}/?recarregar#lugares`, 1500);
+      await esperar(`document.querySelectorAll('#md-doc .bs-citado').length > 0`);
+      const pachinko = await edge.evaluate(citadoEm('Pachinko de Wakako'));
+      const tituloDaLore = wakako.rotulos[wakako.links.indexOf(lore)];
+      const ok = wakako.links.includes('#docDiario') && Boolean(alvo) && foco === alvo.split('/')[1] && tituloDaLore === 'Night City & os anos 2070'
+        && mina.links.includes('#people/wakako-okada') && /na base:/.test(mina.texto)
+        && pachinko.links.includes('#people/wakako-okada')
+        && contagem.linhas > 3 && contagem.linhas <= contagem.cartoes && !contagem.visoes.length;
+      return [ok, `Wakako ${wakako.links.length} links · lore "${tituloDaLore}" · seção ${alvo} → ${foco} · Mina "${mina.texto.slice(0, 60)}" · Pachinko ${pachinko.links.join(' ')} · ${contagem.linhas}/${contagem.cartoes} cartões · visões ${contagem.visoes.join(' ')}`];
+    });
   } finally {
     await limpar();
   }

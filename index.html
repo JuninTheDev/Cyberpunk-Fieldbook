@@ -340,7 +340,15 @@
       const base = window.campaignBase;
       const extras = manager.extraPages('morana', moranaExtras(base.elenco()));
       const moranaPages = [...morana.groups.flatMap(group => group.pages.flatMap(page => [page.id, ...(page.tabs || []).map(tab => tab.id)])), ...Object.keys(extras.pages), ...Object.keys(extras.markdownDocs), ...Object.keys(markdownDocs)];
-      base.ligar({ paginas: moranaPages, paginaDoArquivo: docPage });
+      // O "Citado em" dos cartões da base: os documentos inteiros do Protocolo Morana e os de todas as campanhas, sem as
+      // visões (a base entra pelos registros). Os mesmos da busca: o roteiro (fora da busca, como a Base) só é lido
+      // quando a aba abre, e a sessão sem roteiro no servidor não dá erro. O título das páginas é HTML.
+      const todosOsDocs = { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs };
+      const daMorana = [...moranaPages, ...((built.campaigns.find(campanha => campanha.id === morana.id) || {}).groups || []).flatMap(grupo => grupo.pages.map(pagina => pagina.id))];
+      const textoDe = html => { const molde = document.createElement('template'); molde.innerHTML = html; return molde.content.textContent.trim(); };
+      const documentos = [...new Set(daMorana)].filter(id => todosOsDocs[id] && !todosOsDocs[id].vista && !todosOsDocs[id].semBusca)
+        .map(id => ({ id, titulo: textoDe(todosOsDocs[id].title) }));
+      base.ligar({ paginas: moranaPages, paginaDoArquivo: docPage, documentos });
       window.wikiConfig = {
         campaigns: built.campaigns,
         markdownDocs: { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs },

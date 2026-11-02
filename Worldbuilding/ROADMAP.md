@@ -75,12 +75,33 @@ de partida.
 
 ## Fase 1: ligar o que já existe
 
-- [~] **B1 · Citado em:** em andamento (sessão KouArt, 2026-11-02). Cada cartão em Pessoas e facções e
-  em Lugares e peças ganha a lista "Citado em": os documentos e as seções (`###`) onde o nome aparece, e os outros
-  registros que citam esse. Cada linha leva à seção.
-  - A regra é a mesma dos links: o nome e os `Também`. Entram os documentos da campanha e os de `night-city`.
-  - Regra pura: `citacoes(base, documentos)` em `campanha-base.js`.
-  - Teste: um nome citado em dois documentos aparece com as duas seções; o `Também` conta; o próprio cartão não conta.
+- [x] **B1 · Citado em:** feito (sessão KouArt, 2026-11-02). Cada cartão em Pessoas e facções e em Lugares e peças
+  termina com a linha "Citado em": os documentos, com as seções onde o nome aparece, e os outros registros da base que
+  citam esse. Cada link leva ao documento, à seção ou ao registro.
+  - **A regra** é a mesma dos links: o nome e os `Também`. O `buscadoresDe` agora serve aos dois.
+    - Uma seção é cada título `#`, `##` e `###`, como a wiki endereça; o `####` fica na de cima.
+    - O próprio registro não conta, e o link de um relógio leva ao Estado da campanha.
+  - **Os documentos** são os mesmos da busca, do Protocolo Morana e de `night-city`, sem as visões. O roteiro fica de
+    fora: ele só é lido quando a aba abre, e a sessão sem roteiro no servidor daria erro.
+  - **Onde está:**
+    - `secoesDe`, `citacoes` e `citadoEm` ficam em `campanha-base.js`;
+    - a linha entra depois que a página abre, com os textos do `wikiApp.loadMarkdownDoc` (o mesmo cache da busca);
+    - o `index.html` passa a lista dos documentos.
+  - **Testes:**
+    - `tests/lib/base-estatica.js` (`node tests/validar.js base`):
+      - uma base pequena, com os valores exatos: as seções, o `####`, o título que começa com uma marca, duas seções
+        com o mesmo título, os `Também`, e a linha em HTML com o `&` escapado;
+      - a base de verdade;
+    - `tests/cenarios/base.js` (`node tests/rodar.js base`):
+      - a linha da Wakako, a da Mina e a do Pachinko, e o link que abre a seção do Diário;
+      - nenhum documento citado é uma visão, a Base ou um roteiro;
+      - o título em HTML de um documento de Night City aparece como texto.
+  - **Mutações:** as 21 caíram (12 na regra pura e 9 na página), e os arquivos voltaram exatos (md5).
+  - **A suíte da wiki:**
+    - o `node tests/validar.js` passou: 458 verificações e as regressões;
+    - no `node tests/rodar.js`, sem o v14, passaram 29 dos 33 cenários;
+    - os 4 que falham, falham igual sem a mudança, nesta worktree: o `ensaio`, o `fluxo` (sem o
+      `foundry-2077/.cache`), o `reversao` e o `sistema` (sem os PDFs, que ficam fora do git).
 - [ ] **B2 · O link explícito `[[Nome]]`:** nos `.md`, `[[Nome]]` e `[[Nome|texto]]` viram o link do registro, com o
   cartão, como o link automático.
   - Serve onde o automático não liga: a segunda menção na mesma seção, ou uma forma diferente do nome.

@@ -2189,7 +2189,8 @@
 
     // switchCampaign: troca a campanha ativa (pergunta antes, se a página pedir). setBadges: selos de novidade no menu.
     // status: o último /api/estado. hasPage: a página existe nesta wiki (a do mestre tem páginas que a dos jogadores não tem).
-    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, theme, shell, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
+    // loadMarkdownDoc(id): o texto do .md de uma página, com o mesmo cache da busca (o "Citado em" da base da campanha).
+    window.wikiApp = { openPage, updatePages, escapeHtml, renderMarkdown, loadMarkdownDoc, setupMap: setupCampaignMap, setupNotes, currentPage: () => currentPage, activeCampaign, campaigns: () => campaigns, switchCampaign, setBadges, prefs, theme, shell, hasPage: id => Boolean(pageContent[id]), status: () => lastState, install, toggleSidebar, recentPages, clockState, rollTable, rollDice, showRoll, linkGlossary, sessionTime, downloadSession };
     // Quem depende da wiki montada (o menu da conta) começa aqui.
     document.dispatchEvent(new Event('wiki:pronta'));
 })();

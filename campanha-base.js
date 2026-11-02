@@ -206,6 +206,78 @@
     return saida.join('\n\n');
   }
 
+  // ---------------- Citado em ----------------
+  // Os nomes que viram link: o nome e os Também de cada registro com cartão (pessoa, facção, lugar e peça), o mais
+  // longo primeiro. A mesma regra serve aos links dos documentos e ao "Citado em".
+  function buscadoresDe(base) {
+    const formas = new Map();
+    for (const item of base.todos.values()) {
+      if (!PAGINA_DO_TIPO[item.tipo]) continue;
+      for (const forma of [item.nome, ...item.tambem]) if (forma.length > 2 && !formas.has(forma)) formas.set(forma, item);
+    }
+    if (!formas.size) return null;
+    const escapar = texto => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return { formas, regex: new RegExp(`(?<![\\p{L}\\p{N}])(${[...formas.keys()].sort((a, b) => b.length - a.length).map(escapar).join('|')})(?![\\p{L}\\p{N}])`, 'gu') };
+  }
+  // Um título de seção como a página mostra (sem as marcas) e o endereço dele (#pagina/secao). A wiki endereça pelo
+  // texto antes da primeira marca, ou pelo título inteiro quando ele começa com uma (o unitTitle do wiki-app).
+  const semMarcas = texto => String(texto).replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1').replace(/[*`]/g, '').trim();
+  const alvoDoTitulo = texto => slug(/^[*`[]/.test(texto) ? semMarcas(texto) : texto.split(/[*`[]/)[0]);
+  // As seções de um documento, como a wiki as endereça: cada título #, ## e ### abre uma (o #### fica na de cima). O
+  // texto antes do primeiro título é o começo do documento; o "# Título" da primeira linha é o título da página.
+  function secoesDe(texto) {
+    const linhas = String(texto || '').replace(/^﻿/, '').replace(/\r/g, '').split('\n');
+    if (/^#\s/.test(linhas[0])) linhas.shift();
+    const partes = [{ secao: '', titulo: '', linhas: [] }];
+    for (const linha of linhas) {
+      const titulo = linha.match(/^#{1,3}\s+(.+?)\s*$/);
+      if (titulo) partes.push({ secao: alvoDoTitulo(titulo[1]), titulo: semMarcas(titulo[1]), linhas: [] });
+      partes[partes.length - 1].linhas.push(linha);
+    }
+    return partes.map(parte => ({ secao: parte.secao, titulo: parte.titulo, texto: parte.linhas.join('\n') }));
+  }
+  // Onde cada registro aparece. documentos: [{ id, titulo, texto }], o id é a página do documento na wiki.
+  // → Map: id do registro → { documentos: [{ id, titulo, secoes: [{ secao, titulo }] }], registros: [item] }. Um nome
+  // só no começo do documento deixa as seções vazias. Os registros são os outros da base que citam esse, nos campos ou
+  // no texto do mestre; o próprio registro não conta.
+  function citacoes(base, documentos = []) {
+    const resultado = new Map();
+    const busca = buscadoresDe(base);
+    if (!busca) return resultado;
+    const de = id => { if (!resultado.has(id)) resultado.set(id, { documentos: [], registros: [] }); return resultado.get(id); };
+    const nomesEm = texto => {
+      const achados = new Set();
+      busca.regex.lastIndex = 0;
+      for (let m = busca.regex.exec(texto); m; m = busca.regex.exec(texto)) achados.add(busca.formas.get(m[1]).id);
+      return achados;
+    };
+    for (const doc of documentos) {
+      for (const parte of secoesDe(doc.texto)) {
+        for (const id of nomesEm(parte.texto)) {
+          const lista = de(id).documentos;
+          let entrada = lista.find(item => item.id === doc.id);
+          if (!entrada) lista.push(entrada = { id: doc.id, titulo: doc.titulo, secoes: [] });
+          if (parte.secao && !entrada.secoes.some(item => item.secao === parte.secao)) entrada.secoes.push({ secao: parte.secao, titulo: parte.titulo });
+        }
+      }
+    }
+    for (const item of base.todos.values()) {
+      for (const id of nomesEm([...Object.values(item.campos), item.texto].join('\n'))) if (id !== item.id) de(id).registros.push(item);
+    }
+    return resultado;
+  }
+  // O endereço de um registro na wiki do mestre: o cartão; o relógio e o segredo ficam no Estado da campanha.
+  const enderecoDe = item => linkDe(item) || (item.tipo === 'relogio' ? `#notes/${slug(item.nome)}` : '#notes/segredos-revelados');
+  // A linha "Citado em" do cartão, em HTML: cada documento (o link leva à página) com as seções, e os registros da
+  // base. Vazia quando o nome não aparece em lugar nenhum.
+  function citadoEm(lista) {
+    if (!lista) return '';
+    const link = (href, texto) => `<a href="${esc(href)}">${esc(texto)}</a>`;
+    const docs = lista.documentos.map(doc => `${link(`#${doc.id}`, doc.titulo)}${doc.secoes.length ? ` (${doc.secoes.map(secao => link(`#${doc.id}/${secao.secao}`, secao.titulo)).join(', ')})` : ''}`);
+    const registros = lista.registros.length ? [`na base: ${lista.registros.map(item => link(enderecoDe(item), item.nome)).join(', ')}`] : [];
+    return `<b>Citado em:</b> ${[...docs, ...registros].join('; ')}`;
+  }
+
   // ---------------- Para o Foundry ----------------
   // O texto do ator do elenco: quem é, lado, onde e o texto do mestre, em HTML simples.
   function inline(texto, href = () => '') {
@@ -242,7 +314,7 @@
     return problemas;
   }
 
-  const api = { ler, slug, expandir, trechos, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
+  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
@@ -344,16 +416,7 @@
 
   // ---------------- Links dos nomes e o cartão ao passar o mouse ----------------
   let buscadores = null;
-  function montarBuscadores() {
-    const formas = new Map();
-    for (const item of navegador.base.todos.values()) {
-      if (!PAGINA_DO_TIPO[item.tipo]) continue;
-      for (const forma of [item.nome, ...item.tambem]) if (forma.length > 2 && !formas.has(forma)) formas.set(forma, item);
-    }
-    if (!formas.size) return null;
-    const escapar = texto => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return { formas, regex: new RegExp(`(?<![\\p{L}\\p{N}])(${[...formas.keys()].sort((a, b) => b.length - a.length).map(escapar).join('|')})(?![\\p{L}\\p{N}])`, 'gu') };
-  }
+  const montarBuscadores = () => buscadoresDe(navegador.base);
   const PULAR = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .page-tabs, .eyebrow, .ent-card, .npc-stats, .entry-tag';
   // Uma vez por nome em cada seção (num documento, cada título ## ou ###); nunca no próprio cartão.
   function secaoDe(no, raizDoc) {
@@ -430,9 +493,32 @@
   }
   const esconderCartao = () => { if (cartaoFlutuante) cartaoFlutuante.hidden = true; };
 
-  // opções: { paginas: ids de página onde os nomes viram link; paginaDoArquivo(nome.md) → id da página }
-  function ligar({ paginas = [], paginaDoArquivo: porArquivo } = {}) {
+  // ---------------- Citado em, nos cartões ----------------
+  // Em Pessoas e facções e em Lugares e peças, cada cartão ganha a linha "Citado em" no fim. Os textos dos documentos
+  // vêm do wiki-app (os mesmos que a busca carrega), depois de a página abrir.
+  const PAGINAS_DA_BASE = new Set(Object.values(PAGINA_DO_TIPO));
+  let documentosACitar = [];
+  let citado = null;
+  const lerCitacoes = () => (citado = citado || Promise.allSettled(documentosACitar.map(doc => raiz.wikiApp.loadMarkdownDoc(doc.id).then(texto => ({ ...doc, texto }))))
+    .then(lidos => citacoes(navegador.base, lidos.filter(lido => lido.status === 'fulfilled').map(lido => lido.value))));
+  async function mostrarCitacoes(container) {
+    if (!navegador.base || !raiz.wikiApp || !raiz.wikiApp.loadMarkdownDoc) return;
+    const mapa = await lerCitacoes();
+    for (const titulo of container.querySelectorAll(':scope > h4')) {
+      const html = citadoEm(mapa.get(slug(titulo.textContent)));
+      if (!html) continue;
+      let fim = titulo.nextElementSibling;
+      while (fim && !fim.matches('h3, h4')) fim = fim.nextElementSibling;
+      const linha = Object.assign(document.createElement('ul'), { className: 'bs-citado', innerHTML: `<li>${html}</li>` });
+      if (fim) fim.before(linha); else container.append(linha);
+    }
+  }
+
+  // opções: { paginas: ids de página onde os nomes viram link; paginaDoArquivo(nome.md) → id da página; documentos:
+  // [{ id, titulo }] do "Citado em" }
+  function ligar({ paginas = [], paginaDoArquivo: porArquivo, documentos = [] } = {}) {
     if (porArquivo) paginaDoArquivo = porArquivo;
+    documentosACitar = documentos;
     const pode = new Set(paginas);
     document.addEventListener('wiki:pagina', evento => {
       esconderCartao();
@@ -441,7 +527,10 @@
       ligarNomes(conteudo);
       if (evento.detail.id === 'notes') ligarEstado(conteudo);
     });
-    document.addEventListener('wiki:documento', evento => { if (pode.has(evento.detail.id)) ligarNomes(evento.detail.container); });
+    document.addEventListener('wiki:documento', evento => {
+      if (pode.has(evento.detail.id)) ligarNomes(evento.detail.container);
+      if (PAGINAS_DA_BASE.has(evento.detail.id)) mostrarCitacoes(evento.detail.container);
+    });
     document.addEventListener('wiki:mesa', evento => { if (evento.detail) usarMesa(evento.detail); });
     document.addEventListener('mouseover', evento => { const link = evento.target.closest && evento.target.closest('a.ent'); if (link) mostrarCartao(link); });
     document.addEventListener('mouseout', evento => { const link = evento.target.closest && evento.target.closest('a.ent'); if (link && !link.contains(evento.relatedTarget)) esconderCartao(); });

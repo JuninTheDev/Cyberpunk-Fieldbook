@@ -69,6 +69,42 @@ async function validarBase({ raiz, r }) {
     return [!sem.length, sem.join(', ') || `${npcs.campaignCast.length} atores`];
   });
 
+  await r.passo('Citado em: as seções dos documentos (#, ## e ###; o #### fica na de cima), os Também e os outros registros, sem o próprio', async () => {
+    const pequena = B.ler([
+      '## Pessoas', '### Ana Prata', '- **Quem é:** Fixer', '- **Também:** Prata', '- **Relações:** Trabalha para a Corpo Azul', '',
+      '### Beto', '- **Quem é:** Mensageiro', 'Fala com Ana Prata toda semana.', '',
+      '## Facções', '### Corpo Azul', '- **Quer:** tudo', '',
+      '## Relógios', '### A virada', '- **Segmentos:** um; dois', 'Ana Prata marca o relógio.'
+    ].join('\n'));
+    const documentos = [
+      { id: 'docUm', titulo: 'Um', texto: ['# Um', 'Ana Prata no começo.', '## Primeira parte', 'Prata aparece de novo. Beto também.', '### Detalhe', '#### Sub', 'Corpo Azul aqui.', '## `Código` e mais', 'Ana Prata.', '## Fala de **Beto**', 'nada', '## Notas', 'Beto.', '## Notas', 'Beto de novo.'].join('\r\n') },
+      { id: 'docDois', titulo: 'Dois & três', texto: 'Só Prata.' }
+    ];
+    const mapa = B.citacoes(pequena, documentos);
+    const resumo = id => { const c = mapa.get(id); return c ? { documentos: c.documentos.map(doc => `${doc.id}:${doc.secoes.map(secao => `${secao.secao}=${secao.titulo}`).join(',')}`), registros: c.registros.map(item => item.id) } : null; };
+    const esperado = {
+      'ana-prata': { documentos: ['docUm:primeira-parte=Primeira parte,codigo-e-mais=Código e mais', 'docDois:'], registros: ['beto', 'a-virada'] },
+      // Duas seções com o mesmo título: o endereço leva à primeira, e o link aparece uma vez.
+      beto: { documentos: ['docUm:primeira-parte=Primeira parte,fala-de=Fala de Beto,notas=Notas'], registros: [] },
+      'corpo-azul': { documentos: ['docUm:detalhe=Detalhe'], registros: ['ana-prata'] },
+      'a-virada': null
+    };
+    const errados = Object.entries(esperado).filter(([id, valor]) => JSON.stringify(resumo(id)) !== JSON.stringify(valor)).map(([id]) => `${id}: ${JSON.stringify(resumo(id))}`);
+    const linha = B.citadoEm(mapa.get('ana-prata'));
+    const linhaEsperada = '<b>Citado em:</b> <a href="#docUm">Um</a> (<a href="#docUm/primeira-parte">Primeira parte</a>, <a href="#docUm/codigo-e-mais">Código e mais</a>); <a href="#docDois">Dois &amp; três</a>; na base: <a href="#people/beto">Beto</a>, <a href="#notes/a-virada">A virada</a>';
+    if (linha !== linhaEsperada) errados.push(`linha: ${linha}`);
+    if (B.citadoEm(mapa.get('a-virada')) !== '') errados.push('a virada tem linha');
+    // Na base de verdade: a Wakako aparece no Diário, a Mina pela relação com a Wakako, e nenhum registro cita a si mesmo.
+    const docs = ['diario-da-campanha.md', 'handouts-da-campanha.md', 'sessao-zero.md', 'guia-night-city-2077.md'].map(nome => ({ id: nome, titulo: nome, texto: fs.readFileSync(path.join(pasta, nome), 'utf8') }));
+    const real = B.citacoes(base, docs);
+    const wakako = real.get('wakako-okada');
+    if (!wakako || !wakako.documentos.some(doc => doc.id === 'diario-da-campanha.md' && doc.secoes.length)) errados.push('a Wakako sem o Diário');
+    if (!(real.get('mina-kuroda') || { registros: [] }).registros.some(item => item.id === 'wakako-okada')) errados.push('a Mina sem a Wakako');
+    const proprios = [...real.entries()].filter(([id, c]) => c.registros.some(item => item.id === id)).map(([id]) => id);
+    if (proprios.length) errados.push(`citam a si mesmos: ${proprios.join(', ')}`);
+    return [!errados.length, errados.slice(0, 4).join(' · ') || `${real.size} registros citados nos ${docs.length} documentos`];
+  });
+
   return base;
 }
 
