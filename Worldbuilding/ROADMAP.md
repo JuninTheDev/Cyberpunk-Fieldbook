@@ -75,8 +75,9 @@ de partida.
 
 ## Fase 1: ligar o que já existe
 
-- [ ] **B1 · Citado em:** cada cartão em Pessoas e facções e em Lugares e peças ganha a lista "Citado em": os
-  documentos e as seções (`###`) onde o nome aparece, e os outros registros que citam esse. Cada linha leva à seção.
+- [~] **B1 · Citado em:** em andamento (sessão KouArt, 2026-11-02). Cada cartão em Pessoas e facções e
+  em Lugares e peças ganha a lista "Citado em": os documentos e as seções (`###`) onde o nome aparece, e os outros
+  registros que citam esse. Cada linha leva à seção.
   - A regra é a mesma dos links: o nome e os `Também`. Entram os documentos da campanha e os de `night-city`.
   - Regra pura: `citacoes(base, documentos)` em `campanha-base.js`.
   - Teste: um nome citado em dois documentos aparece com as duas seções; o `Também` conta; o próprio cartão não conta.
