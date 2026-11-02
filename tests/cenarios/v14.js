@@ -4154,6 +4154,17 @@ module.exports = async ({ edge, servidores, r }) => {
       const api = game.system.api;
       const esperar = async condicao => { for (let i = 0; i < 100 && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
       const pegar = id => foundry.utils.deepClone(cat[id]);
+      // Mostra a cena no canvas. A ativação chama o Scene#view sem esperar, e ele recusa trocar de cena com o canvas ainda
+      // carregando outra ("You cannot switch Scenes until resources finish loading"): o passo anterior volta para a cena de
+      // antes no finally, e a ativação da cena nova chegava no meio desse desenho (o canvas ficava na velha, e o token
+      // movido fora da tela não andava). Até a cena aparecer, pede o view de novo quando o canvas termina de carregar.
+      const mostrar = async alvoDaVista => {
+        for (let i = 0; i < 100 && !(canvas.ready && canvas.scene?.id === alvoDaVista.id); i++) {
+          if (!canvas.loading && canvas.scene?.id !== alvoDaVista.id) await alvoDaVista.view();
+          await new Promise(r => setTimeout(r, 100));
+        }
+        return canvas.ready && canvas.scene?.id === alvoDaVista.id;
+      };
       const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, dados: CONFIG.Dice.randomUniform, tempo: game.time.worldTime, mensagens: game.messages.map(m => m.id), config: Object.fromEntries(['area', 'lesaoCritica', 'defesaDosNpcs', 'resultado', 'rolarDireto'].map(k => [k, game.settings.get('${S}', k)])) };
       const atores = [], usuarios = [];
       let cena;
@@ -4169,7 +4180,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const alvo = await criar({ name: 'Munições: alvo', type: 'personagem', system: { hp: { value: 80 }, atributos: { will: { valor: 8 }, tech: { valor: 8 }, ref: { valor: 0 }, body: { valor: 20 } } }, items: [armadura] });
         cena = await Scene.implementation.create({ name: 'Munições (C14)', active: false, width: 1600, height: 1000, grid: { size: 100, distance: 2, units: 'm' } });
         await cena.activate();
-        await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        await mostrar(cena);
         for (const [ator, x] of [[a, 100], [alvo, 500]]) await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x, y: 400 })).toObject()]);
         await esperar(() => canvas.tokens.placeables.length === 2);
         const token = cena.tokens.find(t => t.actorId === alvo.id);
@@ -4211,7 +4222,7 @@ module.exports = async ({ edge, servidores, r }) => {
         for (const [k, v] of Object.entries(antes.config)) await game.settings.set('${S}', k, v);
         if (game.time.worldTime !== antes.tempo) await game.time.advance(antes.tempo - game.time.worldTime);
         if (game.scenes.has(antes.ativa)) await game.scenes.get(antes.ativa).activate();
-        if (game.scenes.has(antes.cena)) await game.scenes.get(antes.cena).view();
+        if (game.scenes.has(antes.cena)) await mostrar(game.scenes.get(antes.cena));
         delete window.__c14Aguardando; delete window.__c14Liberar;
       }
     })()`);
@@ -19902,6 +19913,7 @@ module.exports = async ({ edge, servidores, r }) => {
           c.querySelector('[name="nome"]').value = 'Zed';
           c.querySelector('[name="pasta"]').value = pasta + '/zed';
           c.querySelector('[name="rotulo"]').value = '20';
+          c.querySelector('[name="encaixar"]').checked = false; // o corte pela grade (o C53 liga o encaixe na janela)
           c.querySelector('[name="rotulo"]').dispatchEvent(new Event('change', { bubbles: true }));
           await __esperar(() => janela('cortador-de-folha')?.querySelector('canvas.previa')?.height > 100);
           lido.previa = janela('cortador-de-folha').querySelector('canvas.previa').height;
@@ -19975,6 +19987,153 @@ module.exports = async ({ edge, servidores, r }) => {
       const v = info;
       const ok = v.antes.mae === false && v.erro === null && v.quadros === 28 && v.arquivos === 28 && v.ativo === true && v.parado90 === `${v.mae}/qyan/qyan_parado_090.webp`
         && v.falhou === `O Foundry não gravou outro_parado_000.webp em ${v.mae}/outro: o conjunto do token não mudou.` && v.igual;
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('tokens dinâmicos (o C53): a folha feita no ChatGPT e o encaixe; o cortador vem com o "Encaixar" ligado e o kit (o molde cinza baixado, 1536 × 1024, e o prompt copiado com o personagem); a folha em fundo verde, com o Parado passando da linha e a arma na célula vizinha, vira 28 quadros 256 × 256 com a mesma escala, os pés na mesma linha, o meio no meio, sem o verde e sem pedaço da vizinha; a figura que falta recusa e o lado trocado avisa', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const FP = foundry.applications.apps.FilePicker.implementation;
+        const pasta = 'teste-c53';
+        try { await FP.createDirectory('data', pasta); } catch { /* já existe */ }
+        // A folha como o ChatGPT faz: 1536 × 1024 (8 × 4, células de 192 × 256), cada figura de pé com 180 de altura (a cabeça
+        // redonda, o corpo e o braço do lado da direção: 45, 90 e 135 para a esquerda; 225, 270 e 315 para a direita; no
+        // Mirando, o braço com a arma, 70 de comprimento, que entra na célula vizinha). O Parado vai de 90 a 270 (os pés na
+        // célula de baixo). As poses nas colunas 5 a 8. As cores: o Parado vermelho, o Caminhando azul, o Mirando amarelo.
+        const folhaEm = async (nome, { fundo = '#00ff00', semFigura = null, ladoTrocado = null } = {}) => {
+          const tela = document.createElement('canvas'); tela.width = 1536; tela.height = 1024;
+          const p = tela.getContext('2d');
+          if (fundo) { p.fillStyle = fundo; p.fillRect(0, 0, 1536, 1024); }
+          const cores = ['#c83232', '#3232c8', '#c8c832'];
+          ['parado', 'caminhando', 'mirando'].forEach((pose, l) => {
+            for (let c = 0; c < 8; c++) {
+              const angulo = c * 45, chave = pose + '-' + angulo;
+              if (chave === semFigura) continue;
+              const cx = c * 192 + 96, topo = [90, 316, 572][l] + (c % 2) * 3;
+              const lado = chave === ladoTrocado ? 'esquerda' : angulo > 0 && angulo < 180 ? 'esquerda' : angulo > 180 ? 'direita' : null;
+              const braco = pose === 'mirando' ? 70 : 40;
+              p.fillStyle = cores[l];
+              p.beginPath(); p.arc(cx, topo + 20, 20, 0, Math.PI * 2); p.fill();
+              p.fillRect(cx - 30, topo + 40, 60, 140);
+              if (lado === 'esquerda') p.fillRect(cx - 30 - braco, topo + 60, braco, 12);
+              if (lado === 'direita') p.fillRect(cx + 30, topo + 60, braco, 12);
+            }
+          });
+          p.fillStyle = '#784014';
+          p.beginPath(); p.arc(4 * 192 + 96, 840, 20, 0, Math.PI * 2); p.fill(); p.fillRect(4 * 192 + 66, 860, 60, 140); // ferido leve
+          p.fillRect(5 * 192 + 51, 890, 90, 110); // ferido grave
+          p.fillRect(6 * 192 + 11, 930, 170, 50); // incapacitado
+          p.fillRect(7 * 192 + 11, 925, 170, 60); // morto
+          const blob = await new Promise(r => tela.toBlob(r, 'image/png'));
+          await FP.upload('data', pasta, new File([blob], nome, { type: 'image/png' }), {}, { notify: false });
+          return pasta + '/' + nome;
+        };
+        const verde = await folhaEm('chatgpt.png');
+        const referencia = await folhaEm('referencia.png', { fundo: null });
+        const falta = await folhaEm('falta.png', { semFigura: 'mirando-90' });
+        const trocada = await folhaEm('lado.png', { ladoTrocado: 'caminhando-270' });
+        const ator = await Actor.implementation.create({ name: 'Teste Encaixe', type: 'personagem', ownership: { default: 0 } });
+        const janela = () => document.querySelector('.application.cortador-de-folha');
+        const moldeAntes = game.settings.get('${S}', 'moldeDaFolha');
+        const copiar = game.clipboard.copyPlainText;
+        const criarUrl = URL.createObjectURL;
+        const despachar = HTMLAnchorElement.prototype.dispatchEvent;
+        const lido = {};
+        const pixelsDe = async fonte => {
+          const bitmap = await createImageBitmap(fonte);
+          const t = document.createElement('canvas'); t.width = bitmap.width; t.height = bitmap.height;
+          const p = t.getContext('2d', { willReadFrequently: true }); p.drawImage(bitmap, 0, 0);
+          return { largura: t.width, altura: t.height, dados: p.getImageData(0, 0, t.width, t.height).data };
+        };
+        try {
+          // 1. O cortador: o "Encaixar" ligado e o kit do ChatGPT.
+          game.system.api.tokenDinamico.abrirCortador(ator);
+          await __esperar(() => janela()?.querySelector('[name="encaixar"]'));
+          lido.padrao = { encaixar: janela().querySelector('[name="encaixar"]').checked, kit: Boolean(janela().querySelector('fieldset.chatgpt [data-action="baixarMolde"]') && janela().querySelector('[data-action="copiarPrompt"]')) };
+          // 2. O molde: a folha de referência (transparente) encaixada, em cinza, 1536 × 1024; o download fica preso aqui.
+          const baixado = {};
+          URL.createObjectURL = blob => { baixado.blob = blob; return criarUrl.call(URL, blob); };
+          HTMLAnchorElement.prototype.dispatchEvent = function (evento) { if (this.download) { baixado.nome = this.download; return true; } return despachar.call(this, evento); };
+          janela().querySelector('[name="molde"]').value = referencia;
+          janela().querySelector('[data-action="baixarMolde"]').click();
+          await __esperar(() => baixado.nome, 200);
+          URL.createObjectURL = criarUrl; HTMLAnchorElement.prototype.dispatchEvent = despachar;
+          const molde = await pixelsDe(baixado.blob);
+          const em = (x, y) => [...molde.dados.subarray((y * molde.largura + x) * 4, (y * molde.largura + x) * 4 + 4)];
+          // O Parado 0 do molde: o quadro de 192 em (0, 32), o corpo no meio dele.
+          lido.molde = { nome: baixado.nome, tipo: baixado.blob.type, tamanho: molde.largura + 'x' + molde.altura, corpo: em(96, 140), canto: em(0, 0)[3], salvo: game.settings.get('${S}', 'moldeDaFolha') };
+          // 3. O prompt, com o personagem.
+          let copiado = null;
+          game.clipboard.copyPlainText = texto => { copiado = texto; };
+          janela().querySelector('[name="descricao"]').value = 'Neo, solo de jaqueta verde-oliva';
+          janela().querySelector('[data-action="copiarPrompt"]').click();
+          await __esperar(() => copiado);
+          lido.prompt = { personagem: copiado.includes('O personagem: Neo, solo de jaqueta verde-oliva.'), poses: copiado.includes('na coluna 5, ferido leve'), molde: copiado.includes('(1536 × 1024, paisagem)') };
+          // 4. A prévia do encaixe: com o lado trocado, o aviso embaixo; com a folha certa, os quadros 8 × 4 (720 × 360), sem aviso.
+          const c = janela();
+          c.querySelector('[name="folha"]').value = trocada;
+          c.querySelector('[name="folha"]').dispatchEvent(new Event('change', { bubbles: true }));
+          await __esperar(() => janela()?.querySelector('ul.avisos li'), 200);
+          lido.avisoNaPrevia = janela().querySelector('ul.avisos li').textContent;
+          c.querySelector('[name="folha"]').value = verde;
+          c.querySelector('[name="folha"]').dispatchEvent(new Event('change', { bubbles: true }));
+          await __esperar(() => janela()?.querySelector('canvas.previa')?.height === 360 && !janela().querySelector('ul.avisos li'), 200);
+          lido.previa = janela().querySelector('canvas.previa').height;
+          // 5. Cortar e salvar, encaixando.
+          c.querySelector('[name="nome"]').value = 'Neo';
+          c.querySelector('[name="pasta"]').value = pasta + '/neo';
+          c.querySelector('button[type="submit"]').click();
+          await __esperar(() => ator.getFlag('${S}', 'tokenDinamico')?.ativo && !janela(), 300);
+          const conjunto = ator.getFlag('${S}', 'tokenDinamico');
+          lido.conjunto = { preenchidas: Object.values(conjunto?.imagens ?? {}).filter(Boolean).length, parado90: conjunto?.imagens?.['parado-90'] };
+          // 6. Os quadros: 256 × 256; a caixa do que é opaco, o meio (o centro de massa), o verde que sobrou e o azul (a cor do
+          // Caminhando, a linha de baixo do Parado).
+          const ler = async nome => {
+            const { largura, altura, dados } = await pixelsDe(await (await fetch(pasta + '/neo/' + nome + '?v=' + Date.now())).blob());
+            let x0 = largura, y0 = altura, x1 = -1, y1 = -1, soma = 0, n = 0, verdes = 0, azuis = 0;
+            for (let y = 0; y < altura; y++) for (let x = 0; x < largura; x++) {
+              const i = (y * largura + x) * 4;
+              if (dados[i + 3] <= 64) continue;
+              x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); soma += x; n++;
+              if (dados[i + 1] > Math.max(dados[i], dados[i + 2]) + 40) verdes++;
+              if (dados[i + 2] > 150 && dados[i] < 100) azuis++;
+            }
+            return { tamanho: largura + 'x' + altura, pes: y1, altura: y1 - y0 + 1, meio: Math.round(soma / n), meioY: Math.round((y0 + y1) / 2), verdes, azuis };
+          };
+          lido.quadros = {};
+          for (const nome of ['neo_parado_000.webp', 'neo_parado_090.webp', 'neo_caminhando_270.webp', 'neo_mirando_090.webp', 'neo_ferido-leve.webp', 'neo_morto.webp']) lido.quadros[nome] = await ler(nome);
+          // 7. A figura que falta: recusa, e nada muda; o lado trocado: grava, com o aviso.
+          const antes = JSON.stringify(ator.getFlag('${S}', 'tokenDinamico'));
+          lido.falta = (await game.system.api.tokenDinamico.cortarFolha({ ator, folha: falta, nome: 'falta', pasta: pasta + '/falta', encaixar: true })).erro;
+          lido.igual = JSON.stringify(ator.getFlag('${S}', 'tokenDinamico')) === antes;
+          const lado = await game.system.api.tokenDinamico.cortarFolha({ ator, folha: trocada, nome: 'lado', pasta: pasta + '/lado', encaixar: true });
+          lido.lado = { quadros: lado.quadros, avisos: lado.avisos, caixa: lado.caixa };
+          return lido;
+        } finally {
+          URL.createObjectURL = criarUrl; HTMLAnchorElement.prototype.dispatchEvent = despachar;
+          game.clipboard.copyPlainText = copiar;
+          await game.settings.set('${S}', 'moldeDaFolha', moldeAntes);
+          for (const app of [...foundry.applications.instances.values()].filter(app => app.element?.classList.contains('cortador-de-folha'))) await app.close();
+          await ator.delete();
+        }
+      })()`);
+      const v = info;
+      const q = v.quadros ?? {};
+      const dePe = ['neo_parado_000.webp', 'neo_parado_090.webp', 'neo_caminhando_270.webp', 'neo_mirando_090.webp', 'neo_ferido-leve.webp'];
+      const semAzul = ['neo_parado_000.webp', 'neo_parado_090.webp', 'neo_mirando_090.webp', 'neo_ferido-leve.webp', 'neo_morto.webp'];
+      const ok = v.padrao.encaixar === true && v.padrao.kit
+        && v.molde.nome === 'molde-do-token.png' && v.molde.tipo === 'image/png' && v.molde.tamanho === '1536x1024' && v.molde.canto === 0
+        && v.molde.corpo[3] === 255 && v.molde.corpo[0] === v.molde.corpo[1] && v.molde.corpo[1] === v.molde.corpo[2] && v.molde.salvo === 'teste-c53/referencia.png'
+        && v.prompt.personagem && v.prompt.poses && v.prompt.molde
+        && v.avisoNaPrevia === 'Caminhando 90° e 270° parecem virados para o mesmo lado (um devia ser o espelho do outro).' && v.previa === 360
+        && v.conjunto.preenchidas === 28 && v.conjunto.parado90 === 'teste-c53/neo/neo_parado_090.webp'
+        && Object.values(q).length === 6 && Object.values(q).every(f => f.tamanho === '256x256' && f.verdes === 0)
+        && semAzul.every(n => q[n].azuis === 0) && q['neo_caminhando_270.webp'].azuis > 1000
+        && dePe.every(n => Math.abs(q[n].pes - 223) <= 1 && Math.abs(q[n].meio - 128) <= 2)
+        && dePe.slice(0, 4).every(n => Math.abs(q[n].altura - 192) <= 2)
+        && Math.abs(q['neo_morto.webp'].meio - 128) <= 2 && Math.abs(q['neo_morto.webp'].meioY - 128) <= 2
+        && v.falta === 'A linha 3 (Mirando) tem 7 figura(s), e o molde pede 8. Duas figuras encostadas viram uma só: peça ao ChatGPT para separá-las.' && v.igual
+        && v.lado.quadros === 28 && JSON.stringify(v.lado.avisos) === JSON.stringify(['Caminhando 90° e 270° parecem virados para o mesmo lado (um devia ser o espelho do outro).'])
+        && JSON.stringify(v.lado.caixa) === JSON.stringify({ x: 0, y: 0, largura: 256, altura: 256 });
       return [ok, JSON.stringify(info)];
     });
 

@@ -9582,6 +9582,130 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   Foundry (M6), o balanço fora do desenho (M7: o desenho nunca sobe) e o balanço que fica depois do movimento (M8: o desenho fica
   acima no fim dos três movimentos, 1,16 px, 1,22 px e 3,33 px na diagonal).
 
+### Ciclo 199 (2026-11-02): C53, a folha feita no ChatGPT e o encaixe no molde (sessão KouArt)
+
+- **Pedido do usuário (2026-11-01):** "uma ferramenta para criar tokens padronizados dentro dos moldes que já existem
+  usando a I.A do gpt [...] os token precisam ser criados de maneira que se encaixe perfeitamente nos cortes, tenham
+  todos os msm lados e etc, só mudaria o personagem". Com a folha do Qyan como inspiração; entre o ChatGPT e a API, o
+  usuário escolheu o ChatGPT ("Vamos fazer pelo chat gpt").
+- **O que era:** o cortador do ciclo 179 corta a folha pela grade, com as células fixas. As duas folhas que existem
+  (o Agente e o Qyan: 1774 × 887, 8 × 4, fundo transparente) não respeitam a grade:
+  - os oito Parado do Agente passam da linha: o cortador corta os pés deles e deixa um pedaço de sapato no alto do
+    Caminhando;
+  - o Incapacitado entra na célula do Ferido grave nas duas folhas, e a arma do Mirando a 270 do Qyan entra na vizinha;
+  - o tamanho muda de uma folha para a outra: o Qyan de pé tem uns 205 px e o Agente uns 182, e o token do Qyan sai uns
+    13% maior.
+  Uma folha feita por IA vai ter os mesmos desvios: o encaixe tem de ser do código, e não da IA.
+- **Entrega:**
+  - **o encaixe** (`regras-encaixe.mjs`, regras puras sobre os pixels):
+    - as figuras são as manchas de pixels opacos (alfa acima de 8, com as 8 vizinhas); um pedaço pequeno se junta à
+      figura mais perto, até 15% da altura mediana (a arma solta, o cabelo), e o que está longe fica fora;
+    - as linhas se separam onde o centro de uma figura salta mais de 35% da altura mediana; cada linha vai da esquerda
+      para a direita, nas chaves da disposição. Numa linha com figura a mais, a menor se junta à vizinha (até 25% da
+      altura mediana). Linha a mais ou a menos, ou uma figura que falta, é erro, e nada se grava;
+    - a escala é uma só, para a folha toda: a altura mediana do Parado vira 3/4 do quadro de 256. As figuras de pé ficam
+      com o centro de massa no meio (a arma estendida quase não o puxa; o meio da caixa puxaria) e os pés na linha de
+      224; Caído, Incapacitado e Morto ficam no centro. A figura que não cabe diminui até caber, com 4 px de margem;
+    - só os pixels da própria figura vão para o quadro: o pedaço de outra que entrou na caixa fica transparente;
+    - o fundo liso sai sozinho, se os quatro cantos forem opacos e da mesma cor: o que encosta na borda e tem essa cor.
+      No verde (a cor com os canais bem diferentes), também o verde preso entre o braço e o corpo e, numa faixa de 2 px
+      na beirada da figura, o alfa pela força do verde, com o verde tirado da cor. Um fundo de várias cores é recusado;
+    - os avisos, que não impedem de gravar: a figura com a altura fora de 80% a 125% da do Parado, e o par de lados que
+      não é espelho um do outro (45 e 315, 90 e 270, 135 e 225), pela máscara de cada um numa grade de 32 × 32;
+  - **o cortador** (`cortador-de-folha.mjs`): a marca "Encaixar as figuras no molde", ligada por padrão; a prévia com os
+    quadros encaixados, a linha dos pés, os erros e os avisos; e, ao salvar, os avisos numa notificação que fica.
+    `cortarFolha({ encaixar: true })` grava os 28 quadros de 256 × 256 com os mesmos nomes, a mesma pasta e as mesmas
+    mensagens de antes. Sem a marca, o corte pela grade é o de antes;
+  - **o kit do ChatGPT**, no cortador ("Fazer a folha no ChatGPT"):
+    - "Baixar o molde" encaixa uma folha que já existe e a desenha em cinza (`molde-do-token.png`): cada quadro a 3/4, numa
+      célula de 192 × 256 (1536 × 1024 na disposição padrão), com o cinza claro (70 mais a metade da luz) para a IA ver
+      as poses sem copiar a roupa. O molde escolhido fica guardado neste computador (a configuração do cliente
+      `moldeDaFolha`);
+    - "Copiar o prompt" copia o pedido, que traz:
+      - o personagem (a descrição da janela, ou o da segunda imagem);
+      - as linhas na ordem do molde e as direções de cada coluna (de frente, de perfil, de costas...);
+      - as poses da linha de poses, coluna a coluna;
+      - as regras: o mesmo formato do molde, o fundo transparente (ou verde puro e liso), as figuras separadas e do mesmo
+        tamanho, sem texto;
+  - API: `encaixarNoMolde`, `moldeDaFolha` e `promptDoChatGPT` no `game.system.api.tokenDinamico`.
+- **Nas folhas de verdade:** as do Agente e do Qyan encaixaram sem erro e sem aviso. O Parado a 270 espelhado de
+  propósito deu o aviso do par, e uma figura apagada foi recusada.
+- **Limites:**
+  - o par de lados é conferido pela silhueta: de frente e de costas têm a mesma, e a troca entre eles não é vista;
+  - num verde sintético (o do teste), sobram fiapos finos de verde onde a figura de teste tinha cantos duros;
+  - a faixa do rótulo só vale no corte pela grade: uma folha com os nomes escritos embaixo pede o modo antigo, ou o
+    ChatGPT sem texto, como o prompt pede;
+  - o ChatGPT nem sempre acerta as 28 figuras de primeira; o encaixe recusa ou avisa, e a folha volta para ele.
+- **Testes:**
+  - **G3:** `encaixe.test.mjs` (novo, 9 testes):
+    - o fundo, com o verde inteiro, o preso e a beirada sem o halo;
+    - as figuras e os pedaços;
+    - as linhas e as posições (o Parado que passa da linha fica na dele), com a figura que falta, a linha a mais e o
+      pedaço grande perto;
+    - o meio pelo centro de massa, a escala pelo Parado, os pés na linha e as deitadas no centro, com os destinos
+      exatos;
+    - os pixels só da figura;
+    - os avisos;
+    - a folha inteira no verde, com o fundo que não é liso e a folha vazia;
+    - o molde e o cinza;
+    - o prompt;
+  - **G4:** um passo novo, depois do conserto do ciclo 188, que confere:
+    - o cortador abre com o "Encaixar" ligado;
+    - o molde baixado, interceptado sem gravar arquivo: `molde-do-token.png`, 1536 × 1024, cinza no corpo (os três
+      canais iguais), transparente no canto, e o molde guardado na configuração;
+    - o prompt copiado, com o personagem, as poses por coluna e o formato;
+    - a prévia: com o lado trocado, o aviso embaixo; com a folha certa, os quadros em 720 × 360, sem aviso;
+    - uma folha de 1536 × 1024 em fundo verde, com o Parado passando da linha e a arma do Mirando na célula vizinha. Ela
+      vira 28 quadros de 256 × 256 sem verde e sem pedaço da vizinha. Os de pé têm os pés em 223 (±1) e o meio em
+      128 (±2); o Parado, o Caminhando e o Mirando, a altura de 192 (±2); o Morto fica no centro;
+    - a folha sem uma figura é recusada, e nada muda;
+    - o lado trocado grava os 28 quadros, com o aviso.
+    O passo da parte 3 do C45 desliga o "Encaixar", para continuar conferindo o corte pela grade.
+- **No caminho:** o passo das Costelas quebradas do C50 caiu em 9 de 10 G4 deste ciclo, sempre em 31,1 s, com o
+  "reading 'id'" do Desfazer sem cartão. Não era a corrida do ciclo 198. O `servidor.log` do Foundry de teste mostrou a
+  cena criada e 10 s sem nada, duas vezes, antes do combate. O problema era o preparo do `comMunicoes`, o dos passos das
+  munições especiais do C14 e dos que o usam:
+  - a ativação da cena nova chama o `Scene#view` sem esperar, e ele recusa trocar de cena com o canvas ainda carregando
+    outra ("You cannot switch Scenes until resources finish loading"), só com uma notificação;
+  - o `finally` do passo anterior voltava para a cena de antes, e o desenho dela ainda não tinha acabado;
+  - o canvas ficava na cena velha, e as duas esperas do preparo (a cena e os 2 tokens) davam 10 s cada;
+  - os passos que não precisam da tela passavam, só mais lentos (22 a 31 s em vez de 2 s). O das Costelas move o token
+    da cena que não estava na tela, e o cartão não saía.
+  Com um rastro no passo, ele passava: o rastro mudava o tempo, e a corrida caía num passo vizinho. O preparo agora
+  mostra a cena (o `mostrar`: até ela aparecer, pede o `view` de novo quando o canvas termina de carregar), também ao
+  voltar para a de antes. O que os passos conferem não mudou.
+- **Portões:** G1, 237 arquivos com sintaxe válida; G2, ESLint 10.12.0 sem erros; G3, 756/756; G4 completo, 320/320 em
+  642 s e em 687 s (duas rodadas seguidas, depois do conserto do "No caminho"), com a mesa do servidor vazia. Antes do
+  conserto, 9 de 10 rodadas deram 319/320 (o passo das Costelas).
+- **Mutações:** as 26 caíram, e os arquivos voltaram exatos (md5).
+  - **No G3 (18):**
+    - o verde preso que fica (M1) e a beirada com o verde (M2);
+    - os cantos diferentes como fundo (M3, 2 testes);
+    - os pedaços que não se juntam (M4);
+    - as linhas que não se separam (M5, 3) e a linha fora de ordem (M6, 3);
+    - a figura a mais que não se junta (M7);
+    - o meio pela caixa (M8);
+    - a escala por todas as figuras (M9);
+    - as de pé no centro (M10);
+    - a deitada que não diminui (M11);
+    - o pedaço da outra figura no quadro (M12);
+    - o par de lados sem conferir (M13);
+    - a figura menor sem aviso (M14);
+    - o fundo de várias cores aceito (M15);
+    - o molde a escala 1 (M16);
+    - o cinza sem clarear (M17);
+    - a coluna contada do zero no prompt (M18).
+  - **No G4 (8, um G4 inteiro cada, todas no passo do C53;** em 7 dessas rodadas, o passo das Costelas também caiu,
+    pelo "No caminho"):
+    - a janela com o encaixe desligado (G1);
+    - a figura sem o plano (G2);
+    - o molde colorido (G3);
+    - o `cortarFolha` que ignora o encaixe (G4);
+    - o molde que não fica guardado (G5);
+    - o prompt sem o personagem (G6);
+    - a prévia sem os avisos (G7);
+    - o `cortarFolha` sem os avisos (G8).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

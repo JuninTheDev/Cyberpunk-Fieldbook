@@ -439,6 +439,21 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   mãos, mas o `update` não: o ator de teste que nasceu com três mãos ocupadas não volta ao que era.
 - **G4 focado com uma cena nova** (ciclo 196): crie a cena com `active: false`, espere o `canvasReady` depois do
   `activate()` e só então ponha os tokens; sem isso, o primeiro `control()` dá "setting 'visible'" de null.
+- **Um download no G4** (ciclo 199): o `foundry.utils.saveDataToFile` cria um Blob e clica num link com `download`; no
+  G4, o arquivo cairia na pasta Downloads do usuário, fora da `FieldbookTeste`. Intercepte o
+  `HTMLAnchorElement.prototype.dispatchEvent` (só o do link com `download`) e embrulhe o `URL.createObjectURL` para pegar
+  o Blob, e devolva os dois no `finally`.
+- **Uma imagem gravada em WebP** (ciclo 199): a compressão mexe nos pixels da beirada. Confira a caixa do que é opaco
+  (alfa acima de 64), o centro de massa e as contagens de cor com folga, e não pixel a pixel.
+- **Trocar de cena no G4** (ciclo 199): o `scene.activate()` chama o `Scene#view` sem esperar, e o view recusa trocar de
+  cena enquanto o canvas carrega outra (`canvas.loading`), só com uma notificação. Um passo que volta para a cena de
+  antes no `finally` deixa esse desenho no meio, e a cena do passo seguinte não aparece. Espere o canvas mostrar a cena
+  (`canvas.ready && canvas.scene?.id === cena.id`) e, se ele não trocou, peça o `view()` de novo quando o
+  `canvas.loading` acabar (o `mostrar` do `comMunicoes`).
+- **Um passo instável que passa com um rastro** (ciclo 199): pode ser só o tempo. Antes de mexer no passo, compare a
+  duração dos passos vizinhos nas rodadas que falham e nas que passam: uma espera de 10 s que se esgota aparece como
+  um passo de 20 ou 30 s. Leia também o `servidor.log` do Foundry de teste (`FieldbookTeste/foundry14`), que tem a
+  hora de cada operação. Ele é reescrito a cada G4: copie antes da rodada seguinte.
 
 ## Build
 

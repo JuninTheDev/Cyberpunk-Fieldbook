@@ -350,6 +350,33 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     do Foundry (o mestre, em geral). A pasta é criada nível por nível ("tokens/qyan" num mundo sem "tokens" também; o
     conserto do ciclo 188), e, se o Foundry não gravar um quadro, o cortador avisa e o conjunto do ator não muda. API:
     `game.system.api.tokenDinamico.cortarFolha({ ator, folha, nome, pasta })`.
+  - **O encaixe no molde** (o C53, ciclo 199; pedido do usuário): com **"Encaixar as figuras no molde"** marcado (o
+    padrão), o cortador não corta pela grade. Ele acha cada figura inteira (o que não é fundo, com os pedaços soltos
+    perto dela, como a arma ou o cabelo), separa as linhas e põe as figuras de cada linha, da esquerda para a direita, nas
+    posições da disposição. Todos os quadros saem com 256 × 256 e a mesma escala, dada pelo Parado, que fica com 3/4 da
+    altura do quadro. As figuras de pé ficam com o meio no meio e os pés na mesma linha; Caído, Incapacitado e Morto ficam
+    no centro. A figura larga demais diminui até caber, e o pedaço de outra figura que entra na caixa fica de fora.
+    - **O fundo:** um fundo liso de uma cor só (o verde puro do ChatGPT, ou o branco) sai sozinho. No verde, a beirada
+      também perde o verde, e o verde preso entre o braço e o corpo sai.
+    - **O que ele recusa,** sem gravar nada: um fundo de várias cores, uma linha a mais ou a menos e uma figura que falta
+      (duas encostadas viram uma).
+    - **O que ele avisa,** gravando os quadros: a figura bem menor ou maior que o Parado (fora de 80% a 125%) e o par de
+      lados que não é espelho um do outro (45 e 315, 90 e 270, 135 e 225).
+    - **A prévia** mostra os quadros encaixados, com a linha dos pés, os erros e os avisos.
+    - Sem a marca, corta pela grade, como antes; a faixa do rótulo só vale nesse modo.
+  - **O kit do ChatGPT** (o C53): no cortador, "Fazer a folha no ChatGPT".
+    - **"Baixar o molde":** a partir de uma folha que já existe (a do Agente, a do Qyan), baixa
+      `molde-do-token.png`. É a folha encaixada em cinza, 192 × 256 por célula (1536 × 1024 na disposição padrão), com
+      as figuras do mesmo tamanho e os pés alinhados.
+    - **"Copiar o prompt":** copia o pedido para o ChatGPT, em português. Ele traz as linhas e as direções de cada coluna
+      (de frente, de perfil, de costas...), as poses da última linha, o mesmo formato do molde, o fundo transparente (ou
+      verde puro e liso), as figuras separadas e do mesmo tamanho e nenhum texto. O personagem vem da descrição da janela
+      (opcional, se você mandar a imagem dele).
+    - **O caminho:** no ChatGPT, mande o molde, a imagem do personagem e o prompt. Use o que ele devolver como a folha,
+      com o "Encaixar" marcado, e "Cortar e salvar".
+    - O molde escolhido fica guardado neste computador.
+    - API: `game.system.api.tokenDinamico.encaixarNoMolde(folha, disposicao)`, `moldeDaFolha(folha, disposicao)`,
+      `promptDoChatGPT({ descricao, disposicao })` e `cortarFolha({ ..., encaixar: true })`.
 - **Painel Tático** (o módulo painel-tatico da mesa, dentro do sistema; o C25, ciclo 125): a barra na base da tela com o
   token controlado (ou, sem nenhum, o personagem do jogador):
   - **o retrato grande** do personagem, um PNG para cada estado de ferimento (Sem ferimentos, Levemente, Gravemente,

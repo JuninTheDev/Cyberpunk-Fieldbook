@@ -12,7 +12,8 @@
 // transição da troca pelo estado (a configuração "Token dinâmico: transição") e a pré-carga das imagens.
 import { SISTEMA } from './config.mjs';
 import { estaseDe } from './cryo.mjs';
-import { abrirCortador, cortarFolha } from './cortador-de-folha.mjs';
+import { abrirCortador, cortarFolha, encaixarNoMolde, moldeDaFolha } from './cortador-de-folha.mjs';
+import { promptDoChatGPT } from './regras-encaixe.mjs';
 import { ANIMACAO_DA_DIRECAO, animacaoDaTroca, balancoDoPasso, CHAVES, chaveDaImagem, conjuntoValido, DIRECOES, imagemDoAndar, imagemDoToken, imagensDaPasta, imagensDoConjunto, NOMES_DAS_POSES, PASSOS, POSES_COM_DIRECAO, POSES_SEM_DIRECAO, TRANSICOES, VELOCIDADE_DO_ANDAR, velocidadeDoAndar } from './regras-token-dinamico.mjs';
 
 export const FLAG_TOKEN_DINAMICO = 'tokenDinamico';
@@ -320,6 +321,8 @@ export function registrarTelaDoTokenDinamico() {
     name: 'Token dinâmico: passos', hint: 'Enquanto o token dinâmico anda: o Caminhando e o Parado da mesma direção alternados a cada meia casa (um passo cada), ou só o Caminhando.',
     scope: 'world', config: true, type: String, choices: PASSOS, default: 'alternar'
   });
+  // O molde do ChatGPT (o C53): a última folha usada como molde no cortador, neste navegador.
+  game.settings.register(SISTEMA, 'moldeDaFolha', { scope: 'client', config: false, type: String, default: '' });
   CONFIG.Token.objectClass = classeDoToken(CONFIG.Token.objectClass);
 }
 
@@ -347,4 +350,4 @@ export function registrarTokenDinamico() {
   Hooks.on('renderTokenHUD', botaoNoHud);
 }
 
-export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe, preCarregar, quadroDesenhado, balancoDesenhado, abrirCortador, cortarFolha };
+export const API = { abrir: abrirTokenDinamico, salvarConjunto, aplicarNoAtor, imagemPara, estadoDoAtor, conjuntoDe, preCarregar, quadroDesenhado, balancoDesenhado, abrirCortador, cortarFolha, encaixarNoMolde, moldeDaFolha, promptDoChatGPT };

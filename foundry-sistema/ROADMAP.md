@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 199). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 200). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **A branch:** desde o C28 (ciclo 195, 2026-10-28), o `master`. O push de um ciclo põe o sistema no Foundry 14 da mesa
   sozinho, com a mesa vazia; a `sistema-v14` ficou parada no merge do C28.
@@ -529,10 +529,12 @@ andando para que seja mais fluido e dê para ver realmente o token se movendo e 
 **Pedido do usuário de 2026-11-01** ("uma ferramenta para criar tokens padronizados dentro dos moldes que já existem
 usando a I.A do gpt [...] se encaixe perfeitamente nos cortes, tenham todos os msm lados [...] só mudaria o personagem";
 escolheu o ChatGPT, sem a API):
-- [~] **C53. A folha feita no ChatGPT e o encaixe no molde:** em andamento (sessão KouArt, 2026-11-01). O cortador acha
-  cada figura inteira (sem cortar pela grade), põe cada uma na sua posição, com a mesma escala e os pés na mesma linha,
-  em quadros do mesmo tamanho para todo personagem, tira o fundo liso e avisa do que falta ou está virado; e o kit do
-  ChatGPT: o prompt e o molde cinza para baixar.
+- [x] **C53. A folha feita no ChatGPT e o encaixe no molde:** feito no ciclo 199 (sessão KouArt, 2026-11-02): o cortador
+  acha cada figura inteira (sem cortar pela grade) e põe cada uma na sua posição, com a mesma escala (a do Parado) e os
+  pés na mesma linha, em quadros de 256 × 256 para todo personagem; tira o fundo liso (o verde do ChatGPT) e avisa do
+  que falta ou está virado. E o kit do ChatGPT: o molde cinza para baixar e o prompt para copiar.
+  - [ ] (só se o usuário quiser) a geração pela API da OpenAI, com um botão "Gerar" no cortador: pede a chave dele e
+    custa por imagem.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);

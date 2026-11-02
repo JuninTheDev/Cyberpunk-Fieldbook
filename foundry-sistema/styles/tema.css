@@ -1272,3 +1272,9 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.cortador-de-folha canvas.previa { width: 100%; height: auto; background: repeating-conic-gradient(#2a2a2a 0 25%, #1c1c1c 0 50%) 0 0 / 16px 16px; }
 .cpr-fieldbook.cortador-de-folha .dica { font-size: 12px; opacity: 0.8; margin: 0; }
 .cpr-fieldbook.cortador-de-folha footer { display: flex; justify-content: space-between; align-items: center; }
+/* O kit do ChatGPT e os avisos do encaixe (o C53). */
+.cpr-fieldbook.cortador-de-folha fieldset.chatgpt { display: flex; flex-direction: column; gap: 6px; border: 1px solid rgba(243, 230, 0, 0.35); padding: 6px 8px; margin: 0; }
+.cpr-fieldbook.cortador-de-folha fieldset.chatgpt textarea { width: 100%; resize: vertical; }
+.cpr-fieldbook.cortador-de-folha ul.avisos { margin: 0; padding-left: 1.2rem; font-size: 12px; color: #f3e600; }
+.cpr-fieldbook.cortador-de-folha ul.avisos:empty { display: none; }
+.cpr-fieldbook.cortador-de-folha ul.avisos li.erro { color: #ff5a5a; }
