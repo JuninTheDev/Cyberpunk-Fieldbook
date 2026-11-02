@@ -102,8 +102,8 @@ de partida.
     - no `node tests/rodar.js`, sem o v14, passaram 29 dos 33 cenários;
     - os 4 que falham, falham igual sem a mudança, nesta worktree: o `ensaio`, o `fluxo` (sem o
       `foundry-2077/.cache`), o `reversao` e o `sistema` (sem os PDFs, que ficam fora do git).
-- [ ] **B2 · O link explícito `[[Nome]]`:** nos `.md`, `[[Nome]]` e `[[Nome|texto]]` viram o link do registro, com o
-  cartão, como o link automático.
+- [~] **B2 · O link explícito `[[Nome]]`:** em andamento (sessão KouArt, 2026-11-02). Nos `.md`, `[[Nome]]` e
+  `[[Nome|texto]]` viram o link do registro, com o cartão, como o link automático.
   - Serve onde o automático não liga: a segunda menção na mesma seção, ou uma forma diferente do nome.
   - É também a forma que o Obsidian entende (B12).
   - Um `[[...]]` sem registro é erro na conferência, e a página mostra o texto sem link.
