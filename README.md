@@ -375,9 +375,17 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
 - **A base da campanha (mestre):** cada pessoa, facção, lugar, peça de Morana, relógio e segredo tem um registro só, em `documentos/morana/base-da-campanha.md`.
   - **Sai dela:** Pessoas e facções (com a tabela Quem é quem), Lugares e peças, as tabelas do Diário e o texto dos atores do elenco no Foundry.
   - **Nos documentos:** os nomes viram link, e passar o mouse mostra o cartão com o lado, onde está e a situação de agora. Uma linha `{{base:pecas}}`, `{{base:faccoes}}`, `{{base:pessoas}}`, `{{base:segredos}}` ou `{{base:relogio:<chave>}}` vira a tabela de agora.
+  - **O link explícito:** `[[Nome]]` ou `[[Nome|texto]]` (a forma do Obsidian) vira o link do registro, com o cartão.
+    - **Quando usar:** onde o link automático não liga, como a segunda menção na mesma seção, ou um texto que não é o nome ("[[Wakako Okada|a fixer]]").
+    - **Qual registro:** o que tem esse nome ou esse `Também`, sem diferença de maiúsculas e acentos. Um relógio leva ao Estado da campanha.
+    - **Uma vez por seção:** o nome que já tem o link explícito não ganha outro, automático, na mesma seção.
+    - **Sem registro:** a página mostra só o texto, e `node tests/validar.js base` acusa o link quebrado, na base e nos documentos.
+    - **No Foundry:** fica só o texto.
+    - **Numa tabela:** o `[[Nome|texto]]` vira `[[Nome]]`, porque o `|` separaria as colunas.
+    - **Por enquanto:** o link usa a base do Protocolo Morana.
   - **Citado em:** cada cartão de Pessoas e facções e de Lugares e peças termina com a lista de onde o nome aparece.
     - **O que entra:** os documentos, com o link de cada seção (cada título `#`, `##` e `###`), e os outros registros da base que citam esse.
-    - **A regra:** é a mesma dos links: o nome e os `Também`.
+    - **A regra:** é a mesma dos links: o nome e os `Também`, e o `[[Nome]]`.
     - **Os documentos:** são os mesmos da busca. O roteiro de cada sessão fica de fora, porque ele só é lido quando a aba abre.
   - **Endereços antigos:** `#docQuemEQuem` abre a tabela em Pessoas e facções.
 - **Estado da campanha (mestre):** o que muda na mesa, salvo no servidor, por campanha: entra no backup e aparece igual no PC e no tablet.
@@ -399,7 +407,7 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
 - **Armas e Cyberware de 2077:** o seletor **Cartões | Tabela** mostra tudo numa tabela que ordena (clique no cabeçalho) e filtra por origem (Mission Kit ou suplemento de fã), classe, tipo, categoria ou instalação.
 - Páginas longas têm a barra **Nesta página**, que fica presa no topo e pula entre as seções.
 - O **Escudo do mestre** tem a calculadora de DV por alcance e o rolador de lesão crítica.
-- **Links nos documentos .md:** `[texto](#pagina/secao)` abre uma página da wiki; `[texto](arquivo.md)` e o nome de um documento entre crases abrem o documento; `[texto](https://...)` abre fora, em outra aba.
+- **Links nos documentos .md:** `[[Nome]]` abre o registro da base da campanha (veja acima); `[texto](#pagina/secao)` abre uma página da wiki; `[texto](arquivo.md)` e o nome de um documento entre crases abrem o documento; `[texto](https://...)` abre fora, em outra aba.
 - **Fichas de NPC** tem os inimigos prontos, com a conta de quantos usar por tamanho do grupo, e o **elenco do Protocolo Morana** (Wakako, Mina, Endo, Sato, Iskra, Vega, Brakk, Tamsin e Tomas). Buscar uma gangue ("Tyger Claws") ou um implante ("Kerenzikov") abre a ficha certa.
 - **Roladores:** o **Lifepath** rola cada tabela ou o passado inteiro de uma vez. A **Economia** gera um Night Market (o de cyberware sempre traz um Berserk ou Sandevistan dos anos 2070). Os **Encontros de 2077** (só na wiki do mestre) rolam dia, noite ou madrugada, e cada resultado leva à ficha do NPC.
 - **Avanço e Pontos de Melhoria** traz os custos, a tabela de quanto dar no fim da sessão e o questionário de estilo de jogo.

@@ -354,6 +354,8 @@
         markdownDocs: { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs },
         pageContent: { ...pageContent, notes: notesPage(), caixa: netwireInbox, ...(window.npcStatBlocks ? window.npcStatBlocks.pages : {}), ...(window.playerManager ? { playerView: window.playerManager.page } : {}), ...built.pages, ...extras.pages },
         clocks: base.relogiosDaWiki(),
+        // [[Nome]] nos .md: o link do registro da base, com o cartão.
+        wikiLink: (nome, texto) => base.linkExplicito(nome, texto),
         // Páginas que viraram parte de outra: o endereço antigo continua abrindo.
         aliases: { docQuemEQuem: { id: 'people', section: 'quem-e-quem' }, campaign: { id: 'docDiario' }, session1: { id: 'sessao01Notas' }, docSessao01: { id: 'sessao01Notas' } },
         gmNotes,

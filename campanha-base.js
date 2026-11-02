@@ -27,8 +27,10 @@
   const dobrar = texto => String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const slug = texto => dobrar(texto).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const esc = texto => String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  // Numa célula de tabela em Markdown, "|" quebraria a coluna.
-  const celula = texto => String(texto ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
+  // O link explícito nos .md: [[Nome]] ou [[Nome|texto]] (a forma do Obsidian).
+  const LINK_EXPLICITO = /\[\[([^[\]|]+)(?:\|([^[\]]+))?\]\]/g;
+  // Numa célula de tabela em Markdown, "|" quebraria a coluna: o [[Nome|texto]] fica [[Nome]], e o resto vira "/".
+  const celula = texto => String(texto ?? '').replace(LINK_EXPLICITO, (inteiro, alvo) => `[[${alvo.trim()}]]`).replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
   const lista = texto => String(texto || '').split(';').map(item => item.trim()).filter(Boolean);
 
   // ---------------- Leitura do arquivo ----------------
@@ -219,9 +221,18 @@
     const escapar = texto => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return { formas, regex: new RegExp(`(?<![\\p{L}\\p{N}])(${[...formas.keys()].sort((a, b) => b.length - a.length).map(escapar).join('|')})(?![\\p{L}\\p{N}])`, 'gu') };
   }
+  // O registro de um [[Nome]]: o que tem esse nome ou esse Também, sem ligar para maiúsculas e acentos (de qualquer
+  // tipo: um relógio leva ao Estado da campanha). null quando não há.
+  function registroDoLink(base, alvo) {
+    const chave = slug(alvo);
+    for (const item of base.todos.values()) if ([item.nome, ...item.tambem].some(forma => slug(forma) === chave)) return item;
+    return null;
+  }
+  // Os [[Nome]] de um texto que não acham registro (a conferência acusa; a página mostra só o texto).
+  const linksQuebrados = (base, texto) => [...String(texto || '').matchAll(LINK_EXPLICITO)].map(m => m[1].trim()).filter(alvo => !registroDoLink(base, alvo));
   // Um título de seção como a página mostra (sem as marcas) e o endereço dele (#pagina/secao). A wiki endereça pelo
   // texto antes da primeira marca, ou pelo título inteiro quando ele começa com uma (o unitTitle do wiki-app).
-  const semMarcas = texto => String(texto).replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1').replace(/[*`]/g, '').trim();
+  const semMarcas = texto => String(texto).replace(LINK_EXPLICITO, (inteiro, alvo, rotulo) => (rotulo || alvo).trim()).replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1').replace(/[*`]/g, '').trim();
   const alvoDoTitulo = texto => slug(/^[*`[]/.test(texto) ? semMarcas(texto) : texto.split(/[*`[]/)[0]);
   // As seções de um documento, como a wiki as endereça: cada título #, ## e ### abre uma (o #### fica na de cima). O
   // texto antes do primeiro título é o começo do documento; o "# Título" da primeira linha é o título da página.
@@ -239,7 +250,7 @@
   // Onde cada registro aparece. documentos: [{ id, titulo, texto }], o id é a página do documento na wiki.
   // → Map: id do registro → { documentos: [{ id, titulo, secoes: [{ secao, titulo }] }], registros: [item] }. Um nome
   // só no começo do documento deixa as seções vazias. Os registros são os outros da base que citam esse, nos campos ou
-  // no texto do mestre; o próprio registro não conta.
+  // no texto do mestre; o próprio registro não conta. O [[Nome]] também cita, com maiúsculas e acentos diferentes.
   function citacoes(base, documentos = []) {
     const resultado = new Map();
     const busca = buscadoresDe(base);
@@ -249,6 +260,7 @@
       const achados = new Set();
       busca.regex.lastIndex = 0;
       for (let m = busca.regex.exec(texto); m; m = busca.regex.exec(texto)) achados.add(busca.formas.get(m[1]).id);
+      for (const m of texto.matchAll(LINK_EXPLICITO)) { const item = registroDoLink(base, m[1]); if (item) achados.add(item.id); }
       return achados;
     };
     for (const doc of documentos) {
@@ -280,9 +292,11 @@
 
   // ---------------- Para o Foundry ----------------
   // O texto do ator do elenco: quem é, lado, onde e o texto do mestre, em HTML simples.
+  // O [[Nome|texto]] fica só o texto (aqui não há cartão; na wiki do mestre, o nome vira link sozinho).
   function inline(texto, href = () => '') {
     return esc(texto)
       .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(LINK_EXPLICITO, (inteiro, alvo, rotulo) => (rotulo || alvo).trim())
       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, rotulo, alvo) => { const destino = href(alvo.replace(/&amp;/g, '&')); return destino ? `<a href="${esc(destino)}">${rotulo}</a>` : rotulo; })
       .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
       .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g, '$1<i>$2</i>');
@@ -309,12 +323,13 @@
       if (item.campos.mapa && marcadores.length && !marcadores.includes(item.campos.mapa)) problemas.push(`${item.nome}: o ponto "${item.campos.mapa}" não existe no mapa.`);
       if (item.tipo === 'pessoa' && !item.campos.quem) problemas.push(`${item.nome}: falta "Quem é".`);
       if (item.tipo === 'peca' && !item.campos.onde) problemas.push(`${item.nome}: falta "Onde" (no começo da campanha).`);
+      for (const alvo of linksQuebrados(base, [...Object.values(item.campos), item.texto].join('\n'))) problemas.push(`${item.nome}: o link [[${alvo}]] não acha registro.`);
     }
     for (const nome of elenco) if (!base.pessoas.some(item => item.campos.ficha === nome)) problemas.push(`A ficha do elenco "${nome}" não tem registro na base.`);
     return problemas;
   }
 
-  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
+  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
@@ -432,16 +447,19 @@
     if (!buscadores) return;
     const documento = root.matches && root.matches('#md-doc') ? root : root.querySelector && root.querySelector('#md-doc');
     const usados = new Map();
+    const escopoDe = no => (documento && documento.contains(no) ? secaoDe(no, documento) : (no.parentElement.closest('.entry, .section, .person') || root));
+    const usadosEm = escopo => { if (!usados.has(escopo)) usados.set(escopo, new Set()); return usados.get(escopo); };
+    // O nome que já tem link na seção (o [[Nome]]) não ganha outro.
+    for (const link of root.querySelectorAll('a.ent[data-ent]')) usadosEm(escopoDe(link)).add(link.dataset.ent);
     const caminhante = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const nos = [];
     while (caminhante.nextNode()) nos.push(caminhante.currentNode);
     for (const no of nos) {
       const pai = no.parentElement;
       if (!pai || pai.closest(PULAR) || !no.data.trim()) continue;
-      const escopo = documento && documento.contains(no) ? secaoDe(no, documento) : (pai.closest('.entry, .section, .person') || root);
+      const escopo = escopoDe(no);
       const tituloDoEscopo = slug(escopo.matches && escopo.matches('h3, h4, h5') ? escopo.textContent : (escopo.dataset && escopo.dataset.toc) || '');
-      if (!usados.has(escopo)) usados.set(escopo, new Set());
-      const usado = usados.get(escopo);
+      const usado = usadosEm(escopo);
       buscadores.regex.lastIndex = 0;
       const achados = [];
       for (let m = buscadores.regex.exec(no.data); m; m = buscadores.regex.exec(no.data)) {
@@ -468,6 +486,12 @@
     }
   }
 
+  // O [[Nome]] e o [[Nome|texto]] dos .md (o wiki-app chama, com o texto já em HTML): o link do registro, com o cartão,
+  // como o link automático. Vazio sem registro (o wiki-app mostra só o texto).
+  function linkExplicito(alvo, rotulo) {
+    const item = navegador.base && registroDoLink(navegador.base, alvo);
+    return item ? `<a class="ent ent-${item.tipo}" data-ent="${item.id}" href="${esc(enderecoDe(item))}">${rotulo}</a>` : '';
+  }
   let cartaoFlutuante = null;
   function mostrarCartao(link) {
     const item = navegador.base && navegador.base.todos.get(link.dataset.ent);
@@ -557,7 +581,7 @@
   }
 
   Object.assign(navegador, {
-    carregar, mudar, ligar, ligarNomes, paginaEstado, expandirComDocs,
+    carregar, mudar, ligar, ligarNomes, linkExplicito, paginaEstado, expandirComDocs,
     // Para os documentos (transform): as citações {{base:...}} com o estado de agora.
     citar: texto => expandir(texto, navegador.base, navegador.estado, valoresDosRelogios()),
     pessoas: texto => paginaPessoas(texto, navegador.estado),

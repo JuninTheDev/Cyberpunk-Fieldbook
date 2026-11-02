@@ -105,6 +105,38 @@ async function validarBase({ raiz, r }) {
     return [!errados.length, errados.slice(0, 4).join(' · ') || `${real.size} registros citados nos ${docs.length} documentos`];
   });
 
+  await r.passo('[[Nome]]: acha o registro pelo nome ou pelos Também (sem ligar para maiúsculas e acentos), conta no Citado em, e nenhum documento tem link quebrado', async () => {
+    const pequena = B.ler([
+      '## Pessoas', '### Ana Prata', '- **Quem é:** Fixer', '- **Também:** Prata', '- **Lado:** [[corpo azul|a corpo]]', '',
+      '### Beto', '- **Quem é:** Mensageiro', 'Deve a [[Ninguém]].', '',
+      '## Facções', '### Corpo Azul', '- **Quer:** tudo', '',
+      '## Relógios', '### A Virada', '- **Segmentos:** um; dois'
+    ].join('\n'));
+    const ana = pequena.todos.get('ana-prata');
+    const doc = B.citacoes(pequena, [{ id: 'd', titulo: 'D', texto: '## Parte\nFala com [[ana prata|ela]].\n## Com [[Beto|o mensageiro]]\nnada' }]);
+    const tabela = B.tabelaPessoas(pequena, B.vazio());
+    const foundry = B.paraFoundry(ana);
+    const casos = {
+      'pelo nome': (B.registroDoLink(pequena, 'Ana Prata') || {}).id === 'ana-prata',
+      'pelo Também, em minúsculas': (B.registroDoLink(pequena, 'prata') || {}).id === 'ana-prata',
+      'com acento': (B.registroDoLink(pequena, 'Béto') || {}).id === 'beto',
+      'um relógio': (B.registroDoLink(pequena, 'a virada') || {}).id === 'a-virada',
+      'sem registro': B.registroDoLink(pequena, 'Ninguém') === null,
+      'os quebrados de um texto': JSON.stringify(B.linksQuebrados(pequena, 'Com [[Ana Prata]], [[ Ninguém | alguém ]] e [[Fulano]].')) === '["Ninguém","Fulano"]',
+      'a conferência acusa o da base': JSON.stringify(B.conferir(pequena)) === '["Beto: o link [[Ninguém]] não acha registro."]',
+      'conta no Citado em, em minúsculas': JSON.stringify(doc.get('ana-prata')) === '{"documentos":[{"id":"d","titulo":"D","secoes":[{"secao":"parte","titulo":"Parte"}]}],"registros":[]}',
+      'o título da seção sem os colchetes': JSON.stringify(doc.get('beto').documentos[0].secoes) === '[{"secao":"com","titulo":"Com o mensageiro"}]',
+      'conta na base': JSON.stringify(B.citacoes(pequena, []).get('corpo-azul').registros.map(item => item.id)) === '["ana-prata"]',
+      'na tabela, sem o "|" que quebra a coluna': tabela.includes('| [[corpo azul]] |'),
+      'no Foundry, só o texto': foundry.includes('<b>Lado:</b> a corpo') && !foundry.includes('[[')
+    };
+    const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome);
+    // Os documentos de verdade (os da campanha e os de Night City): nenhum [[Nome]] quebrado.
+    const pastas = [pasta, path.join(raiz, 'documentos', 'night-city')];
+    const quebrados = pastas.flatMap(dir => fs.readdirSync(dir).filter(nome => nome.endsWith('.md')).flatMap(nome => B.linksQuebrados(base, fs.readFileSync(path.join(dir, nome), 'utf8')).map(alvo => `${nome}: [[${alvo}]]`)));
+    return [!errados.length && !quebrados.length, [...errados, ...quebrados].slice(0, 5).join(' · ') || `${Object.keys(casos).length} casos; nenhum link quebrado nos documentos`];
+  });
+
   return base;
 }
 

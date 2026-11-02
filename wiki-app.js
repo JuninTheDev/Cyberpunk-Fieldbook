@@ -1170,9 +1170,15 @@
       const doc = /\.md$/i.test(name) ? docPageFor(name) : '';
       return doc ? `#${doc}${section && /^[\w-]+$/.test(section) ? `/${section}` : ''}` : '';
     }
+    // [[Nome]] e [[Nome|texto]] (a forma do Obsidian): o link que config.wikiLink(nome, texto em HTML) devolver (na wiki
+    // do mestre, o registro da base da campanha); sem ele, só o texto.
+    const fromHtml = html => html.replace(/&(amp|lt|gt|quot|#39);/g, (match, entity) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" })[entity]);
+    const wikiLink = (target, label) => { const text = (label || target).trim(); return (config.wikiLink && config.wikiLink(fromHtml(target.trim()), text)) || text; };
     function renderInlineMarkdown(text) {
       return escapeHtml(text)
         .replace(/`([^`]+)`/g, (match, code) => { const doc = /\.md$/i.test(code) ? docPageFor(code) : ''; return doc ? `<a href="#${doc}"><code>${code}</code></a>` : `<code>${code}</code>`; })
+        // O que está entre crases fica como está.
+        .replace(/(<code>[\s\S]*?<\/code>)|\[\[([^[\]|]+)(?:\|([^[\]]+))?\]\]/g, (match, code, target, label) => code || wikiLink(target, label))
         .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, label, target) => {
           const href = linkHref(target);
           if (!href) return label;

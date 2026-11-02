@@ -102,11 +102,40 @@ de partida.
     - no `node tests/rodar.js`, sem o v14, passaram 29 dos 33 cenários;
     - os 4 que falham, falham igual sem a mudança, nesta worktree: o `ensaio`, o `fluxo` (sem o
       `foundry-2077/.cache`), o `reversao` e o `sistema` (sem os PDFs, que ficam fora do git).
-- [~] **B2 · O link explícito `[[Nome]]`:** em andamento (sessão KouArt, 2026-11-02). Nos `.md`, `[[Nome]]` e
-  `[[Nome|texto]]` viram o link do registro, com o cartão, como o link automático.
-  - Serve onde o automático não liga: a segunda menção na mesma seção, ou uma forma diferente do nome.
-  - É também a forma que o Obsidian entende (B12).
-  - Um `[[...]]` sem registro é erro na conferência, e a página mostra o texto sem link.
+- [x] **B2 · O link explícito `[[Nome]]`:** feito (sessão KouArt, 2026-11-02). Nos `.md`, `[[Nome]]` e
+  `[[Nome|texto]]` viram o link do registro, com o cartão, como o link automático. É a forma do Obsidian (B12).
+  - **O registro:** é o que tem esse nome ou esse `Também`, sem diferença de maiúsculas e acentos. Pode ser de qualquer
+    tipo: o link de um relógio leva ao Estado da campanha.
+  - **Uma vez por seção:** o nome que já tem o link explícito não ganha outro, automático, na mesma seção.
+  - **O "Citado em"** conta o `[[Nome]]`, mesmo em minúsculas.
+  - **Sem registro:**
+    - a página mostra só o texto;
+    - a conferência (`conferir`, no `validar.js base`) acusa o link quebrado na base;
+    - o teste acusa o link quebrado nos documentos da campanha e de `night-city`.
+  - **Entre crases,** o `[[...]]` fica como está.
+  - **No Foundry** (o `inline`), fica só o texto.
+  - **Numa tabela** (a `celula`), o `[[Nome|texto]]` vira `[[Nome]]`: o `|` separaria as colunas.
+  - **Onde está:**
+    - o `wiki-app.js` entende a forma no `renderInlineMarkdown` e pede o link ao `config.wikiLink`. Sem ele, como na
+      wiki dos jogadores, fica só o texto;
+    - na wiki do mestre, o `index.html` liga o `config.wikiLink` ao `linkExplicito` do `campanha-base.js`;
+    - no `campanha-base.js` ficam o `registroDoLink` e o `linksQuebrados`;
+    - por enquanto, o link usa a base do Protocolo Morana em todas as páginas (o B8 leva a base às outras campanhas).
+  - **Testes:**
+    - `tests/lib/base-estatica.js`, com 12 casos exatos: o nome, o `Também` em minúsculas, o acento, o relógio, o
+      link quebrado, a conferência, o "Citado em", o título da seção, a tabela e o Foundry. E nenhum link quebrado nos
+      documentos de verdade;
+    - `tests/cenarios/base.js`: só no navegador do teste, uma seção no fim da Sessão zero e um lugar "Bar & Grill" no
+      fim da base. O passo confere:
+      - os 4 links, cada um com o texto e o endereço certos;
+      - que o nome não ganha um segundo link na seção;
+      - o código entre crases e o texto sem registro;
+      - o cartão e o "Citado em" da Mina.
+  - **Mutações:** as 19 caíram (10 na regra pura e 9 na página), e os arquivos voltaram exatos (md5). A da conversão
+    do `&amp;` sobreviveu na primeira rodada: o link automático achava o "Bar & Grill" pelo nome. O teste passou a usar
+    um texto que não é nome ("o bar").
+  - **A suíte da wiki:** o `validar.js` passou (459 verificações e as regressões). No `rodar.js` sem o v14, passaram
+    29 dos 33 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
 - [ ] **B3 · As relações com nome e papel:** `- **Relações:** Mina Kuroda (guarda); Tyger Claws (respeitam)`.
   - Cada nome vira link, com o papel ao lado.
   - O cartão do outro registro mostra a relação de volta ("Wakako Okada: guarda").

@@ -152,6 +152,52 @@ module.exports = async ({ edge, servidores, r }) => {
         && contagem.linhas > 3 && contagem.linhas <= contagem.cartoes && !contagem.visoes.length;
       return [ok, `Wakako ${wakako.links.length} links · lore "${tituloDaLore}" · seção ${alvo} → ${foco} · Mina "${mina.texto.slice(0, 60)}" · Pachinko ${pachinko.links.join(' ')} · ${contagem.linhas}/${contagem.cartoes} cartões · visões ${contagem.visoes.join(' ')}`];
     });
+
+    await r.passo('[[Nome]] nos documentos: o link do registro, com o cartão (pelo nome, pelo Também em minúsculas, um relógio, um nome com "&"); sem registro, só o texto; e o nome não ganha um segundo link na seção', async () => {
+      // Só neste navegador: um lugar "Bar & Grill" no fim da base e uma seção de teste no fim da Sessão zero.
+      const injetado = await edge.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+        const extra = {
+          'base-da-campanha.md': '\\n## Lugares\\n### Bar & Grill\\n- **Distrito:** Watson\\n',
+          'sessao-zero.md': '\\n## Teste dos links\\nCom [[Wakako Okada|a fixer]], depois Wakako Okada de novo; [[mina|a guarda]], [[Kabuki adoece]], [[Bar & Grill|o bar]], \`[[Wakako Okada]]\` e [[Ninguém aqui]].\\n'
+        };
+        const original = window.fetch;
+        window.fetch = (url, ...resto) => original(url, ...resto).then(resposta => {
+          const nome = Object.keys(extra).find(arquivo => String(url).endsWith(arquivo));
+          return nome && resposta.ok ? resposta.text().then(texto => new Response(texto + extra[nome], { status: resposta.status, headers: resposta.headers })) : resposta;
+        });
+      })()` });
+      try {
+        await edge.ir(`${local}/?links#docSessaoZero`, 1500);
+        await esperar(`document.querySelector('#md-doc a.ent[data-ent="bar-grill"]')`);
+        const secao = await edge.evaluate(`(() => {
+          const titulo = [...document.querySelectorAll('#md-doc > h3')].find(h => h.textContent.trim() === 'Teste dos links');
+          const bloco = [];
+          for (let n = titulo && titulo.nextElementSibling; n && !n.matches('h3'); n = n.nextElementSibling) bloco.push(n);
+          const semCodigo = bloco.map(n => { const copia = n.cloneNode(true); copia.querySelectorAll('code').forEach(c => c.remove()); return copia.textContent; }).join(' ');
+          return {
+            links: bloco.flatMap(n => [...n.querySelectorAll('a.ent')]).map(a => [a.dataset.ent, a.getAttribute('href'), a.textContent].join(' ')),
+            codigo: bloco.flatMap(n => [...n.querySelectorAll('code')]).map(c => c.textContent),
+            semCodigo
+          };
+        })()`);
+        await edge.evaluate(`document.querySelector('#md-doc a.ent[data-ent="wakako-okada"]').scrollIntoView({ block: 'center' })`);
+        await edge.evaluate(`document.querySelector('#md-doc a.ent[data-ent="wakako-okada"]').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))`);
+        const cartao = await esperar(`(() => { const c = document.querySelector('.ent-card'); return c && !c.hidden ? c.textContent : null; })()`);
+        await edge.shot('links-explicitos');
+        // O [[mina]] (minúsculo; o texto da Sessão zero não tem "Mina" assim) conta no Citado em da Mina. O "o bar" e o
+        // "a guarda" não são nomes: só o [[...]] os liga (o link automático não salva um [[...]] que não achou o registro).
+        await edge.ir(`${local}/?links#people`, 1500);
+        await esperar(`document.querySelectorAll('#md-doc .bs-citado').length > 0`);
+        const mina = await edge.evaluate(citadoEm('Mina Kuroda'));
+        const esperados = ['wakako-okada #people/wakako-okada a fixer', 'mina-kuroda #people/mina-kuroda a guarda', 'kabuki-adoece #notes/kabuki-adoece Kabuki adoece', 'bar-grill #lugares/bar-grill o bar'];
+        const ok = JSON.stringify(secao.links) === JSON.stringify(esperados)
+          && JSON.stringify(secao.codigo) === '["[[Wakako Okada]]"]' && /Ninguém aqui/.test(secao.semCodigo) && !/\[\[|\]\]/.test(secao.semCodigo)
+          && /Fixer/.test(cartao || '') && mina.links.includes('#docSessaoZero/teste-dos-links');
+        return [ok, `links ${JSON.stringify(secao.links)} · código ${JSON.stringify(secao.codigo)} · texto "${secao.semCodigo.slice(0, 120)}" · cartão ${(cartao || '').slice(0, 40)} · Mina ${mina.links.join(' ')}`];
+      } finally {
+        await edge.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injetado.result.identifier });
+      }
+    });
   } finally {
     await limpar();
   }
