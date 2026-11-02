@@ -137,6 +137,47 @@ async function validarBase({ raiz, r }) {
     return [!errados.length && !quebrados.length, [...errados, ...quebrados].slice(0, 5).join(' · ') || `${Object.keys(casos).length} casos; nenhum link quebrado nos documentos`];
   });
 
+  await r.passo('Relações "Nome (papel)": o nome vira [[link]] com o papel, o cartão do outro (de qualquer tipo) mostra a relação de volta, o texto solto fica como está e a conferência acusa o nome sem registro', async () => {
+    const texto = [
+      '## Pessoas', '### Ana Prata', '- **Quem é:** Fixer', '- **Também:** Prata',
+      '- **Relações:** Beto (guarda);corpo azul  ( patroa ); Ninguém (amigo); trabalha no Bar Azul (às vezes) e mais; A Mala (dona)', '',
+      '### Beto', '- **Quem é:** Mensageiro', '- **Relações:** Irmão da Prata (o mais novo) e sócio dela; viu (de longe) A Mala (aberta)', '',
+      '## Facções', '### Corpo Azul', '- **Quer:** tudo', '- **Relações:** prata (contato); Bar Azul (sede)', '',
+      '## Lugares', '### Bar Azul', '- **Distrito:** Watson', '- **Relações:** A Virada (ameaça)', '',
+      '## Peças de Morana', '### A Mala', '- **O que é:** Uma mala', '- **Onde:** Com Ana', '- **Relações:** Beto (carrega); A Mala (ela mesma)', '',
+      '## Relógios', '### A Virada', '- **Segmentos:** um; dois'
+    ].join('\n');
+    const pequena = B.ler(texto);
+    const relacoesDe = id => B.cartao(pequena.todos.get(id), B.vazio(), pequena).split('\n').filter(linha => /^- \*\*Relações/.test(linha));
+    const volta = Object.fromEntries([...B.relacoesDeVolta(pequena)].map(([id, lista]) => [id, lista.map(item => `${item.de.id}:${item.papel}`)]));
+    const esperado = {
+      // O "corpo azul" e o "prata" acham o registro pelo nome e pelo Também, sem ligar para maiúsculas; o link mostra o nome.
+      'ana-prata': ['- **Relações:** [[Beto]] (guarda);[[Corpo Azul]] (patroa); Ninguém (amigo); trabalha no Bar Azul (às vezes) e mais; [[A Mala]] (dona)', '- **Relações de outros:** [[Corpo Azul]]: contato'],
+      // O parêntese no meio da frase, ou antes do nome, não é relação: o campo fica como está.
+      beto: ['- **Relações:** Irmão da Prata (o mais novo) e sócio dela; viu (de longe) A Mala (aberta)', '- **Relações de outros:** [[Ana Prata]]: guarda; [[A Mala]]: carrega'],
+      'corpo-azul': ['- **Relações:** [[Ana Prata]] (contato); [[Bar Azul]] (sede)', '- **Relações de outros:** [[Ana Prata]]: patroa'],
+      // A relação com um relógio vira o link dele (no Estado da campanha); o relógio não tem cartão.
+      'bar-azul': ['- **Relações:** [[A Virada]] (ameaça)', '- **Relações de outros:** [[Corpo Azul]]: sede'],
+      // A relação consigo mesma não volta.
+      'a-mala': ['- **Relações:** [[Beto]] (carrega); [[A Mala]] (ela mesma)', '- **Relações de outros:** [[Ana Prata]]: dona']
+    };
+    const errados = Object.entries(esperado).filter(([id, linhas]) => JSON.stringify(relacoesDe(id)) !== JSON.stringify(linhas)).map(([id]) => `${id}: ${JSON.stringify(relacoesDe(id))}`);
+    const casos = {
+      'as relações da Ana': JSON.stringify(B.relacoes(pequena, pequena.todos.get('ana-prata')).map(item => `${item.nome}=${item.papel}=${item.item ? item.item.id : null}`)) === '["Beto=guarda=beto","corpo azul=patroa=corpo-azul","Ninguém=amigo=null","A Mala=dona=a-mala"]',
+      'o texto solto não tem relação': B.relacoes(pequena, pequena.todos.get('beto')).length === 0,
+      'as de volta': JSON.stringify(volta) === '{"beto":["ana-prata:guarda","a-mala:carrega"],"corpo-azul":["ana-prata:patroa"],"a-mala":["ana-prata:dona"],"ana-prata":["corpo-azul:contato"],"bar-azul":["corpo-azul:sede"],"a-virada":["bar-azul:ameaça"]}',
+      'a conferência acusa o nome sem registro': JSON.stringify(B.conferir(pequena)) === '["Ana Prata: a relação com \\"Ninguém\\" não acha registro."]',
+      'na citação {{base:item:beto}}': B.expandir('{{base:item:beto}}', pequena, B.vazio()).includes('- **Relações de outros:** [[Ana Prata]]: guarda; [[A Mala]]: carrega'),
+      'em Pessoas e facções': ['- **Relações de outros:** [[Ana Prata]]: guarda; [[A Mala]]: carrega', '- **Relações:** [[Ana Prata]] (contato); [[Bar Azul]] (sede)'].every(linha => B.paginaPessoas(texto, B.vazio()).includes(linha)),
+      'em Lugares e peças': ['- **Relações de outros:** [[Corpo Azul]]: sede', '- **Relações de outros:** [[Ana Prata]]: dona'].every(linha => B.paginaLugares(texto, B.vazio()).includes(linha))
+    };
+    errados.push(...Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome));
+    // A base de verdade, como está: as Relações são texto solto, e os cartões mostram o campo como antes, sem as de volta.
+    const mudados = [...base.todos.values()].filter(item => item.campos.relacoes && B.cartao(item, B.vazio(), base).split('\n').filter(linha => /^- \*\*Relações/.test(linha)).join('\n') !== `- **Relações:** ${item.campos.relacoes}`).map(item => item.id);
+    if (mudados.length) errados.push(`na base de verdade, mudaram: ${mudados.join(', ')}`);
+    return [!errados.length, errados.slice(0, 4).join(' · ') || `${Object.keys(esperado).length} cartões e ${Object.keys(casos).length} casos; ${[...base.todos.values()].filter(item => item.campos.relacoes).length} relações em texto solto na base, iguais`];
+  });
+
   return base;
 }
 

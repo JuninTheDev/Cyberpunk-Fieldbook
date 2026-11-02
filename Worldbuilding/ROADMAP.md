@@ -136,11 +136,34 @@ de partida.
     um texto que não é nome ("o bar").
   - **A suíte da wiki:** o `validar.js` passou (459 verificações e as regressões). No `rodar.js` sem o v14, passaram
     29 dos 33 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
-- [~] **B3 · As relações com nome e papel:** em andamento (sessão KouArt, 2026-11-02).
-  `- **Relações:** Mina Kuroda (guarda); Tyger Claws (respeitam)`.
-  - Cada nome vira link, com o papel ao lado.
-  - O cartão do outro registro mostra a relação de volta ("Wakako Okada: guarda").
-  - O texto que não segue o formato continua aparecendo como hoje, e a conferência avisa do nome que não existe.
+- [x] **B3 · As relações com nome e papel:** feito (sessão KouArt, 2026-11-02). No campo `Relações`, a forma
+  `Nome (papel); Nome (papel)` liga os registros: `- **Relações:** Mina Kuroda (guarda); Tyger Claws (respeitam)`.
+  - **No cartão:** cada nome vira o `[[Nome]]` do registro (o link do B2, com o cartão), com o papel ao lado.
+  - **De volta:** o cartão do outro registro ganha a linha "Relações de outros" ("Wakako Okada: guarda").
+    - Vale para os quatro tipos com cartão: pessoa, facção, lugar e peça. A facção, o lugar e a peça passam a mostrar
+      também as próprias Relações.
+    - A relação consigo mesmo não volta. A relação com um relógio leva ao Estado da campanha.
+  - **O nome:** é o nome ou um `Também`, sem diferença de maiúsculas e acentos, como no `[[Nome]]`.
+  - **Fora do formato:** a parte sem o parêntese no fim, ou com um parêntese antes do nome, aparece como está. As
+    Relações de hoje na base (Wakako, Vega e Morty) são texto solto, e os cartões saem iguais.
+  - **Sem registro:** o nome fica como texto, e a conferência acusa (`Ana Prata: a relação com "Ninguém" não acha
+    registro.`).
+  - **Onde está:** o `relacoes`, o `relacoesDeVolta` e o `cartao` (que agora recebe a base) ficam em
+    `campanha-base.js`. A página não mudou: o `[[Nome]]` do cartão passa pelo `config.wikiLink` do B2.
+  - **No Foundry:** o texto do ator mostra o campo como está.
+  - **Testes:**
+    - `tests/lib/base-estatica.js`: uma base pequena, com os cinco tipos e os valores exatos: as linhas de cada
+      cartão, as relações, as de volta, a conferência, a citação `{{base:item:x}}` e as duas páginas. E a base de
+      verdade, com os cartões iguais aos de antes;
+    - `tests/cenarios/base.js`: só no navegador do teste, as Relações da Wakako no formato, com um nome que não existe
+      e um texto solto. O passo confere:
+      - os links da Mina e dos Tyger Claws, com o papel, e o resto como texto;
+      - as relações de volta na Mina e nos Tyger Claws;
+      - o cartão ao passar o mouse.
+  - **Mutações:** as 28 caíram (25 na regra pura e 3 conferidas no passo da página), e os arquivos voltaram exatos
+    (md5). O caso do parêntese antes do nome entrou no teste para pegar a do começo da parte (o `(^|;)` da regra).
+  - **A suíte da wiki:** o `validar.js` passou (460 verificações e as regressões). No `rodar.js` sem o v14,
+    passaram 29 dos 33 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
 - [ ] **B4 · A saúde da base:** a conferência ganha:
   - **erros**, que seguram o `validar.js`: o `[[link]]` quebrado (B2) e o `{{base:item:x}}` sem registro;
   - **avisos**, numa seção "Conferência da base" no Estado da campanha, para o mestre: o registro que nenhum documento

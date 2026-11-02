@@ -124,12 +124,38 @@
     return base.segredos.map(item => `- ${revelado(estado, item.id) ? '☑' : '☐'} **${item.nome}**${item.campos.revela ? ` (${item.campos.revela})` : ''}${item.texto ? `: ${item.texto.replace(/\s+/g, ' ')}` : ''}`).join('\n');
   }
 
+  // ---------------- Relações ----------------
+  // O campo Relações no formato "Nome (papel); Nome (papel)": o nome (ou um Também) vira o link do registro, com o
+  // papel ao lado, e o cartão do outro registro mostra a relação de volta ("Wakako Okada: guarda"). A parte fora do
+  // formato (o texto solto, ou o parêntese no meio da frase) aparece como está.
+  const RELACAO = /(^|;)(\s*)([^;()]+?)\s*\(([^;()]+)\)(?=\s*(?:;|$))/g;
+  // As relações no formato: [{ nome, papel, item }]; item é null quando o nome não acha registro (a conferência acusa).
+  const relacoes = (base, item) => [...String(item.campos.relacoes || '').matchAll(RELACAO)].map(([, , , nome, papel]) => ({ nome, papel: papel.trim(), item: registroDoLink(base, nome) }));
+  // O campo como o cartão mostra: cada relação com registro vira [[Nome]] (papel), o link com o cartão.
+  const relacoesNoCartao = (base, item) => String(item.campos.relacoes || '').replace(RELACAO, (inteiro, antes, espaco, nome, papel) => { const alvo = registroDoLink(base, nome); return alvo ? `${antes}${espaco}[[${alvo.nome}]] (${papel.trim()})` : inteiro; });
+  // As relações de volta: id → [{ de, papel }], os registros que têm esse nas Relações (o próprio não conta).
+  function relacoesDeVolta(base) {
+    const volta = new Map();
+    for (const item of base.todos.values()) {
+      for (const relacao of relacoes(base, item)) {
+        if (!relacao.item || relacao.item === item) continue;
+        if (!volta.has(relacao.item.id)) volta.set(relacao.item.id, []);
+        volta.get(relacao.item.id).push({ de: item, papel: relacao.papel });
+      }
+    }
+    return volta;
+  }
+
   // Um cartão: os campos numa lista curta, o texto do mestre e as falas.
-  function cartao(item, estado) {
+  function cartao(item, estado, base) {
     const linhas = [`### ${item.nome}`];
     if (item.campos.quem || item.campos.oque) linhas.push(`*${item.campos.quem || item.campos.oque}*`);
     const campos = [];
     const add = (rotulo, valor) => { if (valor) campos.push(`- **${rotulo}:** ${valor}`); };
+    const addRelacoes = () => {
+      add('Relações', relacoesNoCartao(base, item));
+      add('Relações de outros', (relacoesDeVolta(base).get(item.id) || []).map(volta => `[[${volta.de.nome}]]: ${volta.papel}`).join('; '));
+    };
     if (item.tipo === 'pessoa') {
       add('Lado', item.campos.lado);
       add('Onde', comMudanca(item, estado, 'onde'));
@@ -137,7 +163,7 @@
       add('Situação', comMudanca(item, estado, 'situacao'));
       add('Atitude com o grupo', doEstado(estado, item.id).atitude);
       add('Na mesa', doEstado(estado, item.id).nota);
-      add('Relações', item.campos.relacoes);
+      addRelacoes();
       add('Para os jogadores', item.campos.publico);
       add('Ficha', item.campos.ficha ? fichaDe(item) : '');
       add('Mais', item.campos.mais);
@@ -145,16 +171,19 @@
       add('Quer', item.campos.quer);
       add('Aparece', item.campos.aparece);
       add('Rosto', item.campos.rosto);
+      addRelacoes();
       add('Mais', item.campos.mais);
     } else if (item.tipo === 'peca') {
       add('Onde está agora', comMudanca(item, estado, 'onde'));
       add('Arquitetura NET', item.campos.arquitetura);
       add('Na mesa', doEstado(estado, item.id).nota);
+      addRelacoes();
       add('Mais', item.campos.mais);
     } else if (item.tipo === 'lugar') {
       add('Onde fica', item.campos.distrito);
       add('Aparece', item.campos.aparece);
       add('Situação', comMudanca(item, estado, 'situacao'));
+      addRelacoes();
       add('Para os jogadores', item.campos.publico);
       add('No mapa', item.campos.mapa ? `[ver no mapa de Night City](#campaignMap/${item.campos.mapa})` : '');
       add('Mais', item.campos.mais);
@@ -167,13 +196,13 @@
     const base = ler(texto);
     const grupos = [...new Set(base.pessoas.map(item => item.grupo))];
     return [`# Pessoas e facções`, '', FONTE, '', '## Quem é quem', '', tabelaPessoas(base, estado),
-      ...grupos.flatMap(nome => ['', `## ${nome === 'Pessoas' ? 'Elenco principal' : nome}`, '', ...base.pessoas.filter(item => item.grupo === nome).map(item => `${cartao(item, estado)}\n`)]),
-      '', '## Forças', '', tabelaFaccoes(base), '', ...base.faccoes.map(item => `${cartao(item, estado)}\n`)].join('\n');
+      ...grupos.flatMap(nome => ['', `## ${nome === 'Pessoas' ? 'Elenco principal' : nome}`, '', ...base.pessoas.filter(item => item.grupo === nome).map(item => `${cartao(item, estado, base)}\n`)]),
+      '', '## Forças', '', tabelaFaccoes(base), '', ...base.faccoes.map(item => `${cartao(item, estado, base)}\n`)].join('\n');
   }
   function paginaLugares(texto, estado) {
     const base = ler(texto);
-    return [`# Lugares e peças`, '', FONTE, '', '## As peças de Morana', '', tabelaPecas(base, estado), '', ...base.pecas.map(item => `${cartao(item, estado)}\n`),
-      '## Lugares da campanha', '', tabelaLugares(base, estado), '', ...base.lugares.map(item => `${cartao(item, estado)}\n`)].join('\n');
+    return [`# Lugares e peças`, '', FONTE, '', '## As peças de Morana', '', tabelaPecas(base, estado), '', ...base.pecas.map(item => `${cartao(item, estado, base)}\n`),
+      '## Lugares da campanha', '', tabelaLugares(base, estado), '', ...base.lugares.map(item => `${cartao(item, estado, base)}\n`)].join('\n');
   }
 
   // ---------------- Citações da base nos documentos ----------------
@@ -188,7 +217,7 @@
       if (qual === 'segredos') return segredos(base, estado);
       if (qual === 'relogio') { const item = base.relogios.find(r => r.chave === chave); return item ? relogio(item, Number(valores[item.chave]) || 0) : `*(relógio "${chave}" não existe na base)*`; }
       const item = base.todos.get(qual === 'item' ? chave : '');
-      if (item) return cartao(item, estado);
+      if (item) return cartao(item, estado, base);
       return `*(citação desconhecida: ${inteiro.trim()})*`;
     });
   }
@@ -324,12 +353,13 @@
       if (item.tipo === 'pessoa' && !item.campos.quem) problemas.push(`${item.nome}: falta "Quem é".`);
       if (item.tipo === 'peca' && !item.campos.onde) problemas.push(`${item.nome}: falta "Onde" (no começo da campanha).`);
       for (const alvo of linksQuebrados(base, [...Object.values(item.campos), item.texto].join('\n'))) problemas.push(`${item.nome}: o link [[${alvo}]] não acha registro.`);
+      for (const relacao of relacoes(base, item)) if (!relacao.item) problemas.push(`${item.nome}: a relação com "${relacao.nome}" não acha registro.`);
     }
     for (const nome of elenco) if (!base.pessoas.some(item => item.campos.ficha === nome)) problemas.push(`A ficha do elenco "${nome}" não tem registro na base.`);
     return problemas;
   }
 
-  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
+  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, relacoes, relacoesDeVolta, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 

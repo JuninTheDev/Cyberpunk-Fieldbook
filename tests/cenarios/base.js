@@ -198,6 +198,45 @@ module.exports = async ({ edge, servidores, r }) => {
         await edge.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injetado.result.identifier });
       }
     });
+
+    // Um campo do cartão (a linha "Rótulo: ..."): o texto e os links com o cartão.
+    const campoDoCartao = (nome, rotulo) => `(() => {
+      const titulo = [...document.querySelectorAll('#md-doc > h4')].find(h => h.textContent.trim() === ${JSON.stringify(nome)});
+      for (let n = titulo && titulo.nextElementSibling; n && !n.matches('h3, h4'); n = n.nextElementSibling) {
+        const li = [...n.querySelectorAll('li')].find(item => item.textContent.startsWith(${JSON.stringify(`${rotulo}:`)}));
+        if (li) return { texto: li.textContent, links: [...li.querySelectorAll('a.ent')].map(a => [a.dataset.ent, a.getAttribute('href'), a.textContent].join(' ')) };
+      }
+      return null;
+    })()`;
+    await r.passo('Relações "Nome (papel)": em Pessoas e facções, o nome vira o link com o cartão e o papel ao lado, e o cartão do outro (a Mina, os Tyger Claws) mostra a relação de volta; o texto solto fica como está', async () => {
+      // Só neste navegador: as Relações da Wakako no formato, com um nome que não existe e um texto solto.
+      const injetado = await edge.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+        const original = window.fetch;
+        window.fetch = (url, ...resto) => original(url, ...resto).then(resposta => (String(url).endsWith('base-da-campanha.md') && resposta.ok
+          ? resposta.text().then(texto => new Response(texto.replace(/(### Wakako Okada[\\s\\S]*?- \\*\\*Relações:\\*\\*)[^\\r\\n]*/, '$1 Mina Kuroda (guarda); Tyger Claws (respeitam); Ninguém aqui (sócio); deve favores a todo mundo'), { status: resposta.status, headers: resposta.headers }))
+          : resposta));
+      })()` });
+      try {
+        await edge.ir(`${local}/?relacoes#people`, 1500);
+        await esperar(`document.querySelector('#md-doc a.ent[data-ent="tyger-claws"]')`);
+        const wakako = await edge.evaluate(campoDoCartao('Wakako Okada', 'Relações'));
+        const mina = await edge.evaluate(campoDoCartao('Mina Kuroda', 'Relações de outros'));
+        const claws = await edge.evaluate(campoDoCartao('Tyger Claws', 'Relações de outros'));
+        const link = `[...document.querySelectorAll('#md-doc > ul li')].find(li => li.textContent.startsWith('Relações: Mina Kuroda')).querySelector('a.ent[data-ent="mina-kuroda"]')`;
+        await edge.evaluate(`${link}.scrollIntoView({ block: 'center' })`);
+        await edge.evaluate(`${link}.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))`);
+        const cartao = await esperar(`(() => { const c = document.querySelector('.ent-card'); return c && !c.hidden ? c.textContent : null; })()`);
+        await edge.shot('relacoes');
+        const ok = wakako && wakako.texto === 'Relações: Mina Kuroda (guarda); Tyger Claws (respeitam); Ninguém aqui (sócio); deve favores a todo mundo'
+          && JSON.stringify(wakako.links) === '["mina-kuroda #people/mina-kuroda Mina Kuroda","tyger-claws #people/tyger-claws Tyger Claws"]'
+          && mina && mina.texto === 'Relações de outros: Wakako Okada: guarda' && JSON.stringify(mina.links) === '["wakako-okada #people/wakako-okada Wakako Okada"]'
+          && claws && claws.texto === 'Relações de outros: Wakako Okada: respeitam' && JSON.stringify(claws.links) === '["wakako-okada #people/wakako-okada Wakako Okada"]'
+          && /Guarda de Wakako/.test(cartao || '');
+        return [ok, `Wakako ${JSON.stringify(wakako)} · Mina ${JSON.stringify(mina)} · Claws ${JSON.stringify(claws)} · cartão ${(cartao || '').slice(0, 40)}`];
+      } finally {
+        await edge.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injetado.result.identifier });
+      }
+    });
   } finally {
     await limpar();
   }
