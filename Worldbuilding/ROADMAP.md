@@ -136,7 +136,8 @@ de partida.
     um texto que não é nome ("o bar").
   - **A suíte da wiki:** o `validar.js` passou (459 verificações e as regressões). No `rodar.js` sem o v14, passaram
     29 dos 33 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
-- [ ] **B3 · As relações com nome e papel:** `- **Relações:** Mina Kuroda (guarda); Tyger Claws (respeitam)`.
+- [~] **B3 · As relações com nome e papel:** em andamento (sessão KouArt, 2026-11-02).
+  `- **Relações:** Mina Kuroda (guarda); Tyger Claws (respeitam)`.
   - Cada nome vira link, com o papel ao lado.
   - O cartão do outro registro mostra a relação de volta ("Wakako Okada: guarda").
   - O texto que não segue o formato continua aparecendo como hoje, e a conferência avisa do nome que não existe.
