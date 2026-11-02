@@ -164,7 +164,7 @@ de partida.
     (md5). O caso do parêntese antes do nome entrou no teste para pegar a do começo da parte (o `(^|;)` da regra).
   - **A suíte da wiki:** o `validar.js` passou (460 verificações e as regressões). No `rodar.js` sem o v14,
     passaram 29 dos 33 cenários; falham os mesmos 4 do B1, com as mesmas mensagens.
-- [ ] **B4 · A saúde da base:** a conferência ganha:
+- [~] **B4 · A saúde da base:** em andamento (sessão KouArt, 2026-11-02). A conferência ganha:
   - **erros**, que seguram o `validar.js`: o `[[link]]` quebrado (B2) e o `{{base:item:x}}` sem registro;
   - **avisos**, numa seção "Conferência da base" no Estado da campanha, para o mestre: o registro que nenhum documento
     cita e a relação com um nome que não existe (B3).
