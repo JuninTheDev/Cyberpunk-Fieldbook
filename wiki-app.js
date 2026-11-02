@@ -1382,6 +1382,8 @@
           ['Gancho', marker.hook], ['Encontro', marker.encounter], ['Pistas', marker.clue], ['Notas', marker.note]
         ].filter(([, value]) => value).map(([label, value]) => `<details><summary>${label}</summary><div>${renderMarkdown(value)}</div></details>`).join('')}</div>`;
       document.getElementById('map-marker-detail').innerHTML = header + sections;
+      // Na wiki do mestre, o pino de um lugar da base ganha o resto do cartão (campanha-base.js).
+      document.dispatchEvent(new CustomEvent('wiki:ponto', { detail: { id: markerId, container: document.getElementById('map-marker-detail') } }));
       campaignMapUI?.open('detail', trigger || document.querySelector(`.map-pin[data-map-marker="${CSS.escape(markerId)}"]`));
       if (focus) focusCampaignMapMarker(marker);
     }

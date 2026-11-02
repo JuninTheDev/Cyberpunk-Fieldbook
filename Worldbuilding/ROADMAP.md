@@ -201,13 +201,40 @@ de partida.
 
 Depende das decisões 1 e 2.
 
-- [~] **B5 · O pino do mapa mostra o lugar da base:** em andamento (sessão KouArt, 2026-11-02).
-  - o pino de um ponto que está no `Mapa:` de um registro abre o cartão do lugar: a situação de agora, o Estado e o
-    "Citado em";
-  - o título, o distrito e o resumo saem do `campaign-map.js`, e o pino fica com a posição, a categoria e o código;
-  - o que só o pino tem (o gancho, o encontro, a pista) vira campo do registro (decisão 1).
-
-  Teste: o pino do Pachinko de Wakako mostra o distrito da base, e mudar a situação no Estado muda o pino.
+- [x] **B5 · O pino do mapa mostra o lugar da base:** feito (sessão KouArt, 2026-11-02), com a decisão 1: o gancho, o
+  encontro e as pistas viraram campos do registro.
+  - **O pino:** o ponto que está no `Mapa` de um lugar mostra o registro. O nome, o distrito e o texto (no lugar do
+    resumo de antes) vêm do lugar, e as seções Gancho, Encontro e Pistas saem dos campos novos (`- **Gancho:**`,
+    `- **Encontro:**`, `- **Pistas:**`).
+    - O painel ganha o resto do cartão: a situação e a nota marcadas no Estado (com o "era:"), o Aparece, as relações,
+      o `Para os jogadores` e o "Citado em". Os nomes viram link, com o cartão.
+    - A lista de Locais, a busca da wiki e o "Copiar posição de um pino" do Publicar leem os mesmos dados.
+  - **O `campaign-map.js`** ficou com a posição, a categoria, o código, o ato e a nota de cada ponto.
+    - O ato continua no ponto porque é o filtro "Ato / sessão" do mapa; a nota fala do ponto ("o ponto 68 do mapa
+      fornecido").
+    - O "ponto 64", que só estava no distrito do pino das Docks, foi para a nota do ponto.
+    - Os títulos, os ganchos, os encontros e as pistas foram para a base sem mudar uma letra. O distrito e o resumo
+      eram cópias do registro: agora valem os da base.
+  - **O Estado da campanha** ganhou a tabela dos Lugares (a situação e o que mudou na mesa). O cartão do lugar, em
+    Lugares e peças, mostra a nota ("Na mesa") e os três campos novos.
+  - **A conferência:** o ponto do mapa em dois lugares é erro (o pino fica com o primeiro). O ponto sem lugar também,
+    no `validar.js`, que lê o `campaign-map.js`; no mapa, ele mostra o id.
+  - **Testes:**
+    - `tests/lib/base-estatica.js`: uma base pequena, com os pinos, o cartão e o painel exatos, a peça com ponto (o pino
+      é só de lugar) e os dois erros. E a base de verdade: o `campaign-map.js` sem as cópias, e cada ponto com o lugar;
+    - `tests/cenarios/base.js`: no navegador do teste, a situação e a nota do Pachinko marcadas no Estado. O mapa aberto
+      direto no ponto mostra o nome, o distrito, o texto, o Estado, o "Citado em", as seções e os nomes em link. De
+      volta ao mapa sem recarregar, com o pino aberto pela lista de Locais, aparece a situação nova;
+    - `tests/ui/mapa.test.js` (o teste opcional do mapa, rodado com a trava): passou, 11 de 11, antes e depois do B5 (a
+      busca por nome e distrito, os filtros e as seções recolhidas, agora com os dados da base).
+  - **Mutações:** 37 mutações, todas pegas: 26 sem navegador (o `pinosDoMapa`, os campos novos, o cartão e o painel, a
+    conferência dos pontos, e os dados: o ponto sem o lugar na base e a cópia de volta no `campaign-map.js`) e 11 no
+    navegador (o aviso `wiki:ponto` do wiki-app, o mapa juntado com a base no `index.html`, o bloco do pino, a ordem
+    dele, os nomes em link, o "Citado em" nos dois caminhos e a tabela dos lugares no Estado). Os arquivos voltaram
+    exatos (md5). A mutação que tira o `ligarNomes` do pino passaria com o mapa aberto pelo endereço, que liga os nomes
+    pela página; o teste passou a abrir o pino também pela lista de Locais.
+  - **A suíte da wiki:** o `validar.js` passou (462 verificações e as regressões). No `rodar.js` sem o v14, passaram 27
+    dos 31 cenários (o `base` com 22 de 22); falham os mesmos 4 do B1, com as mesmas mensagens.
 - [ ] **B6 · A Visão dos jogadores lê da base:**
   - em Pessoas e em Lugares no mapa, o mestre escolhe um registro da base e marca Revelado;
   - o texto que vai é o `Para os jogadores` do registro, e a posição vem do ponto do mapa;

@@ -1,8 +1,8 @@
 // A base da campanha: um registro para cada pessoa, facção, lugar, peça da trama, relógio e segredo, num arquivo só
-// (documentos/<campanha>/base-da-campanha.md). Pessoas e facções, Lugares e peças, o Estado da campanha e as tabelas
-// do Diário são visões desse arquivo, e os documentos citam a base em vez de copiar (uma linha {{base:pecas}} vira a
-// tabela). O que muda na mesa (com quem está a maleta, quem morreu, o segredo revelado) fica no servidor, com os relógios
-// (mesa.json: estado e segredos), e aparece em todas as visões.
+// (documentos/<campanha>/base-da-campanha.md). Pessoas e facções, Lugares e peças, o Estado da campanha, as tabelas
+// do Diário e os pinos do mapa são visões desse arquivo, e os documentos citam a base em vez de copiar (uma linha
+// {{base:pecas}} vira a tabela). O que muda na mesa (com quem está a maleta, quem morreu, o segredo revelado) fica no
+// servidor, com os relógios (mesa.json: estado e segredos), e aparece em todas as visões.
 //
 // O arquivo: "## Pessoas", "## Outros nomes", "## Facções", "## Lugares", "## Peças de Morana", "## Relógios" e
 // "## Segredos"; cada registro é um "### Nome", com os campos em linhas "- **Campo:** valor" e o resto (texto e
@@ -16,7 +16,8 @@
   const CAMPOS = {
     'Também': 'tambem', 'Quem é': 'quem', 'Lado': 'lado', 'Onde': 'onde', 'Aparece': 'aparece', 'Ficha': 'ficha', 'Situação': 'situacao',
     'Para os jogadores': 'publico', 'Mais': 'mais', 'Relações': 'relacoes', 'Quer': 'quer', 'Rosto': 'rosto', 'O que é': 'oque',
-    'Arquitetura': 'arquitetura', 'Mapa': 'mapa', 'Chave': 'chave', 'Segmentos': 'segmentos', 'Revela': 'revela', 'Distrito': 'distrito'
+    'Arquitetura': 'arquitetura', 'Mapa': 'mapa', 'Chave': 'chave', 'Segmentos': 'segmentos', 'Revela': 'revela', 'Distrito': 'distrito',
+    'Gancho': 'gancho', 'Encontro': 'encontro', 'Pistas': 'pistas'
   };
   const NOMES_DOS_TIPOS = { pessoa: 'Pessoa', faccao: 'Facção', lugar: 'Lugar', peca: 'Peça de Morana', relogio: 'Relógio', segredo: 'Segredo' };
   // Onde cada tipo tem o cartão: pessoas e facções em Pessoas e facções; lugares e peças em Lugares e peças.
@@ -145,6 +146,24 @@
     }
     return volta;
   }
+  // A linha "Relações de outros" do cartão: [[Nome]]: papel, de cada registro que tem esse nas Relações.
+  const relacoesDeOutros = (base, item) => (relacoesDeVolta(base).get(item.id) || []).map(volta => `[[${volta.de.nome}]]: ${volta.papel}`).join('; ');
+
+  // Os campos de um lugar, na ordem do cartão: [rótulo, valor]. O pino do mapa mostra os mesmos (noPino).
+  const camposDoLugar = (item, estado, base) => [
+    ['Onde fica', item.campos.distrito],
+    ['Aparece', item.campos.aparece],
+    ['Situação', comMudanca(item, estado, 'situacao')],
+    ['Na mesa', doEstado(estado, item.id).nota],
+    ['Relações', relacoesNoCartao(base, item)],
+    ['Relações de outros', relacoesDeOutros(base, item)],
+    ['Para os jogadores', item.campos.publico],
+    ['Gancho', item.campos.gancho],
+    ['Encontro', item.campos.encontro],
+    ['Pistas', item.campos.pistas],
+    ['No mapa', item.campos.mapa ? `[ver no mapa de Night City](#campaignMap/${item.campos.mapa})` : ''],
+    ['Mais', item.campos.mais]
+  ];
 
   // Um cartão: os campos numa lista curta, o texto do mestre e as falas.
   function cartao(item, estado, base) {
@@ -154,7 +173,7 @@
     const add = (rotulo, valor) => { if (valor) campos.push(`- **${rotulo}:** ${valor}`); };
     const addRelacoes = () => {
       add('Relações', relacoesNoCartao(base, item));
-      add('Relações de outros', (relacoesDeVolta(base).get(item.id) || []).map(volta => `[[${volta.de.nome}]]: ${volta.papel}`).join('; '));
+      add('Relações de outros', relacoesDeOutros(base, item));
     };
     if (item.tipo === 'pessoa') {
       add('Lado', item.campos.lado);
@@ -180,13 +199,7 @@
       addRelacoes();
       add('Mais', item.campos.mais);
     } else if (item.tipo === 'lugar') {
-      add('Onde fica', item.campos.distrito);
-      add('Aparece', item.campos.aparece);
-      add('Situação', comMudanca(item, estado, 'situacao'));
-      addRelacoes();
-      add('Para os jogadores', item.campos.publico);
-      add('No mapa', item.campos.mapa ? `[ver no mapa de Night City](#campaignMap/${item.campos.mapa})` : '');
-      add('Mais', item.campos.mais);
+      for (const [rotulo, valor] of camposDoLugar(item, estado, base)) add(rotulo, valor);
     }
     return [...linhas, '', ...campos, '', item.texto].join('\n').trim();
   }
@@ -337,11 +350,35 @@
     return `<h3>Na campanha</h3><p>${dados}</p>${paragrafos(item.texto)}`;
   }
 
+  // ---------------- O mapa do mestre ----------------
+  // O pino de um ponto que está no Mapa de um lugar mostra o registro: o nome, o distrito, o texto, o gancho, o encontro
+  // e as pistas. Os pontos (campaign-map.js) ficam com a posição, a categoria, o código, o ato e a nota do ponto; o
+  // ponto sem lugar mostra o id (a conferência acusa). Devolve dados novos: os do mapa não mudam.
+  function pinosDoMapa(base, dados) {
+    if (!base || !dados) return dados;
+    const lugarDoPonto = new Map();
+    for (const item of base.lugares) if (item.campos.mapa && !lugarDoPonto.has(item.campos.mapa)) lugarDoPonto.set(item.campos.mapa, item);
+    return { ...dados, markers: (dados.markers || []).map(marker => {
+      const item = lugarDoPonto.get(marker.id);
+      if (!item) return { ...marker, title: marker.title || marker.id };
+      return { ...marker, base: item.id, title: item.nome, district: item.campos.distrito || '', summary: item.texto, hook: item.campos.gancho || '', encounter: item.campos.encontro || '', clue: item.campos.pistas || '' };
+    }) };
+  }
+  // No painel do pino, os campos do cartão do lugar que ele ainda não mostra (o nome, o distrito e o texto ficam em cima;
+  // o gancho, o encontro e as pistas, nas seções), em HTML. Vazio quando não há nenhum.
+  const FORA_DO_PINO = new Set(['Onde fica', 'Gancho', 'Encontro', 'Pistas', 'No mapa']);
+  function noPino(item, estado, base, href) {
+    const linhas = camposDoLugar(item, estado, base).filter(([rotulo, valor]) => valor && !FORA_DO_PINO.has(rotulo));
+    return linhas.length ? `<ul>${linhas.map(([rotulo, valor]) => `<li><b>${rotulo}:</b> ${inline(valor, href)}</li>`).join('')}</ul>` : '';
+  }
+
   // ---------------- Conferência (os testes e o Estado da campanha usam) ----------------
   // fichas: nomes das fichas de NPC que existem; marcadores: ids do mapa; elenco: nomes das fichas da campanha.
   function conferir(base, { fichas = [], marcadores = [], elenco = [] } = {}) {
     const problemas = [...base.erros];
     const nomes = new Map();
+    // O ponto do mapa é de um lugar só (o pino mostra o primeiro), e todo ponto tem o lugar dele.
+    const pontos = new Map();
     for (const item of base.todos.values()) {
       for (const nome of [item.nome, ...item.tambem]) {
         const outro = nomes.get(nome);
@@ -350,10 +387,15 @@
       }
       if (item.campos.ficha && fichas.length && !fichas.includes(item.campos.ficha)) problemas.push(`${item.nome}: a ficha "${item.campos.ficha}" não existe em Fichas de NPC.`);
       if (item.campos.mapa && marcadores.length && !marcadores.includes(item.campos.mapa)) problemas.push(`${item.nome}: o ponto "${item.campos.mapa}" não existe no mapa.`);
+      if (item.tipo === 'lugar' && item.campos.mapa) {
+        const dono = pontos.get(item.campos.mapa);
+        if (dono) problemas.push(`${item.nome}: o ponto "${item.campos.mapa}" do mapa já é de ${dono.nome}.`); else pontos.set(item.campos.mapa, item);
+      }
       if (item.tipo === 'pessoa' && !item.campos.quem) problemas.push(`${item.nome}: falta "Quem é".`);
       if (item.tipo === 'peca' && !item.campos.onde) problemas.push(`${item.nome}: falta "Onde" (no começo da campanha).`);
       for (const alvo of linksQuebrados(base, [...Object.values(item.campos), item.texto].join('\n'))) problemas.push(`${item.nome}: o link [[${alvo}]] não acha registro.`);
     }
+    for (const id of marcadores) if (!pontos.has(id)) problemas.push(`O ponto "${id}" do mapa não tem registro na base.`);
     for (const nome of elenco) if (!base.pessoas.some(item => item.campos.ficha === nome)) problemas.push(`A ficha do elenco "${nome}" não tem registro na base.`);
     return problemas;
   }
@@ -389,7 +431,7 @@
     ].join('');
   }
 
-  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, relacoes, relacoesDeVolta, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, conferir, saude, conferenciaEmHtml, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
+  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, relacoes, relacoesDeVolta, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, pinosDoMapa, noPino, conferir, saude, conferenciaEmHtml, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
@@ -463,10 +505,12 @@
       const tabela = `<div class="table-wrap"><table class="bs-tabela">${cabeca}<tbody>${base.pessoas.filter(item => item.grupo === grupo).map(linhaPessoa).join('')}</tbody></table></div>`;
       return i === 0 ? tabela : `<details class="bs-mais"><summary>${esc(grupo)} (${base.pessoas.filter(item => item.grupo === grupo).length})</summary>${tabela}</details>`;
     }).join('')}</div>`;
+    const linhaLugar = item => `<tr data-bs-id="${item.id}"><td><a href="${linkDe(item)}"><b>${esc(item.nome)}</b></a><br><small>${esc(item.campos.distrito || '')}</small></td><td><input data-bs-campo="situacao" placeholder="${esc(item.campos.situacao || '—')}" maxlength="120"></td><td><input data-bs-campo="nota" placeholder="o que mudou, quem está lá…" maxlength="300"></td></tr>`;
+    const lugares = base.lugares.length ? `<div class="section" data-toc="Lugares"><h3>Lugares</h3><p>A situação de agora e o que mudou na mesa. Aparece nos cartões de Lugares e peças e no pino do mapa.</p><div class="table-wrap" data-bs-lugares><table class="bs-tabela"><thead><tr><th>Lugar</th><th>Situação</th><th>Na mesa</th></tr></thead><tbody>${base.lugares.map(linhaLugar).join('')}</tbody></table></div></div>` : '';
     const reveladas = `<div class="section" data-toc="Segredos revelados"><h3>Segredos revelados</h3><p>Marque quando o grupo descobrir. Fica no Diário e serve de lembrete do que ainda pode surpreender.</p><ul class="bs-segredos">${base.segredos.map(item => `<li><label><input type="checkbox" data-bs-segredo="${item.id}"> <b>${esc(item.nome)}</b>${item.campos.revela ? ` <small>(${esc(item.campos.revela)})</small>` : ''}</label>${item.texto ? `<br><small>${inline(item.texto.replace(/\s+/g, ' '), href)}</small>` : ''}</li>`).join('')}</ul></div>`;
     // A conferência precisa dos documentos: ligarEstado a preenche depois de lê-los.
     const conferencia = '<div class="section" data-toc="Conferência da base"><h3>Conferência da base</h3><p>Os erros são o que está quebrado: um link <code>[[Nome]]</code> ou uma citação <code>{{base:...}}</code> que não acha o registro, na base ou num documento. Os avisos são o que vale olhar: o registro que nenhum documento cita e a relação com um nome que não está na base.</p><div data-bs-conferencia><p class="note-status">Lendo os documentos…</p></div></div>';
-    return `${relogios}${pecas}${pessoas}${reveladas}<p class="note-status" data-bs-status></p>${conferencia}`;
+    return `${relogios}${pecas}${pessoas}${lugares}${reveladas}<p class="note-status" data-bs-status></p>${conferencia}`;
   }
   // Links dos textos da base nas páginas HTML: #pagina/secao e arquivo.md (a página daquele documento).
   let paginaDoArquivo = () => '';
@@ -613,6 +657,23 @@
     }
   }
 
+  // O painel do pino de um lugar da base (o wiki-app avisa quando o abre): os campos do cartão que ele não mostra, o
+  // "Citado em" (os documentos são lidos pela wiki, que no mapa aberto direto ainda está montando) e os nomes em link.
+  // Outro pino troca o painel: o "Citado em" que chega depois entra no bloco velho, que já saiu da página.
+  function mostrarNoPino({ id, container }) {
+    const item = navegador.base && navegador.base.lugares.find(lugar => lugar.campos.mapa === id);
+    if (!item || !container) return;
+    const bloco = Object.assign(document.createElement('div'), { className: 'map-place-base', innerHTML: noPino(item, navegador.estado, navegador.base, href) });
+    const secoes = container.querySelector('.map-place-sections');
+    if (secoes) secoes.before(bloco); else container.append(bloco);
+    ligarNomes(container);
+    const citar = () => lerCitacoes().then(mapa => {
+      const html = citadoEm(mapa.get(item.id));
+      if (html) bloco.append(Object.assign(document.createElement('ul'), { className: 'bs-citado', innerHTML: `<li>${html}</li>` }));
+    });
+    if (raiz.wikiApp) citar(); else document.addEventListener('wiki:pronta', citar, { once: true });
+  }
+
   // opções: { paginas: ids de página onde os nomes viram link; paginaDoArquivo(nome.md) → id da página; documentos:
   // [{ id, titulo }] do "Citado em" }
   function ligar({ paginas = [], paginaDoArquivo: porArquivo, documentos = [] } = {}) {
@@ -630,6 +691,7 @@
       if (pode.has(evento.detail.id)) ligarNomes(evento.detail.container);
       if (PAGINAS_DA_BASE.has(evento.detail.id)) mostrarCitacoes(evento.detail.container);
     });
+    document.addEventListener('wiki:ponto', evento => mostrarNoPino(evento.detail));
     document.addEventListener('wiki:mesa', evento => { if (evento.detail) usarMesa(evento.detail); });
     document.addEventListener('mouseover', evento => { const link = evento.target.closest && evento.target.closest('a.ent'); if (link) mostrarCartao(link); });
     document.addEventListener('mouseout', evento => { const link = evento.target.closest && evento.target.closest('a.ent'); if (link && !link.contains(evento.relatedTarget)) esconderCartao(); });
@@ -661,6 +723,8 @@
     citar: texto => expandir(texto, navegador.base, navegador.estado, valoresDosRelogios()),
     pessoas: texto => paginaPessoas(texto, navegador.estado),
     lugares: texto => paginaLugares(texto, navegador.estado),
+    // O mapa do mestre com os lugares da base (os dados do campaign-map.js → os pinos com o registro).
+    mapa: dados => pinosDoMapa(navegador.base, dados),
     // Os relógios para a wiki (config.clocks): { chave: [segmentos] }.
     relogiosDaWiki: () => Object.fromEntries((navegador.base ? navegador.base.relogios : []).map(item => [item.chave, item.segmentos])),
     elenco: () => (navegador.base ? navegador.base.pessoas.filter(item => item.campos.ficha && item.grupo === 'Pessoas').map(item => item.campos.ficha) : [])

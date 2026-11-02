@@ -3,7 +3,7 @@
 // citações {{base:...}} e {{doc:...}} dos documentos existem e as cópias antigas saíram. Na wiki do mestre: Pessoas e
 // facções, Lugares e peças e as notas da Sessão 01 saem da base e do diário; o endereço antigo de Quem é quem abre a
 // tabela; os nomes viram links com cartão; o Estado da campanha grava no servidor e aparece nas páginas, e mostra a
-// Conferência da base (os erros e os avisos).
+// Conferência da base (os erros e os avisos); o pino do mapa mostra o lugar da base, com o Estado.
 // Usa o servidor local de teste (o mestre) e devolve a mesa como estava.
 const { validarBase } = require('../lib/base-estatica');
 
@@ -16,7 +16,7 @@ module.exports = async ({ edge, servidores, r }) => {
   const local = servidores.local;
   const mesa = `${local}/api/campanhas/morana/mesa`;
   const esperar = async (expressao, vezes = 40) => { for (let i = 0; i < vezes; i++) { const v = await edge.evaluate(expressao).catch(() => null); if (v) return v; await edge.sleep(250); } return null; };
-  const limpar = () => fetch(mesa, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: { dan: null, 'a-maleta': null }, segredos: {} }) });
+  const limpar = () => fetch(mesa, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: { dan: null, 'a-maleta': null, 'pachinko-de-wakako': null }, segredos: {} }) });
   await limpar();
   try {
     await r.passo('Pessoas e facções sai da base: a tabela Quem é quem, os cartões do elenco e das forças, e o aviso de onde editar', async () => {
@@ -283,6 +283,65 @@ module.exports = async ({ edge, servidores, r }) => {
       } finally {
         await edge.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: injetado.result.identifier });
       }
+    });
+
+    await r.passo('O mapa lê a base: o pino do Pachinko de Wakako mostra o nome, o distrito e o texto do registro, a situação e a nota marcadas no Estado (mudar no Estado muda o pino, sem recarregar), o Citado em e o gancho, o encontro e as pistas do registro, com os nomes em link', async () => {
+      const pachinko = base.todos.get('pachinko-de-wakako');
+      const marcar = (situacao, nota) => edge.evaluate(`(() => {
+        const campo = (nome, valor) => { const c = document.querySelector('[data-bs-id="pachinko-de-wakako"] [data-bs-campo="' + nome + '"]'); c.value = valor; c.dispatchEvent(new Event('change', { bubbles: true })); };
+        campo('situacao', ${JSON.stringify(situacao)});
+        campo('nota', ${JSON.stringify(nota)});
+      })()`);
+      const noServidor = async situacao => { for (let i = 0; i < 20; i++) { await edge.sleep(300); const dados = await (await fetch(mesa)).json(); const lugar = (dados.estado || {})['pachinko-de-wakako']; if (lugar && lugar.situacao === situacao) return lugar; } return null; };
+      // No Estado da campanha, a tabela dos lugares da base.
+      await edge.ir(`${local}/?pino#notes`, 1500);
+      await esperar(`document.querySelector('[data-bs-id="pachinko-de-wakako"] [data-bs-campo="situacao"]')`);
+      const lugares = await edge.evaluate(`[...document.querySelectorAll('[data-bs-lugares] [data-bs-id]')].map(linha => linha.dataset.bsId)`);
+      await marcar('Fechado pela NCPD', 'Teste do pino');
+      const salvo = await noServidor('Fechado pela NCPD');
+      // O mapa aberto direto no ponto (a wiki ainda montando), com o Estado lido do servidor.
+      await edge.ir(`${local}/?pino-mapa#campaignMap/wakako-jig-jig`, 2000);
+      const painel = `document.getElementById('map-marker-detail')`;
+      const lerPainel = `(() => {
+        const p = ${painel};
+        return {
+          titulo: p.querySelector('#map-place-title').textContent,
+          distrito: p.querySelector('.map-district')?.textContent || '',
+          resumo: p.querySelector('.map-place-summary')?.textContent.trim() || '',
+          campos: [...p.querySelectorAll('.map-place-base > ul:not(.bs-citado) > li')].map(li => li.textContent),
+          citado: [...p.querySelectorAll('.map-place-base .bs-citado a')].map(a => a.getAttribute('href')),
+          secoes: [...p.querySelectorAll('.map-place-sections details')].map(d => [d.querySelector('summary').textContent, d.querySelector('div').textContent.trim()]),
+          links: [...p.querySelectorAll('a.ent')].map(a => a.dataset.ent),
+          // O bloco da base fica entre o texto e as seções.
+          antesDasSecoes: p.querySelector('.map-place-base')?.nextElementSibling === p.querySelector('.map-place-sections'),
+          rotulo: document.querySelector('.map-pin[data-map-marker="wakako-jig-jig"] .pin-label')?.textContent || ''
+        };
+      })()`;
+      await esperar(`${painel}?.querySelector('.map-place-base .bs-citado')`);
+      const info = await edge.evaluate(lerPainel);
+      await edge.shot('pino-pachinko');
+      // Outra página e de volta, sem recarregar: a situação nova no Estado, sem a nota, aparece no pino. Desta vez o pino
+      // abre pela lista de Locais, com o mapa já montado.
+      await edge.ir(`${local}/?pino-mapa#notes`, 1000);
+      await esperar(`document.querySelector('[data-bs-id="pachinko-de-wakako"] [data-bs-campo="situacao"]')?.value === 'Fechado pela NCPD'`);
+      await marcar('Reaberto', '');
+      await edge.ir(`${local}/?pino-mapa#campaignMap`, 1000);
+      await esperar(`document.querySelector('.map-marker-card[data-map-marker="wakako-jig-jig"]')`);
+      await edge.evaluate(`document.querySelector('.map-marker-card[data-map-marker="wakako-jig-jig"]').click()`);
+      const depois = await esperar(`${painel}?.querySelector('.map-place-base .bs-citado') ? ${lerPainel} : null`);
+      const resalvo = await noServidor('Reaberto');
+      const ok = JSON.stringify(lugares) === JSON.stringify(base.lugares.map(item => item.id)) && salvo && salvo.nota === 'Teste do pino'
+        && info.titulo === pachinko.nome && info.rotulo === pachinko.nome && info.distrito === pachinko.campos.distrito && info.resumo === pachinko.texto
+        && info.campos.includes('Situação: Fechado pela NCPD (era: —)') && info.campos.includes('Na mesa: Teste do pino') && info.campos.includes(`Aparece: ${pachinko.campos.aparece}`)
+        && !info.campos.some(campo => /^(Onde fica|Gancho|Encontro|Pistas|No mapa):/.test(campo))
+        && info.citado.includes('#people/wakako-okada')
+        && JSON.stringify(info.secoes.slice(0, 3)) === JSON.stringify([['Gancho', pachinko.campos.gancho], ['Encontro', pachinko.campos.encontro], ['Pistas', pachinko.campos.pistas]])
+        && info.secoes.length === 4 && info.secoes[3][0] === 'Notas' && /ponto 68/.test(info.secoes[3][1])
+        && info.links.includes('wakako-okada') && info.links.includes('mina-kuroda') && info.antesDasSecoes
+        && depois && depois.titulo === pachinko.nome && depois.campos.includes('Situação: Reaberto (era: —)') && !depois.campos.some(campo => campo.startsWith('Na mesa:'))
+        && depois.citado.includes('#people/wakako-okada') && depois.links.includes('wakako-okada') && depois.links.includes('mina-kuroda') && depois.antesDasSecoes
+        && resalvo && !resalvo.nota;
+      return [ok, `Estado ${lugares.join(' ')} · salvo ${JSON.stringify(salvo)} · ${JSON.stringify(info)} · depois ${JSON.stringify(depois)} · ${JSON.stringify(resalvo)}`];
     });
   } finally {
     await limpar();

@@ -8,7 +8,7 @@ Como editar:
 
 - Cada registro é um `###` com o nome. Os campos são linhas que começam com `- **Campo:**`; o resto (texto e falas em `>`) é a nota do mestre.
 - **Também:** outros nomes pelos quais o registro aparece nos documentos, separados por ponto e vírgula. Cada nome só pode ser de um registro.
-- **Ficha:** o nome da ficha em Fichas de NPC. **Mapa:** o ponto do mapa de Night City.
+- **Ficha:** o nome da ficha em Fichas de NPC. **Mapa:** o ponto do mapa de Night City: o pino mostra o lugar, com o nome, o distrito, o texto e a situação de agora. **Gancho**, **Encontro** e **Pistas** são as seções do pino.
 - Os campos **Situação** e **Onde** são o começo da campanha. O que muda na mesa se marca em Estado da campanha, na wiki (fica no servidor, com os relógios), e aparece em todas as páginas; este arquivo não muda a cada sessão.
 
 ## Pessoas
@@ -143,6 +143,9 @@ Criados na mesa, na Sessão 2. Recuaram sem dizer quem os mandou.
 - **Distrito:** Jig-Jig Street, Japantown, Westbrook
 - **Aparece:** Sessão 1
 - **Mapa:** wakako-jig-jig
+- **Gancho:** Wakako contratou o grupo para buscar uma maleta num armazém de Kabuki. Ainda não recebeu a maleta, nem notícia.
+- **Encontro:** Mina Kuroda observa os visitantes. Se houver confronto, Wakako controla o ritmo e oferece uma saída antes de escalar a violência.
+- **Pistas:** O que Wakako sabe da maleta, e para quem a queria, fica para a nova trama.
 - **Para os jogadores:** Um pachinko parlour elegante e silencioso na Jig-Jig Street.
 
 O salão de Wakako, protegido por gente que raramente precisa sacar uma arma.
@@ -152,6 +155,9 @@ O salão de Wakako, protegido por gente que raramente precisa sacar uma arma.
 - **Distrito:** Kabuki, Watson (território Tyger Claws)
 - **Aparece:** Sessão 1
 - **Mapa:** kabuki-depot
+- **Gancho:** O grupo trocou tiros com Dan, um funcionário, que pagou 150eb para sair vivo. O mensageiro já estava morto; Ricky cortou o braço dele para levar a maleta.
+- **Encontro:** Vega e a equipe chegaram e houve combate. Vega recuou quando a maleta começou a dar sinais.
+- **Pistas:** Os dois corpos ficaram no armazém: o do mensageiro, sem o braço esquerdo, e o de Kobo, com o comunicador de "I.".
 
 Um armazém comum de Kabuki, onde o grupo achou o mensageiro morto e o corpo de Kobo, e onde trocou tiros com Dan e com a equipe de Vega. Os dois corpos ficaram lá.
 
@@ -166,6 +172,9 @@ O consultório do Ricky e de Morty, "não tão limpo quanto muitos pacientes esp
 - **Distrito:** Northside, Watson
 - **Aparece:** Sessão 1 (a ordem de recuperação)
 - **Mapa:** arasaka-docks
+- **Gancho:** A ordem que Vega levava manda entregar o ativo "Morana" aqui até as 06:00.
+- **Encontro:** Segurança Arasaka pesada, guindastes, containers e drones de inspeção.
+- **Pistas:** O que a Arasaka quer com o ativo fica para a nova trama.
 
 O destino da maleta na ordem de recuperação que Vega levava (H-05): entrega até as 06:00.
 

@@ -216,6 +216,54 @@ async function validarBase({ raiz, r }) {
     return [!errados.length, errados.slice(0, 4).join(' · ') || `${Object.keys(casos).length} casos; nenhum erro na base e nos ${docs.length} documentos; ${real.avisos.length} avisos: ${real.avisos.join(' · ')}`];
   });
 
+  await r.passo('O mapa lê a base: o pino de um ponto que está no Mapa de um lugar mostra o nome, o distrito, o texto, o gancho, o encontro e as pistas dele, e o painel ganha a situação e a nota do Estado; o campaign-map.js fica com a posição, a categoria, o código, o ato e a nota do ponto', async () => {
+    // A peça vem antes dos lugares e tem um ponto: o pino é só de lugar. O segundo lugar no mesmo ponto não leva o pino.
+    const pequena = B.ler([
+      '## Peças de Morana', '### A Mala', '- **O que é:** Uma mala', '- **Onde:** No bar', '- **Mapa:** bar', '',
+      '## Lugares', '### Bar Azul', '- **Distrito:** Watson', '- **Situação:** Aberto', '- **Mapa:** bar', '- **Gancho:** Alguém deve ao dono.', '- **Encontro:** O dono não gosta de visita.', '- **Pistas:** A conta fica embaixo do balcão.', '', 'Um bar pequeno.', '',
+      '### Beco', '- **Distrito:** Kabuki', '- **Mapa:** beco', '',
+      '### Bar Velho', '- **Distrito:** Watson', '- **Mapa:** bar'
+    ].join('\n'));
+    const dados = { width: 10, categories: { plot: { label: 'Campanha' } }, markers: [
+      { id: 'bar', code: 'B', x: 1, y: 2, category: 'plot', act: 'Sessão 01', note: 'A nota do ponto.' },
+      { id: 'beco', code: 'K', x: 3, y: 4, category: 'plot' },
+      { id: 'solto', code: 'S', x: 5, y: 6, category: 'plot' }
+    ] };
+    const copia = JSON.stringify(dados);
+    const pinos = B.pinosDoMapa(pequena, dados);
+    const esperados = [
+      { id: 'bar', code: 'B', x: 1, y: 2, category: 'plot', act: 'Sessão 01', note: 'A nota do ponto.', base: 'bar-azul', title: 'Bar Azul', district: 'Watson', summary: 'Um bar pequeno.', hook: 'Alguém deve ao dono.', encounter: 'O dono não gosta de visita.', clue: 'A conta fica embaixo do balcão.' },
+      { id: 'beco', code: 'K', x: 3, y: 4, category: 'plot', base: 'beco', title: 'Beco', district: 'Kabuki', summary: '', hook: '', encounter: '', clue: '' },
+      // O ponto sem lugar mostra o id (a conferência acusa).
+      { id: 'solto', code: 'S', x: 5, y: 6, category: 'plot', title: 'solto' }
+    ];
+    const estado = { estado: { 'bar-azul': { situacao: 'Fechado', nota: 'O dono <sumiu> & a conta também.' } }, segredos: {} };
+    const casos = {
+      'os pinos': JSON.stringify(pinos.markers) === JSON.stringify(esperados),
+      'o resto dos dados': pinos.width === 10 && pinos.categories === dados.categories,
+      'os dados do mapa não mudam': JSON.stringify(dados) === copia,
+      'sem a base, os dados como estão': B.pinosDoMapa(null, dados) === dados,
+      'a conferência': JSON.stringify(B.conferir(pequena, { marcadores: ['bar', 'beco', 'solto'] })) === JSON.stringify(['Bar Velho: o ponto "bar" do mapa já é de Bar Azul.', 'O ponto "solto" do mapa não tem registro na base.']),
+      'o cartão do lugar, com o Estado': B.cartao(pequena.todos.get('bar-azul'), estado, pequena) === ['### Bar Azul', '', '- **Onde fica:** Watson', '- **Situação:** **Fechado** (era: Aberto)', '- **Na mesa:** O dono <sumiu> & a conta também.', '- **Gancho:** Alguém deve ao dono.', '- **Encontro:** O dono não gosta de visita.', '- **Pistas:** A conta fica embaixo do balcão.', '- **No mapa:** [ver no mapa de Night City](#campaignMap/bar)', '', 'Um bar pequeno.'].join('\n'),
+      // No painel do pino, os campos que ele ainda não mostra: sem o distrito, o gancho, o encontro, as pistas e o mapa.
+      'no pino': B.noPino(pequena.todos.get('bar-azul'), estado, pequena) === '<ul><li><b>Situação:</b> <b>Fechado</b> (era: Aberto)</li><li><b>Na mesa:</b> O dono &lt;sumiu&gt; &amp; a conta também.</li></ul>',
+      'no pino, sem o Estado': B.noPino(pequena.todos.get('bar-azul'), B.vazio(), pequena) === '<ul><li><b>Situação:</b> Aberto</li></ul>',
+      'no pino, sem nada': B.noPino(pequena.todos.get('beco'), B.vazio(), pequena) === ''
+    };
+    const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => `${nome}${nome === 'os pinos' ? `: ${JSON.stringify(pinos.markers)}` : ''}`);
+    // A base de verdade: os pontos do mapa não têm mais as cópias, e cada um acha o lugar dele.
+    const copias = ['title', 'district', 'summary', 'hook', 'encounter', 'clue'];
+    const comCopia = marcadores.filter(marker => copias.some(chave => chave in marker)).map(marker => marker.id);
+    if (comCopia.length) errados.push(`o campaign-map.js ainda tem as cópias: ${comCopia.join(', ')}`);
+    const reais = B.pinosDoMapa(base, contexto.window.campaignMapData).markers;
+    const semLugar = reais.filter(marker => !marker.base).map(marker => marker.id);
+    if (semLugar.length) errados.push(`pontos sem lugar: ${semLugar.join(', ')}`);
+    const pachinko = reais.find(marker => marker.id === 'wakako-jig-jig') || {};
+    const registro = base.todos.get('pachinko-de-wakako');
+    if (pachinko.title !== registro.nome || pachinko.district !== registro.campos.distrito || pachinko.hook !== registro.campos.gancho) errados.push(`o Pachinko: ${JSON.stringify(pachinko)}`);
+    return [!errados.length, errados.slice(0, 4).join(' · ') || `${Object.keys(casos).length} casos; ${reais.length} pontos do mapa, cada um com o lugar: ${reais.map(marker => `${marker.code} ${marker.title}`).join(', ')}`];
+  });
+
   return base;
 }
 

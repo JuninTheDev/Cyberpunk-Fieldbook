@@ -317,10 +317,10 @@
     ];
 
     // Monta a wiki com as campanhas do servidor. Sem servidor (arquivo aberto com dois cliques), só o Protocolo Morana.
-    // O Estado da campanha: os relógios, as peças, as pessoas e os segredos da base (campanha-base.js) e o bloco de mesa.
+    // O Estado da campanha: os relógios, as peças, as pessoas, os lugares e os segredos da base (campanha-base.js) e o bloco de mesa.
     const notesPage = () => ({
       eyebrow: 'Mesa do mestre / só você vê', title: 'Estado da campanha',
-      lede: 'O que mudou na mesa: os relógios, com quem estão as peças de Morana, a situação de cada pessoa e os segredos que o grupo já descobriu. Fica salvo no servidor, com o backup, igual no PC e no tablet, e aparece nas páginas da base e nos cartões dos nomes. No fim da sessão, o bloco vira o rascunho do resumo para os jogadores (Virar rascunho de sessão).',
+      lede: 'O que mudou na mesa: os relógios, com quem estão as peças de Morana, a situação de cada pessoa e de cada lugar e os segredos que o grupo já descobriu. Fica salvo no servidor, com o backup, igual no PC e no tablet, e aparece nas páginas da base e nos cartões dos nomes. No fim da sessão, o bloco vira o rascunho do resumo para os jogadores (Virar rascunho de sessão).',
       html: `${window.campaignBase.paginaEstado()}<div class="section" data-toc="Bloco de mesa"><h3>Bloco de mesa</h3><textarea id="session-note" class="note-area" placeholder="Cena atual, iniciativa, nomes, pistas, dívidas, consequências..."></textarea><p class="note-status" id="note-status">Salvo automaticamente neste navegador.</p><button class="action" id="clear-notes" type="button">Limpar notas</button> <button class="action" data-session-draft type="button" title="Cria uma sessão não publicada, com este bloco, em Visão dos jogadores → Sessões">Virar rascunho de sessão</button> <button class="action" data-page="docDiario" type="button">Abrir diário da campanha</button></div>`
     });
     // Os documentos citam a base: uma linha {{base:...}} vira a tabela de agora (as visões já trazem a própria montagem).
@@ -349,6 +349,9 @@
       const documentos = [...new Set(daMorana)].filter(id => todosOsDocs[id] && !todosOsDocs[id].vista && !todosOsDocs[id].semBusca)
         .map(id => ({ id, titulo: textoDe(todosOsDocs[id].title) }));
       base.ligar({ paginas: moranaPages, paginaDoArquivo: docPage, documentos });
+      // O mapa do mestre: o pino de um lugar da base mostra o registro (o nome, o distrito, o texto, o gancho, o encontro
+      // e as pistas); o campaign-map.js fica com a posição, a categoria, o código, o ato e a nota do ponto.
+      window.campaignMapData = base.mapa(window.campaignMapData);
       window.wikiConfig = {
         campaigns: built.campaigns,
         markdownDocs: { ...markdownDocs, ...built.markdownDocs, ...extras.markdownDocs },

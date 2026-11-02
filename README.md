@@ -85,6 +85,11 @@ O mapa abre ocupando a janela inteira, tanto para o mestre quanto para os jogado
 
 - **Explorar:** arraste o mapa; use a roda do mouse, dois dedos ou os botões **+** e **−** para ampliar. Com o mapa em foco, as setas deslocam, **+** e **−** mudam o zoom e **Home** enquadra a cidade.
 - **Locais:** abre a lista de pontos, com busca e filtros. Selecione um ponto no mapa ou na lista para abrir a ficha do lugar, com o distrito e as informações disponíveis para quem está lendo. Os jogadores continuam recebendo somente o que o mestre publicou.
+- **No mapa do mestre:** o ponto que está no `Mapa` de um lugar da base mostra o registro.
+  - **Em cima:** o nome, o distrito e o texto do lugar.
+  - **Do cartão:** a situação e a nota marcadas no Estado da campanha, o Aparece, as relações, o `Para os jogadores` e o "Citado em".
+  - **As seções:** Gancho, Encontro e Pistas são campos do lugar (`- **Gancho:**`, `- **Encontro:**`, `- **Pistas:**`); Notas é do ponto.
+  - Os nomes viram link, com o cartão. A lista de Locais, a busca e o "Copiar posição de um pino" do Publicar usam os mesmos dados.
 - **Camadas:** reúne as versões do mapa e as opções de exibição. O mapa detalhado é o padrão; o mapa base continua disponível e o mestre também pode escolher a versão com referências originais.
 - **No celular e no tablet:** a lista, as camadas e a ficha aparecem na parte inferior, com rolagem própria e opção de expandir. Os controles de zoom ficam acima do painel aberto para continuar acessíveis.
 - **Teclado e navegação:** os marcadores podem ser abertos com **Enter** ou **Espaço**; **Esc** fecha o painel ou menu aberto. **/** ou **Ctrl+K** abre a busca da wiki. Os botões Voltar e Avançar do navegador continuam funcionando entre as páginas.
@@ -116,7 +121,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 
 | Arquivo | Para que serve |
 |---|---|
-| `documentos/morana/base-da-campanha.md` | **A base da campanha: a fonte única.** Um registro para cada pessoa, facção, lugar, peça de Morana, relógio e segredo. Pessoas e facções, Lugares e peças, o Estado da campanha, as tabelas citadas nos documentos (`{{base:pecas}}`), os cartões dos nomes e o texto dos atores do elenco no Foundry saem daqui. |
+| `documentos/morana/base-da-campanha.md` | **A base da campanha: a fonte única.** Um registro para cada pessoa, facção, lugar, peça de Morana, relógio e segredo. Pessoas e facções, Lugares e peças, o Estado da campanha, as tabelas citadas nos documentos (`{{base:pecas}}`), os cartões dos nomes, os pinos do mapa e o texto dos atores do elenco no Foundry saem daqui. |
 | `documentos/morana/handouts-da-campanha.md` | Os handouts que os jogadores receberam (H-04 e H-05) e como criar um handout na hora. Na wiki, cada citação tem os botões **Entregar aos jogadores** e **Só preparar**. |
 | `documentos/morana/sessao-zero.md` | Linhas e véus, a carta X, o que Morana pode fazer com cada personagem, as regras da casa e as perguntas. |
 | `documentos/morana/guia-night-city-2077.md` | World building de 2077: linha do tempo, distritos, facções, NPCs do jogo e sessões avulsas, sem a trama da campanha. |
@@ -132,8 +137,8 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `api-netwire.js` | O servidor das mensagens dentro do jogo (carregado pelo `api-personagens.js`, que diz quem é quem). Por campanha, em `campanhas/<id>/netwire.json` (entra no backup): os canais (conversa direta de um NPC com jogadores escolhidos, ou canal da cidade) e as mensagens (rascunho, agendada ou entregue, com a nota do mestre e a origem). O jogador recebe só os canais dele e o que já foi entregue, sem nota; a agendada aparece sozinha quando chega a hora. Os canais #handouts e #n54-news vêm prontos das Notícias e handouts e das Notícias de Night City. |
 | `api-netwire-ia.js` | A IA que rascunha as mensagens, com `fetch` e sem dependências, em dois provedores: o Claude (API de Mensagens da Anthropic) e o Gemini (API Interactions do Google). Monta o contexto que o mestre marcou, pede em JSON com formato fixo, aproveita o cache de cada API e calcula o custo estimado (os preços do Gemini mudam nas datas que o Google anunciou). Liga com `ANTHROPIC_API_KEY` e/ou `GEMINI_API_KEY` no servidor. |
 | `netwire.js` | No navegador: a página **Mensagens** dos jogadores (`#pvMensagens/<canal>`) e a **Caixa do NetWire** do mestre (`#caixa`). Também o selo de não lidas (na conta: o que cada jogador já leu em cada canal). |
-| `campaign-map.js` | Pinos do mapa de operações. Os lugares da base apontam para eles (`#campaignMap/<ponto>` abre o mapa já no ponto). |
-| `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; mostra no fim de cada cartão onde o nome aparece ("Citado em"); liga as Relações nos dois sentidos; confere a base e os documentos (a Conferência da base); grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
+| `campaign-map.js` | Os pontos do mapa de operações: a posição, a categoria, o código, o ato e a nota de cada um. O nome, o distrito, o texto, o gancho, o encontro e as pistas vêm do lugar da base que tem o ponto no `Mapa` (`#campaignMap/<ponto>` abre o mapa já no ponto). |
+| `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; mostra no fim de cada cartão onde o nome aparece ("Citado em"); liga as Relações nos dois sentidos; monta os pinos do mapa com os lugares; confere a base e os documentos (a Conferência da base); grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
 | `nightcity-map.js`, `assets/nightcity-map/tiles/` | O mapa detalhado de Night City, padrão nas duas visões: 16.121 tiles locais (137,3 MiB), com cinco níveis de detalhe. Só a região visível é baixada; o aparelho guarda até 768 tiles para revisitar sem rede. O seletor mantém o mapa base e, para o mestre, a versão com referências. Ao substituir os tiles, atualizar a edição `?v=` em `nightcity-map.js`, `sw.js` e `server.js`: cada edição tem cache imutável. |
 | `system-rules.js` | As regras da mesa para consulta: uma regra só, com o Mission Kit valendo sobre o RED quando os dois conflitam. Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (a tabela da ciberpsicose e as de perda e ganho do Kit), terapia e drogas, netrunning (o do RED com os quickhacks no Neuroport do Kit), economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido ou do Kit. |
@@ -373,7 +378,7 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
 ## Consulta durante a sessão
 
 - **A base da campanha (mestre):** cada pessoa, facção, lugar, peça de Morana, relógio e segredo tem um registro só, em `documentos/morana/base-da-campanha.md`.
-  - **Sai dela:** Pessoas e facções (com a tabela Quem é quem), Lugares e peças, as tabelas do Diário e o texto dos atores do elenco no Foundry.
+  - **Sai dela:** Pessoas e facções (com a tabela Quem é quem), Lugares e peças, os pinos do mapa, as tabelas do Diário e o texto dos atores do elenco no Foundry.
   - **Nos documentos:** os nomes viram link, e passar o mouse mostra o cartão com o lado, onde está e a situação de agora. Uma linha `{{base:pecas}}`, `{{base:faccoes}}`, `{{base:pessoas}}`, `{{base:segredos}}` ou `{{base:relogio:<chave>}}` vira a tabela de agora.
   - **O link explícito:** `[[Nome]]` ou `[[Nome|texto]]` (a forma do Obsidian) vira o link do registro, com o cartão.
     - **Quando usar:** onde o link automático não liga, como a segunda menção na mesma seção, ou um texto que não é o nome ("[[Wakako Okada|a fixer]]").
@@ -395,10 +400,10 @@ As mensagens dentro do jogo, como o celular de V no Cyberpunk 2077: contatos que
     - **Sem registro:** o nome fica como texto, e a Conferência da base, no Estado da campanha, avisa.
   - **Endereços antigos:** `#docQuemEQuem` abre a tabela em Pessoas e facções.
 - **Estado da campanha (mestre):** o que muda na mesa, salvo no servidor, por campanha: entra no backup e aparece igual no PC e no tablet.
-  - **O que guarda:** os relógios, com quem está cada peça de Morana, a situação, onde está e a atitude de cada pessoa com o grupo, os segredos revelados e o bloco de mesa.
-  - **Onde aparece:** nas páginas da base, nas tabelas citadas nos documentos (o diário mostra a foto de agora) e nos cartões dos nomes.
+  - **O que guarda:** os relógios, com quem está cada peça de Morana, a situação, onde está e a atitude de cada pessoa com o grupo, a situação e a nota de cada lugar, os segredos revelados e o bloco de mesa.
+  - **Onde aparece:** nas páginas da base, no pino do mapa, nas tabelas citadas nos documentos (o diário mostra a foto de agora) e nos cartões dos nomes.
   - **Conferência da base:** no fim da página, o que está quebrado e o que vale olhar na base.
-    - **Os erros**, em destaque: o link `[[Nome]]` ou a citação `{{base:...}}` que não acha registro, na base ou num documento, e o que mais a conferência acusa (um nome em dois registros, uma pessoa sem "Quem é"). Eles também seguram o `node tests/validar.js base`.
+    - **Os erros**, em destaque: o link `[[Nome]]` ou a citação `{{base:...}}` que não acha registro, na base ou num documento, e o que mais a conferência acusa (um nome em dois registros, uma pessoa sem "Quem é", um ponto do mapa em dois lugares). Eles também seguram o `node tests/validar.js base`, que acusa ainda o ponto do mapa sem lugar.
     - **Os avisos:** a pessoa, a facção, o lugar ou a peça que nenhum documento cita (a base e os outros registros não contam), e a relação com um nome que não está na base.
     - **Os documentos:** são os mesmos do "Citado em", e a seção diz quantos leu. Os nomes dos registros viram link, com o cartão.
   - **Mostrar aos jogadores**, embaixo de cada relógio, põe esse relógio no Resumo dos jogadores (só leitura). Bom para o relógio da cidade.
