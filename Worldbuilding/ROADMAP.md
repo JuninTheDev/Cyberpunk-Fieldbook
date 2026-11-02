@@ -201,11 +201,11 @@ de partida.
 
 Depende das decisões 1 e 2.
 
-- [ ] **B5 · O pino do mapa mostra o lugar da base:**
+- [~] **B5 · O pino do mapa mostra o lugar da base:** em andamento (sessão KouArt, 2026-11-02).
   - o pino de um ponto que está no `Mapa:` de um registro abre o cartão do lugar: a situação de agora, o Estado e o
     "Citado em";
   - o título, o distrito e o resumo saem do `campaign-map.js`, e o pino fica com a posição, a categoria e o código;
-  - o que só o pino tem (o gancho, o encontro, a pista) fica nele até a decisão 1.
+  - o que só o pino tem (o gancho, o encontro, a pista) vira campo do registro (decisão 1).
 
   Teste: o pino do Pachinko de Wakako mostra o distrito da base, e mudar a situação no Estado muda o pino.
 - [ ] **B6 · A Visão dos jogadores lê da base:**
@@ -279,6 +279,7 @@ Depende das decisões 3 e 4.
 
 1. **O mapa (B5):** o pino passa a mostrar o lugar da base, e os textos repetidos saem do `campaign-map.js`? O gancho, o
    encontro e a pista do pino viram campos do registro (`- **Gancho:**`…)?
+   - **Decidido (2026-11-02):** sim, e o gancho, o encontro e a pista viram campos do registro.
 2. **A Visão dos jogadores (B6):** as listas digitadas de Pessoas e Lugares passam a vir da base, e o mestre só marca
    Revelado?
 3. **O mundo e a campanha (B9):** o que é do mundo (a Arasaka, os distritos, os NPCs do jogo) e o que é só da
