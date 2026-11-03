@@ -73,6 +73,8 @@ Rode da raiz do clone.
 - **G4, Foundry 14:** `node tests/rodar.js v14`. Sem falhas conhecidas desde o ciclo 116 (QUALITY_GATES).
 - **Os scripts do servidor** (`servidor/*.sh`, quando mudam): `node --test tests/isolados/servidor-sistema.test.js` (com o
   Git Bash; roda os scripts num repositório e com comandos de mentira).
+- **Os hooks dos agentes** (`.claude/hooks/*` e `.claude/settings.json`, quando mudam):
+  `node --test tests/isolados/regras-dos-agentes.test.js`.
 - **O que conta como falha:** qualquer falha fora das conhecidas segura o commit. E uma falha conhecida não se tira nem se
   muda para passar.
 - **O build** (`node build/conteudo.mjs`) gera `dados/catalogo.json` e `scripts/gerado.mjs`. Ele precisa do CORE
@@ -117,6 +119,26 @@ Rode da raiz do clone.
 - **Os testes fora da pasta descartável:** eles só usam `%LOCALAPPDATA%\FieldbookTeste`.
 - **O `sed -i`:** ele troca o CRLF por LF. Edite com a ferramenta de edição ou com um script do Node. Mantenha o final de
   linha que cada arquivo tem e confira no diff: o diff de um arquivo inteiro, numa mudança pequena, é o sinal.
+
+## Os hooks
+
+O `.claude/settings.json` chama o `.claude/hooks/regras-dos-agentes.js` antes de cada comando (Bash e PowerShell) e de
+cada edição (Edit e Write) das sessões do Claude Code no repositório, os workers inclusive. O Codex e o Antigravity não
+passam por ele: para eles, as regras continuam só no texto.
+
+- **Recusa:**
+  - o `sed -i` e o push forçado;
+  - rodar o `publicar.*`, o `atualizar-modulo.bat` e o `abrir-online.*`;
+  - matar o `node`, o `msedge` ou o Foundry pelo nome (pare pelo PID).
+- **Pergunta ao usuário:**
+  - o `ssh` e o `scp`, e um `servidor/*.sh` rodado à mão;
+  - apagar a `testes.trava` ou um arquivo de `tests/` (menos o `tests/.saida`);
+  - editar os módulos do Foundry 12, os `system-*.js`, os scripts de publicar e os próprios hooks;
+  - uma edição em `tests/` que tira um `assert` ou um `r.passo(`.
+- **O texto não conta:** o que está entre aspas e nos heredocs (a mensagem de um commit pode falar do `sed -i`).
+- **Não é uma caixa de areia:** um script que escreve o arquivo por conta própria passa.
+- **Numa sessão sem tela** (`claude -p`, o Agent SDK), a pergunta vira recusa.
+- **Mudou uma regra:** mude o `AGENTS.md`, o hook e o teste juntos.
 
 ## O projeto (o resumo do Alethe)
 
