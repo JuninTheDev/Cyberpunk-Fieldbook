@@ -39,7 +39,8 @@ function criarServidorIsolado(t, { env: extra = {}, fetch: falso } = {}) {
   iniciar({}, requireIsolado, { exports: {} }, arquivo, raiz);
   if (!atender) throw new Error('O servidor não registrou o atendimento das requisições.');
 
-  function pedir(url, { method = 'GET', body, cookie, headers = {} } = {}) {
+  // ip: o endereço da conexão (o padrão é o do próprio servidor, como atrás do Caddy ou do túnel).
+  function pedir(url, { method = 'GET', body, cookie, headers = {}, ip = '127.0.0.1' } = {}) {
     return new Promise((resolve, reject) => {
       const texto = body === undefined ? '' : typeof body === 'string' ? body : JSON.stringify(body);
       const request = Readable.from(texto ? [texto] : []);
@@ -49,7 +50,7 @@ function criarServidorIsolado(t, { env: extra = {}, fetch: falso } = {}) {
         ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         ...(cookie ? { cookie } : {}), ...headers
       }).map(([key, value]) => [key.toLowerCase(), value]));
-      request.socket = { remoteAddress: '127.0.0.1' };
+      request.socket = { remoteAddress: ip };
       const partes = [];
       const response = new Writable({ write(chunk, encoding, done) { partes.push(Buffer.from(chunk)); done(); } });
       response.headersSent = false;

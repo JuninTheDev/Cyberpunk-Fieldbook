@@ -80,19 +80,13 @@ const hasGmCookie = request => {
   return sameSecret(given, gmToken) || sameSecret(given, gmKey); // o segundo: cookie antigo, de antes da assinatura
 };
 const isGameMaster = request => (!hosted && isLoopback(request.socket.remoteAddress) && !viaTunnel(request)) || hasGmCookie(request);
-// Atrás do Caddy o endereço de quem chegou vem no X-Forwarded-For (o Caddy descarta o que o visitante mandar).
-const clientIp = request => String(request.headers['cf-connecting-ip'] || (request.headers['x-forwarded-for'] || '').split(',')[0] || request.socket.remoteAddress).trim();
+// O endereço de quem chegou: no servidor, o que o Caddy escreve; em casa, o do túnel (veja o ipDoCliente).
+const { ipDoCliente, limiteDeTentativas } = require('./api-personagens');
+const clientIp = request => ipDoCliente(request, { hospedado: hosted });
 const gmCookie = (value, maxAge) => `gm=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${hosted ? '; Secure' : ''}`;
 
 // Senha do mestre errada: 10 tentativas a cada 10 minutos por endereço.
-const loginAttempts = new Map();
-function tooManyLogins(ip) {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || now > entry.until) { loginAttempts.set(ip, { count: 1, until: now + 10 * 60 * 1000 }); return false; }
-  entry.count += 1;
-  return entry.count > 10;
-}
+const loginAttempts = limiteDeTentativas();
 
 // O abrir-online.ps1 confere este cabeçalho para saber se o servidor já entende o túnel.
 const SERVER_VERSION = { 'X-Wiki-Servidor': '2' };
@@ -228,12 +222,12 @@ const sendJson = (response, status, data, headers = {}) => send(response, status
 async function gmLogin(request, response) {
   if (!gmKey) return sendJson(response, 400, { erro: 'Esta wiki não tem senha do mestre (GM_KEY).' });
   const ip = clientIp(request);
-  if (tooManyLogins(ip)) return sendJson(response, 429, { erro: 'Muitas tentativas. Espere 10 minutos.' });
+  if (loginAttempts.excedeu(ip)) return sendJson(response, 429, { erro: 'Muitas tentativas. Espere 10 minutos.' });
   let senha = '';
   try { senha = String((await readJsonBody(request)).senha || ''); } catch (error) { return sendJson(response, error.status || 400, { erro: error.message }); }
   // Quantas ainda cabem nos 10 minutos (a tela do mestre mostra).
-  if (!sameSecret(senha, gmKey)) return sendJson(response, 403, { erro: 'Senha incorreta.', restantes: Math.max(0, 10 - loginAttempts.get(ip).count) });
-  loginAttempts.delete(ip);
+  if (!sameSecret(senha, gmKey)) return sendJson(response, 403, { erro: 'Senha incorreta.', restantes: loginAttempts.restantes(ip) });
+  loginAttempts.esquecer(ip);
   return sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie(gmToken, 31536000) });
 }
 
@@ -266,7 +260,7 @@ const { ROUTES: characterApiRoutes } = require('./api-personagens');
 // A IA do NetWire (api-netwire-ia.js), que rascunha mensagens na Caixa do mestre: o Claude (ANTHROPIC_API_KEY) e/ou o
 // Gemini (GEMINI_API_KEY); sem nenhuma das duas, desligada.
 const netwireIa = { chave: process.env.ANTHROPIC_API_KEY || '', url: process.env.ANTHROPIC_BASE_URL || '', gemini: { chave: process.env.GEMINI_API_KEY || '', url: process.env.GEMINI_BASE_URL || '' }, modelo: process.env.NETWIRE_MODELO || '', limite: Number(process.env.NETWIRE_IA_LIMITE) || 30, fetch: (...args) => fetch(...args) };
-const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js'), secureCookies: hosted, ia: netwireIa });
+const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js'), secureCookies: hosted, hospedado: hosted, ia: netwireIa });
 
 // A mesa na barra lateral, para cada um. Mundo ligado a uma campanha (o "mundo do Foundry" dela): quem joga nela vê
 // a mesa aberta e o nome da campanha; quem não joga vê o Foundry sem mundo aberto (não fica sabendo de outra mesa).

@@ -23,7 +23,42 @@ const creationRules = require('./system-criacao');
 const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
-module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false, ia = {} }) {
+
+// Quem chegou, para o limite de tentativas (aqui e na senha do mestre, no server.js). Só um intermediário nesta
+// máquina (a conexão vem do próprio servidor) diz quem está do outro lado:
+//   · no servidor (MODO=hospedado), o Caddy, que põe o endereço de quem chegou no fim do X-Forwarded-For. O que vem
+//     antes, e o CF-Connecting-IP, que ninguém confere lá, quem manda é o visitante;
+//   · em casa, o túnel do Cloudflare (abrir-online.ps1), pelo CF-Connecting-IP.
+// Quem chega direto (pela rede de casa) é o endereço da própria conexão: um cabeçalho, ali, viria dele.
+function ipDoCliente(request, { hospedado = false } = {}) {
+  const conexao = String((request.socket && request.socket.remoteAddress) || '');
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(conexao)) return conexao;
+  const ultimoDoCaddy = String(request.headers['x-forwarded-for'] || '').split(',').map(ip => ip.trim()).filter(Boolean).pop();
+  if (hospedado) return ultimoDoCaddy || conexao;
+  return String(request.headers['cf-connecting-ip'] || '').trim() || ultimoDoCaddy || conexao;
+}
+
+// Tentativas erradas por endereço: no máximo "maximo" a cada "janela". Cada endereço novo que erra vira uma entrada:
+// quando o mapa chega ao "teto", as vencidas saem.
+function limiteDeTentativas({ maximo = 10, janela = 10 * 60 * 1000, teto = 5000, agora = () => Date.now() } = {}) {
+  const tentativas = new Map();
+  return {
+    // Conta uma tentativa; true quando ela passa do limite.
+    excedeu(ip) {
+      const instante = agora();
+      if (tentativas.size >= teto) for (const [chave, entrada] of tentativas) if (instante > entrada.ate) tentativas.delete(chave);
+      const entrada = tentativas.get(ip);
+      if (!entrada || instante > entrada.ate) { tentativas.set(ip, { contagem: 1, ate: instante + janela }); return false; }
+      entrada.contagem += 1;
+      return entrada.contagem > maximo;
+    },
+    restantes: ip => Math.max(0, maximo - ((tentativas.get(ip) || {}).contagem || 0)),
+    esquecer: ip => tentativas.delete(ip),
+    get tamanho() { return tentativas.size; }
+  };
+}
+
+module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false, hospedado = false, ia = {} }) {
   const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic, docsDir });
   const { sessions, preferences } = createAccountStores({ dataDir, writeJsonAtomic });
   // Documentos do mestre: os .md de documentos/<id da campanha>/ no projeto (vêm pelo git, como o resto da wiki).
@@ -150,16 +185,9 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     return inCampaign(identity, id) ? id : undefined;
   }
 
-  // Limite de tentativas de código por IP: 10 a cada 10 minutos.
-  const attempts = new Map();
-  const clientIp = request => String(request.headers['cf-connecting-ip'] || (request.headers['x-forwarded-for'] || '').split(',')[0] || request.socket.remoteAddress).trim();
-  function tooManyAttempts(ip) {
-    const now = Date.now();
-    const entry = attempts.get(ip);
-    if (!entry || now > entry.until) { attempts.set(ip, { count: 1, until: now + 10 * 60 * 1000 }); return false; }
-    entry.count += 1;
-    return entry.count > 10;
-  }
+  // Limite de tentativas de código por endereço: 10 a cada 10 minutos.
+  const attempts = limiteDeTentativas();
+  const clientIp = request => ipDoCliente(request, { hospedado });
 
   // ---------------- Leitura do corpo ----------------
   // Gravações exigem JSON: um formulário de outro site não consegue mandar esse tipo sem permissão (CORS).
@@ -493,11 +521,11 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     }
 
     if (pathname === '/api/entrar' && method === 'POST') {
-      if (tooManyAttempts(clientIp(request))) return json(response, 429, { erro: 'Muitas tentativas. Espere 10 minutos.' });
+      if (attempts.excedeu(clientIp(request))) return json(response, 429, { erro: 'Muitas tentativas. Espere 10 minutos.' });
       const { codigo } = await readJson(request);
       const account = findAccount(String(codigo || '').trim().toUpperCase());
       if (!account) return json(response, 403, { erro: 'Código não encontrado. Confira com o mestre.' });
-      attempts.delete(clientIp(request));
+      attempts.esquecer(clientIp(request));
       const token = await sessions.create(account.id, request.headers['user-agent']);
       return json(response, 200, { jogador: { id: account.id, nome: account.nome } }, { 'Set-Cookie': sessionCookie(token) });
     }
@@ -1151,3 +1179,5 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
 };
 const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city|agenda|netwire)(\/|$)/;
 module.exports.ROUTES = ROUTES;
+module.exports.ipDoCliente = ipDoCliente;
+module.exports.limiteDeTentativas = limiteDeTentativas;
