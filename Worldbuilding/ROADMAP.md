@@ -235,7 +235,7 @@ Depende das decisões 1 e 2.
     pela página; o teste passou a abrir o pino também pela lista de Locais.
   - **A suíte da wiki:** o `validar.js` passou (462 verificações e as regressões). No `rodar.js` sem o v14, passaram 27
     dos 31 cenários (o `base` com 22 de 22); falham os mesmos 4 do B1, com as mesmas mensagens.
-- [ ] **B6 · A Visão dos jogadores lê da base:**
+- [~] **B6 · A Visão dos jogadores lê da base:** em andamento (sessão KouArt, 2026-11-02), com a decisão 2.
   - em Pessoas e em Lugares no mapa, o mestre escolhe um registro da base e marca Revelado;
   - o texto que vai é o `Para os jogadores` do registro, e a posição vem do ponto do mapa;
   - os itens digitados que já existem no Publicar continuam e se ligam ao registro pelo nome. Um item sem registro
@@ -309,6 +309,8 @@ Depende das decisões 3 e 4.
    - **Decidido (2026-11-02):** sim, e o gancho, o encontro e a pista viram campos do registro.
 2. **A Visão dos jogadores (B6):** as listas digitadas de Pessoas e Lugares passam a vir da base, e o mestre só marca
    Revelado?
+   - **Decidido (2026-11-02):** sim, como está no B6: os itens digitados que já existem continuam e se ligam ao registro
+     pelo nome, e um item sem registro continua possível.
 3. **O mundo e a campanha (B9):** o que é do mundo (a Arasaka, os distritos, os NPCs do jogo) e o que é só da
    campanha? A base do mundo sai do guia de 2077 do Morana, da lore dos anos 2070 ou das duas?
 4. **Um arquivo por registro (B11) e o editor:** a base vira pasta? O Obsidian no PC (B12) basta, ou vale o editor na
