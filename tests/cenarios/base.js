@@ -67,8 +67,17 @@ module.exports = async ({ edge, servidores, r }) => {
       const cartao = await esperar(`(() => { const c = document.querySelector('.ent-card'); return c && !c.hidden ? c.textContent : null; })()`);
       await edge.shot('cartao-wakako');
       const href = await edge.evaluate(`document.querySelector('#md-doc a.ent[data-ent="wakako-okada"]').getAttribute('href')`);
-      const ok = links.includes('wakako-okada') && links.includes('endo') && links.includes('dan') && href === '#people/wakako-okada' && /Fixer/.test(cartao || '') && /Pachinko/.test(cartao || '');
-      return [ok, `${links.length} links (${[...new Set(links)].length} nomes) · cartão: ${(cartao || '').slice(0, 80)}`];
+      // Cada link na seção dele (o título ###, #### ou ##### mais perto acima): nenhum nome duas vezes na mesma seção, e o
+      // nome que volta noutra seção (Endo, nas Sessões 1 e 2) ganha o link de novo (o código é do wiki-nomes.js).
+      const porSecao = await edge.evaluate(`(() => {
+        const doc = document.getElementById('md-doc');
+        const secaoDe = link => { let filho = link; while (filho.parentElement !== doc) filho = filho.parentElement; while (filho && !/^H[3-5]$/.test(filho.tagName)) filho = filho.previousElementSibling; return filho ? filho.textContent.trim() : ''; };
+        const chaves = [...doc.querySelectorAll('a.ent')].map(link => secaoDe(link) + ' | ' + link.dataset.ent);
+        const secoesDo = id => new Set(chaves.filter(chave => chave.endsWith(' | ' + id)).map(chave => chave.split(' | ')[0])).size;
+        return { repetidos: chaves.filter((chave, i) => chaves.indexOf(chave) !== i), endo: secoesDo('endo') };
+      })()`);
+      const ok = links.includes('wakako-okada') && links.includes('endo') && links.includes('dan') && href === '#people/wakako-okada' && (cartao || '').startsWith('PessoaWakako Okada') && /Fixer/.test(cartao || '') && /Pachinko/.test(cartao || '') && !porSecao.repetidos.length && porSecao.endo >= 2;
+      return [ok, `${links.length} links (${[...new Set(links)].length} nomes) · Endo em ${porSecao.endo} seções · repetidos: ${porSecao.repetidos.join(', ') || 'nenhum'} · cartão: ${(cartao || '').slice(0, 80)}`];
     });
 
     await r.passo('Estado da campanha: Dan capturado e a maleta com Wakako ficam no servidor e aparecem nas páginas e no cartão', async () => {

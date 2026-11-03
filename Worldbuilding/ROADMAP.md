@@ -274,13 +274,44 @@ Depende das decisões 1 e 2.
   - **A suíte da wiki:** o `validar.js` passou (463 verificações e as regressões, com os 2 testes novos do
     `api.test.js`). No `rodar.js` sem o v14, passaram 27 dos 31 cenários (o `jogadores` com 23 de 23 e o `base` com 23
     de 23); falham os mesmos 4 do B1, com as mesmas mensagens.
-- [~] **B7 · O arquivo dos jogadores:** em andamento (sessão KouArt, 2026-11-02).
-  - na visão dos jogadores, os nomes revelados viram link nos resumos das sessões, nas notícias e nos handouts, com um
-    cartão que mostra só o que o grupo sabe;
-  - uma página com as pessoas, os lugares e as facções reveladas, com o "Citado em" nas sessões;
-  - o nome não revelado fica como texto: o cartão não pode entregar quem é quem;
-  - o código que liga os nomes vai para um arquivo que as duas wikis carregam, sem dados. Os dados dos jogadores vêm do
-    servidor, já filtrados.
+- [x] **B7 · O arquivo dos jogadores:** feito (sessão KouArt, 2026-11-02).
+  - **O código comum:** o `wiki-nomes.js`, sem dados, que as duas wikis carregam. Ele tem o buscador dos nomes (o mais
+    longo primeiro, um nome por entrada), o link (uma vez por nome em cada seção, nunca na seção do próprio nome nem
+    dentro de outro link) e o cartão ao passar o mouse ou com o foco.
+    - A wiki do mestre passou a usá-lo: o `campanha-base.js` monta as entradas da base e o HTML do cartão de cada
+      registro, e o "Citado em" usa o mesmo buscador. Por fora, nada mudou.
+    - O servidor entrega o arquivo aos jogadores (`server.js`), e a wiki do celular guarda (`sw.js`).
+  - **Na página dos jogadores:** as pessoas e os lugares revelados viram link no Resumo, nas Sessões, nas Notícias e
+    handouts, nas Notícias de Night City e no Arquivo.
+    - O cartão mostra o que o grupo sabe: o tipo (Pessoa ou Lugar), o nome, o "Como o grupo conhece" ou o distrito e
+      o começo do texto. O clique leva ao Arquivo, na seção do nome.
+    - A página só conhece o que o servidor mandou: o nome não revelado fica como texto. Vira link o nome como está no
+      Publicar; um nome mais curto não liga (os `Também` da base podem ser segredo e não vão).
+  - **O Arquivo** (Campanha → Arquivo): as pessoas (e as facções da base) antes, os lugares depois, cada um com o
+    texto e o "Citado em" das sessões e das notícias da campanha (no texto ou no título).
+  - **Testes:**
+    - `tests/isolados/nomes.test.js`: o buscador (o longo antes do curto, a primeira entrada fica com o nome, os
+      sinais do nome valem como texto, as bordas da palavra) e os nomes de um texto; o arquivo sem nomes da base;
+    - `tests/isolados/mapa-publico.test.js`: a wiki do celular guarda o `wiki-nomes.js`, e não o `campanha-base.js`;
+    - `tests/cenarios/jogadores.js`: uma sessão e uma notícia de teste. Os links e o cartão (com o mouse, o foco, a
+      rolagem e a troca de página), o nome não revelado como texto e o Arquivo (a ordem, o "Citado em", o link do
+      nome de outro, nenhum link para si mesmo nem dentro de link, o menu e a aba). O arquivo novo entra nos
+      liberados aos jogadores, e o Arquivo, na conferência do celular;
+    - `tests/cenarios/base.js`: a wiki do mestre com o código movido (os links, os cartões e o "Citado em"), agora
+      também com o nome que volta noutra seção do diário (Endo) e o nome no cartão;
+    - `tests/lib/base-estatica.js`: o relógio e o segredo não contam no "Citado em" pelo nome (o relógio, só pelo link
+      explícito).
+  - **Mutações:** 53 mutações, todas pegas: 11 sem navegador (o buscador, as bordas da palavra, a ordem, o slug, a wiki
+    do celular), 31 no cenário jogadores (o link, o cartão com o mouse, o foco, a rolagem e a troca de página, as
+    páginas com links, o Arquivo, o "Citado em", o menu e a aba, o arquivo liberado aos jogadores) e 11 no base (a wiki
+    do mestre com o código movido). Quatro passaram na primeira rodada, e os testes foram reforçados: o nome de novo na
+    seção seguinte (nas duas wikis), o nome no cartão do mestre, e o relógio e o segredo fora do "Citado em" pelo nome.
+    Os arquivos voltaram exatos (md5).
+  - **A suíte da wiki:** o `validar.js` passou (466 verificações e as regressões, com o `nomes.test.js`). No `rodar.js`
+    sem o v14, passaram 27 dos 31 cenários (o `jogadores` com 25 de 25 e o `base` com 24 de 24); falham os mesmos 4 do
+    B1, com as mesmas mensagens. Numa rodada antes, o `campanhas` falhou com um 404 do NetWire: o teste apaga pela API a
+    campanha que a página do mestre ainda lê, e a leitura que cruza o DELETE volta 404. Com o mesmo código, passou nas 4
+    rodadas seguintes; a corrida é do teste e ficou para o usuário decidir.
 
 ## Fase 3: o mundo de todas as campanhas
 

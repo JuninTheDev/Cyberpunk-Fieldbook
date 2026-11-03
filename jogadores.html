@@ -62,6 +62,7 @@
   <script src="criador.js"></script>
   <script src="conta.js"></script>
   <script src="nightcity-map.js"></script>
+  <script src="wiki-nomes.js"></script>
   <script src="netwire.js"></script>
   <script>
     // Visão dos jogadores: o conteúdo de campanha vem da API (api/visao), publicado pelo mestre, e só das campanhas em
@@ -100,6 +101,7 @@
         <div class="section" data-toc="Na wiki"><h3>Na wiki</h3><ul>
           <li><b>Resumo:</b> o seu personagem, a próxima sessão (com o botão para pôr no calendário), os relógios que o mestre mostra e as últimas notícias.</li>
           <li><b>Sessões, Pessoas, Mapa e Notícias:</b> o que o grupo já sabe, publicado pelo mestre. O que é novo desde a sua última visita ganha um selo.</li>
+          <li><b>Arquivo:</b> as pessoas e os lugares que o grupo conhece, com as sessões e as notícias onde cada um aparece. Nas outras páginas, o nome deles vira link: passe o mouse para ver o cartão.</li>
           <li><b>Fixar:</b> o botão ☆ ao lado do título de qualquer página a põe no topo da barra lateral (Combate, a Ficha...).</li>
         </ul></div>`
     };
@@ -113,6 +115,7 @@
       { id: 'pvMensagens', label: 'Mensagens', icon: 'MSG' },
       { id: 'pvSessions', label: 'Sessões', icon: 'S' },
       { id: 'pvPeople', label: 'Pessoas', icon: 'P' },
+      { id: 'pvArquivo', label: 'Arquivo', icon: 'ARQ' },
       { id: 'pvMap', label: 'Mapa', icon: 'MAP' },
       { id: 'pvNews', label: 'Notícias e handouts', icon: 'N' },
       { id: 'pvNightCity', label: 'Notícias de Night City', icon: 'N54' },
@@ -139,14 +142,14 @@
         homePage: 'pvHome',
         // Sem campanha (sem código, ou sem servidor): uma de mentira, só para o menu (real: false).
         campaigns: list ? list.map(item => ({ id: item.id, name: item.nome, color: item.cor, groups: playerGroups })) : [{ id: 'grupo', name: 'Night City, 2077', real: false, groups: playerGroups }],
-        pageContent: { pvMensagens: messagesPage, pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City'), pvGuia: playerGuide },
+        pageContent: { pvMensagens: messagesPage, pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvArquivo: waiting('Arquivo'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City'), pvGuia: playerGuide },
         mapPages: ['pvMap'],
         // As abas do topo (a casca NetWire): o menu do jogo. Mensagens, por enquanto, são as notícias e os handouts.
         topTabs: [
           { id: 'inicio', label: 'Início', inicio: true, paginas: ['pvGuia'] },
           { id: 'personagem', label: 'Personagem', curto: 'Ficha', paginas: ['ficha', 'personagens', 'loja', 'criador'] },
           { id: 'mensagens', label: 'Mensagens', curto: 'Msgs', paginas: ['pvMensagens', 'pvNews', 'pvNightCity'] },
-          { id: 'campanha', label: 'Campanha', paginas: ['pvSessions', 'pvPeople'] },
+          { id: 'campanha', label: 'Campanha', paginas: ['pvSessions', 'pvPeople', 'pvArquivo'] },
           { id: 'mapa', label: 'Mapa', paginas: ['pvMap'] },
           { id: 'regras', label: 'Regras', area: 'system', pagina: 'combat' }
         ],
@@ -203,6 +206,15 @@
         markSeen(open);
       }
       document.addEventListener('wiki:pagina', event => markSeen(event.detail.id));
+
+      // ---------------- O arquivo: os nomes revelados ----------------
+      // As pessoas e os lugares que o mestre revelou viram link no resumo, nas sessões, nas notícias e no próprio
+      // Arquivo, com um cartão do que o grupo sabe (wiki-nomes.js). Só com o que o servidor mandou: o nome que o grupo
+      // não conhece fica como texto. buildPages monta os nomes e os cartões.
+      const NAME_PAGES = new Set(['pvHome', 'pvSessions', 'pvNews', 'pvNightCity', 'pvArquivo']);
+      let names = { search: null, cards: new Map() };
+      document.addEventListener('wiki:pagina', event => { if (window.wikiNomes && NAME_PAGES.has(event.detail.id)) window.wikiNomes.ligar(document.getElementById('content'), names.search); });
+      if (window.wikiNomes) window.wikiNomes.ouvir(id => names.cards.get(id) || '');
       // As preferências da conta chegaram: o que foi visto em outro aparelho não é mais novidade.
       document.addEventListener('wiki:preferencias', () => { if (Object.keys(currentIds).length) updateBadges(); });
 
@@ -288,6 +300,21 @@
           clocks: clocks.length ? `<div class="nw-pad pv-side-clocks"><p class="nw-pad-title">Relógios</p>${clocks.map(clock => `<p class="pv-side-clock"><span>${escapeHtml(clock.nome)}</span><b>${clock.valor}/${clock.passos.length}</b></p><span class="nw-bar" aria-hidden="true">${clock.passos.map((_, index) => `<i${index < clock.valor ? ' class="on"' : ''}></i>`).join('')}</span>`).join('')}</div>` : ''
         };
         const newsHtml = (items, page) => items.map(item => `<div class="section" data-toc="${escapeHtml(item.titulo || 'Notícia')}"><h3>${escapeHtml(item.titulo || 'Notícia')}${tag(page, item)}</h3>${item.data ? `<p class="pv-news-date">${escapeHtml(item.data)}</p>` : ''}<div class="md-doc">${renderMarkdown(item.texto || '')}</div></div>`).join('');
+        // O Arquivo: cada pessoa e cada lugar revelado (as pessoas antes), com o endereço da seção dele, o cartão e o
+        // "Citado em" (as sessões e as notícias desta campanha onde o nome aparece).
+        const entries = [...people.map(item => ({ item, tipo: 'pessoa' })), ...places.map(item => ({ item, tipo: 'lugar' }))].filter(({ item }) => item.nome)
+          .map(({ item, tipo }, index) => ({ id: `${tipo}-${index}`, tipo, nomes: [item.nome], href: `#pvArquivo/${sectionSlug(item.nome)}`, item }));
+        const lineOf = ({ item, tipo }) => (tipo === 'lugar' ? `Lugar${item.distrito ? ` · ${item.distrito}` : ''}` : item.papel || 'Pessoa');
+        const search = window.wikiNomes ? window.wikiNomes.buscador(entries) : null;
+        const citedIn = new Map(entries.map(entry => [entry.id, []]));
+        const newsTitle = item => item.titulo || 'Notícia';
+        for (const [page, items, title] of [['pvSessions', sessions, sessionTitle], ['pvNews', news, newsTitle]]) {
+          items.forEach((item, index) => {
+            for (const id of window.wikiNomes ? window.wikiNomes.nomesEm(search, `${title(item, index)}\n${item.texto || ''}`) : []) citedIn.get(id).push(`<a href="#${page}/${sectionSlug(title(item, index))}">${escapeHtml(title(item, index))}</a>`);
+          });
+        }
+        names = { search, cards: new Map(entries.map(entry => [entry.id, `<small>${entry.tipo === 'lugar' ? 'Lugar' : 'Pessoa'}</small><b>${escapeHtml(entry.item.nome)}</b>${entry.tipo === 'lugar' ? (entry.item.distrito ? `<p>${escapeHtml(entry.item.distrito)}</p>` : '') : (entry.item.papel ? `<p>${escapeHtml(entry.item.papel)}</p>` : '')}${excerpt(entry.item.texto) ? `<p>${escapeHtml(excerpt(entry.item.texto))}</p>` : ''}`])) };
+        const archiveHtml = entries.map(entry => `<div class="section" data-toc="${escapeHtml(entry.item.nome)}"><h3>${escapeHtml(entry.item.nome)}</h3><p class="pv-news-date">${escapeHtml(lineOf(entry))}</p><div class="md-doc">${renderMarkdown(entry.item.texto || '')}</div>${citedIn.get(entry.id).length ? `<ul class="bs-citado"><li><b>Citado em:</b> ${citedIn.get(entry.id).join(', ')}</li></ul>` : ''}</div>`).join('');
         return {
           pvHome: {
             eyebrow: `${escapeHtml(name)}${updated ? ` / atualizado em ${updated}` : ''}`, title: 'O que o grupo sabe',
@@ -305,6 +332,11 @@
             eyebrow: `${escapeHtml(name)} / pessoas`, title: 'Pessoas',
             lede: 'Quem o grupo já conheceu e o que sabe sobre cada um.',
             html: people.length ? `<div class="cards">${people.map(person => `<div class="person"><h3>${escapeHtml(person.nome)}${tag('pvPeople', person)}</h3>${person.papel ? `<div class="role">${escapeHtml(person.papel)}</div>` : ''}<div class="md-doc">${renderMarkdown(person.texto || '')}</div></div>`).join('')}</div>` : '<div class="callout">Ninguém ainda. As pessoas aparecem aqui conforme o grupo as conhece.</div>'
+          },
+          pvArquivo: {
+            eyebrow: `${escapeHtml(name)} / arquivo`, title: 'Arquivo',
+            lede: 'As pessoas e os lugares que o grupo conhece: o que sabe de cada um e onde aparecem nas sessões e nas notícias. Nas outras páginas, passe o mouse num desses nomes para ver o cartão.',
+            html: archiveHtml || '<div class="callout">Ninguém e nenhum lugar ainda. Aparecem aqui conforme o grupo os conhece.</div>'
           },
           pvMap: {
             eyebrow: `${escapeHtml(name)} / mapa`, title: 'Night City',
@@ -353,7 +385,7 @@
             <div class="nw-entry-links"><button type="button" class="nw-entry-link" data-page="combat">Ver as regras sem entrar</button><a class="nw-entry-link nw-entry-gm" href="mestre" data-entry-gm hidden>Sou o mestre</a></div>
           </div>
         </div>`;
-        const titles = { pvSessions: 'Sessões', pvPeople: 'Pessoas', pvMap: 'Mapa', pvNews: 'Notícias e handouts', pvNightCity: 'Notícias de Night City' };
+        const titles = { pvSessions: 'Sessões', pvPeople: 'Pessoas', pvArquivo: 'Arquivo', pvMap: 'Mapa', pvNews: 'Notícias e handouts', pvNightCity: 'Notícias de Night City' };
         return {
           pvHome: { eyebrow: 'Night City', title: kind === 'offline' ? 'Sem conexão' : kind === 'visitante' ? 'Entrar no NetWire' : 'O que o grupo sabe', lede: kind === 'visitante' ? 'Cada jogador vê a campanha em que joga.' : 'Não consegui ler o que o mestre publicou.', html: kind === 'visitante' ? entry : callout },
           ...Object.fromEntries(Object.entries(titles).map(([id, title]) => [id, { eyebrow: 'Night City', title, lede: '', html: callout }]))
@@ -453,7 +485,8 @@
         sideNow = { next: '', clocks: '' };
         window.wikiApp.setBadges(Object.fromEntries(Object.keys(NEWS_PAGES).map(page => [page, 0])));
         window.playerMapData = null;
-        updatePages({ pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') });
+        names = { search: null, cards: new Map() };
+        updatePages({ pvHome: waiting('Resumo'), pvSessions: waiting('Sessões'), pvPeople: waiting('Pessoas'), pvArquivo: waiting('Arquivo'), pvMap: waiting('Mapa'), pvNews: waiting('Notícias e handouts'), pvNightCity: waiting('Notícias de Night City') });
         refresh();
       });
 

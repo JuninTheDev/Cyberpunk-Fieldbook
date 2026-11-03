@@ -335,6 +335,23 @@ async function validarBase({ raiz, r }) {
     return [!errados.length, errados.slice(0, 4).join(' · ') || `${Object.keys(casos).length} casos; ${visao.npcs.length} pessoas e ${visao.lugares.length} lugares na visão`];
   });
 
+  await r.passo('Os nomes da base no wiki-nomes.js: só os registros com cartão (pessoa, facção, lugar e peça) contam no "Citado em" pelo nome; o relógio e o segredo, só pelo [[Nome]]', async () => {
+    const pequena = B.ler([
+      '## Pessoas', '### Ana Lobo', '- **Quem é:** A dona', '',
+      '## Peças de Morana', '### A Mala', '- **O que é:** Uma mala', '- **Onde:** No bar', '',
+      '## Relógios', '### Bar em chamas', '- **Segmentos:** fumaça; fogo', '',
+      '## Segredos', '### Cofre falso', '- **Revela:** Sessão 2'
+    ].join('\n'));
+    const mapa = B.citacoes(pequena, [
+      { id: 'docA', titulo: 'A', texto: 'Ana Lobo viu o Bar em chamas e o Cofre falso; A Mala sumiu.' },
+      { id: 'docB', titulo: 'B', texto: 'Só o [[Bar em chamas]].' }
+    ]);
+    const docs = id => ((mapa.get(id) || { documentos: [] }).documentos).map(doc => doc.id).join();
+    const casos = { 'a pessoa': docs('ana-lobo') === 'docA', 'a peça': docs('a-mala') === 'docA', 'o relógio, só pelo link': docs('bar-em-chamas') === 'docB', 'o segredo, nunca pelo nome': docs('cofre-falso') === '' };
+    const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome);
+    return [!errados.length, errados.join(', ') || `${Object.keys(casos).length} casos`];
+  });
+
   return base;
 }
 

@@ -9,8 +9,11 @@
 // falas em ">") para o mestre.
 //
 // No navegador: window.campaignBase. No Node (testes, build do Foundry): require('./campanha-base.js').
+// Os nomes que viram link e o cartão são do wiki-nomes.js, que as duas wikis carregam (no navegador, antes deste).
 (function (raiz) {
   'use strict';
+
+  const nomes = raiz.wikiNomes || require('./wiki-nomes.js');
 
   const SECOES = { 'Pessoas': 'pessoa', 'Outros nomes': 'pessoa', 'Facções': 'faccao', 'Lugares': 'lugar', 'Peças de Morana': 'peca', 'Relógios': 'relogio', 'Segredos': 'segredo' };
   const CAMPOS = {
@@ -252,17 +255,9 @@
 
   // ---------------- Citado em ----------------
   // Os nomes que viram link: o nome e os Também de cada registro com cartão (pessoa, facção, lugar e peça), o mais
-  // longo primeiro. A mesma regra serve aos links dos documentos e ao "Citado em".
-  function buscadoresDe(base) {
-    const formas = new Map();
-    for (const item of base.todos.values()) {
-      if (!PAGINA_DO_TIPO[item.tipo]) continue;
-      for (const forma of [item.nome, ...item.tambem]) if (forma.length > 2 && !formas.has(forma)) formas.set(forma, item);
-    }
-    if (!formas.size) return null;
-    const escapar = texto => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return { formas, regex: new RegExp(`(?<![\\p{L}\\p{N}])(${[...formas.keys()].sort((a, b) => b.length - a.length).map(escapar).join('|')})(?![\\p{L}\\p{N}])`, 'gu') };
-  }
+  // longo primeiro (o buscador do wiki-nomes.js, que a wiki dos jogadores também usa). A mesma regra serve aos links
+  // dos documentos e ao "Citado em".
+  const buscadoresDe = base => nomes.buscador([...base.todos.values()].filter(item => PAGINA_DO_TIPO[item.tipo]).map(item => ({ id: item.id, tipo: item.tipo, nomes: [item.nome, ...item.tambem], href: linkDe(item) })));
   // O registro de um [[Nome]]: o que tem esse nome ou esse Também, sem ligar para maiúsculas e acentos (de qualquer
   // tipo: um relógio leva ao Estado da campanha). null quando não há.
   function registroDoLink(base, alvo) {
@@ -299,9 +294,7 @@
     if (!busca) return resultado;
     const de = id => { if (!resultado.has(id)) resultado.set(id, { documentos: [], registros: [] }); return resultado.get(id); };
     const nomesEm = texto => {
-      const achados = new Set();
-      busca.regex.lastIndex = 0;
-      for (let m = busca.regex.exec(texto); m; m = busca.regex.exec(texto)) achados.add(busca.formas.get(m[1]).id);
+      const achados = nomes.nomesEm(busca, texto);
       for (const m of texto.matchAll(LINK_EXPLICITO)) { const item = registroDoLink(base, m[1]); if (item) achados.add(item.id); }
       return achados;
     };
@@ -572,60 +565,12 @@
   }
 
   // ---------------- Links dos nomes e o cartão ao passar o mouse ----------------
+  // O link e o cartão são do wiki-nomes.js: daqui vêm os nomes da base e o HTML do cartão de cada registro.
   let buscadores = null;
-  const montarBuscadores = () => buscadoresDe(navegador.base);
-  const PULAR = 'h1, h2, h3, h4, h5, a, button, summary, code, pre, input, textarea, select, option, label, th, .page-toc, .page-tabs, .eyebrow, .ent-card, .npc-stats, .entry-tag';
-  // Uma vez por nome em cada seção (num documento, cada título ## ou ###); nunca no próprio cartão.
-  function secaoDe(no, raizDoc) {
-    let filho = no.parentElement;
-    while (filho && filho.parentElement !== raizDoc) filho = filho.parentElement;
-    let titulo = filho;
-    while (titulo && !/^H[3-5]$/.test(titulo.tagName)) titulo = titulo.previousElementSibling;
-    return titulo || raizDoc;
-  }
   function ligarNomes(root) {
     if (!navegador.base || !root) return;
-    buscadores = buscadores || montarBuscadores();
-    if (!buscadores) return;
-    const documento = root.matches && root.matches('#md-doc') ? root : root.querySelector && root.querySelector('#md-doc');
-    const usados = new Map();
-    const escopoDe = no => (documento && documento.contains(no) ? secaoDe(no, documento) : (no.parentElement.closest('.entry, .section, .person') || root));
-    const usadosEm = escopo => { if (!usados.has(escopo)) usados.set(escopo, new Set()); return usados.get(escopo); };
-    // O nome que já tem link na seção (o [[Nome]]) não ganha outro.
-    for (const link of root.querySelectorAll('a.ent[data-ent]')) usadosEm(escopoDe(link)).add(link.dataset.ent);
-    const caminhante = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const nos = [];
-    while (caminhante.nextNode()) nos.push(caminhante.currentNode);
-    for (const no of nos) {
-      const pai = no.parentElement;
-      if (!pai || pai.closest(PULAR) || !no.data.trim()) continue;
-      const escopo = escopoDe(no);
-      const tituloDoEscopo = slug(escopo.matches && escopo.matches('h3, h4, h5') ? escopo.textContent : (escopo.dataset && escopo.dataset.toc) || '');
-      const usado = usadosEm(escopo);
-      buscadores.regex.lastIndex = 0;
-      const achados = [];
-      for (let m = buscadores.regex.exec(no.data); m; m = buscadores.regex.exec(no.data)) {
-        const item = buscadores.formas.get(m[1]);
-        if (!item || usado.has(item.id) || tituloDoEscopo === item.id) continue;
-        usado.add(item.id);
-        achados.push({ inicio: m.index, fim: m.index + m[1].length, item });
-      }
-      if (!achados.length) continue;
-      const pedaco = document.createDocumentFragment();
-      let de = 0;
-      for (const { inicio, fim, item } of achados) {
-        pedaco.append(no.data.slice(de, inicio));
-        const link = document.createElement('a');
-        link.className = `ent ent-${item.tipo}`;
-        link.href = linkDe(item);
-        link.dataset.ent = item.id;
-        link.textContent = no.data.slice(inicio, fim);
-        pedaco.append(link);
-        de = fim;
-      }
-      pedaco.append(no.data.slice(de));
-      no.replaceWith(pedaco);
-    }
+    buscadores = buscadores || buscadoresDe(navegador.base);
+    nomes.ligar(root, buscadores);
   }
 
   // O [[Nome]] e o [[Nome|texto]] dos .md (o wiki-app chama, com o texto já em HTML): o link do registro, com o cartão,
@@ -634,10 +579,10 @@
     const item = navegador.base && registroDoLink(navegador.base, alvo);
     return item ? `<a class="ent ent-${item.tipo}" data-ent="${item.id}" href="${esc(enderecoDe(item))}">${rotulo}</a>` : '';
   }
-  let cartaoFlutuante = null;
-  function mostrarCartao(link) {
-    const item = navegador.base && navegador.base.todos.get(link.dataset.ent);
-    if (!item) return;
+  // O cartão de um registro, ao passar o mouse no nome: o lado, onde está e a situação de agora. Vazio sem registro.
+  function cartaoDoNome(id) {
+    const item = navegador.base && navegador.base.todos.get(id);
+    if (!item) return '';
     const e = navegador.estado;
     const linhas = [];
     if (item.tipo === 'pessoa') {
@@ -645,19 +590,8 @@
     } else if (item.tipo === 'faccao') linhas.push(['Quer', item.campos.quer], ['Rosto', item.campos.rosto]);
     else if (item.tipo === 'peca') linhas.push(['Onde está agora', agora(item, e, 'onde')], ['No começo', mudou(item, e, 'onde') ? item.campos.onde : '']);
     else if (item.tipo === 'lugar') linhas.push(['Onde fica', item.campos.distrito], ['Situação', agora(item, e, 'situacao')], ['Aparece', item.campos.aparece]);
-    cartaoFlutuante = cartaoFlutuante || Object.assign(document.createElement('div'), { className: 'ent-card' });
-    cartaoFlutuante.innerHTML = `<small>${NOMES_DOS_TIPOS[item.tipo]}</small><b>${esc(item.nome)}</b>${item.campos.quem || item.campos.oque ? `<p>${inline(item.campos.quem || item.campos.oque)}</p>` : ''}<dl>${linhas.filter(([, valor]) => valor).map(([rotulo, valor]) => `<dt>${rotulo}</dt><dd>${inline(valor)}</dd>`).join('')}</dl>${item.fala ? `<q>${inline(item.fala.replace(/^["“]|["”]$/g, ''))}</q>` : ''}`;
-    document.body.append(cartaoFlutuante);
-    const caixa = link.getBoundingClientRect();
-    const largura = Math.min(320, window.innerWidth - 16);
-    cartaoFlutuante.style.width = `${largura}px`;
-    cartaoFlutuante.style.left = `${Math.max(8, Math.min(window.innerWidth - largura - 8, caixa.left))}px`;
-    const altura = cartaoFlutuante.offsetHeight;
-    const abaixo = caixa.bottom + 6 + altura < window.innerHeight;
-    cartaoFlutuante.style.top = `${(abaixo ? caixa.bottom + 6 : Math.max(8, caixa.top - altura - 6)) + window.scrollY}px`;
-    cartaoFlutuante.hidden = false;
+    return `<small>${NOMES_DOS_TIPOS[item.tipo]}</small><b>${esc(item.nome)}</b>${item.campos.quem || item.campos.oque ? `<p>${inline(item.campos.quem || item.campos.oque)}</p>` : ''}<dl>${linhas.filter(([, valor]) => valor).map(([rotulo, valor]) => `<dt>${rotulo}</dt><dd>${inline(valor)}</dd>`).join('')}</dl>${item.fala ? `<q>${inline(item.fala.replace(/^["“]|["”]$/g, ''))}</q>` : ''}`;
   }
-  const esconderCartao = () => { if (cartaoFlutuante) cartaoFlutuante.hidden = true; };
 
   // ---------------- Citado em, nos cartões ----------------
   // Em Pessoas e facções e em Lugares e peças, cada cartão ganha a linha "Citado em" no fim. Os textos dos documentos
@@ -707,7 +641,6 @@
     documentosACitar = documentos;
     const pode = new Set(paginas);
     document.addEventListener('wiki:pagina', evento => {
-      esconderCartao();
       if (!pode.has(evento.detail.id)) return;
       const conteudo = document.getElementById('content');
       ligarNomes(conteudo);
@@ -719,11 +652,7 @@
     });
     document.addEventListener('wiki:ponto', evento => mostrarNoPino(evento.detail));
     document.addEventListener('wiki:mesa', evento => { if (evento.detail) usarMesa(evento.detail); });
-    document.addEventListener('mouseover', evento => { const link = evento.target.closest && evento.target.closest('a.ent'); if (link) mostrarCartao(link); });
-    document.addEventListener('mouseout', evento => { const link = evento.target.closest && evento.target.closest('a.ent'); if (link && !link.contains(evento.relatedTarget)) esconderCartao(); });
-    document.addEventListener('focusin', evento => { if (evento.target.matches && evento.target.matches('a.ent')) mostrarCartao(evento.target); });
-    document.addEventListener('focusout', esconderCartao);
-    window.addEventListener('scroll', esconderCartao, { passive: true });
+    nomes.ouvir(cartaoDoNome);
   }
 
   // Os relógios de agora: os da wiki (o mestre pode ter acabado de marcar um); antes de ela montar, os da mesa lida.

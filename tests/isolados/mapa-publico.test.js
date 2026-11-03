@@ -144,6 +144,8 @@ test('mapa offline: instalação guarda só renderer leve, nunca baixa os tiles;
   const e = serviceWorker(); e.stores.set('fieldbook-jogadores-v16', {});
   await e.evento('install'); await e.evento('activate');
   assert.ok(e.precache.includes('/nightcity-map.js'));
+  // O arquivo comum dos nomes (as duas wikis carregam) vai junto; a base da campanha, que é do mestre, não.
+  assert.ok(e.precache.includes('/wiki-nomes.js')); assert.equal(e.precache.includes('/campanha-base.js'), false);
   assert.equal(e.precache.some(url => url.startsWith('/assets/nightcity-map/tiles/')), false);
   assert.equal(e.precache.includes('/index.html'), false); assert.equal(e.precache.includes('/campaign-map.js'), false);
   assert.equal(e.fetches.length, 0); assert.equal(e.skipWaiting, 1); assert.equal(e.claim, 1);

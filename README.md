@@ -82,9 +82,17 @@ Na wiki do mestre, **Campanha → Visão dos jogadores** é o painel do que os j
 
 Os jogadores entram com o código deles pelo botão **Entrar**, no canto de cima (ou na página inicial). Sem código, a pessoa vê só a aba **Regras**. Veja **Conta e navegação**.
 
+**Na página dos jogadores, os nomes revelados viram link:**
+- **Onde:** no Resumo, nas Sessões, nas Notícias e handouts, nas Notícias de Night City e no **Arquivo**, uma vez por nome em cada seção.
+  - Passar o mouse (ou o foco do teclado) mostra o cartão com o que o grupo sabe: o nome, o "Como o grupo conhece" ou o distrito, e o começo do texto.
+  - O clique leva ao Arquivo, no nome.
+- **O Arquivo** (Campanha → Arquivo): as pessoas e os lugares revelados, com o texto de cada um e o "Citado em": as sessões e as notícias da campanha onde o nome aparece, no texto ou no título.
+- **Só o revelado:** a página só conhece o que o servidor mandou. O nome que o grupo não conhece fica como texto, e o cartão não diz mais do que o item publicado.
+- **Só o nome publicado:** vira link o nome como está no Publicar (no item da base, o "Nome para os jogadores"). Um nome mais curto ("Wakako", de "Wakako Okada") não liga.
+
 Os jogadores também veem a aba **Regras** inteira (Escudo do mestre, combate, netrunning, armas, cyberware...), sem as notas de campanha. Nas páginas de regras da wiki do mestre, essas notas aparecem com **contorno tracejado vermelho**: é o que só você vê. Elas ficam no `index.html` (em `gmNotes`), e não nos arquivos `system-*.js`, que os jogadores baixam.
 
-**Não escreva segredos** em `jogadores.html`, `wiki-app.js`, `wiki.css` ou `system-*.js`: esses arquivos vão para os aparelhos dos jogadores.
+**Não escreva segredos** em `jogadores.html`, `wiki-app.js`, `wiki-nomes.js`, `wiki.css` ou `system-*.js`: esses arquivos vão para os aparelhos dos jogadores.
 
 ## Mapa de Night City
 
@@ -136,7 +144,8 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `documentos/<campanha>/`, `documentos/night-city/` | Os documentos de cada campanha nova, e os de todas. Veja **Campanhas**. |
 | `index.html` | A wiki do mestre. As páginas de resumo do Protocolo Morana e as notas de campanha nas regras (`gmNotes`) estão escritas aqui; os documentos completos são lidos dos `.md`. |
 | `campanhas-painel.js` | A página Campanhas e as páginas das campanhas novas (visão geral, notas, documentos) na wiki do mestre. |
-| `jogadores.html` | A visão dos jogadores: resumo, pessoas, mapa e notícias publicados pelo mestre na campanha do jogador, as Notícias de Night City e as regras. |
+| `jogadores.html` | A visão dos jogadores: resumo, pessoas, arquivo, mapa e notícias publicados pelo mestre na campanha do jogador, as Notícias de Night City e as regras. Os nomes revelados viram link, com o cartão. |
+| `wiki-nomes.js` | Os nomes que viram link, com o cartão ao passar o mouse: o código, sem dados, que as duas wikis carregam. A do mestre liga os nomes da base (`campanha-base.js`); a dos jogadores, os das pessoas e dos lugares revelados. |
 | `jogadores-painel.js` | O painel "Visão dos jogadores" da wiki do mestre (o Publicar de cada campanha, com os itens da base, e as Notícias de Night City). |
 | `jogadores-mestre.json`, `jogadores.json` | O Publicar de antes das campanhas. Ficam no git como ponto de partida do Protocolo Morana num servidor novo; o Publicar de agora grava em `campanhas/<id>/publicar.json`, na pasta de dados. |
 | `wiki-app.js`, `wiki.css` | O motor e o visual da wiki, usados pelas duas páginas. As últimas camadas do `wiki.css` são o visual de 2026. A parte 1 é o padrão da Loja: fundo quase preto, amarelo, ciano e vermelho, Oxanium no texto e Share Tech Mono nos rótulos (as duas do Google Fonts, licença OFL, em `cyberpunk-css-main/cyberpunk-css-main/fonts/`). A parte 2 segue os exemplos do Resumo, de Personagens, da Ficha e do Escudo: a barra de cima de ponta a ponta, a barra lateral em caixa normal (com as abas Campanhas e Sistema), os títulos em caixa normal e os botões vazados para o que só navega. |
@@ -145,7 +154,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `api-netwire-ia.js` | A IA que rascunha as mensagens, com `fetch` e sem dependências, em dois provedores: o Claude (API de Mensagens da Anthropic) e o Gemini (API Interactions do Google). Monta o contexto que o mestre marcou, pede em JSON com formato fixo, aproveita o cache de cada API e calcula o custo estimado (os preços do Gemini mudam nas datas que o Google anunciou). Liga com `ANTHROPIC_API_KEY` e/ou `GEMINI_API_KEY` no servidor. |
 | `netwire.js` | No navegador: a página **Mensagens** dos jogadores (`#pvMensagens/<canal>`) e a **Caixa do NetWire** do mestre (`#caixa`). Também o selo de não lidas (na conta: o que cada jogador já leu em cada canal). |
 | `campaign-map.js` | Os pontos do mapa de operações: a posição, a categoria, o código, o ato e a nota de cada um. O nome, o distrito, o texto, o gancho, o encontro e as pistas vêm do lugar da base que tem o ponto no `Mapa` (`#campaignMap/<ponto>` abre o mapa já no ponto). |
-| `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão; mostra no fim de cada cartão onde o nome aparece ("Citado em"); liga as Relações nos dois sentidos; monta os pinos do mapa com os lugares; monta o que vai para os jogadores dos itens da base (o servidor também usa); confere a base e os documentos (a Conferência da base); grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
+| `campanha-base.js` | Lê a base da campanha e monta as visões dela; liga os nomes nos documentos, com o cartão (pelo `wiki-nomes.js`); mostra no fim de cada cartão onde o nome aparece ("Citado em"); liga as Relações nos dois sentidos; monta os pinos do mapa com os lugares; monta o que vai para os jogadores dos itens da base (o servidor também usa); confere a base e os documentos (a Conferência da base); grava o Estado da campanha na mesa do servidor. Só a wiki do mestre carrega; os testes e o build do Foundry também usam. |
 | `nightcity-map-base.webp`, `nightcity-map-reference.webp` | Os mapas (WebP, 2,7 MB cada; eram JPEG de 5,3 MB). O dos jogadores fica guardado no aparelho depois da primeira vez. |
 | `nightcity-map.js`, `assets/nightcity-map/tiles/` | O mapa detalhado de Night City, padrão nas duas visões: 16.121 tiles locais (137,3 MiB), com cinco níveis de detalhe. Só a região visível é baixada; o aparelho guarda até 768 tiles para revisitar sem rede. O seletor mantém o mapa base e, para o mestre, a versão com referências. Ao substituir os tiles, atualizar a edição `?v=` em `nightcity-map.js`, `sw.js` e `server.js`: cada edição tem cache imutável. |
 | `system-rules.js` | As regras da mesa para consulta: uma regra só, com o Mission Kit valendo sobre o RED quando os dois conflitam. Escudo do mestre, perícias, testes, combate, dano e cura, Humanidade (a tabela da ciberpsicose e as de perda e ganho do Kit), terapia e drogas, netrunning (o do RED com os quickhacks no Neuroport do Kit), economia (com o Night Market), criação, Lifepath e Avanço. Cada seção indica a página do PDF traduzido ou do Kit. |

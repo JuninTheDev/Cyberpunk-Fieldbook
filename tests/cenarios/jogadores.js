@@ -178,6 +178,105 @@ module.exports = async ({ edge, servidores, r }) => {
       const ok = Boolean(hideo) && hideo.texto === endo.campos.publico && !pessoas.some(item => item.nome === endo.nome) && ['armazem-de-kabuki', 'consultorio-do-ricky'].every(id => pinos.some(title => title.startsWith(base.todos.get(id).nome)));
       return [ok, `${pessoas.length} pessoas; pinos: ${pinos.join(', ')}`];
     });
+
+    // O arquivo dos jogadores (B7 do worldbuilding): o resumo, uma sessão e uma notícia de teste citam os nomes revelados
+    // (a pessoa da base e os lugares) e um não revelado (Mina Kuroda, digitada e escondida no Publicar). Wakako Okada só
+    // está no título da sessão, e o texto dela no Arquivo cita Hideo Mori.
+    const SESSAO = { id: 'sessao-do-arquivo', titulo: 'Sessão do arquivo: Wakako Okada', data: 'hoje', texto: 'Hideo Mori levou o grupo ao Armazém de Kabuki. Mina Kuroda olhava de longe. Hideo Mori voltou sozinho.', publicada: true };
+    const NOTICIA = { id: 'noticia-do-arquivo', titulo: 'Boletim do arquivo', data: 'hoje', texto: 'Tiros perto do Consultório do Ricky.', publicada: true };
+    await r.passo('jogador: os nomes revelados viram link no resumo, nas sessões e nas notícias, com o cartão do que o grupo sabe; o nome não revelado fica como texto', async () => {
+      const { atualizado: _data, ...mestre } = await lerPublicar();
+      const mina = mestre.npcs.find(item => item.nome === 'Mina Kuroda');
+      const npcs = mestre.npcs.map(item => (item.nome === 'Wakako Okada' ? { ...item, texto: `${item.texto} Confia em Hideo Mori.` } : item));
+      const resposta = await publicar({ ...mestre, npcs, resumo: `${mestre.resumo}\n\nNo Pachinko de Wakako, Hideo Mori deixou um recado.`, sessoes: [...(mestre.sessoes || []), SESSAO], noticias: [...mestre.noticias, NOTICIA] });
+      // Outro endereço, para a página ler o Publicar de novo na hora.
+      await edge.ir(`${servidores.rede}/?arquivo#pvSessions`, 1500);
+      for (let i = 0; i < 40 && !(await edge.evaluate(`/Sessão do arquivo/.test(document.getElementById('content').textContent) && !!window.wikiNomes`).catch(() => false)); i++) await edge.sleep(250);
+      const lido = await edge.evaluate(`(async () => {
+        const links = secao => [...secao.querySelectorAll('a.ent')].map(link => [link.textContent, link.getAttribute('href'), link.className]);
+        const secao = (toc) => [...document.querySelectorAll('#content .section')].find(item => item.dataset.toc === toc);
+        const aberto = () => Boolean(document.querySelector('.ent-card:not([hidden])'));
+        const sessao = secao(${JSON.stringify(SESSAO.titulo)});
+        const naSessao = links(sessao);
+        const minaComoTexto = sessao.textContent.includes('Mina Kuroda') && ![...sessao.querySelectorAll('a')].some(link => link.textContent.includes('Mina'));
+        const primeiro = sessao.querySelector('a.ent');
+        primeiro.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        const cartao = document.querySelector('.ent-card:not([hidden])');
+        const textoDoCartao = cartao ? cartao.textContent : '';
+        primeiro.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+        const escondeu = !aberto();
+        // Com o teclado: o foco no link mostra o cartão, e sair dele esconde.
+        primeiro.focus();
+        const comFoco = aberto();
+        primeiro.blur();
+        const semFoco = !aberto();
+        // Rolar a página também esconde.
+        primeiro.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        const antesDeRolar = aberto();
+        window.dispatchEvent(new Event('scroll'));
+        const rolouEscondeu = antesDeRolar && !aberto();
+        // Trocar de página esconde o cartão aberto.
+        primeiro.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        const antesDeTrocar = aberto();
+        wikiApp.openPage('pvNews');
+        const trocouEscondeu = antesDeTrocar && !aberto();
+        await new Promise(r => setTimeout(r, 300));
+        const naNoticia = links(secao('Boletim do arquivo'));
+        wikiApp.openPage('pvHome');
+        await new Promise(r => setTimeout(r, 300));
+        const noResumo = links(secao('Resumo'));
+        // Uma vez por nome em cada seção: Wakako Okada também está na Última sessão (no título dela).
+        const naUltimaSessao = links(secao('Última sessão')).map(([nome]) => nome);
+        // O link leva ao Arquivo, na seção do nome.
+        wikiApp.openPage('pvSessions');
+        await new Promise(r => setTimeout(r, 300));
+        secao(${JSON.stringify(SESSAO.titulo)}).querySelector('a.ent').click();
+        await new Promise(r => setTimeout(r, 500));
+        return { naSessao, minaComoTexto, textoDoCartao, escondeu, comFoco, semFoco, rolouEscondeu, trocouEscondeu, naNoticia, noResumo, naUltimaSessao, pagina: wikiApp.currentPage(), endereco: location.hash };
+      })()`);
+      const endo = base.todos.get('endo');
+      const casos = {
+        'o Publicar de teste': resposta.status === 200 && Boolean(mina) && !mina.revelado,
+        'na sessão, uma vez por nome': JSON.stringify(lido.naSessao) === JSON.stringify([['Hideo Mori', '#pvArquivo/hideo-mori', 'ent ent-pessoa'], ['Armazém de Kabuki', '#pvArquivo/armazem-de-kabuki', 'ent ent-lugar']]),
+        'o nome não revelado fica como texto': lido.minaComoTexto,
+        'o cartão mostra o que o grupo sabe': lido.textoDoCartao.startsWith('PessoaHideo Mori') && lido.textoDoCartao.includes(endo.campos.publico.slice(0, 60)) && !lido.textoDoCartao.includes(endo.nome) && lido.escondeu,
+        'o cartão com o foco; rolar e trocar de página esconde': lido.comFoco && lido.semFoco && lido.rolouEscondeu && lido.trocouEscondeu,
+        'na notícia': JSON.stringify(lido.naNoticia) === JSON.stringify([['Consultório do Ricky', '#pvArquivo/consultorio-do-ricky', 'ent ent-lugar']]),
+        // O resumo de partida já cita Wakako Okada (revelada no começo do cenário), em negrito.
+        'no resumo': JSON.stringify(lido.noResumo.map(([nome]) => nome)) === JSON.stringify(['Wakako Okada', 'Pachinko de Wakako', 'Hideo Mori']),
+        'de novo na seção seguinte': JSON.stringify(lido.naUltimaSessao) === JSON.stringify(['Wakako Okada']),
+        'o link abre o Arquivo': lido.pagina === 'pvArquivo' && lido.endereco === '#pvArquivo/hideo-mori'
+      };
+      const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome);
+      return [!errados.length, errados.length ? `${errados.join(', ')}: ${JSON.stringify(lido)}` : `${Object.keys(casos).length} casos`];
+    });
+    await r.passo('jogador: o Arquivo mostra as pessoas, as facções e os lugares revelados, com o "Citado em" nas sessões e nas notícias', async () => {
+      await abrir(edge, 'pvArquivo', 400);
+      await edge.shot('arquivo-jogador');
+      const lido = await edge.evaluate(`[...document.querySelectorAll('#content .section')].map(secao => ({ nome: secao.dataset.toc, tipo: (secao.querySelector('.pv-news-date') || {}).textContent || '', citado: [...secao.querySelectorAll('.bs-citado a')].map(link => link.getAttribute('href')), links: [...secao.querySelectorAll('a.ent')].map(link => link.textContent) }))`);
+      const menu = await edge.evaluate(`({ item: Boolean(document.querySelector('.nav-item[data-page="pvArquivo"]')), aba: (document.querySelector('.top-tab[aria-current="page"]') || { dataset: {} }).dataset.topTab })`);
+      const visao = await (await fetch(`${servidores.local}/api/visao?campanha=morana`)).json();
+      const de = nome => lido.find(item => item.nome === nome) || {};
+      const armazem = base.todos.get('armazem-de-kabuki');
+      const naSessao = JSON.stringify(['#pvSessions/sessao-do-arquivo-wakako-okada']);
+      const casos = {
+        'no menu e na aba Campanha': menu.item && menu.aba === 'campanha',
+        'os revelados, as pessoas antes': JSON.stringify(lido.map(item => item.nome)) === JSON.stringify([...visao.npcs, ...visao.lugares].map(item => item.nome)),
+        'sem o não revelado': !lido.some(item => item.nome === 'Mina Kuroda'),
+        'a pessoa': de('Hideo Mori').tipo === 'Pessoa' && JSON.stringify(de('Hideo Mori').citado) === naSessao,
+        // O nome no próprio cartão não vira link (o texto do Hideo Mori diz "Hideo Mori"), nem o nome dentro de um link
+        // (o "Citado em" do Hideo Mori leva à sessão com Wakako Okada no título); o de outro, no texto, sim.
+        'sem link para si mesmo nem dentro de link': JSON.stringify(de('Hideo Mori').links) === '[]',
+        'o nome de outro vira link': JSON.stringify(de('Wakako Okada').links) === JSON.stringify(['Hideo Mori']),
+        // Wakako Okada está só no título da sessão.
+        'o nome no título da sessão': JSON.stringify(de('Wakako Okada').citado) === naSessao,
+        'o lugar da sessão': de(armazem.nome).tipo === `Lugar · ${armazem.campos.distrito}` && JSON.stringify(de(armazem.nome).citado) === naSessao,
+        'o lugar da notícia': JSON.stringify(de('Consultório do Ricky').citado) === JSON.stringify(['#pvNews/boletim-do-arquivo']),
+        'quem não aparece fica sem a linha': JSON.stringify(de('Pachinko de Wakako').citado) === '[]'
+      };
+      const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome);
+      return [!errados.length, errados.length ? `${errados.join(', ')}: ${JSON.stringify(lido)}` : `${lido.length} no Arquivo`];
+    });
     await r.passo('jogador: regras sem notas de campanha nem segredos', async () => {
       await edge.evaluate(`document.querySelector('#tab-system').click()`);
       const vazamentos = [];
@@ -228,12 +327,16 @@ module.exports = async ({ edge, servidores, r }) => {
       return [resposta.status === 200 && !sobras.length, `HTTP ${resposta.status}${resposta.status === 200 ? '' : `: ${await resposta.text()}`}${sobras.length ? ` | sobrou ${sobras.join(', ')}` : ''}`];
     });
     await edge.celular(true);
-    await r.passo('jogador no celular: sem rolagem lateral', async () => { await abrir(edge, 'pvPeople', 400); return [await semRolagemLateral(edge), '']; });
+    await r.passo('jogador no celular: sem rolagem lateral', async () => {
+      const com = [];
+      for (const pagina of ['pvPeople', 'pvArquivo']) { await abrir(edge, pagina, 400); if (!(await semRolagemLateral(edge))) com.push(pagina); }
+      return [!com.length, com.join(', ')];
+    });
     await edge.celular(false);
 
     // ---------------- Controle de acesso (sem navegador) ----------------
     const status = async (url, options = {}) => (await fetch(url, { redirect: 'manual', ...options })).status;
-    const liberados = ['/', '/jogadores.html', '/wiki-app.js', '/wiki.css', '/system-2077.js', '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/fonts/Oxanium.woff2', '/netwire.css', '/netwire.js', '/cyberpunk-css-main/cyberpunk-css-main/fonts/VT323.woff2'];
+    const liberados = ['/', '/jogadores.html', '/wiki-app.js', '/wiki.css', '/system-2077.js', '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/fonts/Oxanium.woff2', '/netwire.css', '/netwire.js', '/wiki-nomes.js', '/cyberpunk-css-main/cyberpunk-css-main/fonts/VT323.woff2'];
     // O jogadores.json de antes das campanhas não é mais público: o que o mestre publica vem pela API, por campanha.
     const bloqueados = ['/index.html', '/jogadores.json', '/jogadores-mestre.json', '/jogadores-painel.js', '/campanhas-painel.js', '/mestre-npcs.js', '/campaign-map.js', '/server.js', '/api-campanhas.js', '/documentos/morana/base-da-campanha.md', '/.git/config', '/cyberpunk-css-main/cyberpunk-css-main/fonts/..%5C..%5C..%5Cindex.html', '/%2e%2e/%2e%2e/Windows/win.ini'];
     await r.passo('acesso: arquivos dos jogadores liberados pela rede', async () => {
