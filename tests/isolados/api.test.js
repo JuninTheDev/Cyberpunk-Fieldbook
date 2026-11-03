@@ -144,3 +144,106 @@ test('o resumo do personagem traz a Humanidade (EMP × 10 sem ficha da mesa), pa
   const semEmp = (await servidor.pedir('/api/personagens', { cookie: jogador.cookie })).json.personagens.find(item => item.id === vazio.json.personagem.id);
   assert.equal(semEmp.numeros.humanidade, null);
 });
+
+// A Visão dos jogadores lê da base (B6 do worldbuilding): o item do Publicar que vem de um registro guarda o id dele, e
+// o servidor monta o que vai para os jogadores com a base de verdade (documentos/morana/base-da-campanha.md) e os pontos
+// do mapa do mestre (campaign-map.js).
+test('a Visão dos jogadores lê da base: dos registros revelados, só o nome, o "Para os jogadores" e a posição do ponto', async t => {
+  const servidor = criarServidorIsolado(t);
+  const mestre = await servidor.entrarComoMestre();
+  const raiz = path.resolve(__dirname, '../..');
+  const arquivoDaBase = path.join(raiz, 'documentos', 'morana', 'base-da-campanha.md');
+  const base = require(path.join(raiz, 'campanha-base.js')).ler(fs.readFileSync(arquivoDaBase, 'utf8'));
+  const registro = id => base.todos.get(id);
+  const mapa = { window: {} };
+  require('node:vm').runInNewContext(fs.readFileSync(path.join(raiz, 'campaign-map.js'), 'utf8'), mapa);
+  const ponto = id => mapa.window.campaignMapData.markers.find(marker => marker.id === id);
+  const pachinko = registro('pachinko-de-wakako');
+  const doMapa = ponto(pachinko.campos.mapa);
+  const daBase = {
+    resumo: '', noticias: [], sessoes: [],
+    npcs: [
+      { id: 'p-wakako', base: 'wakako-okada', papel: 'Quem contratou o grupo', nota: 'NOTA-DO-MESTRE', revelado: true },
+      // O que vier a mais no item não vai: o texto e o Lado são do registro.
+      { id: 'p-endo', base: 'endo', nome: 'O mensageiro', texto: 'TEXTO-INJETADO', lado: 'LADO-INJETADO', revelado: true },
+      { id: 'p-mina', base: 'mina-kuroda', revelado: false },
+      { id: 'p-maleta', base: 'a-maleta', revelado: true },
+      { id: 'p-sumiu', base: 'registro-que-nao-existe', revelado: true },
+      { id: 'p-digitado', nome: 'Tomas Vale', papel: 'Vizinho', texto: 'Digitado no Publicar.', nota: 'NOTA-DO-MESTRE', revelado: true }
+    ],
+    lugares: [
+      { id: 'l-pachinko', base: 'pachinko-de-wakako', x: 1, y: 1, revelado: true },
+      { id: 'l-ricky', base: 'consultorio-do-ricky', x: 2360, y: 1500, revelado: true },
+      { id: 'l-armazem', base: 'armazem-de-kabuki', revelado: false }
+    ]
+  };
+  const publicar = mestreView => servidor.pedir('/api/campanhas/morana/publicar', { method: 'POST', cookie: mestre, body: { mestre: mestreView } });
+  assert.equal((await publicar(daBase)).status, 200);
+  const jogador = await criarJogador(servidor, mestre, 'Ana');
+  const visao = await servidor.pedir('/api/visao?campanha=morana', { cookie: jogador.cookie });
+  assert.equal(visao.status, 200);
+  assert.deepEqual(visao.json.npcs, [
+    { id: 'p-wakako', nome: 'Wakako Okada', papel: 'Quem contratou o grupo', texto: registro('wakako-okada').campos.publico },
+    { id: 'p-endo', nome: 'O mensageiro', papel: '', texto: registro('endo').campos.publico },
+    { id: 'p-digitado', nome: 'Tomas Vale', papel: 'Vizinho', texto: 'Digitado no Publicar.' }
+  ]);
+  assert.deepEqual(visao.json.lugares, [
+    { id: 'l-pachinko', nome: 'Pachinko de Wakako', distrito: pachinko.campos.distrito, x: doMapa.x, y: doMapa.y, texto: pachinko.campos.publico },
+    // Sem ponto no mapa: a posição do item.
+    { id: 'l-ricky', nome: 'Consultório do Ricky', distrito: registro('consultorio-do-ricky').campos.distrito, x: 2360, y: 1500, texto: registro('consultorio-do-ricky').campos.publico }
+  ]);
+  // Nunca chegam ao jogador: o registro não revelado, a nota, o texto do mestre, o Lado e as relações do registro, nem
+  // o id da base.
+  const recebido = JSON.stringify(visao.json);
+  const proibidos = ['NOTA-DO-MESTRE', 'TEXTO-INJETADO', 'LADO-INJETADO', 'p-mina', 'l-armazem', 'p-maleta', 'p-sumiu', '"base"',
+    registro('wakako-okada').texto, registro('endo').texto, pachinko.texto, registro('wakako-okada').campos.relacoes, registro('wakako-okada').campos.lado];
+  assert.deepEqual(proibidos.filter(texto => recebido.includes(JSON.stringify(texto).slice(1, -1))), []);
+  // O mestre continua lendo o Publicar como gravou: o id do registro e a nota.
+  const doMestre = (await servidor.pedir('/api/campanhas/morana/publicar', { cookie: mestre })).json;
+  assert.deepEqual(doMestre.npcs[0], daBase.npcs[0]);
+  // A base que muda (o publicar.bat manda o arquivo novo) atualiza a página dos jogadores, quando algum item revelado
+  // vem dela.
+  const arquivoDoPublicar = path.join(servidor.dados, 'campanhas', 'morana', 'publicar.json');
+  const antigo = () => fs.writeFileSync(arquivoDoPublicar, JSON.stringify({ ...JSON.parse(fs.readFileSync(arquivoDoPublicar, 'utf8')), atualizado: '2000-01-01T00:00:00.000Z' }));
+  antigo();
+  assert.equal((await servidor.pedir('/api/visao?campanha=morana', { cookie: jogador.cookie })).json.atualizado, new Date(fs.statSync(arquivoDaBase).mtimeMs).toISOString());
+  assert.equal((await publicar({ ...daBase, npcs: daBase.npcs.slice(-1), lugares: daBase.lugares.map(item => ({ ...item, revelado: false })) })).status, 200);
+  antigo();
+  const soDigitado = (await servidor.pedir('/api/visao?campanha=morana', { cookie: jogador.cookie })).json;
+  assert.equal(soDigitado.atualizado, '2000-01-01T00:00:00.000Z');
+  assert.deepEqual(soDigitado.npcs, [{ id: 'p-digitado', nome: 'Tomas Vale', papel: 'Vizinho', texto: 'Digitado no Publicar.' }]);
+});
+
+// A base de agora: o arquivo que mudou (o publicar.bat mandou outro) vale na próxima leitura, sem publicar de novo. Os
+// pontos do mapa do mestre são só do Protocolo Morana, e sem o arquivo da base o item dela não vai. As campanhas e os
+// documentos ficam na pasta temporária do servidor isolado.
+test('a Visão dos jogadores lê a base de agora, e os pontos do mapa são só do Protocolo Morana', async t => {
+  const { dados } = criarServidorIsolado(t);
+  const { createCampaigns } = require('../../api-campanhas');
+  const docs = path.join(dados, 'documentos');
+  const writeJsonAtomic = async (arquivo, valor) => { fs.mkdirSync(path.dirname(arquivo), { recursive: true }); fs.writeFileSync(arquivo, JSON.stringify(valor)); };
+  const campaigns = createCampaigns({ dataDir: path.join(dados, 'direto'), writeJsonAtomic, docsDir: docs });
+  const escreverBase = (campanha, publico, quando) => {
+    const arquivo = path.join(docs, campanha, 'base-da-campanha.md');
+    fs.mkdirSync(path.dirname(arquivo), { recursive: true });
+    fs.writeFileSync(arquivo, ['## Lugares', '### Bar Azul', '- **Distrito:** Watson', '- **Mapa:** wakako-jig-jig', `- **Para os jogadores:** ${publico}`, ''].join('\n'));
+    fs.utimesSync(arquivo, quando, quando);
+  };
+  const mapa = { window: {} };
+  require('node:vm').runInNewContext(fs.readFileSync(path.resolve(__dirname, '../../campaign-map.js'), 'utf8'), mapa);
+  const ponto = mapa.window.campaignMapData.markers.find(marker => marker.id === 'wakako-jig-jig');
+  for (const id of ['morana', 'outra']) await campaigns.writePublish(id, { resumo: '', npcs: [], noticias: [], lugares: [{ id: 'l1', base: 'bar-azul', x: 10, y: 20, revelado: true }] });
+  assert.deepEqual(campaigns.readPublish('morana').publicado.lugares, []);
+  assert.equal(campaigns.readPublish('morana').daBase, null);
+  const antes = new Date('2026-01-01T00:00:00.000Z');
+  const depois = new Date('2026-02-01T00:00:00.000Z');
+  escreverBase('morana', 'O bar de antes.', antes);
+  escreverBase('outra', 'O bar da outra.', antes);
+  assert.deepEqual(campaigns.readPublish('morana').publicado.lugares, [{ id: 'l1', nome: 'Bar Azul', distrito: 'Watson', x: ponto.x, y: ponto.y, texto: 'O bar de antes.' }]);
+  assert.equal(campaigns.readPublish('morana').daBase, antes.toISOString());
+  // Na outra campanha, o ponto do mapa do Morana não vale: fica a posição do item.
+  assert.deepEqual(campaigns.readPublish('outra').publicado.lugares, [{ id: 'l1', nome: 'Bar Azul', distrito: 'Watson', x: 10, y: 20, texto: 'O bar da outra.' }]);
+  escreverBase('morana', 'O bar de depois.', depois);
+  assert.equal(campaigns.readPublish('morana').publicado.lugares[0].texto, 'O bar de depois.');
+  assert.equal(campaigns.readPublish('morana').daBase, depois.toISOString());
+});

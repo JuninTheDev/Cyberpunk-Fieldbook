@@ -16,6 +16,8 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
+const campaignBase = require('./campanha-base');
 
 // nomeJogadores: o nome que os jogadores veem (o do mestre pode ser segredo: Morana é o vírus da campanha). Os
 // jogadores do Protocolo Morana viam "Night City, 2077" antes das campanhas e continuam vendo.
@@ -39,8 +41,9 @@ const pick = (items, flag) => (Array.isArray(items) ? items : []).filter(item =>
 const publishedOf = mestre => ({ resumo: String(mestre.resumo || ''), npcs: pick(mestre.npcs, FLAGS.npcs), lugares: pick(mestre.lugares, FLAGS.lugares), noticias: pick(mestre.noticias, FLAGS.noticias).reverse(), sessoes: pick(mestre.sessoes, FLAGS.sessoes) });
 
 // dataDir: a pasta dos personagens e códigos. legacyDir: onde o Publicar gravava antes das campanhas (no servidor e
-// no PC é a mesma; nos testes, os personagens ficam numa pasta temporária).
-function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
+// no PC é a mesma; nos testes, os personagens ficam numa pasta temporária). docsDir: a pasta documentos/ do projeto,
+// com a base de cada campanha.
+function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic, docsDir = '' }) {
   const listFile = path.join(dataDir, 'campanhas.json');
   const newsFile = path.join(dataDir, 'noticias-night-city.json');
   const folder = id => path.join(dataDir, 'campanhas', id);
@@ -99,7 +102,36 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic }) {
 
   // ---------------- Publicar ----------------
   const withoutDate = data => { if (!data || typeof data !== 'object') return null; const { atualizado: _date, ...rest } = data; return rest; };
+  // O que vai para os jogadores, com os itens de Pessoas e de Lugares no mapa que vêm da base montados na hora (a base
+  // de agora: o que o publicar.bat mandou de novo vale sem publicar outra vez; campanha-base.js, visaoDosJogadores).
+  // daBase: quando a base mudou, se algum item revelado vem dela (a página dos jogadores se atualiza pelo "atualizado").
   function readPublish(id) {
+    const read = readStoredPublish(id);
+    if (!['npcs', 'lugares'].some(kind => (read.publicado[kind] || []).some(item => item && item.base))) return read;
+    const base = baseOf(id);
+    return { ...read, publicado: campaignBase.visaoDosJogadores(base && base.value, read.publicado, pointsOf(id)), daBase: base ? new Date(base.time).toISOString() : null };
+  }
+  // A base e os pontos do mapa, lidos de novo só quando o arquivo muda: { value, time }, ou null sem o arquivo.
+  const cache = new Map();
+  function readChanged(file, parse) {
+    let time;
+    try { time = fs.statSync(file).mtimeMs; } catch { return null; }
+    const known = cache.get(file);
+    if (known && known.time === time) return known;
+    let value = null;
+    try { value = parse(fs.readFileSync(file, 'utf8')); } catch { /* um arquivo que não lê vale como vazio */ }
+    cache.set(file, { value, time });
+    return cache.get(file);
+  }
+  const baseOf = id => (docsDir ? readChanged(path.join(docsDir, id, 'base-da-campanha.md'), campaignBase.ler) : null);
+  // Os pontos do mapa do mestre (campaign-map.js, que define window.campaignMapData) são do Protocolo Morana.
+  const MAP_FILE = path.join(__dirname, 'campaign-map.js');
+  function pointsOf(id) {
+    if (id !== FIRST.id) return new Map();
+    const read = readChanged(MAP_FILE, text => { const sandbox = { window: {} }; vm.runInNewContext(text, sandbox, { timeout: 1000 }); return sandbox.window.campaignMapData.markers; });
+    return new Map(((read && read.value) || []).map(marker => [marker.id, { x: Number(marker.x) || 0, y: Number(marker.y) || 0 }]));
+  }
+  function readStoredPublish(id) {
     const data = readFile(path.join(folder(id), 'publicar.json'));
     if (data && data.mestre) return { mestre: { ...emptyView(), ...data.mestre }, publicado: { ...emptyView(), ...(data.publicado || publishedOf(data.mestre)) }, atualizado: data.atualizado || null };
     if (id === FIRST.id) {

@@ -346,7 +346,7 @@ th.current, td.current { background: var(--yellow) !important; color: #090b0c !i
 .pv-row.on { border-left-color: var(--cyan); }
 .pv-row-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 8px; }
 .pv-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font: 12px Oxanium, Consolas, monospace; text-transform: uppercase; cursor: pointer; }
-.pv-row-head select { max-width: 260px; padding: 5px 8px; border: 1px solid #48504e; background: #171b1b; color: var(--text); font: 12px BlenderProBook, sans-serif; }
+.pv-row-head select, .pv-base-pick { max-width: 260px; padding: 5px 8px; border: 1px solid #48504e; background: #171b1b; color: var(--text); font: 12px BlenderProBook, sans-serif; }
 .pv-remove { margin-left: auto; padding: 5px 9px; border: 1px solid #5a3a3f; background: transparent; color: var(--coral); cursor: pointer; font: 11px Oxanium, Consolas, monospace; text-transform: uppercase; }
 .pv-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; }
 .pv-field { display: grid; gap: 3px; }

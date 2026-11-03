@@ -264,6 +264,77 @@ async function validarBase({ raiz, r }) {
     return [!errados.length, errados.slice(0, 4).join(' · ') || `${Object.keys(casos).length} casos; ${reais.length} pontos do mapa, cada um com o lugar: ${reais.map(marker => `${marker.code} ${marker.title}`).join(', ')}`];
   });
 
+  await r.passo('A Visão dos jogadores lê da base: o item de Pessoas ou de Lugares no mapa que vem de um registro leva só o nome (ou o que o mestre escreveu), o "Para os jogadores" e, no lugar, o distrito e a posição do ponto; o registro que falta ou de outro tipo não vai, e o item digitado passa como está', async () => {
+    const pequena = B.ler([
+      '## Pessoas', '### Ana Lobo', '- **Também:** Ana', '- **Quem é:** Dona do Bar Azul', '- **Lado:** Arasaka em segredo', '- **Relações:** Bar Azul (dona)',
+      '- **Para os jogadores:** A mulher do [[Bar Azul]], sempre com o [[Beto Sombra|homem de chapéu]]. Veja [a ficha](#npcs/ana-lobo), [o bar](base-da-campanha.md#bar-azul) e [o canal](https://exemplo.com/ana).', '',
+      'O texto do mestre: ela trabalha para a Arasaka.', '',
+      '### Beto Sombra', '- **Quem é:** O capanga', '',
+      '## Facções', '### Os Lobos', '- **Quer:** O bar', '',
+      '## Lugares', '### Bar Azul', '- **Distrito:** Watson', '- **Mapa:** bar', '- **Para os jogadores:** Um bar pequeno.', '', 'A conta fica embaixo do balcão.', '',
+      '### Beco', '- **Distrito:** Kabuki, atrás do [[Bar Azul]]', '',
+      '### Porão', '- **Mapa:** sumido', '',
+      '## Peças de Morana', '### A Mala', '- **O que é:** Uma mala', '- **Onde:** No bar', '',
+      '## Segredos', '### O cofre', '- **Revela:** Sessão 2', '', 'Ana guarda o cofre.'
+    ].join('\n'));
+    const digitadaPessoa = { id: 'n8', nome: 'Digitada', papel: 'Vizinha', texto: 'Digitado no Publicar.' };
+    const digitadoLugar = { id: 'l5', nome: 'Digitado', distrito: 'Pacifica', x: 5, y: 6, texto: 'Digitado.' };
+    const noticias = [{ id: 'n', titulo: 'Notícia' }];
+    const publicado = {
+      resumo: 'O resumo.', noticias, sessoes: [],
+      npcs: [
+        // O que vier a mais no item da base não vai: o texto, o Lado e as relações são do registro.
+        { id: 'n1', base: 'ana-lobo', papel: 'A dona do bar', texto: 'INJETADO', lado: 'INJETADO', relacoes: 'INJETADO' },
+        { id: 'n2', base: 'beto-sombra', nome: '  O homem de chapéu  ' },
+        { id: 'n3', base: 'os-lobos' },
+        { id: 'n4', base: 'a-mala' }, { id: 'n5', base: 'o-cofre' }, { id: 'n6', base: 'bar-azul' }, { id: 'n7', base: 'nao-existe' },
+        digitadaPessoa
+      ],
+      lugares: [
+        { id: 'l1', base: 'bar-azul', x: 9, y: 9 },
+        { id: 'l2', base: 'beco', x: 30, y: 40 },
+        { id: 'l3', base: 'porao', x: '7', y: 'oito' },
+        { id: 'l4', base: 'ana-lobo' },
+        digitadoLugar
+      ]
+    };
+    const copia = JSON.stringify(publicado);
+    const pontos = new Map([['bar', { x: 1, y: 2 }]]);
+    const visao = B.visaoDosJogadores(pequena, publicado, pontos);
+    // O [[Nome|texto]] fica só o texto (o nome pode ser o segredo), e o link para uma página do mestre, só o rótulo.
+    const pessoas = [
+      { id: 'n1', nome: 'Ana Lobo', papel: 'A dona do bar', texto: 'A mulher do Bar Azul, sempre com o homem de chapéu. Veja a ficha, o bar e [o canal](https://exemplo.com/ana).' },
+      { id: 'n2', nome: 'O homem de chapéu', papel: '', texto: '' },
+      { id: 'n3', nome: 'Os Lobos', papel: '', texto: '' },
+      digitadaPessoa
+    ];
+    const lugares = [
+      { id: 'l1', nome: 'Bar Azul', distrito: 'Watson', x: 1, y: 2, texto: 'Um bar pequeno.' },
+      { id: 'l2', nome: 'Beco', distrito: 'Kabuki, atrás do Bar Azul', x: 30, y: 40, texto: '' },
+      // O ponto que não está no mapa: a posição do item.
+      { id: 'l3', nome: 'Porão', distrito: '', x: 7, y: 0, texto: '' },
+      digitadoLugar
+    ];
+    const semPontos = B.visaoDosJogadores(pequena, publicado);
+    const semBase = B.visaoDosJogadores(null, publicado);
+    const casos = {
+      'as pessoas': JSON.stringify(visao.npcs) === JSON.stringify(pessoas),
+      'os lugares': JSON.stringify(visao.lugares) === JSON.stringify(lugares),
+      'o item digitado é o mesmo': visao.npcs[3] === digitadaPessoa && visao.lugares[3] === digitadoLugar,
+      'o resto da visão': visao.resumo === 'O resumo.' && visao.noticias === noticias && Array.isArray(visao.sessoes),
+      'o publicado não muda': JSON.stringify(publicado) === copia,
+      'sem os pontos, a posição do item': JSON.stringify(semPontos.lugares[0]) === JSON.stringify({ id: 'l1', nome: 'Bar Azul', distrito: 'Watson', x: 9, y: 9, texto: 'Um bar pequeno.' }),
+      'sem a base, só os digitados': JSON.stringify(semBase.npcs) === JSON.stringify([digitadaPessoa]) && JSON.stringify(semBase.lugares) === JSON.stringify([digitadoLugar]),
+      // Os tipos de registro de cada lista (o painel do Publicar usa os mesmos).
+      'os tipos': JSON.stringify(B.TIPOS_NA_VISAO) === JSON.stringify({ npcs: ['pessoa', 'faccao'], lugares: ['lugar'] })
+    };
+    const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => `${nome}${nome === 'as pessoas' ? `: ${JSON.stringify(visao.npcs)}` : nome === 'os lugares' ? `: ${JSON.stringify(visao.lugares)}` : ''}`);
+    // Nada do registro além disso: o Quem é, o Lado, o texto do mestre, as peças, os segredos, o nome atrás do [[Nome|texto]].
+    const vazou = ['INJETADO', 'Dona do Bar Azul', 'Arasaka', 'texto do mestre', 'O capanga', 'conta fica', 'Uma mala', 'cofre', 'Beto Sombra', 'ana-lobo', '"base"'].filter(texto => JSON.stringify(visao).includes(texto));
+    if (vazou.length) errados.push(`vazou: ${vazou.join(', ')}`);
+    return [!errados.length, errados.slice(0, 4).join(' · ') || `${Object.keys(casos).length} casos; ${visao.npcs.length} pessoas e ${visao.lugares.length} lugares na visão`];
+  });
+
   return base;
 }
 

@@ -24,7 +24,7 @@ const MAX_BODY = 300 * 1024;
 const MAX_PUBLISH = 2_000_000;
 const MAX_PER_PLAYER = 20;
 module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false, ia = {} }) {
-  const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic });
+  const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic, docsDir });
   const { sessions, preferences } = createAccountStores({ dataDir, writeJsonAtomic });
   // Documentos do mestre: os .md de documentos/<id da campanha>/ no projeto (vêm pelo git, como o resto da wiki).
   // documentos/night-city/ é de todas as campanhas. O título é o primeiro "# " do arquivo.
@@ -660,7 +660,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       const scheduled = campaigns.agendaUpdated(id);
       // As mensagens do NetWire (uma nova, ou uma agendada que chegou) também contam como novidade.
       const messages = netwire.updated(id);
-      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, relogios: clocks, agenda, mensagens: messages, atualizado: [view.atualizado, news.atualizado, table, scheduled, messages].filter(Boolean).sort().pop() || null });
+      // A base da campanha que mudou também, quando algum item revelado vem dela (view.daBase).
+      return json(response, 200, { ...view.publicado, campanha: campaignCard(campaigns.get(id), identity), nightCity: news.publicado, relogios: clocks, agenda, mensagens: messages, atualizado: [view.atualizado, news.atualizado, table, scheduled, messages, view.daBase].filter(Boolean).sort().pop() || null });
     }
     // Agenda das mesas: só o mestre marca, muda e desmarca (os jogadores veem as da campanha deles em /api/visao).
     if (pathname === '/api/agenda' || pathname.startsWith('/api/agenda/')) {

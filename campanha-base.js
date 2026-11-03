@@ -372,6 +372,32 @@
     return linhas.length ? `<ul>${linhas.map(([rotulo, valor]) => `<li><b>${rotulo}:</b> ${inline(valor, href)}</li>`).join('')}</ul>` : '';
   }
 
+  // ---------------- A visão dos jogadores ----------------
+  // No Publicar, um item de Pessoas ou de Lugares no mapa pode vir da base: { base: id do registro }, com o nome que os
+  // jogadores veem (vazio: o do registro) e o resto que o mestre escreve no item. O servidor monta, na hora de mandar, o
+  // que vai para os jogadores: o nome, o "Para os jogadores" do registro e, no lugar, o distrito e a posição do ponto do
+  // mapa (sem ponto, a do item). Nada mais do registro sai daqui: nem o texto do mestre, o Lado, as relações ou os
+  // segredos. O item de um registro que não está na base, ou que não é desse tipo, não vai; o item digitado passa como
+  // está. publicado: as listas já filtradas (só o revelado, sem a nota); pontos: Map id do ponto → { x, y }.
+  const TIPOS_NA_VISAO = { npcs: ['pessoa', 'faccao'], lugares: ['lugar'] };
+  // O texto para os jogadores: o [[Nome|texto]] fica só o texto (o nome pode ser o segredo), e o link para uma página
+  // do mestre, só o rótulo.
+  const textoDosJogadores = texto => String(texto || '').replace(LINK_EXPLICITO, (inteiro, alvo, rotulo) => (rotulo || alvo).trim()).replace(/\[([^\]]+)\]\((?!https?:\/\/)[^)\s]*\)/g, '$1').trim();
+  function visaoDosJogadores(base, publicado, pontos = new Map()) {
+    const doItem = (lista, item) => {
+      if (!item.base) return item;
+      const registro = base && base.todos.get(item.base);
+      if (!registro || !TIPOS_NA_VISAO[lista].includes(registro.tipo)) return null;
+      const nome = String(item.nome || '').trim() || registro.nome;
+      const texto = textoDosJogadores(registro.campos.publico);
+      if (lista === 'npcs') return { id: item.id, nome, papel: String(item.papel || ''), texto };
+      const ponto = pontos.get(registro.campos.mapa);
+      return { id: item.id, nome, distrito: textoDosJogadores(registro.campos.distrito), x: ponto ? ponto.x : Number(item.x) || 0, y: ponto ? ponto.y : Number(item.y) || 0, texto };
+    };
+    const listas = Object.keys(TIPOS_NA_VISAO).map(lista => [lista, (publicado[lista] || []).map(item => doItem(lista, item)).filter(Boolean)]);
+    return { ...publicado, ...Object.fromEntries(listas) };
+  }
+
   // ---------------- Conferência (os testes e o Estado da campanha usam) ----------------
   // fichas: nomes das fichas de NPC que existem; marcadores: ids do mapa; elenco: nomes das fichas da campanha.
   function conferir(base, { fichas = [], marcadores = [], elenco = [] } = {}) {
@@ -431,7 +457,7 @@
     ].join('');
   }
 
-  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, relacoes, relacoesDeVolta, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, pinosDoMapa, noPino, conferir, saude, conferenciaEmHtml, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
+  const api = { ler, slug, expandir, trechos, secoesDe, citacoes, citadoEm, registroDoLink, linksQuebrados, relacoes, relacoesDeVolta, paginaPessoas, paginaLugares, tabelaPessoas, tabelaFaccoes, tabelaPecas, tabelaLugares, relogio, segredos, cartao, paraFoundry, inline, pinosDoMapa, noPino, visaoDosJogadores, TIPOS_NA_VISAO, conferir, saude, conferenciaEmHtml, agora, vazio, NOMES_DOS_TIPOS, PAGINA_DO_TIPO, SITUACOES, ATITUDES };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 

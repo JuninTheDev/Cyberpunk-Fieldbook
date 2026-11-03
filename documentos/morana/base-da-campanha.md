@@ -9,6 +9,7 @@ Como editar:
 - Cada registro é um `###` com o nome. Os campos são linhas que começam com `- **Campo:**`; o resto (texto e falas em `>`) é a nota do mestre.
 - **Também:** outros nomes pelos quais o registro aparece nos documentos, separados por ponto e vírgula. Cada nome só pode ser de um registro.
 - **Ficha:** o nome da ficha em Fichas de NPC. **Mapa:** o ponto do mapa de Night City: o pino mostra o lugar, com o nome, o distrito, o texto e a situação de agora. **Gancho**, **Encontro** e **Pistas** são as seções do pino.
+- **Para os jogadores:** o que o grupo sabe. Na Visão dos jogadores, o item que vem deste registro mostra aos jogadores só este texto, com o nome (e, no lugar, o distrito e o ponto do mapa); o resto do registro nunca vai. Num link explícito com texto (a forma do Obsidian, com a barra), vai só o texto.
 - Os campos **Situação** e **Onde** são o começo da campanha. O que muda na mesa se marca em Estado da campanha, na wiki (fica no servidor, com os relógios), e aparece em todas as páginas; este arquivo não muda a cada sessão.
 
 ## Pessoas

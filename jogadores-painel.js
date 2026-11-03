@@ -9,8 +9,9 @@
   // Como cada lista aparece no painel e o que vai para os jogadores. nightCity é de todas as campanhas.
   const newsFields = [['titulo', 'Título', 'input'], ['data', 'Quando (texto livre)', 'input'], ['texto', 'Texto', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']];
   const kinds = {
-    npcs: { flag: 'revelado', flagLabel: 'Revelado', fields: [['nome', 'Nome', 'input'], ['papel', 'Como o grupo conhece', 'input'], ['texto', 'O que o grupo sabe (aceita **negrito** e listas)', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], empty: { nome: '', papel: '', texto: '', nota: '', revelado: false } },
-    lugares: { flag: 'revelado', flagLabel: 'No mapa', fields: [['nome', 'Nome', 'input'], ['distrito', 'Bairro / distrito', 'input'], ['x', 'X', 'number'], ['y', 'Y', 'number'], ['texto', 'O que o grupo sabe', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], empty: { nome: '', distrito: '', x: 2800, y: 2660, texto: '', nota: '', revelado: false } },
+    // fromBase: os campos do item que vem de um registro da base (o texto e o distrito são do registro; a nota vem depois).
+    npcs: { flag: 'revelado', flagLabel: 'Revelado', fields: [['nome', 'Nome', 'input'], ['papel', 'Como o grupo conhece', 'input'], ['texto', 'O que o grupo sabe (aceita **negrito** e listas)', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], fromBase: [['nome', 'Nome para os jogadores (vazio: o do registro)', 'input'], ['papel', 'Como o grupo conhece', 'input']], empty: { nome: '', papel: '', texto: '', nota: '', revelado: false } },
+    lugares: { flag: 'revelado', flagLabel: 'No mapa', fields: [['nome', 'Nome', 'input'], ['distrito', 'Bairro / distrito', 'input'], ['x', 'X', 'number'], ['y', 'Y', 'number'], ['texto', 'O que o grupo sabe', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], fromBase: [['nome', 'Nome para os jogadores (vazio: o do registro)', 'input'], ['x', 'X', 'number'], ['y', 'Y', 'number']], empty: { nome: '', distrito: '', x: 2800, y: 2660, texto: '', nota: '', revelado: false } },
     // Sessões: o resumo de cada uma, na ordem do painel (a última aparece no Resumo dos jogadores).
     sessoes: { flag: 'publicada', flagLabel: 'Publicada', fields: [['titulo', 'Título (ex.: Sessão 03: Kabuki)', 'input'], ['data', 'Quando (texto livre)', 'input'], ['texto', 'O que aconteceu, como o grupo viu (aceita **negrito** e listas)', 'textarea'], ['nota', 'Nota do mestre (nunca vai para os jogadores)', 'secret']], empty: { titulo: '', data: '', texto: '', nota: '', publicada: false } },
     noticias: { flag: 'publicada', flagLabel: 'Publicada', fields: newsFields, empty: { titulo: '', data: '', texto: '', nota: '', publicada: false } },
@@ -34,8 +35,8 @@
         <p><a class="action pv-link" id="pv-open" href="jogadores.html" target="_blank" rel="noopener">Abrir a visão dos jogadores</a></p></div>
       <div class="section" data-toc="O que o grupo sabe"><h3>O que o grupo sabe</h3><p class="note-status">Resumo na página inicial dos jogadores. Aceita títulos (##), **negrito** e listas.</p><textarea id="pv-resumo" class="note-area" rows="8"></textarea></div>
       <div class="section" data-toc="Sessões"><h3>Sessões</h3><p class="note-status">Uma por sessão, na ordem em que aconteceram. Os jogadores leem na página Sessões; a última também aparece no Resumo deles.</p><div id="pv-sessoes" class="pv-list"></div><button class="action" type="button" data-pv-add="sessoes">Adicionar sessão</button></div>
-      <div class="section" data-toc="Pessoas"><h3>Pessoas</h3><div id="pv-npcs" class="pv-list"></div><button class="action" type="button" data-pv-add="npcs">Adicionar pessoa</button></div>
-      <div class="section" data-toc="Lugares no mapa"><h3>Lugares no mapa</h3><p class="note-status">X e Y usam as coordenadas do mapa de Night City (5600 × 5320). No Protocolo Morana, dá para copiar a posição de um pino do mapa do mestre, na lista do lugar.</p><div id="pv-lugares" class="pv-list"></div><button class="action" type="button" data-pv-add="lugares">Adicionar lugar</button></div>
+      <div class="section" data-toc="Pessoas"><h3>Pessoas</h3><p class="note-status">No Protocolo Morana, dá para escolher uma pessoa ou facção da base da campanha: vai o nome (ou o que você escrever) e o "Para os jogadores" do registro. Uma pessoa digitada com o nome de um registro fica ligada a ele, e vai o texto digitado.</p><div id="pv-npcs" class="pv-list"></div><button class="action" type="button" data-pv-add="npcs">Adicionar pessoa</button> <select class="pv-base-pick" data-pv-base="npcs" hidden></select></div>
+      <div class="section" data-toc="Lugares no mapa"><h3>Lugares no mapa</h3><p class="note-status">X e Y usam as coordenadas do mapa de Night City (5600 × 5320). No Protocolo Morana, dá para copiar a posição de um pino do mapa do mestre, na lista do lugar, ou escolher um lugar da base: vai o nome, o distrito, o "Para os jogadores" e a posição do ponto dele.</p><div id="pv-lugares" class="pv-list"></div><button class="action" type="button" data-pv-add="lugares">Adicionar lugar</button> <select class="pv-base-pick" data-pv-base="lugares" hidden></select></div>
       <div class="section" data-toc="Notícias e handouts"><h3>Notícias e handouts</h3><p class="note-status">Boletins, mensagens, bilhetes desta campanha. Os mais recentes aparecem primeiro para os jogadores.</p><div id="pv-noticias" class="pv-list"></div><button class="action" type="button" data-pv-add="noticias">Adicionar notícia</button></div>
       <div class="section pv-shared" data-toc="Notícias de Night City"><h3>Notícias de Night City</h3><p class="note-status">O mural de <b>todas as campanhas</b>: boletins do N54, eleição, apagões, o que a cidade inteira sabe. Uma notícia publicada aqui aparece para todos os jogadores, de qualquer campanha.</p><div id="pv-nightCity" class="pv-list"></div><button class="action" type="button" data-pv-add="nightCity">Adicionar notícia de Night City</button></div>
       <div class="pv-savebar"><span id="pv-dirty" class="note-status">Sem alterações.</span><button class="action" type="button" id="pv-save">Publicar</button></div>`
@@ -61,16 +62,57 @@
     return `<option value="">Copiar posição de um pino…</option>${markers().map(marker => `<option value="${escapeHtml(marker.id)}">${escapeHtml(`${marker.code} · ${marker.title}`)}</option>`).join('')}`;
   }
 
+  // A base da campanha (campanha-base.js), por enquanto só no Protocolo Morana. Em Pessoas e em Lugares no mapa, o
+  // mestre escolhe um registro dela ({ base: id }), e o servidor manda aos jogadores o nome, o "Para os jogadores" e a
+  // posição do ponto do mapa (visaoDosJogadores, a mesma conta que este painel mostra). O item digitado continua; com o
+  // nome de um registro, fica ligado a ele.
+  const campaignBase = () => (campaign && campaign.id === 'morana' && window.campaignBase && window.campaignBase.base) || null;
+  // O registro do item: o do campo base, ou o do nome (ou de um Também) do item digitado, dos tipos da lista.
+  function recordOf(kind, item) {
+    const base = campaignBase();
+    const types = window.campaignBase && window.campaignBase.TIPOS_NA_VISAO[kind];
+    if (!base || !types) return null;
+    const record = item.base ? base.todos.get(item.base) : item.nome ? window.campaignBase.registroDoLink(base, item.nome) : null;
+    return record && types.includes(record.tipo) ? record : null;
+  }
+  // O nome do registro, com o cartão ao passar o mouse; o clique abre o cartão em outra aba (aqui ficam as alterações).
+  const recordLink = record => `<a class="ent ent-${record.tipo}" data-ent="${escapeHtml(record.id)}" href="#${window.campaignBase.PAGINA_DO_TIPO[record.tipo]}/${escapeHtml(record.id)}" target="_blank" rel="noopener">${escapeHtml(record.nome)}</a>`;
+  // Os registros que a lista ainda não tem (nem ligados pelo nome), para o "Adicionar da base".
+  function baseOptions(kind) {
+    const taken = new Set(state[kind].map(item => (recordOf(kind, item) || {}).id));
+    const free = [...campaignBase().todos.values()].filter(record => window.campaignBase.TIPOS_NA_VISAO[kind].includes(record.tipo) && !taken.has(record.id));
+    return `<option value="">Adicionar da base…</option>${free.map(record => `<option value="${escapeHtml(record.id)}">${escapeHtml(record.nome)}</option>`).join('')}`;
+  }
+
+  const fieldHtml = (item, [field, label, type], placeholder = '') => (type === 'textarea' || type === 'secret'
+    ? `<label class="pv-field wide${type === 'secret' ? ' secret' : ''}"><span>${label}</span><textarea data-field="${field}" rows="${type === 'secret' ? 2 : 3}">${escapeHtml(item[field])}</textarea></label>`
+    : `<label class="pv-field${type === 'number' ? ' small' : ''}"><span>${label}</span><input data-field="${field}" type="${type === 'number' ? 'number' : 'text'}" value="${escapeHtml(item[field])}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ''}></label>`);
+  // O item da base: o nome que os jogadores veem (vazio: o do registro) e o que o mestre escreve; sem mudar aqui, o que
+  // vai da base. O lugar com ponto no mapa não tem X e Y: vale a posição do ponto.
+  function baseFields(kind, item, record) {
+    const note = fieldHtml(item, kinds[kind].fields[kinds[kind].fields.length - 1]);
+    if (!record) return `<p class="note-status" data-pv-sent>Este registro não está mais na base (mudou de nome?): o item não vai para os jogadores.</p>${note}`;
+    const marker = kind === 'lugares' && markers().find(point => point.id === record.campos.mapa);
+    const sent = window.campaignBase.visaoDosJogadores(campaignBase(), { [kind]: [item] })[kind][0];
+    const where = kind === 'lugares' ? `<p class="note-status">${escapeHtml(sent.distrito || 'Sem distrito')} · ${marker ? `no ponto ${escapeHtml(marker.code)} do mapa do mestre` : 'na posição X e Y deste item (o registro não tem ponto no mapa)'}</p>` : '';
+    const own = kinds[kind].fromBase.filter(([field]) => !(marker && (field === 'x' || field === 'y'))).map(definition => fieldHtml(item, definition, definition[0] === 'nome' ? record.nome : '')).join('');
+    return `${own}<div class="pv-field wide" data-pv-sent><span>Vai da base: o "Para os jogadores" do registro${kind === 'lugares' ? ', o distrito e a posição' : ''}</span><p>${sent.texto ? window.campaignBase.inline(sent.texto) : '<i>O registro não tem "Para os jogadores": vai só o nome.</i>'}</p>${where}</div>${note}`;
+  }
+
   function renderList(kind) {
     const container = document.getElementById(`pv-${kind}`);
     if (!container) return;
     const { fields, flag, flagLabel } = kinds[kind];
-    container.innerHTML = state[kind].map((item, index) => `<div class="pv-row${item[flag] ? ' on' : ''}" data-kind="${kind}" data-index="${index}">
-        <div class="pv-row-head"><label class="pv-toggle"><input type="checkbox" data-field="${flag}" ${item[flag] ? 'checked' : ''}> ${flagLabel}</label>${kind === 'lugares' && markers().length ? `<select data-pv-pin>${pinOptions()}</select>` : ''}<button type="button" class="pv-remove" data-pv-remove>Remover</button></div>
-        <div class="pv-fields">${fields.map(([field, label, type]) => type === 'textarea' || type === 'secret'
-          ? `<label class="pv-field wide${type === 'secret' ? ' secret' : ''}"><span>${label}</span><textarea data-field="${field}" rows="${type === 'secret' ? 2 : 3}">${escapeHtml(item[field])}</textarea></label>`
-          : `<label class="pv-field${type === 'number' ? ' small' : ''}"><span>${label}</span><input data-field="${field}" type="${type === 'number' ? 'number' : 'text'}" value="${escapeHtml(item[field])}"></label>`).join('')}</div>
-      </div>`).join('') || '<p class="note-status">Nada aqui ainda.</p>';
+    container.innerHTML = state[kind].map((item, index) => {
+      const record = recordOf(kind, item);
+      const from = item.base ? `<span class="note-status">Da base: ${record ? recordLink(record) : escapeHtml(item.base)}</span>` : record ? `<span class="note-status" data-pv-ligado>Na base: ${recordLink(record)} (vai o texto digitado aqui)</span>` : '';
+      return `<div class="pv-row${item[flag] ? ' on' : ''}" data-kind="${kind}" data-index="${index}"${item.base ? ` data-base="${escapeHtml(item.base)}"` : ''}>
+        <div class="pv-row-head"><label class="pv-toggle"><input type="checkbox" data-field="${flag}" ${item[flag] ? 'checked' : ''}> ${flagLabel}</label>${from}${kind === 'lugares' && !item.base && markers().length ? `<select data-pv-pin>${pinOptions()}</select>` : ''}<button type="button" class="pv-remove" data-pv-remove>Remover</button></div>
+        <div class="pv-fields">${item.base ? baseFields(kind, item, record) : fields.map(definition => fieldHtml(item, definition)).join('')}</div>
+      </div>`;
+    }).join('') || '<p class="note-status">Nada aqui ainda.</p>';
+    const pick = document.querySelector(`[data-pv-base="${kind}"]`);
+    if (pick) { pick.hidden = !campaignBase(); if (campaignBase()) pick.innerHTML = baseOptions(kind); }
   }
 
   function render() {
@@ -83,7 +125,7 @@
 
   async function save() {
     // Garante um id estável para cada item (usado pela busca e pelo mapa dos jogadores).
-    Object.keys(kinds).forEach(kind => state[kind].forEach(item => { if (!item.id) item.id = `${slug(item.nome || item.titulo)}-${Math.random().toString(36).slice(2, 6)}`; }));
+    Object.keys(kinds).forEach(kind => state[kind].forEach(item => { if (!item.id) item.id = `${slug(item.nome || item.titulo || item.base)}-${Math.random().toString(36).slice(2, 6)}`; }));
     const target = campaign;
     setStatus('Publicando…');
     try {
@@ -136,7 +178,20 @@
       markDirty(row.dataset.kind);
     };
     root.onchange = event => {
-      if (!state || !event.target.matches('[data-pv-pin]') || !event.target.value) return;
+      if (!state || !event.target.value) return;
+      // Um registro da base: o item guarda o id dele (o nome e o texto vêm da base). O lugar guarda a posição do ponto,
+      // para quando o registro perder o ponto.
+      if (event.target.matches('[data-pv-base]') && campaignBase()) {
+        const kind = event.target.dataset.pvBase;
+        const { texto: _texto, distrito: _distrito, ...empty } = kinds[kind].empty;
+        const record = campaignBase().todos.get(event.target.value);
+        const marker = kind === 'lugares' && record && markers().find(point => point.id === record.campos.mapa);
+        state[kind].push({ ...empty, base: event.target.value, ...(marker ? { x: marker.x, y: marker.y } : {}) });
+        renderList(kind);
+        markDirty(kind);
+        return;
+      }
+      if (!event.target.matches('[data-pv-pin]')) return;
       const marker = markers().find(item => item.id === event.target.value);
       const row = event.target.closest('.pv-row');
       if (!marker || !row) return;

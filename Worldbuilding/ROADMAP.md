@@ -235,15 +235,45 @@ Depende das decisões 1 e 2.
     pela página; o teste passou a abrir o pino também pela lista de Locais.
   - **A suíte da wiki:** o `validar.js` passou (462 verificações e as regressões). No `rodar.js` sem o v14, passaram 27
     dos 31 cenários (o `base` com 22 de 22); falham os mesmos 4 do B1, com as mesmas mensagens.
-- [~] **B6 · A Visão dos jogadores lê da base:** em andamento (sessão KouArt, 2026-11-02), com a decisão 2.
-  - em Pessoas e em Lugares no mapa, o mestre escolhe um registro da base e marca Revelado;
-  - o texto que vai é o `Para os jogadores` do registro, e a posição vem do ponto do mapa;
-  - os itens digitados que já existem no Publicar continuam e se ligam ao registro pelo nome. Um item sem registro
-    continua possível.
-
-  **Segurança:** o servidor monta o que vai para os jogadores a partir da base (o `api-netwire-ia.js` já lê a base no
-  servidor) e manda só os campos públicos dos registros revelados. Teste em `tests/isolados/api.test.js`: nunca chegam
-  ao jogador um registro não revelado, o texto do mestre, o `Lado`, as relações nem os segredos.
+- [x] **B6 · A Visão dos jogadores lê da base:** feito (sessão KouArt, 2026-11-02), com a decisão 2: os itens
+  digitados continuam.
+  - **No Publicar:** em Pessoas e em Lugares no mapa, **Adicionar da base…** escolhe um registro que a lista ainda não
+    tem (pessoas e facções; lugares), e o mestre marca Revelado (ou No mapa).
+    - O item guarda o id do registro, o "Nome para os jogadores" (vazio: o do registro; o grupo conhece o Endo por
+      "Hideo Mori"), o "Como o grupo conhece" e a nota.
+    - O painel mostra o que vai da base, com a mesma conta do servidor: o `Para os jogadores` e, no lugar, o distrito
+      e o ponto do mapa. O lugar sem ponto tem X e Y; o lugar escolhido guarda a posição do ponto, para quando o
+      registro perder o ponto.
+    - O item digitado com o nome (ou um `Também`) de um registro do tipo da lista fica ligado a ele ("Na base: …",
+      com o cartão, que abre em outra aba), e vai o texto digitado. O registro que saiu da base avisa no painel.
+  - **Segurança:** o servidor monta o que vai para os jogadores na hora de ler, com a base de agora (o
+    `visaoDosJogadores` do `campanha-base.js`, chamado pelo `api-campanhas.js`).
+    - Do registro vão só o nome, o `Para os jogadores` e, no lugar, o distrito e a posição do ponto. O resto do item
+      fica de fora, e o registro que falta ou de outro tipo (uma peça, um segredo) não vai.
+    - No `Para os jogadores`, o `[[Nome|texto]]` vira só o texto (o nome pode ser o segredo), e o link para uma
+      página do mestre, só o rótulo.
+    - Os pontos do mapa (`campaign-map.js`) são só do Protocolo Morana. A base e o mapa são lidos de novo quando o
+      arquivo muda, e a base que mudou conta no "atualizado" da página dos jogadores, quando algum item revelado vem
+      dela.
+  - **Testes:**
+    - `tests/lib/base-estatica.js`: uma base pequena, com o que sai de cada item, exato: o `[[Nome|texto]]` e os
+      links, o registro de outro tipo ou que falta, a posição do ponto e a do item, e o que nunca sai (o Quem é, o
+      Lado, o texto do mestre, a peça, o segredo, o nome atrás do `[[Nome|texto]]`);
+    - `tests/isolados/api.test.js`: com a base de verdade, o jogador recebe só o que deve (nada do registro não
+      revelado, da nota, do texto do mestre, do Lado e das relações), e o mestre lê o Publicar como gravou. Numa pasta
+      temporária, a base que muda vale sem publicar de novo, e os pontos do mapa são só do Morana;
+    - `tests/cenarios/jogadores.js`: no navegador do teste, as opções da base, os itens ligados, o item da base (o
+      que o painel mostra e o que o servidor manda), o registro que saiu e a página do jogador, com a pessoa pelo nome
+      que o mestre escolheu.
+  - **Mutações:** 51 mutações, todas pegas: 21 sem navegador (o `visaoDosJogadores`: o item digitado, os tipos, o
+    registro que falta, o nome, o texto e os links dele, o papel, o que vem a mais no item, o distrito, a posição do
+    ponto e a do item, o resto da visão), 10 do servidor (a montagem na hora, o "atualizado" com a base, a pasta dos
+    documentos, os pontos só do Morana, a releitura do arquivo que mudou, a base de cada campanha) e 20 no navegador (o
+    painel: a base só no Morana, a ligação pelo nome e pelo tipo, as opções da base, os campos do item da base, a
+    prévia, o link do cartão, a posição guardada, o id, o registro que saiu). Os arquivos voltaram exatos (md5).
+  - **A suíte da wiki:** o `validar.js` passou (463 verificações e as regressões, com os 2 testes novos do
+    `api.test.js`). No `rodar.js` sem o v14, passaram 27 dos 31 cenários (o `jogadores` com 23 de 23 e o `base` com 23
+    de 23); falham os mesmos 4 do B1, com as mesmas mensagens.
 - [ ] **B7 · O arquivo dos jogadores:**
   - na visão dos jogadores, os nomes revelados viram link nos resumos das sessões, nas notícias e nos handouts, com um
     cartão que mostra só o que o grupo sabe;

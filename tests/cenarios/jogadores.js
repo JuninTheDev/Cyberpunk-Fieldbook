@@ -4,6 +4,7 @@
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
+const vm = require('vm');
 const { abrir, buscar, semRolagemLateral } = require('../lib/wiki');
 
 module.exports = async ({ edge, servidores, r }) => {
@@ -48,6 +49,100 @@ module.exports = async ({ edge, servidores, r }) => {
       })()`);
       return [resultado.publicado && !resultado.vazou, JSON.stringify(resultado)];
     });
+
+    // A Visão dos jogadores lê da base (B6 do worldbuilding): o "Adicionar da base" de Pessoas e de Lugares no mapa, o
+    // item digitado ligado ao registro pelo nome, e o que o servidor manda (o mesmo que o painel mostra).
+    const B = require(path.join(servidores.raiz, 'campanha-base.js'));
+    const base = B.ler(fs.readFileSync(path.join(servidores.raiz, 'documentos', 'morana', 'base-da-campanha.md'), 'utf8'));
+    const mapa = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(servidores.raiz, 'campaign-map.js'), 'utf8'), mapa);
+    const ponto = id => mapa.window.campaignMapData.markers.find(marker => marker.id === id);
+    await r.passo('painel: Pessoas e Lugares no mapa oferecem os registros da base que a lista não tem; o item digitado com o nome de um registro fica ligado a ele', async () => {
+      const lido = await edge.evaluate(`(() => {
+        const opcoes = kind => [...document.querySelectorAll('[data-pv-base="' + kind + '"]:not([hidden]) option')].map(option => option.value).filter(Boolean);
+        const ligados = kind => [...document.querySelectorAll('#pv-' + kind + ' [data-pv-ligado] a.ent')].map(link => link.dataset.ent + ' ' + link.getAttribute('href') + ' ' + link.target);
+        return { pessoas: opcoes('npcs'), lugares: opcoes('lugares'), ligadosPessoas: ligados('npcs'), ligadosLugares: ligados('lugares') };
+      })()`);
+      const publicado = await lerPublicar();
+      const ligadosDe = (lista, tipos) => lista.map(item => B.registroDoLink(base, item.nome || '')).filter(item => item && tipos.includes(item.tipo)).map(item => item.id);
+      const livres = (lista, tipos) => [...base.todos.values()].filter(item => tipos.includes(item.tipo) && !ligadosDe(lista, tipos).includes(item.id)).map(item => item.id);
+      // O nome ligado tem o cartão ao passar o mouse e abre a página do registro em outra aba (o painel guarda as alterações).
+      const comLink = ids => ids.map(id => `${id} #${B.PAGINA_DO_TIPO[base.todos.get(id).tipo]}/${id} _blank`);
+      const esperado = { pessoas: livres(publicado.npcs, ['pessoa', 'faccao']), lugares: livres(publicado.lugares, ['lugar']), ligadosPessoas: comLink(ligadosDe(publicado.npcs, ['pessoa', 'faccao'])), ligadosLugares: comLink(ligadosDe(publicado.lugares, ['lugar'])) };
+      const casos = esperado.ligadosPessoas.some(texto => texto.startsWith('wakako-okada ')) && esperado.ligadosLugares.some(texto => texto.startsWith('pachinko-de-wakako ')) && ['endo', 'arasaka'].every(id => esperado.pessoas.includes(id)) && ['armazem-de-kabuki', 'consultorio-do-ricky'].every(id => esperado.lugares.includes(id));
+      return [casos && JSON.stringify(lido) === JSON.stringify(esperado), JSON.stringify(lido)];
+    });
+    await r.passo('painel: o item da base mostra o que vai; o Publicar manda aos jogadores o nome, o "Para os jogadores" e a posição do ponto, sem a nota nem o texto do mestre', async () => {
+      const resultado = await edge.evaluate(`(async () => {
+        const campos = row => [...row.querySelectorAll('[data-field]')].map(input => input.dataset.field);
+        const escolher = (kind, id) => { const pick = document.querySelector('[data-pv-base="' + kind + '"]'); pick.value = id; pick.dispatchEvent(new Event('change', { bubbles: true })); return document.querySelector('#pv-' + kind + ' .pv-row[data-base="' + id + '"]'); };
+        const escrever = (row, field, value) => { const input = row.querySelector('[data-field="' + field + '"]'); input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); };
+        // Uma pessoa digitada com o nome de um lugar da base não se liga a ele (a lista de Pessoas é de pessoas e facções).
+        document.querySelector('[data-pv-add="npcs"]').click();
+        const linhas = document.querySelectorAll('#pv-npcs .pv-row');
+        escrever(linhas[linhas.length - 1], 'nome', 'Pachinko de Wakako');
+        const endo = escolher('npcs', 'endo');
+        const outroTipo = [...document.querySelectorAll('#pv-npcs .pv-row')].find(row => (row.querySelector('[data-field="nome"]') || {}).value === 'Pachinko de Wakako');
+        const painel = { nome: endo.querySelector('.pv-row-head a.ent').textContent, placeholder: endo.querySelector('[data-field="nome"]').placeholder, texto: endo.querySelector('[data-pv-sent] p').textContent, campos: campos(endo), aindaNaLista: [...document.querySelectorAll('[data-pv-base="npcs"] option')].some(option => option.value === 'endo'), outroTipoLigado: !outroTipo || Boolean(outroTipo.querySelector('[data-pv-ligado]')) };
+        escrever(endo, 'nome', 'Hideo Mori');
+        escrever(endo, 'nota', 'NOTA-DA-BASE');
+        endo.querySelector('input[data-field="revelado"]').click();
+        // Cada escolha desenha a lista de novo: o lugar é marcado antes de escolher o próximo.
+        const armazem = escolher('lugares', 'armazem-de-kabuki');
+        painel.armazem = { campos: campos(armazem), onde: armazem.querySelector('[data-pv-sent] .note-status').textContent, semTexto: Boolean(armazem.querySelector('[data-pv-sent] p i')), semPino: !armazem.querySelector('[data-pv-pin]') };
+        armazem.querySelector('input[data-field="revelado"]').click();
+        const ricky = escolher('lugares', 'consultorio-do-ricky');
+        painel.ricky = { campos: campos(ricky) };
+        escrever(ricky, 'x', '2360');
+        escrever(ricky, 'y', '1500');
+        ricky.querySelector('input[data-field="revelado"]').click();
+        document.getElementById('pv-save').click();
+        await new Promise(r => setTimeout(r, 1200));
+        const visao = await (await fetch('api/visao?campanha=morana', { cache: 'no-store' })).text();
+        const mestre = await (await fetch('api/campanhas/morana/publicar', { cache: 'no-store' })).json();
+        return { painel, visao, guardado: mestre.npcs.find(item => item.base === 'endo'), guardadoLugar: mestre.lugares.find(item => item.base === 'armazem-de-kabuki') };
+      })()`);
+      const endo = base.todos.get('endo');
+      const armazem = base.todos.get('armazem-de-kabuki');
+      const ricky = base.todos.get('consultorio-do-ricky');
+      const doArmazem = ponto(armazem.campos.mapa);
+      const visao = JSON.parse(resultado.visao);
+      const semId = item => item && (({ id: _id, ...resto }) => resto)(item);
+      const { painel, guardado, guardadoLugar } = resultado;
+      const casos = {
+        'o painel da pessoa': painel.nome === endo.nome && painel.placeholder === endo.nome && painel.texto === endo.campos.publico && JSON.stringify(painel.campos) === JSON.stringify(['revelado', 'nome', 'papel', 'nota']) && !painel.aindaNaLista,
+        'a pessoa com o nome de um lugar fica sem ligação': painel.outroTipoLigado === false,
+        'o lugar com ponto, sem X e Y nem a cópia de um pino': JSON.stringify(painel.armazem.campos) === JSON.stringify(['revelado', 'nome', 'nota']) && painel.armazem.onde === `${armazem.campos.distrito} · no ponto ${doArmazem.code} do mapa do mestre` && painel.armazem.semTexto === !armazem.campos.publico && painel.armazem.semPino,
+        // O lugar guarda a posição do ponto (para quando o registro perder o ponto), e o id dele sai do registro.
+        'o mestre guarda a posição do ponto': Boolean(guardadoLugar) && guardadoLugar.x === doArmazem.x && guardadoLugar.y === doArmazem.y && /^armazem-de-kabuki-[a-z0-9]+$/.test(guardadoLugar.id),
+        'o lugar sem ponto, com X e Y': JSON.stringify(painel.ricky.campos) === JSON.stringify(['revelado', 'nome', 'x', 'y', 'nota']),
+        'a pessoa para os jogadores': JSON.stringify(semId(visao.npcs.find(item => item.nome === 'Hideo Mori'))) === JSON.stringify({ nome: 'Hideo Mori', papel: '', texto: endo.campos.publico }),
+        'o lugar com ponto': JSON.stringify(semId(visao.lugares.find(item => item.nome === armazem.nome))) === JSON.stringify({ nome: armazem.nome, distrito: armazem.campos.distrito, x: doArmazem.x, y: doArmazem.y, texto: armazem.campos.publico || '' }),
+        'o lugar sem ponto': JSON.stringify(semId(visao.lugares.find(item => item.nome === ricky.nome))) === JSON.stringify({ nome: ricky.nome, distrito: ricky.campos.distrito, x: 2360, y: 1500, texto: ricky.campos.publico }),
+        'o mestre guarda o id e a nota': Boolean(guardado) && guardado.nome === 'Hideo Mori' && guardado.nota === 'NOTA-DA-BASE' && guardado.revelado === true,
+        'nada vaza': !['NOTA-DA-BASE', '"base"', JSON.stringify(endo.texto).slice(1, -1), JSON.stringify(armazem.texto).slice(1, -1)].some(texto => resultado.visao.includes(texto))
+      };
+      const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome);
+      return [!errados.length, errados.length ? `${errados.join(', ')}: ${JSON.stringify(painel)}` : `${Object.keys(casos).length} casos`];
+    });
+    await r.passo('painel: o item de um registro que saiu da base avisa que não vai, e o servidor não manda', async () => {
+      const { atualizado: _data, ...mestre } = await lerPublicar();
+      const antes = mestre.npcs;
+      const resposta = await publicar({ ...mestre, npcs: [...antes, { id: 'saiu-da-base-1', base: 'registro-que-saiu', nome: '', papel: '', nota: '', revelado: true }] });
+      // Sai da página e volta: o painel lê o Publicar de novo.
+      await abrir(edge, 'notes', 300);
+      await abrir(edge, 'playerView', 1200);
+      const lido = await edge.evaluate(`(async () => {
+        const row = document.querySelector('#pv-npcs .pv-row[data-base="registro-que-saiu"]');
+        const visao = await (await fetch('api/visao?campanha=morana', { cache: 'no-store' })).json();
+        return { cabeca: row ? row.querySelector('.pv-row-head .note-status').textContent : '', aviso: row ? row.querySelector('[data-pv-sent]').textContent : '', campos: row ? [...row.querySelectorAll('[data-field]')].map(input => input.dataset.field) : [], foi: visao.npcs.some(item => item.id === 'saiu-da-base-1') };
+      })()`);
+      await publicar({ ...mestre, npcs: antes });
+      await abrir(edge, 'notes', 300);
+      await abrir(edge, 'playerView', 1200);
+      const ok = resposta.status === 200 && lido.cabeca === 'Da base: registro-que-saiu' && lido.aviso.startsWith('Este registro não está mais na base') && JSON.stringify(lido.campos) === JSON.stringify(['revelado', 'nota']) && !lido.foi;
+      return [ok, JSON.stringify(lido)];
+    });
     await r.passo('painel: o Publicar grava na pasta de dados; os arquivos do projeto não mudam', async () => {
       const gravado = fs.existsSync(path.join(pastaPublicar, 'publicar.json'));
       const iguais = arquivos.every((arquivo, i) => fs.readFileSync(arquivo, 'utf8') === copias[i]);
@@ -73,6 +168,15 @@ module.exports = async ({ edge, servidores, r }) => {
       await abrir(edge, 'pvMap', 900);
       const n = await edge.evaluate(`document.querySelectorAll('.map-pin').length`);
       return [n > 0, `${n} pinos`];
+    });
+    await r.passo('jogador: a pessoa e os lugares da base aparecem com o nome que o mestre escolheu, sem o nome do registro', async () => {
+      const pinos = await edge.evaluate(`[...document.querySelectorAll('.map-pin title')].map(title => title.textContent)`);
+      await abrir(edge, 'pvPeople', 400);
+      const pessoas = await edge.evaluate(`[...document.querySelectorAll('#content .person')].map(card => ({ nome: card.querySelector('h3').firstChild.textContent.trim(), texto: card.querySelector('.md-doc').textContent.trim() }))`);
+      const endo = base.todos.get('endo');
+      const hideo = pessoas.find(item => item.nome === 'Hideo Mori');
+      const ok = Boolean(hideo) && hideo.texto === endo.campos.publico && !pessoas.some(item => item.nome === endo.nome) && ['armazem-de-kabuki', 'consultorio-do-ricky'].every(id => pinos.some(title => title.startsWith(base.todos.get(id).nome)));
+      return [ok, `${pessoas.length} pessoas; pinos: ${pinos.join(', ')}`];
     });
     await r.passo('jogador: regras sem notas de campanha nem segredos', async () => {
       await edge.evaluate(`document.querySelector('#tab-system').click()`);
