@@ -188,3 +188,29 @@ test('C28: sem o Foundry 14 preparado, ou sem o foundry-sistema/ no master, não
   assert.equal(s.rodar('atualizar-sistema.sh').status, 3);
   assert.equal(s.linhas('instalacoes.log').length, 0);
 });
+
+// O servidor da wiki carrega, além do server.js e da API, o campanha-base.js (a visão dos jogadores lê a base desde o
+// B6 do worldbuilding) e o wiki-nomes.js (que o campanha-base.js usa desde o B7): mudar qualquer um deles reinicia a
+// wiki. Uma página, não. O campanha-base.js também deixa o módulo do Foundry 12 pendente: aqui, sem o Foundry 12, o
+// atualizar-modulo.sh deixa para depois.
+test('a wiki reinicia quando muda o que o servidor carrega: o server.js, a API, o campanha-base.js e o wiki-nomes.js', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {
+  const s = preparar();
+  t.after(s.limpar);
+  s.mesa14('inactive');
+  const reinicios = () => s.linhas('systemctl.log').filter(linha => linha === 'restart fieldbook').length;
+  const mudar = arquivo => {
+    escrever(s.pasta(`dev/${arquivo}`), `// ${arquivo}, ${reinicios()}\n`);
+    s.publicar(`Muda ${arquivo}`);
+    certo(s.rodar('atualizar.sh'));
+    return reinicios();
+  };
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(reinicios(), 0);
+  assert.equal(mudar('index.html'), 0);
+  assert.equal(mudar('campanha-base.js'), 1);
+  assert.equal(mudar('wiki-nomes.js'), 2);
+  assert.equal(mudar('api-campanhas.js'), 3);
+  assert.equal(mudar('server.js'), 4);
+  assert.equal(mudar('jogadores.html'), 4);
+  assert.equal(s.ler('dados/atualizacoes.log').match(/wiki reiniciada/g).length, 4);
+});

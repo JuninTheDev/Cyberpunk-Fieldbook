@@ -240,6 +240,10 @@ module.exports = async ({ edge, r }) => {
       await edge.evaluate(`(() => { const f = document.getElementById('cp-new'); f.elements.nome.value = 'Terceira Mesa'; f.requestSubmit(); })()`);
       for (let i = 0; i < 40 && !(await edge.evaluate(`window.wikiApp && wikiApp.activeCampaign().id === 'terceira-mesa'`).catch(() => false)); i++) await edge.sleep(250);
       const estado = await edge.evaluate(`({ ativa: wikiApp.activeCampaign().id, pagina: wikiApp.currentPage(), opcoes: document.querySelectorAll('#campaign-picker option').length })`).catch(() => ({}));
+      // A página sai da campanha antes de ela ser apagada: o NetWire da página lê a campanha ativa, e a leitura que
+      // cruzasse o DELETE voltaria 404 ("sem erros de JS"). Os pedidos da página que sai são cancelados.
+      await edge.send('Page.navigate', { url: 'about:blank' });
+      await edge.sleep(300);
       await api('/api/campanhas/terceira-mesa', { method: 'DELETE' });
       return [linhas === 2 && estado.ativa === 'terceira-mesa' && estado.pagina === 'inicio-terceira-mesa' && estado.opcoes === 3, `${linhas} linhas antes · ${JSON.stringify(estado)}`];
     });

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Puxa do GitHub o que o mestre publicou (publicar.bat). Roda a cada minuto (fieldbook-atualizar.timer), como root.
 # - Páginas, regras, lore e estilos: valem na hora (o servidor lê os arquivos a cada pedido).
-# - server.js e a API: reinicia a wiki (2 segundos fora do ar).
+# - server.js, a API e o que ela carrega (campanha-base.js e wiki-nomes.js): reinicia a wiki (2 segundos fora do ar).
 # - Módulos do Foundry (foundry-2077/ e os outros foundry-*/, e o que o build do cpr-2077 lê da wiki: as fichas de NPC,
 #   as regras system-*.js, as arquiteturas e a base da campanha): gera e instala de novo assim que a mesa estiver vazia.
 # - O sistema do Foundry 14 (foundry-sistema/, e o documento das arquiteturas da campanha, que entra num compêndio dele):
@@ -23,7 +23,7 @@ if [ "$antes" != "$depois" ]; then
   # O servidor nunca edita a pasta: o GitHub manda (até o loja-catalogo.js que o build do módulo regrava).
   git_mesa reset -q --hard "$depois"
   echo "$(date '+%F %T') no ar: $(git_mesa log -1 --format='%h %s')" >> "$LOG"
-  if grep -qE '^(server\.js|api-[^/]+\.js|revertidos\.js)$' <<<"$mudou"; then
+  if grep -qE '^(server\.js|api-[^/]+\.js|revertidos\.js|campanha-base\.js|wiki-nomes\.js)$' <<<"$mudou"; then
     systemctl restart fieldbook
     echo "$(date '+%F %T') wiki reiniciada (servidor mudou)" >> "$LOG"
   fi

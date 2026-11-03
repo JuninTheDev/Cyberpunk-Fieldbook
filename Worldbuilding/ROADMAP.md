@@ -311,7 +311,14 @@ Depende das decisões 1 e 2.
     sem o v14, passaram 27 dos 31 cenários (o `jogadores` com 25 de 25 e o `base` com 24 de 24); falham os mesmos 4 do
     B1, com as mesmas mensagens. Numa rodada antes, o `campanhas` falhou com um 404 do NetWire: o teste apaga pela API a
     campanha que a página do mestre ainda lê, e a leitura que cruza o DELETE volta 404. Com o mesmo código, passou nas 4
-    rodadas seguintes; a corrida é do teste e ficou para o usuário decidir.
+    rodadas seguintes; a corrida era do teste (corrigida depois, abaixo).
+  - **Depois do B7 (2026-11-03), a pedido do usuário:**
+    - o `servidor/atualizar.sh` reinicia a wiki também quando muda o `campanha-base.js` ou o `wiki-nomes.js`, que o
+      servidor carrega desde o B6 e o B7. Teste em `tests/isolados/servidor-sistema.test.js`: uma página não reinicia,
+      e cada um desses (com o `server.js` e a API), sim. As duas mutações (tirar cada arquivo da regra) foram pegas;
+    - o cenário `campanhas` tira a página do mestre da campanha de teste (navega para `about:blank`) antes de apagá-la.
+      Forçando a página a reler o NetWire logo depois do DELETE, o 404 aparece sem a correção e some com ela; depois,
+      o cenário passou nas 3 rodadas.
 
 ## Fase 3: o mundo de todas as campanhas
 
