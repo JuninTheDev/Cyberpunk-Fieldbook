@@ -322,26 +322,40 @@ Depende das decisões 1 e 2.
 
 ## Fase 3: o mundo de todas as campanhas
 
-Depende das decisões 3 e 4.
+As decisões 3 e 4 foram tomadas em 2026-11-03 (veja **Decisões do usuário**). A ordem é B8, B11, B9, B10 e B12.
 
 - [ ] **B8 · A base em toda campanha:** a base deixa de ser fixa no Morana (`index.html`).
   - Toda campanha com `documentos/<id>/base-da-campanha.md` ganha Pessoas e facções, Lugares, o Estado e os links.
   - A seção "Peças de Morana" continua do Morana; nas outras campanhas, a seção é "Peças".
   - Teste: uma campanha de teste com uma base pequena.
-- [ ] **B9 · A base de Night City:** `documentos/night-city/base-do-mundo.md`, no mesmo formato, com o que vale para
-  todas as campanhas: os distritos, as corporações, as gangues e a gente conhecida da cidade.
+- [ ] **B9 · A base de Night City:** a pasta `documentos/night-city/base/`, um arquivo por registro (o formato do
+  B11), com o que vale para todas as campanhas: os distritos, as corporações, as gangues, os fixers, os nômades, a NCPD
+  e os NPCs do jogo (decisão 3).
   - Tipos novos: Distrito (com os bairros dentro: Kabuki em Watson) e Evento (B13).
   - **A base da campanha soma por cima:** um registro com o mesmo nome completa o do mundo. A Arasaka do Morana
     acrescenta o `Aparece` e o texto do mestre; o `Lado`, a situação e o Estado são da campanha.
+  - **Um fato da mesa não muda o mundo sozinho:** o Estado de uma campanha vale só nela, e o mestre leva para a base do
+    mundo o que deve valer para todas.
   - O guia e a lore continuam como texto, e os nomes deles viram link. Os registros do mundo saem do que eles já dizem,
     sem inventar: o que a lore não diz fica em branco.
+    - **As duas fontes:** onde divergem, vale o guia, com o jeito de usar da coluna "Na mesa" da lore.
+    - Cada registro tem o campo `- **Fonte:**` (`Kit p. 67`, `Guia, seção 7`).
+  - **Os jogadores:** um registro do mundo só aparece para os jogadores de uma campanha quando o mestre o revela no
+    Publicar dela, como no B6.
   - Conferência: o mesmo nome em dois registros do mundo é erro; um registro da campanha que completa um do mundo não é.
+    Um registro do mundo sem `Fonte` é aviso.
 - [ ] **B10 · Etiquetas:** `- **Etiquetas:** watson/kabuki; tyger-claws` em qualquer registro.
   - As etiquetas têm níveis: `watson/kabuki` está dentro de `watson`.
   - O filtro fica no Índice A–Z e nas páginas da base, e a etiqueta vira um termo da busca.
 - [ ] **B11 · A base em pasta, um arquivo por registro:** além do arquivo único, a pasta `documentos/<id>/base/`, com um
   `.md` por registro: o título `# Nome`, o campo `- **Tipo:** Pessoa`, os outros campos e o texto.
   - Os dois formatos valem juntos. O servidor junta a pasta numa resposta só, e a wiki lê como lê o arquivo de hoje.
+  - O arquivo tem o nome do registro (`Wakako Okada.md`): assim o `[[Nome]]` do B2 abre o mesmo arquivo no Obsidian
+    (B12).
+  - **O que lê o arquivo único:**
+    - o build do módulo do Foundry 12 e a skill `fechar-sessao` continuam com a `base-da-campanha.md` do Morana, que
+      não muda de formato (decisão 4);
+    - o NetWire com IA (`api-netwire-ia.js`) passa a ler a base juntada.
   - Um script converte o arquivo único em pasta, quando o usuário quiser. Ele confere que a base lida antes e depois é
     a mesma.
 - [ ] **B12 · O Obsidian como editor (só documentação):** com o B2 e o B11, abrir `documentos/` como cofre no Obsidian dá
@@ -368,7 +382,8 @@ Depende das decisões 3 e 4.
 - [ ] **B16 · (só se o usuário quiser) Editar um registro na própria wiki:**
   - antes, é preciso decidir onde a base mora: hoje ela vem do git (pelo `publicar.bat`), e uma edição feita no servidor
     teria de voltar para o git;
-  - o Obsidian (B12) cobre a edição no PC sem isso.
+  - o Obsidian (B12) cobre a edição no PC sem isso;
+  - pela decisão 4 (2026-11-03), fica de fora: o git continua a única fonte da base.
 
 ## Decisões do usuário
 
@@ -381,6 +396,34 @@ Depende das decisões 3 e 4.
      pelo nome, e um item sem registro continua possível.
 3. **O mundo e a campanha (B9):** o que é do mundo (a Arasaka, os distritos, os NPCs do jogo) e o que é só da
    campanha? A base do mundo sai do guia de 2077 do Morana, da lore dos anos 2070 ou das duas?
+   - **Decidido (2026-11-03):** o usuário deixou a escolha para a sessão KouArt, pensando no projeto inteiro e na
+     organização.
+     - **Do mundo** é o que vale para qualquer campanha: os distritos, as corporações, as gangues, os fixers, os
+       nômades, a NCPD e os NPCs do jogo.
+     - **Da campanha** é o que a mesa muda (o lado, a situação, onde está, a atitude, os relógios e os segredos), a
+       gente que só existe nela (a Mina, o Endo, o Vega, o Morty) e o texto do mestre. A Wakako, a Arasaka e os Tyger
+       Claws ficam no mundo, e a base do Morana completa os três.
+     - **Um fato da mesa só vira do mundo quando o mestre o escreve na base do mundo.** O Estado de uma campanha não
+       muda as outras.
+     - **As fontes são as duas.** Onde divergem, vale o guia, como a lore já diz, com o jeito de usar da coluna "Na
+       mesa" da lore. Cada registro do mundo diz de onde veio (`- **Fonte:** Kit p. 67`, `- **Fonte:** Guia, seção 7`).
+     - **O guia fica em `documentos/morana/`:** continua o texto da mesa do Morana, e a base do mundo leva os fatos
+       dele.
+     - **Os jogadores veem como hoje:** um registro do mundo só aparece para os jogadores de uma campanha quando o
+       mestre o revela no Publicar dela.
 4. **Um arquivo por registro (B11) e o editor:** a base vira pasta? O Obsidian no PC (B12) basta, ou vale o editor na
    wiki (B16)?
+   - **Decidido (2026-11-03),** com a mesma escolha da 3:
+     - **A pasta, sim.** A base do mundo já nasce em pasta (`documentos/night-city/base/`), e por isso o B11 vem antes
+       do B9.
+     - **A `base-da-campanha.md` do Morana continua um arquivo só.** O build do módulo do Foundry 12
+       (`foundry-2077/build/wiki.mjs`), que não se mexe, a lê direto, e a skill `fechar-sessao` a edita.
+     - **Uma campanha nova pode usar os dois formatos;** o README recomenda a pasta.
+     - **O editor é o Obsidian no PC (B12).** O B16 fica de fora: o git continua a única fonte da base (o servidor
+       volta a pasta para o que está no GitHub a cada publicação), e o que muda na mesa já se edita no Estado da
+       campanha.
 5. **A ordem:** a recomendada é Fase 1, Fase 2, Fase 3 e Fase 4.
+   - **Decidido (2026-11-03),** com a mesma escolha da 3: a Fase 3 na ordem B8, B11, B9, B10 e B12, e depois a Fase 4
+     (B13, B14 e B15).
+     - O B11 vem antes do B9 para a base do mundo nascer no formato dela, sem conversão.
+     - O B10 vem depois do B9: as etiquetas de lugar seguem os distritos.
