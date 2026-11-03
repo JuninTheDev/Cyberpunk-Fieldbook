@@ -274,7 +274,7 @@ Depende das decisões 1 e 2.
   - **A suíte da wiki:** o `validar.js` passou (463 verificações e as regressões, com os 2 testes novos do
     `api.test.js`). No `rodar.js` sem o v14, passaram 27 dos 31 cenários (o `jogadores` com 23 de 23 e o `base` com 23
     de 23); falham os mesmos 4 do B1, com as mesmas mensagens.
-- [ ] **B7 · O arquivo dos jogadores:**
+- [~] **B7 · O arquivo dos jogadores:** em andamento (sessão KouArt, 2026-11-02).
   - na visão dos jogadores, os nomes revelados viram link nos resumos das sessões, nas notícias e nos handouts, com um
     cartão que mostra só o que o grupo sabe;
   - uma página com as pessoas, os lugares e as facções reveladas, com o "Citado em" nas sessões;
