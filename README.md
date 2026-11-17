@@ -9,6 +9,7 @@ A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre liga
 - **Publicar uma mudança:** edite no PC e dê dois cliques em **`publicar.bat`**.
   - Ele recusa se o OneDrive tiver voltado algum arquivo para uma versão antiga.
   - Ele mostra o que mudou, pede uma descrição curta e manda para o GitHub.
+  - Os arquivos novos (ainda fora do git) ele lista à parte e só leva com um **s**: o GitHub é público, e um roteiro ou um rascunho deixado na pasta iria junto. Com o Enter, ficam só no PC.
   - Ele espera a versão nova aparecer na wiki online, o que leva até 1 minuto.
 - **Mestre:** entra por `https://wiki.SEUDOMINIO/mestre`, com a senha. O aparelho fica lembrado por um ano.
   - No menu da conta (o botão **Mestre**, no canto de cima) ficam **Sair do modo mestre**, **Baixar backup** (o servidor faz um por dia) e a versão no ar.

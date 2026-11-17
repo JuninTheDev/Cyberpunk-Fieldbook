@@ -41,6 +41,18 @@ test('login assinado do mestre continua válido e um cookie adulterado é recusa
   assert.equal((await servidor.pedir('/api/mestre/entrar', { method: 'POST', body: { senha: 'errada' } })).status, 403);
 });
 
+test('a própria senha no cookie do mestre não vale (sem o limite de tentativas, ela servia para testar senhas)', async t => {
+  const servidor = criarServidorIsolado(t);
+  for (const cookie of [`gm=${servidor.senha}`, `gm=${encodeURIComponent(servidor.senha)}`]) {
+    assert.equal((await servidor.pedir('/api/estado', { cookie })).json.mestre, false);
+    assert.equal((await servidor.pedir('/api/contas', { cookie })).status, 403);
+    assert.equal((await servidor.pedir('/index.html', { cookie })).status, 403);
+  }
+  // O cookie assinado continua valendo.
+  const assinado = await servidor.entrarComoMestre();
+  assert.equal((await servidor.pedir('/api/estado', { cookie: assinado })).json.mestre, true);
+});
+
 async function criarJogador(servidor, mestre, nome) {
   const resposta = await servidor.pedir('/api/contas', { method: 'POST', cookie: mestre, body: { nome } });
   assert.equal(resposta.status, 201);

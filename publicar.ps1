@@ -29,18 +29,37 @@ $ahead = [int](git rev-list --count '@{u}..HEAD')
 $behind = [int](git rev-list --count 'HEAD..@{u}')
 if ($behind -gt 0) { Stop-WithMessage "O GitHub tem $behind mudança(s) que este PC não tem (feitas em outro computador?). Rode 'git pull' antes." }
 if (-not $changes.Count -and -not $ahead) { Finish 'Nada novo para publicar: o GitHub já tem tudo.' }
+# Os arquivos novos (ainda fora do git) só vão com um "s": o GitHub é público, e um roteiro ou um rascunho deixado na
+# pasta iria junto (a auditoria de 2026-11-16). As mudanças nos arquivos que o git já tem vão sempre.
+$mudados = @(git status --porcelain --untracked-files=no)
+$novos = @(git ls-files --others --exclude-standard --directory)
+$levarNovos = $false
 if ($changes.Count) {
-  Write-Host 'Vai publicar:' -ForegroundColor Cyan
-  git status --short
+  if ($mudados.Count) {
+    Write-Host 'Vai publicar:' -ForegroundColor Cyan
+    git status --short --untracked-files=no
+  }
+  if ($novos.Count) {
+    Write-Host ''
+    Write-Host "Arquivos novos, ainda fora do git ($($novos.Count)):" -ForegroundColor Yellow
+    $novos | Select-Object -First 30 | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    if ($novos.Count -gt 30) { Write-Host "  e mais $($novos.Count - 30)" -ForegroundColor Yellow }
+    $levarNovos = (Read-Host 'Publicar também os arquivos novos? O GitHub é público: qualquer um lê. (s = sim; Enter = não)').Trim().ToLower() -eq 's'
+    if (-not $levarNovos) { Write-Host 'Os arquivos novos ficam só neste PC.' -ForegroundColor Yellow }
+  }
+}
+if ($mudados.Count -or $levarNovos) {
   Write-Host ''
   $message = Read-Host 'Descreva a mudança em poucas palavras (Enter = "Atualização da wiki")'
   if (-not $message.Trim()) { $message = 'Atualização da wiki' }
   # A mensagem vai por arquivo (UTF-8 sem BOM): acentos chegam certos no git.
   $messageFile = Join-Path $env:TEMP 'publicar-mensagem.txt'
   [System.IO.File]::WriteAllText($messageFile, $message, (New-Object System.Text.UTF8Encoding $false))
-  git add -A
+  if ($levarNovos) { git add -A } else { git add -u }
   git commit -q -F $messageFile
   if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'O commit falhou (veja a mensagem acima).' }
+} elseif (-not $ahead) {
+  Finish 'Nada publicado: só havia arquivos novos, e eles ficaram neste PC.'
 }
 git push -q
 if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'O GitHub recusou o envio (veja a mensagem acima). Nada mudou no servidor.' }

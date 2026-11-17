@@ -72,12 +72,14 @@ const sameSecret = (given, expected) => {
 // O túnel sempre põe estes cabeçalhos: quem os traz é jogador, a não ser que tenha o cookie do mestre.
 const viaTunnel = request => Boolean(request.headers['cf-connecting-ip'] || request.headers['x-forwarded-for']);
 // O cookie guarda uma assinatura da senha, não a senha: trocar a GM_KEY desconecta todos os aparelhos.
+// O cookie com a própria senha (o de antes da assinatura) não vale mais: por ele, qualquer um testava senhas sem o
+// limite de tentativas do /api/mestre/entrar (a auditoria de 2026-11-16). O aparelho com esse cookie pede a senha uma vez.
 const gmToken = gmKey ? crypto.createHmac('sha256', gmKey).update('fieldbook-mestre-v1').digest('hex') : '';
 const hasGmCookie = request => {
   if (!gmKey) return false;
   let given;
   try { given = decodeURIComponent(cookieKey(request)); } catch { return false; }
-  return sameSecret(given, gmToken) || sameSecret(given, gmKey); // o segundo: cookie antigo, de antes da assinatura
+  return sameSecret(given, gmToken);
 };
 const isGameMaster = request => (!hosted && isLoopback(request.socket.remoteAddress) && !viaTunnel(request)) || hasGmCookie(request);
 // O endereço de quem chegou: no servidor, o que o Caddy escreve; em casa, o do túnel (veja o ipDoCliente).

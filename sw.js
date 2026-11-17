@@ -91,11 +91,14 @@ self.addEventListener('fetch', event => {
     return;
   }
   if (!guardavel(url)) return;
-  event.respondWith(comPrazo(request).then(response => {
+  // Os 4 segundos só valem com a cópia guardada: sem ela (a primeira visita, logo depois de entrar), espera a rede o tempo
+  // que for. O erro de rede, ali, fazia a wiki abrir como visitante com o jogador logado, num 4G fraco (a auditoria de
+  // 2026-11-16).
+  event.respondWith(caches.match(chave(url)).catch(() => null).then(guardada => (guardada ? comPrazo(request) : fetch(request)).then(response => {
     if (response.ok) {
       const copy = response.clone();
-      caches.open(CACHE).then(cache => cache.put(chave(url), copy));
+      caches.open(CACHE).then(cache => cache.put(chave(url), copy)).catch(() => {});
     }
     return response;
-  }).catch(() => caches.match(chave(url)).then(cached => cached || Response.error())));
+  }).catch(() => guardada || Response.error())));
 });
