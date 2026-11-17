@@ -46,7 +46,7 @@ async function ambiente(tarefa) {
   usuarios.push(gm, jogador, intruso); usuarios.activeGM = gm;
   Object.defineProperty(gm, 'isSelf', { get: () => globalThis.game.user.id === gm.id });
   globalThis.game = { user: gm, users: usuarios, actors: colecao(), scenes: colecao(), folders: colecao(),
-    socket: { emit: (canal, dados) => e.pedidos.push({ canal, dados }), on: (canal, tratar) => { e.socket = tratar; } } };
+    socket: { emit: (canal, dados) => e.pedidos.push({ canal, dados }), on: (canal, tratar) => { e.socket = (mensagem, remetente = mensagem.de) => tratar(mensagem, remetente); } } };
   globalThis.ui = { notifications: { warn: mensagem => e.avisos.push(mensagem), info: mensagem => e.recados.push(mensagem) } };
   globalThis.CONST = { DOCUMENT_OWNERSHIP_LEVELS: { NONE: 0, OWNER: 3 }, FOLDER_DOCUMENT_TYPES: ['Actor'] };
   globalThis.Hooks = { on: (nome, tratar) => { (e.ganchos[nome] ??= []).push(tratar); },
@@ -236,6 +236,11 @@ test('C46.2 aplicação: o socket valida o dono e a cena; só a resposta do mest
   await e.socket({ tipo: 'veiculoNaCena', id: 'intruso', de: e.intruso.id, pedido });
   assert.match(e.pedidos.at(-1).dados.resposta.erro, /permissão|veículo|cena/i);
   assert.equal(e.cena.tokens.length, 0);
+  // O "de" forjado (o C56): o intruso escreve o id do dono, mas o remetente que o servidor do Foundry dá é o dele.
+  await e.socket({ tipo: 'veiculoNaCena', id: 'forjado', de: e.jogador.id, pedido }, e.intruso.id);
+  assert.match(e.pedidos.at(-1).dados.resposta.erro, /permissão|veículo|cena/i);
+  assert.equal(e.pedidos.at(-1).dados.para, e.intruso.id, 'a resposta vai para quem mandou de verdade');
+  assert.equal(e.cena.tokens.length, 0);
   e.cena.active = false; e.cena.visible = false;
   await e.socket({ tipo: 'veiculoNaCena', id: 'oculta', de: e.jogador.id, pedido });
   assert.ok(e.pedidos.at(-1).dados.resposta.erro);
@@ -248,6 +253,9 @@ test('C46.2 aplicação: o socket valida o dono e a cena; só a resposta do mest
   assert.equal(mensagem.tipo, 'veiculoNaCena');
   assert.equal(mensagem.de, e.jogador.id);
   await e.socket({ tipo: 'veiculoNaCenaResposta', id: mensagem.id, para: e.jogador.id, de: e.intruso.id, resposta: { atorId: 'errado' } });
+  assert.equal(concluido, false);
+  // A resposta que diz vir do mestre, mandada pelo intruso, também não conclui.
+  await e.socket({ tipo: 'veiculoNaCenaResposta', id: mensagem.id, para: e.jogador.id, de: e.gm.id, resposta: { atorId: 'errado' } }, e.intruso.id);
   assert.equal(concluido, false);
   globalThis.game.user = e.gm;
   await e.socket(mensagem);

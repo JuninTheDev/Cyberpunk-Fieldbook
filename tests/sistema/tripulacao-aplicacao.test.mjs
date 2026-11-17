@@ -34,7 +34,7 @@ async function ambiente(tarefa) {
   Object.defineProperty(gm, 'isSelf', { get: () => globalThis.game.user.id === gm.id });
   globalThis.game = { user: gm, users: usuarios, actors: colecao(), scenes: colecao(), paused: false, activeTool: 'select',
     settings: { get: () => false }, system: { api: {} },
-    socket: { emit: (canal, dados) => e.pedidos.push({ canal, dados }), on: (canal, tratar) => { e.socket = tratar; } } };
+    socket: { emit: (canal, dados) => e.pedidos.push({ canal, dados }), on: (canal, tratar) => { e.socket = (mensagem, remetente = mensagem.de) => tratar(mensagem, remetente); } } };
   globalThis.ui = { notifications: { warn: mensagem => e.avisos.push(mensagem), info: mensagem => e.recados.push(mensagem) } };
   globalThis.CONST = { DOCUMENT_OWNERSHIP_LEVELS: { NONE: 0, OBSERVER: 2, OWNER: 3 }, TOKEN_DISPOSITIONS: { SECRET: -2 } };
   globalThis.Hooks = { on: (nome, tratar) => { (e.ganchos[nome] ??= []).push(tratar); },

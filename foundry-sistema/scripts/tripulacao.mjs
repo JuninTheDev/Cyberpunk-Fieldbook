@@ -476,13 +476,15 @@ export function registrarTripulacao() {
     });
   });
   Hooks.once('ready', () => {
-    game.socket.on(CANAL, async mensagem => {
+    // Quem mandou: o remetente que o servidor do Foundry dá, não o "de" da mensagem, que o cliente escreve (o C56).
+    game.socket.on(CANAL, async (mensagem, remetente) => {
       if (mensagem.tipo === 'tripulacaoPedido' && mestreAtivo()) {
-        const resposta = await executar(mensagem.pedido ?? {}, game.users.get(mensagem.de)).catch(e => ({ erro: e.message }));
-        game.socket.emit(CANAL, { tipo: 'tripulacaoResposta', id: mensagem.id, para: mensagem.de, de: game.user.id, resposta });
+        if (!game.users.get(remetente)) return;
+        const resposta = await executar(mensagem.pedido ?? {}, game.users.get(remetente)).catch(e => ({ erro: e.message }));
+        game.socket.emit(CANAL, { tipo: 'tripulacaoResposta', id: mensagem.id, para: remetente, de: game.user.id, resposta });
       } else if (mensagem.tipo === 'tripulacaoResposta' && mensagem.para === game.user.id) {
         const espera = esperando.get(mensagem.id);
-        if (espera?.mestre === mensagem.de) espera.resolver(mensagem.resposta);
+        if (espera?.mestre === remetente) espera.resolver(mensagem.resposta);
       }
     });
     if (mestreAtivo()) for (const cena of game.scenes) naFila(cena, () => repararCena(cena));

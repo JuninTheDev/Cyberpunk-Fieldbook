@@ -175,8 +175,9 @@ async function resolver(pedido, usuario) {
 }
 
 export function registrarArtesMarciais() {
-  game.socket.on(CANAL, mensagem => {
-    if (mensagem.tipo !== 'artesMarciais' || !souOMestreAtivo()) return;
-    naFila(() => resolver(mensagem.pedido, game.users.get(mensagem.de))).catch(erro => console.error(`${SISTEMA} | artes marciais`, erro));
+  // Quem pediu: o remetente que o servidor do Foundry dá, não um campo da mensagem (o C56).
+  game.socket.on(CANAL, (mensagem, remetente) => {
+    if (mensagem.tipo !== 'artesMarciais' || !souOMestreAtivo() || !game.users.get(remetente)) return;
+    naFila(() => resolver(mensagem.pedido, game.users.get(remetente))).catch(erro => console.error(`${SISTEMA} | artes marciais`, erro));
   });
 }

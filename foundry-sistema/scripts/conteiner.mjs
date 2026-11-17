@@ -111,19 +111,27 @@ export const parceirosDoUsuario = () => game.actors.filter(ator => ator.type ===
 // graça (o saque, o esconderijo), só vai. Na loja, custa o preço (regras.custoDaCompra): sem o dinheiro, avisa e não vai;
 // com ele, sai de quem compra e entra na loja, com a linha no extrato dos dois. Como no CORE, quem pega precisa ser dono
 // do contêiner (todos os jogadores são, desde a criação).
+// A conferência do dinheiro, a entrega e o pagamento vão juntos na fila do inventário dos dois (o C57, da auditoria de
+// 2026-11-16): com dois cliques rápidos, a segunda compra conferia o saldo antes de a primeira descontar, e o saldo ficava
+// negativo. Na fila, o item e o dinheiro são lidos de novo.
 export async function pegarDoConteiner(conteiner, item, { para = null, quantidade = null } = {}) {
   if (!conteiner.isOwner) { ui.notifications.warn(`${conteiner.name}: sem permissão para mexer neste contêiner.`); return null; }
   if (!para) { ui.notifications.warn('Escolha com quem trocar: o personagem que recebe o item.'); return null; }
   if (!para.isOwner) { ui.notifications.warn(`${para.name}: sem permissão para pôr itens nesta ficha.`); return null; }
-  const levar = quantidade ?? quantidadeDe(item.type, item.system);
-  const custo = conteiner.system.permissoes.deGraca ? 0 : custoDaCompra(item.type, item.system, levar);
-  if (custo > para.system.dinheiro) { ui.notifications.warn(`${para.name}: ${para.system.dinheiro}eb não pagam ${item.name} (${custo}eb).`); return null; }
-  const nome = `${levar > 1 ? `${levar}× ` : ''}${item.name}`;
-  const criado = await levarItem(item, para, { quantidade, manterNaOrigem: conteiner.system.permissoes.estoqueInfinito });
-  if (!criado || !custo) return criado;
-  await para.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: custo, motivo: `Comprou ${nome} em ${conteiner.name}` });
-  await conteiner.mudarComExtrato('dinheiro', { acao: 'somar', valor: custo, motivo: `Vendeu ${nome} para ${para.name}` });
-  return criado;
+  return naFilaDoInventario([conteiner, para], async () => {
+    const atual = conteiner.items.get(item.id);
+    if (!atual) return null;
+    const levar = quantidade ?? quantidadeDe(atual.type, atual.system);
+    const custo = conteiner.system.permissoes.deGraca ? 0 : custoDaCompra(atual.type, atual.system, levar);
+    if (custo > para.system.dinheiro) { ui.notifications.warn(`${para.name}: ${para.system.dinheiro}eb não pagam ${atual.name} (${custo}eb).`); return null; }
+    const nome = `${levar > 1 ? `${levar}× ` : ''}${atual.name}`;
+    // O transferirItem, e não o levarItem: este entraria na mesma fila, atrás desta tarefa, e esperaria para sempre.
+    const criado = await transferirItem(atual, para, { quantidade, manterNaOrigem: conteiner.system.permissoes.estoqueInfinito });
+    if (!criado || !custo) return criado;
+    await para.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: custo, motivo: `Comprou ${nome} em ${conteiner.name}` });
+    await conteiner.mudarComExtrato('dinheiro', { acao: 'somar', valor: custo, motivo: `Vendeu ${nome} para ${para.name}` });
+    return criado;
+  });
 }
 
 // Vender para a loja (o _sellItemTo do CORE): o jogador arrasta o item da ficha dele para a loja, que oferece o preço da

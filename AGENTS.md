@@ -67,10 +67,14 @@ lerem regras diferentes. Mudou uma regra aqui, mudou para todas.
 Rode da raiz do clone.
 
 - **G1, sintaxe:** `node --check` em cada `.mjs` de `foundry-sistema/` (com as subpastas, sem `.cache/` e `packs/`), nos
-  de `tests/sistema/`, no `tests/lib/foundry14.js`, no `tests/lib/trava.js` e no `tests/cenarios/v14.js`.
-- **G2, lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/cenarios/v14.js`.
+  de `tests/sistema/`, no `tests/lib/foundry14.js`, no `tests/lib/trava.js`, no `tests/lib/relatorio.js`, no
+  `tests/lib/foundry.js`, no `tests/rodar.js` e no `tests/cenarios/v14.js`.
+- **G2, lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/relatorio.js tests/lib/foundry.js tests/lib/c34-*.js tests/lib/c41-*.js tests/rodar.js tests/cenarios/v14.js`.
 - **G3, regras:** `node --test "tests/sistema/*.test.mjs"`. Sem falhas conhecidas desde o ciclo 116 (QUALITY_GATES).
-- **G4, Foundry 14:** `node tests/rodar.js v14`. Sem falhas conhecidas desde o ciclo 116 (QUALITY_GATES).
+- **G4, Foundry 14:** `node tests/rodar.js v14`. Neste PC, com `FOUNDRY14_APP=%LOCALAPPDATA%\FieldbookTeste\foundry14-app` e o
+  `node24\node.exe` dessa pasta (sem eles, a parte do Foundry é pulada). Sem falhas conhecidas desde o ciclo 116; desde
+  2026-11-17, quatro instáveis conhecidas, que caem também no master sem mudança (QUALITY_GATES, "Instáveis
+  conhecidas"; o C59 do ROADMAP).
 - **Os scripts do servidor** (`servidor/*.sh`, quando mudam): `node --test tests/isolados/servidor-sistema.test.js` (com o
   Git Bash; roda os scripts num repositório e com comandos de mentira).
 - **Os hooks dos agentes** (`.claude/hooks/*` e `.claude/settings.json`, quando mudam):
@@ -92,7 +96,8 @@ Rode da raiz do clone.
   - A de um teste interrompido vale como solta sozinha.
 - **Não mexa nos arquivos do clone** enquanto o G4 ou as mutações rodam: cada rodada lê os arquivos de novo.
 - **Com gente na mesa do servidor, o G4 pula a parte do Foundry.** A licença do Foundry vale para uma mesa por vez:
-  - o resultado diz "parte do Foundry pulada" e "Tudo certo" com 5 passos, e não vale como portão;
+  - o resultado diz "PULADO" e "NÃO vale como portão", e sai com o código 2 (desde o C54; antes dizia "Tudo certo");
+  - sem resposta da wiki online, também pula: não se sabe se a mesa está vazia;
   - espere a mesa esvaziar e rode de novo;
   - não contorne a checagem.
 - **Se um G4 é interrompido no meio,** pare o que ele deixou rodando antes de começar outro:

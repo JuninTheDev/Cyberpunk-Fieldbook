@@ -278,13 +278,15 @@ export function registrarVinculoVeiculo() {
     }
   });
   Hooks.once('ready', () => {
-    game.socket.on(CANAL, async mensagem => {
+    // Quem mandou: o remetente que o servidor do Foundry dá, não o "de" da mensagem, que o cliente escreve (o C56).
+    game.socket.on(CANAL, async (mensagem, remetente) => {
       if (mensagem.tipo === 'veiculoNaCena' && mestreAtivo()) {
-        const resposta = await porNaCenaDoMestre(mensagem.pedido ?? {}, game.users.get(mensagem.de)).catch(erro => ({ erro: erro.message }));
-        game.socket.emit(CANAL, { tipo: 'veiculoNaCenaResposta', id: mensagem.id, para: mensagem.de, de: game.user.id, resposta });
+        if (!game.users.get(remetente)) return;
+        const resposta = await porNaCenaDoMestre(mensagem.pedido ?? {}, game.users.get(remetente)).catch(erro => ({ erro: erro.message }));
+        game.socket.emit(CANAL, { tipo: 'veiculoNaCenaResposta', id: mensagem.id, para: remetente, de: game.user.id, resposta });
       } else if (mensagem.tipo === 'veiculoNaCenaResposta' && mensagem.para === game.user.id) {
         const espera = esperando.get(mensagem.id);
-        if (espera?.mestre === mensagem.de) espera.resolver(mensagem.resposta);
+        if (espera?.mestre === remetente) espera.resolver(mensagem.resposta);
       }
     });
     if (!mestreAtivo()) return;

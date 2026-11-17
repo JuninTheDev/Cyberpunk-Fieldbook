@@ -113,9 +113,10 @@ module.exports = async ({ edge, servidores, r }) => {
   });
 
   // ---------- Foundry 14 ----------
-  if (!foundry14.disponivel()) { await r.passo(`${foundry14.motivoIndisponivel()}: parte do Foundry pulada`, async () => [true, '']); return; }
+  // O pulo não é um passo aprovado (o C54): a rodada sai com o código 2 e não vale como portão.
+  if (!foundry14.disponivel()) { r.pular('parte do Foundry 14', foundry14.motivoIndisponivel()); return; }
   const ocupada = await mesaOcupada(servidores.raiz);
-  if (ocupada) { await r.passo(`mesa do servidor em uso (${ocupada}): parte do Foundry pulada`, async () => [true, '']); return; }
+  if (ocupada) { r.pular('parte do Foundry 14', ocupada); return; }
 
   foundry14.preparar();
   const mesa = await foundry14.subir();
@@ -9443,6 +9444,25 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.comParede.alvos.length === 0 && /ninguém/.test(info.comParede.cabecalho) && info.semParede.alvos.join() === 'Atrás', JSON.stringify(info)];
     });
 
+    await r.passo('C56 (a auditoria de 2026-11-16): o pedido da NET que o jogador forja com o id do mestre vale como do jogador ("Você não controla este token."), e a resposta volta para ele', async () => {
+      // O Scanner no token do Capanga (do mestre). Antes, o mestre ativo usava o "usuario" da mensagem: o jogador passava
+      // pela conferência do dono, e a resposta ia para o id forjado.
+      const info = await jogador.evaluate(`(async () => {
+        const canal = 'system.${S}';
+        const id = foundry.utils.randomID();
+        const capanga = canvas.scene?.tokens.find(t => t.name === 'Capanga');
+        const mestre = game.users.find(u => u.isGM);
+        const resposta = await new Promise(resolve => {
+          // O ouvinte fica (filtra pelo id); tirar com o off não é preciso.
+          game.socket.on(canal, mensagem => { if (mensagem?.tipo === 'net-resposta' && mensagem.id === id) resolve(mensagem); });
+          setTimeout(() => resolve(null), 8000);
+          game.socket.emit(canal, { tipo: 'net-pedido', id, usuario: mestre.id, op: 'scanner', dados: { cena: canvas.scene.id, token: capanga?.id } });
+        });
+        return { capanga: Boolean(capanga), eu: game.user.id, resposta };
+      })()`);
+      return [info.capanga && info.resposta?.ok === false && info.resposta.erro === 'Você não controla este token.' && info.resposta.usuario === info.eu, JSON.stringify(info)];
+    });
+
     // ---------- Importar da wiki ----------
     await r.passo('capanga (o mook do CORE): o token nasce solto, com o HP na barra; a ficha é uma página só (o painel geral sem as armas, a tabela de armas, o agarrão, os itens e as notas); o que se arrasta para ela entra equipado (a pistola, a armadura, o Medscanner) ou instalado (o Kerenzikov rola a perda de Humanidade; com Shift, o Grip Foot fica com a média); dois capangas na cena: o tiro num muda só o HP e a SP dele, o outro recarrega e atira com a própria munição, e o Death Save no turno é só do que caiu', async () => {
       // Kerenzikov: 4d6 3 + 3 + 3 + 3 = 12. Tiro no capanga 1 (10 m, DV 15): REF 6 + Pistola 6 + d10 9 = 21; dano 3d6 6 + 5 +
@@ -10008,6 +10028,26 @@ module.exports = async ({ edge, servidores, r }) => {
         // No extrato: a mudança da mesa no passo anterior (−100 por fora, sem motivo) e a compra, com os itens.
         && info.extrato.join(' / ') === `definir -100  / subtrair -110 Compra na wiki: ${pedido.itens.map(linha => linha.nome).join(', ')}` && info.linhasDepois === 3;
       return [ok, JSON.stringify({ ...info, wiki: [status(pedido.id).status, status(caro.id).status, status(caro.id).erro] })];
+    });
+
+    await r.passo('C58 (a auditoria de 2026-11-16): o pedido com um item que ainda não existe no sistema não entrega nada nem cobra; o aviso diz o que falta', async () => {
+      // Um pedido de 20eb com 10 balas de rifle (que existem) e um item fora do catálogo. Antes, as balas entravam, os 20eb
+      // saíam e o pedido ia como entregue, sem o item. O pedido é só deste passo (a wiki não o tem: o POST do erro dá 404,
+      // e a entrega segue sem ele).
+      const info = await edge.evaluate(`(async () => {
+        const id = ${JSON.stringify(solo.id)};
+        const a = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === id);
+        const pedido = { id: 'c58-falta', status: 'aprovado', total: 20, itens: [
+          { id: 'core_ammo:rifle-basic', nome: 'Rifle (Basic)', qtd: 10, uid: 'pedido:c58-falta:0' },
+          { id: 'core_gear:c58-nao-existe', nome: 'Item que falta', qtd: 1, uid: 'pedido:c58-falta:1' }
+        ] };
+        const antes = { dinheiro: a.system.dinheiro, itens: a.items.size, extrato: a.system.extratos.dinheiro.length };
+        const resultado = await game.system.api.wiki.entregarPedido(a, id, pedido).then(r => r, e => ({ excecao: e.message }));
+        return { antes, resultado, depois: { dinheiro: a.system.dinheiro, itens: a.items.size, extrato: a.system.extratos.dinheiro.length } };
+      })()`);
+      const { antes, resultado, depois } = info;
+      return [resultado.ok === false && /^Ainda não existe neste sistema: Item que falta\. Nada foi entregue nem cobrado\.$/.test(resultado.notas?.[0] || '')
+        && depois.dinheiro === antes.dinheiro && depois.itens === antes.itens && depois.extrato === antes.extrato, JSON.stringify(info)];
     });
 
     await r.passo('pedidos da loja: a entrega de cada minuto e a do mestre no mesmo pedido entregam uma vez, sem o aviso falso de "já foi resolvido" (as duas juntas; e a de cada minuto com a ficha lida antes de a outra terminar)', async () => {
@@ -15622,6 +15662,30 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('C57 (a auditoria de 2026-11-16): duas compras ao mesmo tempo (o clique duplo) na loja de estoque infinito, com 150eb e a pistola a 100eb: uma vai, a outra avisa; o saldo fica em 50, nunca negativo', async () => {
+      // Antes, as duas conferiam os 150eb antes de a primeira descontar: as duas pistolas iam, e o saldo ficava em −50.
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        let loja, fregues;
+        const avisos = [];
+        ui.notifications.warn = m => { avisos.push(String(m)); };
+        try {
+          loja = await Actor.implementation.create({ name: 'C57 Loja', type: 'conteiner', items: [foundry.utils.deepClone(cat['core_weapons:heavy-pistol'])] });
+          await loja.update({ 'system.permissoes.estoqueInfinito': true });
+          fregues = await Actor.implementation.create({ name: 'C57 Comprador', type: 'personagem', system: { dinheiro: 150 } });
+          const pistola = loja.items.getName('Heavy Pistol');
+          const { pegarDoConteiner } = game.system.api.conteiner;
+          const duas = await Promise.all([1, 2].map(() => pegarDoConteiner(loja, pistola, { para: fregues }).then(r => Boolean(r))));
+          return { duas, avisos, dinheiro: [fregues.system.dinheiro, loja.system.dinheiro], pistolas: fregues.items.filter(i => i.name === 'Heavy Pistol').length, naLoja: Boolean(loja.items.getName('Heavy Pistol')) };
+        } finally {
+          delete ui.notifications.warn;
+          for (const ator of [loja, fregues].filter(Boolean)) await ator.delete();
+        }
+      })()`);
+      return [info.duas.filter(Boolean).length === 1 && info.pistolas === 1 && info.dinheiro.join() === '50,100' && info.naLoja
+        && info.avisos.length === 1 && /50eb não pagam Heavy Pistol \(100eb\)/.test(info.avisos[0]), JSON.stringify(info)];
+    });
+
     await r.passo('contêiner (o C24, parte 3): o "Configurar a compra" do mestre (os dez tipos do CORE, todos comprando a 100% na loja nova) grava o equipamento a 50% e a arma fora; no personalizado sem "Vender itens", o botão some', async () => {
       const info = await edge.evaluate(`(async () => {
         const esperar = async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
@@ -16838,6 +16902,45 @@ module.exports = async ({ edge, servidores, r }) => {
         editouMunicao: [info.editouMunicao, [true, true, true]], semSubstituir: [info.semSubstituir, [14, false, 0, false, 0, false, 0]],
         substituiu: [info.substituiu, [14, true, 7, true, 7, true, 0]], aplicado: [info.aplicado, ['acertou', true, 7, 18, 62, 2, 'Perna quebrada', 7, 0]],
         editouZero: [info.editouZero, true], nunca: [info.nunca, [18, false, 0, false, 0, false, 0]], borracha: [info.borracha, [18, true, 5, true, 5, false, 0]], semLesao: [info.semLesao, true] });
+    });
+
+    await r.passo('C55 (a auditoria de 2026-11-16): o fogo supressivo sem alvo e o explosivo com um contêiner, um Black ICE e um demônio perto do alvo não quebram: o cartão sai, e só o alvo está nele', async () => {
+      // Antes, o resolver dava TypeError (o contêiner e os atores da NET não têm perícias) depois de gastar a bala. Na cena
+      // do C43 (os atores e a cena são só deste passo). A atiradora a 8 m do C43 Alvo (REF 0: só aguenta). Supressivo: d10 5
+      // → REF 8 + Autofogo 4 + 5 = 17; a Concentração do alvo, 3. Explosivo (DV 15 a 8 m): d10 9 → 21; dano 6d6 de 1 = 6.
+      const info = await comFormulasC43(`async ({ criar, alvo, cena, dados, esperar }) => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = (id, mudar = {}) => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), mudar);
+        const atiradora = await criar({ name: 'C55 Atiradora', type: 'personagem', system: { atributos: { ref: { valor: 8 } }, pericias: { autofire: { nivel: 4 }, 'heavy-weapons': { nivel: 4 } } },
+          items: [pegar('core_weapons:assault-rifle', { system: { equipada: true } }), pegar('core_ammo:rifle-basic', { system: { quantidade: 60 } }),
+            pegar('core_weapons:grenade-launcher', { system: { equipada: true } }), pegar('core_ammo:grenade-armor-piercing', { system: { quantidade: 2 } })] });
+        await cena.createEmbeddedDocuments('Token', [(await atiradora.getTokenDocument({ x: 100, y: 400, actorLink: true })).toObject()]);
+        for (const [name, type, dy] of [['C55 Contêiner', 'conteiner', 100], ['C55 Black ICE', 'blackice', -100], ['C55 Demônio', 'demonio', 200]]) {
+          const ator = await criar({ name, type });
+          await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 500, y: 400 + dy })).toObject()]);
+        }
+        await esperar(() => ['C55 Atiradora', 'C55 Contêiner', 'C55 Black ICE', 'C55 Demônio'].every(nome => canvas.tokens.placeables.some(t => t.name === nome)));
+        const resultado = {};
+        try {
+          const rifle = atiradora.items.getName('Assault Rifle'), lanca = atiradora.items.getName('Grenade Launcher');
+          await rifle.recarregar();
+          // Sem alvo marcado (o C43 marca o dele): o supressivo procura quem está a até 25 m (o sobFogo).
+          canvas.tokens.setTargets([]);
+          await esperar(() => !game.user.targets.size);
+          resultado.semAlvo = !game.user.targets.size;
+          dados([[5, 10], [3, 10]]);
+          const supressivo = await rifle.atacar({ modo: 'supressivo' });
+          resultado.supressivo = { cabecalho: supressivo.cabecalho, alvos: supressivo.linhas.map(l => l.nome) };
+          const hp = alvo.system.hp.value;
+          await lanca.recarregar();
+          dados([[9, 10], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6], [1, 6]]);
+          const granada = await lanca.atacar({ alvo: cena.tokens.find(t => t.actor?.id === alvo.id) });
+          resultado.granada = { cabecalho: granada.cabecalho, alvos: granada.linhas.map(l => l.nome), hp: [hp, alvo.system.hp.value] };
+        } catch (erro) { resultado.erro = erro.message; }
+        return resultado;
+      }`, true);
+      const so = lista => JSON.stringify(lista) === JSON.stringify(['C43 Alvo']);
+      return [!info.erro && info.semAlvo && so(info.supressivo?.alvos) && so(info.granada?.alvos) && /explodiu/.test(info.granada.cabecalho) && info.granada.hp[1] < info.granada.hp[0], JSON.stringify(info)];
     });
 
     // ---------- C44: a régua com Andar e Correr (o drag-ruler.js do CORE) ----------

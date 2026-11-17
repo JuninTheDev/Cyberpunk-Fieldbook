@@ -31,18 +31,21 @@ function executar(op, dados, usuario) {
 
 export function iniciarSocketDaNet(operacoes) {
   tratadores = operacoes;
-  game.socket.on(CANAL, async mensagem => {
+  // Quem pediu é o remetente que o servidor do Foundry dá (o segundo argumento), não o "usuario" da mensagem, que o
+  // cliente escreve: com ele, um jogador se passava pelo mestre nas operações da NET (o C56). A resposta só vale vinda
+  // de um mestre.
+  game.socket.on(CANAL, async (mensagem, remetente) => {
     if (mensagem?.tipo === 'net-pedido') {
       if (!souOMestreAtivo()) return;
       let resposta;
       try {
-        resposta = { ok: true, dados: await naFila(() => executar(mensagem.op, mensagem.dados, game.users.get(mensagem.usuario))) };
+        resposta = { ok: true, dados: await naFila(() => executar(mensagem.op, mensagem.dados, game.users.get(remetente))) };
       } catch (falha) {
         if (!(falha instanceof ErroNet)) console.error(`${SISTEMA} | NET: ${mensagem.op}`, falha);
         resposta = { ok: false, erro: falha.message || String(falha) };
       }
-      game.socket.emit(CANAL, { tipo: 'net-resposta', id: mensagem.id, usuario: mensagem.usuario, ...resposta });
-    } else if (mensagem?.tipo === 'net-resposta' && mensagem.usuario === game.user.id) {
+      game.socket.emit(CANAL, { tipo: 'net-resposta', id: mensagem.id, usuario: remetente, ...resposta });
+    } else if (mensagem?.tipo === 'net-resposta' && mensagem.usuario === game.user.id && game.users.get(remetente)?.isGM) {
       const pendente = pendentes.get(mensagem.id);
       if (!pendente) return;
       pendentes.delete(mensagem.id);

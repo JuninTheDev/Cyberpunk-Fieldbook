@@ -642,9 +642,10 @@ async function limparLigacoes(cena) {
 }
 
 export function registrarNeuroport() {
-  game.socket.on(CANAL, mensagem => {
-    if (mensagem.tipo !== 'neuroport' || !souOMestreAtivo()) return;
-    naFila(() => resolver(mensagem.acao, mensagem.pedido, game.users.get(mensagem.de))).catch(erro => console.error(`${SISTEMA} | Neuroport`, erro));
+  // Quem pediu: o remetente que o servidor do Foundry dá, não um campo da mensagem (o C56).
+  game.socket.on(CANAL, (mensagem, remetente) => {
+    if (mensagem.tipo !== 'neuroport' || !souOMestreAtivo() || !game.users.get(remetente)) return;
+    naFila(() => resolver(mensagem.acao, mensagem.pedido, game.users.get(remetente))).catch(erro => console.error(`${SISTEMA} | Neuroport`, erro));
   });
   Hooks.on('preUpdateActor', acordarComODano);
   Hooks.on('updateToken', (token, mudancas) => {

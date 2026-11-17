@@ -132,16 +132,21 @@ async function ativarModulo(edge, ids = ['cpr-2077']) {
   await esperarJogo(edge);
 }
 
-// Mesa do servidor ocupada? A wiki online diz (/api/estado); sem endereço configurado, não dá para saber.
-// A licença do Foundry vale para uma mesa por vez: com gente na mesa do servidor, os cenários do Foundry não rodam.
+// Mesa do servidor ocupada? A wiki online diz (/api/estado); sem endereço configurado, não há servidor com quem dividir
+// a licença. A licença do Foundry vale para uma mesa por vez: com gente na mesa do servidor, os cenários do Foundry não
+// rodam. Devolve '' (pode rodar) ou o motivo para não rodar. Sem resposta (a rede caída, o prazo, um erro do servidor ou
+// uma resposta que não é JSON), não se sabe se a mesa está vazia: não roda (o C54; antes, contava como vazia).
 async function mesaOcupada(raiz) {
   let wiki = process.env.WIKI_ONLINE || '';
   try { wiki = wiki || fs.readFileSync(path.join(raiz, 'servidor', 'endereco.txt'), 'utf8').trim(); } catch { /* sem servidor */ }
   if (!wiki) return '';
+  const endereco = `${wiki.replace(/\/+$/, '')}/api/estado`;
   try {
-    const estado = await (await fetch(`${wiki.replace(/\/+$/, '')}/api/estado`, { signal: AbortSignal.timeout(8000) })).json();
+    const resposta = await fetch(endereco, { signal: AbortSignal.timeout(8000) });
+    if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+    const estado = await resposta.json();
     return estado.mesa && estado.mesa.usuarios > 0 ? `${estado.mesa.usuarios} pessoa(s) na mesa do servidor` : '';
-  } catch { return ''; }
+  } catch (erro) { return `não deu para saber se a mesa do servidor está vazia (${endereco}: ${erro.message})`; }
 }
 
 module.exports = { mesaOcupada, disponivel, preparar, limparMundo, subir, entrarComoMestre, entrarComo, esperarJogo, ativarModulo, PORTA };

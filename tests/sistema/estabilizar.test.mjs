@@ -65,6 +65,9 @@ test('Cura natural (:552 e system-catalog.js:74): por dia inteiro, HP igual ao B
   assert.deepEqual(curaNatural({ dias: 2, body: 6, hp: 1, max: 40 }), { dias: 2, porDia: 6, antes: 1, depois: 13, recuperado: 12 });
   assert.equal(curaNatural({ dias: 3, body: 4, hp: 30, max: 35, anticorpos: true }).depois, 35, 'não passa do máximo');
   assert.equal(curaNatural({ dias: 1, body: 4, hp: 35, max: 35 }).recuperado, 0);
+  // O HP não desce (o comentário da regra): com o HP acima do máximo (o máximo que caiu com a perda de BODY ou de
+  // Humanidade, num dado antigo), o descanso não tira. A mutação do Math.max sobreviveu na auditoria de 2026-11-16 (o C54).
+  assert.deepEqual(curaNatural({ dias: 1, body: 5, hp: 42, max: 40 }), { dias: 1, porDia: 5, antes: 42, depois: 42, recuperado: 0 }, 'o descanso não baixa o HP');
   assert.equal(curaNatural({ dias: 1, body: 6, hp: -2, max: 40 }).depois, 4, 'do negativo, soma o BODY');
   for (const dias of [0, -1, 1.5, NaN, '2']) assert.equal(curaNatural({ dias, body: 4, hp: 15, max: 35 }), null, `dias ${String(dias)}`);
 });

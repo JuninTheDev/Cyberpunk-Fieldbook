@@ -7,9 +7,9 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 | Portão | Como roda | Passa quando | Estado |
 | --- | --- | --- | --- |
 | G1 Sintaxe | `node --check` em cada `.mjs` do sistema (com as subpastas, como `scripts/netrun/`) e nos testes | nenhum erro | ativo |
-| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/c34-*.js tests/lib/c41-*.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
+| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/relatorio.js tests/lib/foundry.js tests/lib/c34-*.js tests/lib/c41-*.js tests/rodar.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
 | G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam: as regras puras com os valores de referência, e o conteúdo gerado contra a própria wiki (tabelas de DV faixa por faixa, lesões pelo 2d6, perícias, os itens da loja) | ativo |
-| G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável) | todas as checagens passam, inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
+| G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável; neste PC, com `FOUNDRY14_APP=%LOCALAPPDATA%\FieldbookTeste\foundry14-app` e o `node24\node.exe` dessa pasta) | todas as checagens passam (as instáveis conhecidas, abaixo, só quando caem também no master sem a mudança), e nada pulado: com a parte do Foundry pulada, sai com o código 2 e não vale (o C54), inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
 | G5 Wiki | `node tests/rodar.js` (a suíte inteira) | nenhuma falha nova; as conhecidas estão listadas abaixo | ativo |
 | Servidor | `node --test tests/isolados/servidor-sistema.test.js`, quando um `servidor/*.sh` muda (o C28: os scripts de verdade, com o Git Bash, num repositório e com comandos de mentira) | todos passam | ativo |
 | G6 Revisão | `git diff` do lote | sem mudança fora da tarefa; desde o C28, o push no master instala o sistema no Foundry 14 da mesa (com a mesa vazia), então nada sem os portões; nada mais que alcance o servidor ou a campanha real | ativo |
@@ -20,6 +20,23 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 - **`fluxo`, "armas de 2077 do compêndio":** precisa do sistema CORE extraído em `foundry-2077/.cache`, que só existe num
   PC com o Foundry 12 e o CORE instalados.
 - **`sistema`, "sem erros de JS na página":** dois 404 dos PDFs dos livros, que ficam fora do git (`*.pdf`).
+
+## Instáveis conhecidas do G4 (desde 2026-11-17, a auditoria)
+
+Caem às vezes no master 4ee2b608 sem mudança nenhuma (três rodadas na auditoria e no ciclo 200). Não se tiram nem se
+afrouxam: uma rodada vale como portão quando as falhas são só destas e a mesma aparece numa rodada do master sem a
+mudança (ou a rodada seguinte passa). O C59 é para consertá-las.
+
+- **`estados (C26; wiki, p. 168–177)`** e **`C26: chaves do Fluxo`:** "A nonpersisted Document cannot be updated", as
+  duas na mesma rodada (2 de 4 rodadas do master; 1 das 5 mutações do G4).
+- **`inventário (C16)`, a luz da lanterna nos dois clientes:** 1 de 4 rodadas do master.
+- **`tokens dinâmicos (o C45, parte 2)`:** 2 de 4 rodadas do master; e o `andar do token dinâmico (o C52)`, junto, uma vez.
+
+**A lição do ciclo 200:** um passo novo no meio do G4 não mexe no que os vizinhos usam: os atores do combate (o Atrás,
+a Atiradora), o escondido dos tokens, as armas e a munição de outro ator, e os ouvintes do socket no navegador do
+jogador (o `off`). Com eles, cinco passos bem depois caíam em todas as rodadas, sem relação aparente. O passo novo vai
+numa cena e com atores só dele (como o `comFormulasC43`) e confere o próprio preparo (o alvo desmarcado). Para achar
+o culpado: o código novo com o `v14.js` antigo, numa rodada.
 
 ## Falhas conhecidas desde a integração da revisão (ciclo 32): nenhuma desde o ciclo 116
 

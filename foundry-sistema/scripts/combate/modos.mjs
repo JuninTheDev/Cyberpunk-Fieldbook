@@ -1,6 +1,6 @@
 // Resolução do ataque no mestre: defesa de cada alvo, dano e modos individuais ou de área.
 
-import { DEFESAS, SISTEMA } from '../config.mjs';
+import { ALVOS_DE_ARMA, ALVOS_DO_SUPRESSIVO, DEFESAS, SISTEMA } from '../config.mjs';
 import { config } from '../configuracoes.mjs';
 import { TABELAS_DV } from '../gerado.mjs';
 import { escolhaDeLesao, lesaoCritica, PERNA_QUEBRADA } from '../lesoes.mjs';
@@ -683,11 +683,12 @@ async function cartucho(ctx) {
   await danoNaArea(ctx, pegas, (ctx.pedido.doisCanos && ctx.perfil?.doisCanos?.dano) || ctx.pedido.porTiro?.danoComMenos || ctx.perfil?.danoFixo || '3d6');
 }
 
-// Tokens com o centro na área de 10 × 10 m em volta do alvo, menos os escondidos.
+// Tokens com o centro na área de 10 × 10 m em volta do alvo, menos os escondidos e quem a arma não atinge (o contêiner,
+// o Black ICE e o demônio: o C55).
 function naArea(ctx, principal) {
   const metade = ((R.AREA_EXPLOSIVO / 2) / ctx.cena.grid.distance) * ctx.cena.grid.size;
   const centro = centroDe(principal);
-  return ctx.cena.tokens.filter(token => token.actor && !token.hidden && R.dentroDaArea(centro, centroDe(token), metade));
+  return ctx.cena.tokens.filter(token => ALVOS_DE_ARMA.includes(token.actor?.type) && !token.hidden && R.dentroDaArea(centro, centroDe(token), metade));
 }
 
 // Explosivo: o ataque contra a DV do alcance do alvo; errou, o mestre decide onde caiu. Acertou, todos na área levam o
@@ -728,12 +729,13 @@ async function explosao(ctx) {
 }
 
 // Quem o fogo supressivo pega sem alvo marcado: todos a até 25 m e à vista (sem parede no meio, se o mestre está
-// vendo a cena), menos quem atirou, os escondidos e os derrotados.
+// vendo a cena), menos quem atirou, os escondidos, os derrotados e quem não faz a Concentração (o veículo, o contêiner e
+// os atores da NET: o C55).
 function sobFogo(ctx) {
   const veCena = canvas.ready && canvas.scene?.id === ctx.cena.id;
   const origem = centroDe(ctx.tokenAtq);
   return ctx.cena.tokens.filter(token => {
-    if (token.id === ctx.tokenAtq.id || token.hidden || !token.actor || token.actor.type === 'veiculo') return false;
+    if (token.id === ctx.tokenAtq.id || token.hidden || !ALVOS_DO_SUPRESSIVO.includes(token.actor?.type)) return false;
     if (token.actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED)) return false;
     const metros = distancia(ctx.tokenAtq, token);
     if (metros === null || metros > R.RAIO_SUPRESSAO + 0.5) return false;

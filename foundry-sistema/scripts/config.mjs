@@ -69,6 +69,12 @@ export const CLASSES_PROGRAMA = {
 
 // Os atores da NET (o blackIce e o demon do CORE): sem corpo, atributos, HP nem Sorte; rolam os números deles + 1d10.
 export const ATORES_DA_NET = ['blackice', 'demonio'];
+// Quem a arma atinge (o alvo marcado e a área do explosivo): as pessoas e o veículo. O contêiner (a loja, o saque) não
+// esquiva nem tem HP, e os atores da NET ficam na NET: com eles na área, o ataque dava TypeError depois de gastar a bala
+// (o C55, da auditoria de 2026-11-16).
+export const ALVOS_DE_ARMA = ['personagem', 'capanga', 'veiculo'];
+// Quem o fogo supressivo pega sem alvo marcado: quem faz a Concentração (WILL). O veículo não (system-rules.js:538).
+export const ALVOS_DO_SUPRESSIVO = ['personagem', 'capanga'];
 
 // O contêiner (o container do CORE): os tipos e as permissões dos jogadores (regras.permissoesDoTipo liga cada tipo).
 export const TIPOS_DE_CONTEINER = {

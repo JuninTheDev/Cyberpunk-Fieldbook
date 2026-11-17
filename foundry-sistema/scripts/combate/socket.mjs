@@ -23,7 +23,8 @@ export function pedir(usuario, pedido, dados, tempo = (Number(config('tempo')) +
   const id = foundry.utils.randomID();
   const promessa = new Promise(resolve => {
     const relogio = setTimeout(() => desistir(id, null), tempo);
-    esperando.set(id, resposta => { clearTimeout(relogio); esperando.delete(id); resolve(resposta); });
+    // de: quem pode responder (a resposta de outro cliente não vale: o C56).
+    esperando.set(id, Object.assign(resposta => { clearTimeout(relogio); esperando.delete(id); resolve(resposta); }, { de: usuario.id }));
   });
   promessa.id = id;
   game.socket.emit(CANAL, { tipo: 'pedido', id, usuario: usuario.id, pedido, dados });
@@ -96,17 +97,24 @@ export function naFila(tarefa) {
   return resultado;
 }
 
+// Quem mandou é o segundo argumento do ouvinte: o id que o servidor do Foundry põe (Foundry 14, handleCustomSocket), e
+// não um campo da mensagem, que o próprio cliente escreve. Com o campo, um jogador, pelo console, se passava pelo mestre
+// (o C56, da auditoria de 2026-11-16). Os pedidos e o fim deles só valem vindos de um mestre; a resposta, só de quem
+// recebeu o pedido.
 export function registrarCombate() {
-  game.socket.on(CANAL, async mensagem => {
+  game.socket.on(CANAL, async (mensagem, remetente) => {
+    const quem = game.users.get(remetente) ?? null;
     if (mensagem.tipo === 'ataque' && souOMestreAtivo()) {
-      await naFila(() => resolver(mensagem.pedido, game.users.get(mensagem.de))).catch(erro => console.error(`${SISTEMA} | ataque`, erro));
-    } else if (mensagem.tipo === 'pedido' && mensagem.usuario === game.user.id) {
+      if (!quem) return;
+      await naFila(() => resolver(mensagem.pedido, quem)).catch(erro => console.error(`${SISTEMA} | ataque`, erro));
+    } else if (mensagem.tipo === 'pedido' && mensagem.usuario === game.user.id && quem?.isGM) {
       const tratar = TRATADORES[mensagem.pedido];
       const resposta = tratar ? await tratar(mensagem.dados, mensagem.id).catch(erro => { console.error(`${SISTEMA} | ${mensagem.pedido}`, erro); return null; }) : null;
       game.socket.emit(CANAL, { tipo: 'resposta', id: mensagem.id, resposta: resposta ?? null });
     } else if (mensagem.tipo === 'resposta') {
-      esperando.get(mensagem.id)?.(mensagem.resposta);
-    } else if (mensagem.tipo === 'expirou') {
+      const espera = esperando.get(mensagem.id);
+      if (espera && espera.de === remetente) espera(mensagem.resposta);
+    } else if (mensagem.tipo === 'expirou' && quem?.isGM) {
       // A janela de reação fecha sem resposta (expirar); a de rolagem, só fecha.
       const janela = janelas.get(mensagem.id);
       if (janela?.expirar) janela.expirar(); else janela?.close();

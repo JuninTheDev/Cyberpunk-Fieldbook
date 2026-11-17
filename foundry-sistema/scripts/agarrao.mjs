@@ -309,9 +309,10 @@ async function aoApagarEfeito(efeito) {
 }
 
 export function registrarAgarrao() {
-  game.socket.on(CANAL, mensagem => {
-    if (mensagem.tipo !== 'agarrao' || !souOMestreAtivo()) return;
-    naFila(() => resolver(mensagem.acao, mensagem.pedido, game.users.get(mensagem.de))).catch(erro => console.error(`${SISTEMA} | agarrão`, erro));
+  // Quem pediu: o remetente que o servidor do Foundry dá, não um campo da mensagem (o C56).
+  game.socket.on(CANAL, (mensagem, remetente) => {
+    if (mensagem.tipo !== 'agarrao' || !souOMestreAtivo() || !game.users.get(remetente)) return;
+    naFila(() => resolver(mensagem.acao, mensagem.pedido, game.users.get(remetente))).catch(erro => console.error(`${SISTEMA} | agarrão`, erro));
   });
   Hooks.on('deleteActiveEffect', efeito => { aoApagarEfeito(efeito).catch(erro => console.error(`${SISTEMA} | agarrão`, erro)); });
 }

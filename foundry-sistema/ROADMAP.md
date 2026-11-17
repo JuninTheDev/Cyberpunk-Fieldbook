@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 200). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 201). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **A branch:** desde o C28 (ciclo 195, 2026-10-28), o `master`. O push de um ciclo põe o sistema no Foundry 14 da mesa
   sozinho, com a mesa vazia; a `sistema-v14` ficou parada no merge do C28.
@@ -538,20 +538,20 @@ escolheu o ChatGPT, sem a API):
 
 **A auditoria de 2026-11-16** (no master 4ee2b608; pedido do usuário em 2026-11-17, "Sim, fase 1": a fase 1 do plano
 de conserto, a parte do sistema e dos testes):
-- [~] **C54. O G4 que não engana:** em andamento (sessão KouArt, 2026-11-17). A parte do Foundry pulada não conta como
+- [x] **C54. O G4 que não engana:** feito no ciclo 200 (sessão KouArt, 2026-11-17). A parte do Foundry pulada não conta como
   passo aprovado (o resultado diz que não vale como portão e sai com o código 2); sem resposta da wiki online, a mesa do
   servidor não conta como vazia; e o caso da cura natural que faltava (o HP acima do máximo não desce).
-- [~] **C55. O ataque de área sem quebrar:** em andamento (sessão KouArt, 2026-11-17). O explosivo e o fogo supressivo
+- [x] **C55. O ataque de área sem quebrar:** feito no ciclo 200 (sessão KouArt, 2026-11-17). O explosivo e o fogo supressivo
   com um contêiner, um Black ICE ou um demônio por perto davam TypeError (eles não têm perícias) depois de gastar a bala.
-- [~] **C56. O remetente verdadeiro no socket:** em andamento (sessão KouArt, 2026-11-17). Os pedidos ao mestre usavam
+- [x] **C56. O remetente verdadeiro no socket:** feito no ciclo 200 (sessão KouArt, 2026-11-17). Os pedidos ao mestre usavam
   o usuário escrito na mensagem: um jogador, pelo console, se passava pelo mestre na NET e nos ataques.
-- [~] **C57. A compra no contêiner dentro da fila:** em andamento (sessão KouArt, 2026-11-17). Com dois cliques
+- [x] **C57. A compra no contêiner dentro da fila:** feito no ciclo 200 (sessão KouArt, 2026-11-17). Com dois cliques
   rápidos, o saldo era conferido antes da primeira compra terminar e ficava negativo.
-- [~] **C58. O pedido da wiki com um item que falta:** em andamento (sessão KouArt, 2026-11-17). Cobrava o total e
+- [x] **C58. O pedido da wiki com um item que falta:** feito no ciclo 200 (sessão KouArt, 2026-11-17). Cobrava o total e
   marcava entregue sem o item; agora não entrega nem cobra, e a wiki mostra o erro.
 - [ ] **C59. O G4 estável:** os passos que caem às vezes no master 4ee2b608, sem mudança nenhuma (QUALITY_GATES,
   "Instáveis conhecidas"): a lanterna do C16, os dois do C26 ("A nonpersisted Document cannot be updated") e o token
-  dinâmico do C45, parte 2.
+  dinâmico do C45, parte 2. No ciclo 200, o andar do token dinâmico do C52 também caiu uma vez.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);

@@ -7,7 +7,7 @@
 // - Modos: tiro, mirado (cabeça, perna, item na mão), corpo a corpo, autofogo, fogo supressivo, espingarda com
 //   cartucho e explosivo em área; das armas de 2077, o ricochete, a carga Tech e a ligação da arma Smart.
 
-import { ATORES_DA_NET, SISTEMA, STATUS_AGARRAO } from './config.mjs';
+import { ALVOS_DE_ARMA, ATORES_DA_NET, SISTEMA, STATUS_AGARRAO } from './config.mjs';
 import { config } from './configuracoes.mjs';
 import { perguntarTeste } from './janela-rolagem.mjs';
 import * as R from './regras.mjs';
@@ -79,9 +79,11 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const penteNoMestre = alheia && !arma.isOwner;
   if (penteNoMestre && !resolverAtaques) { ui.notifications.warn(`${arma.name}: sem o fluxo de combate ligado, só quem controla o dono gasta o pente desta arma.`); return null; }
   const marcados = (alvos ?? (alvo ? [alvo] : [...game.user.targets])).map(token => token?.document ?? token).filter(token => token?.actor);
-  // O Black ICE e o demônio ficam na NET: a arma não os atinge (o dano neles vem dos programas e do Zap).
-  const lista = marcados.filter(token => !ATORES_DA_NET.includes(token.actor.type));
-  if (lista.length < marcados.length) ui.notifications.warn('O Black ICE e o demônio estão na NET: a arma não os atinge.');
+  // O Black ICE e o demônio ficam na NET: a arma não os atinge (o dano neles vem dos programas e do Zap). O contêiner
+  // também não é alvo (o C55).
+  const lista = marcados.filter(token => ALVOS_DE_ARMA.includes(token.actor.type));
+  if (marcados.some(token => ATORES_DA_NET.includes(token.actor.type))) ui.notifications.warn('O Black ICE e o demônio estão na NET: a arma não os atinge.');
+  if (marcados.some(token => token.actor.type === 'conteiner')) ui.notifications.warn('O contêiner não é alvo de arma.');
   if (marcados.length && !lista.length) return null;
   const municao = arma.municaoCarregada;
   const conferirMira = () => {

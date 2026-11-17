@@ -9706,6 +9706,76 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     - a prévia sem os avisos (G7);
     - o `cortarFolha` sem os avisos (G8).
 
+### Ciclo 200 (2026-11-17): C54 a C58, a fase 1 da auditoria de 2026-11-16 (sessão KouArt)
+
+- **Pedido do usuário (2026-11-17):** "Sim, fase 1": a fase 1 do plano de conserto da auditoria de 2026-11-16, que
+  nove especialistas fizeram no master 4ee2b608. A parte da wiki e do servidor foi em commits próprios (94d0a563, o
+  Foundry sem resposta e a Agenda seguram a atualização; 91867682, o publicar, o cookie do mestre, o service worker e a
+  semente sem a trama antiga). Este ciclo é a do sistema e dos testes.
+- **O G4 antes de tudo:** no 4ee2b608, sem mudança nenhuma, o G4 deu 317/320: os dois do C26 ("A nonpersisted Document
+  cannot be updated") e o token dinâmico do C45, parte 2. Na auditoria, mais duas rodadas: 319/320 (a lanterna do C16) e
+  318/320 (os dois do C26). O AGENTS.md dizia "sem falhas conhecidas desde o ciclo 116": essas ficam como instáveis
+  conhecidas no QUALITY_GATES, e o C59 é para consertá-las.
+- **Entrega:**
+  - **C54, o G4 que não engana:**
+    - o `tests/lib/relatorio.js`: o `Relatorio` que estava no `tests/rodar.js`, com o `pular`, e o código de saída: 2
+      com uma parte pulada (o resultado diz que a rodada não vale como portão), a não ser com `PERMITIR_PULAR=1`. Antes, o
+      `node tests/rodar.js v14` sem o Foundry 14 no PC saía com "Tudo certo" e o código 0;
+    - o `v14.js` pula pelo `r.pular`;
+    - o `mesaOcupada` (`tests/lib/foundry.js`) devolve o motivo quando a wiki online não responde, dá erro HTTP ou não
+      manda JSON. Antes, contava como mesa vazia, e o G4 subia o Foundry 14 com gente na mesa do servidor;
+    - o caso da cura natural com o HP acima do máximo (a mutação do `Math.max` sobreviveu na auditoria).
+  - **C55:** o `ALVOS_DE_ARMA` e o `ALVOS_DO_SUPRESSIVO` (`config.mjs`) no `naArea`, no `sobFogo` e nos alvos marcados
+    (`combate.mjs`). O contêiner marcado avisa, como o Black ICE e o demônio.
+  - **C56:** os sete ouvintes do socket usam o segundo argumento, o remetente que o servidor do Foundry dá (o
+    `handleCustomSocket` do Foundry 14):
+    - no combate, o pedido e o "expirou" só valem vindos de um mestre, e a resposta só de quem recebeu o pedido (o `de`
+      guardado no `esperando`);
+    - na NET, a resposta vai para o remetente e só vale vinda de um mestre;
+    - no agarrão, nas artes marciais, no Neuroport, na tripulação e no veículo na cena, quem pediu é o remetente.
+  - **C57:** o `pegarDoConteiner` confere o dinheiro, entrega e paga dentro da fila do inventário dos dois, lendo o item e
+    o saldo de novo. Pelo `transferirItem`: o `levarItem` entraria na mesma fila, atrás da tarefa, e esperaria para sempre.
+  - **C58:** o `entregarUmPedido` confere o catálogo antes de criar: com um item que falta, manda o erro à wiki ("Ainda
+    não existe neste sistema: ... Nada foi entregue nem cobrado.") e não cria nem cobra nada.
+- **Testes de referência:**
+  - **G3:**
+    - o `g4-pulado.test.mjs` (3), o `combate-alvos.test.mjs` (3) e o caso novo no `estabilizar.test.mjs`;
+    - os ambientes de mentira do socket no `tripulacao-aplicacao` e no `vinculo-veiculo-aplicacao` passam o remetente,
+      como o Foundry 14; no do veículo, o "de" forjado pelo intruso e a resposta que diz vir do mestre.
+  - **G4:**
+    - o C55 na cena do C43 (o `comFormulasC43`), sem alvo marcado;
+    - o C56 no navegador do jogador: o `net-pedido` com o id do mestre;
+    - o C57: duas compras sem esperar uma pela outra;
+    - o C58: um pedido com um item fora do catálogo.
+- **No caminho:**
+  - **A primeira versão do passo do C55** ficava no meio do combate: usava o Atrás e a Atiradora, escondia o Alvo e o
+    Capanga, e o passo do C56 tirava o ouvinte do socket no jogador pelo `off`. Com elas, cinco passos depois caíam em
+    todas as rodadas: o C46.4, o C15, os dois do C51 e o C43.1. O jogador não respondia mais às janelas, e a defesa ia
+    pelo padrão.
+    - Com o código novo e o `v14.js` antigo, só os tokens dinâmicos caíram (instáveis).
+    - O passo do C55 foi para a cena própria do C43, e o do C56 deixou o ouvinte (ele filtra pelo id): 324/324.
+  - **A mutação do `sobFogo` sobreviveu na primeira rodada:** o C43 deixa o alvo dele marcado, e com alvo marcado o
+    supressivo não procura ninguém. O passo agora desmarca (`canvas.tokens.setTargets([])`) e confere que ficou sem alvo.
+- **Portões:**
+  - G1: 242 arquivos com sintaxe válida;
+  - G2: ESLint 10.12.0 sem erros, com o `tests/lib/relatorio.js`, o `tests/lib/foundry.js` e o `tests/rodar.js`;
+  - G3: 762/762;
+  - G4 completo: 324/324 em 750 s e em 739 s (as duas últimas rodadas), com a mesa do servidor vazia.
+- **Mutações:** as 15 caíram, e os arquivos voltaram exatos (md5).
+  - **No G3 (10):**
+    - o pulo que sai com 0 (S1) e o v14.js com o passo aprovado no pulo (S2);
+    - a mesa sem resposta como vazia (S3) e o erro HTTP como resposta (S4);
+    - o descanso que baixa o HP acima do máximo (S5);
+    - a resposta de qualquer cliente (S6) e o pedido de qualquer cliente (S7) no combate;
+    - a resposta do veículo para o "de" da mensagem (S8) e a tripulação que confere o "de" (S9);
+    - o contêiner como alvo de arma (S10).
+  - **No G4 (5, um G4 inteiro cada, conferindo que caiu o passo do comportamento, e não uma instável):**
+    - a área do explosivo sem o filtro (F1, com a versão do passo de antes da desmarcação; a parte do explosivo não mudou);
+    - o supressivo sem o filtro (F2, de novo depois da desmarcação);
+    - a NET com o usuário da mensagem (F3);
+    - a compra fora da fila (F4);
+    - o pedido com item que falta entregue e cobrado (F5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

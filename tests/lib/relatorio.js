@@ -1,0 +1,38 @@
+// O relatório dos testes com navegador (tests/rodar.js): os passos de cada cenário e o código de saída da rodada.
+// Um passo pulado (o Foundry 14 que não está no PC, a mesa do servidor em uso ou que não se sabe se está) não é um passo
+// aprovado: o resultado diz que a rodada não vale como portão, e o código de saída é 2 (o C54, da auditoria de
+// 2026-11-16; antes, o pulo saía como ✓ e "Tudo certo", com o código 0). PERMITIR_PULAR=1 sai com 0 mesmo assim.
+
+class Relatorio {
+  constructor() { this.itens = []; }
+  // fn devolve [ok, detalhe]; um erro conta como falha, com a mensagem.
+  async passo(nome, fn) {
+    const inicio = Date.now();
+    try {
+      const [ok, detalhe = ''] = await fn();
+      this.itens.push({ nome, ok: Boolean(ok), detalhe: String(detalhe), ms: Date.now() - inicio });
+    } catch (error) {
+      this.itens.push({ nome, ok: false, detalhe: `erro: ${error.message}`, ms: Date.now() - inicio });
+    }
+  }
+  // A parte do cenário que não rodou, e por quê: não é falha, mas também não é aprovação.
+  pular(nome, motivo = '') {
+    this.itens.push({ nome, ok: true, pulado: true, detalhe: String(motivo), ms: 0 });
+  }
+}
+
+// 1 com alguma falha; 2 com algum passo pulado (a não ser com permitirPular); 0 com tudo rodado e certo.
+function codigoDeSaida({ falhas = 0, pulados = 0, permitirPular = false } = {}) {
+  if (falhas) return 1;
+  if (pulados && !permitirPular) return 2;
+  return 0;
+}
+
+// A última linha da rodada.
+function resumo({ falhas = 0, pulados = 0, permitirPular = false } = {}) {
+  if (falhas) return `${falhas} checagem(ns) falharam.${pulados ? ` E ${pulados} parte(s) pulada(s).` : ''}`;
+  if (pulados) return `${pulados} parte(s) pulada(s): o resto passou, mas a rodada NÃO vale como portão${permitirPular ? ' (PERMITIR_PULAR=1: sai com 0)' : ' (sai com o código 2)'}.`;
+  return 'Tudo certo.';
+}
+
+module.exports = { Relatorio, codigoDeSaida, resumo };
