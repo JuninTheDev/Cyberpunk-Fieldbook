@@ -73,8 +73,10 @@ test('mapa público: somente caminho numérico de tile é liberado; pasta, outra
 
 function serviceWorker() {
   const origem = 'https://wiki.example', ouvintes = new Map(), stores = new Map();
+  // esperaDaRede: uma promessa que a rede de mentira espera antes de responder (a rede lenta); escala: os prazos do
+  // service worker (o setTimeout dele) multiplicados, para a rede lenta não precisar de segundos de verdade.
   const e = { rede: true, fetches: [], precache: [], respostas: new Map(), stores, falharGravacao: false, adiarGravacao: null,
-    falharCache: false, gravacoes: 0, listagens: 0, skipWaiting: 0, claim: 0 };
+    falharCache: false, gravacoes: 0, listagens: 0, skipWaiting: 0, claim: 0, esperaDaRede: null, escala: 1 };
   const endereco = pedido => new URL(typeof pedido === 'string' ? pedido : pedido.url, origem).href;
   const cacheDe = nome => {
     if (!stores.has(nome)) {
@@ -110,9 +112,10 @@ function serviceWorker() {
   vm.runInNewContext(FONTE_SW, {
     self: { location: { origin: origem }, addEventListener: (nome, ouvir) => ouvintes.set(nome, ouvir),
       skipWaiting: async () => { e.skipWaiting++; }, clients: { claim: async () => { e.claim++; } } },
-    caches, URL, Response, setTimeout, clearTimeout,
+    caches, URL, Response, setTimeout: (fn, ms, ...args) => setTimeout(fn, ms * e.escala, ...args), clearTimeout,
     fetch: async pedido => {
       const url = endereco(pedido); e.fetches.push(url);
+      if (e.esperaDaRede) await e.esperaDaRede;
       if (!e.rede) throw new Error('Sem internet');
       const resposta = e.respostas.get(url);
       return resposta ? resposta.clone() : new Response('rede ' + new URL(url).pathname, { headers: { 'Content-Type': 'image/webp' } });
@@ -259,4 +262,24 @@ test('mapa offline: caminhos privados, vizinhos dos tiles e outro domínio passa
   assert.equal(e.stores.size, 0); assert.equal(e.fetches.length, 0);
   assert.ok(await e.pedir('/index.html', { mode: 'navigate' }));
   assert.equal(e.stores.size, 0);
+});
+
+test('rede lenta (a auditoria de 2026-11-16): sem a cópia guardada, o api/eu espera a rede, sem o erro dos 4 s; com a cópia, a rede tem os 4 s e depois vale a cópia', async () => {
+  const e = serviceWorker();
+  e.escala = 0.01; // os 4 s do prazo viram 40 ms
+  e.respostas.set('https://wiki.example/api/eu', new Response('{"papel":"jogador"}'));
+  let soltar;
+  e.esperaDaRede = new Promise(resolve => { soltar = resolve; });
+  setTimeout(() => soltar(), 200); // a rede responde depois do prazo
+  const primeira = await e.pedir('/api/eu');
+  assert.equal(primeira.type === 'error', false, 'sem cópia, não devolve o erro de rede');
+  assert.equal(await primeira.text(), '{"papel":"jogador"}');
+  // Com a cópia guardada (a resposta da primeira), a rede lenta perde para ela.
+  e.respostas.set('https://wiki.example/api/eu', new Response('{"papel":"novo"}'));
+  e.esperaDaRede = new Promise(resolve => setTimeout(resolve, 200));
+  const segunda = await e.pedir('/api/eu');
+  assert.equal(await segunda.text(), '{"papel":"jogador"}', 'a cópia, depois dos 4 s');
+  // Sem rede e sem cópia: o erro de rede (não há o que mostrar).
+  e.esperaDaRede = null; e.rede = false;
+  assert.equal((await e.pedir('/api/visao?campanha=outra')).type, 'error');
 });

@@ -55,7 +55,12 @@ async function validarBase({ raiz, r }) {
       'os documentos antigos não existem': antigos.every(nome => !fs.existsSync(path.join(pasta, `${nome}.md`))),
       'nada aponta para eles': antigos.every(nome => !index.includes(`${nome}.md`) && fs.readdirSync(pasta).every(arquivo => !arquivo.endsWith('.md') || !ler(arquivo).includes(`${nome}.md`))),
       'diário sem a tabela dos NPCs': !/\| Wakako Okada \| Ativa \|/.test(ler('diario-da-campanha.md')),
-      'index.html sem o elenco escrito à mão': !/Contratante \/ aliada ambígua/.test(index) && !/const campaignClocks/.test(index)
+      'index.html sem o elenco escrito à mão': !/Contratante \/ aliada ambígua/.test(index) && !/const campaignClocks/.test(index),
+      // A auditoria de 2026-11-16: o jogadores-mestre.json semeia o Publicar de um servidor novo (server.js) e trazia a
+      // trama descartada, com os segredos; e o diário, público, trazia o segredo de um jogador.
+      'o jogadores-mestre.json só com o começo de agora': (semente => semente.npcs.every(item => ['wakako', 'mina'].includes(item.id))
+        && semente.lugares.every(item => item.id === 'pachinko') && !semente.noticias.length && !/Kenzo|Endo|Iskra|Sato|Hospital/.test(JSON.stringify(semente)))(JSON.parse(fs.readFileSync(path.join(raiz, 'jogadores-mestre.json'), 'utf8'))),
+      'o diário sem o segredo de um jogador': !/O segredo dele: /.test(ler('diario-da-campanha.md'))
     };
     const errados = Object.entries(casos).filter(([, ok]) => !ok).map(([nome]) => nome);
     return [!errados.length, errados.join(' · ') || `${Object.keys(casos).length} conferências`];

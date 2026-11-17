@@ -30,7 +30,7 @@ O estado de agora se marca na wiki, em **Estado da campanha** (fica no servidor 
 
 Das notas dos jogadores, antes da Sessão 1:
 - **Ricky:** quer a família corp e um inimigo na história ("Wonder Corp"). O limite dele é matar o Morty. Aceitou o convite de Wakako pelo dinheiro para as peças de Morty.
-- **Brook:** quer a família presa na história. O limite dele é não colocar muito cromo. Aceitou o convite para acompanhar a equipe e quer o dinheiro para recuperar a oficina. O segredo dele: ajudou em um projeto em Dogtown.
+- **Brook:** quer a família presa na história. O limite dele é não colocar muito cromo. Aceitou o convite para acompanhar a equipe e quer o dinheiro para recuperar a oficina. O segredo dele fica com o mestre (fora do repositório, que é público).
 
 **A maleta e o corpo dos personagens:** "Pode" para todos (decisão do mestre, na Sessão 1).
 

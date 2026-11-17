@@ -15,7 +15,17 @@ como_mesa() { runuser -u mesa -- env HOME="$(getent passwd mesa | cut -d: -f6)" 
 
 [ -d "$DATA/systems/cyberpunk-red-core" ] || { echo "O sistema Cyberpunk RED ainda não está instalado no Foundry do servidor: fica para depois."; exit 2; }
 if ! systemctl is-active --quiet foundry14; then
-  conectados=$(curl -fsS --max-time 3 http://127.0.0.1:30000/api/status 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(Number(JSON.parse(s).users)||0)}catch{console.log(0)}})' || echo 0)
+  status=$(curl -fsS --max-time 5 http://127.0.0.1:30000/api/status 2>/dev/null || true)
+  conectados=$(printf '%s' "$status" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(Number(JSON.parse(s).users)||0)}catch{console.log("?")}})' || echo '?')
+  # Sem resposta com o 12 ligado, não se sabe quem está na mesa (travado ou ligando): fica para depois, como com gente
+  # (a auditoria de 2026-11-16; antes, contava como vazia). Com o 12 parado, não há mesa.
+  if [ "$conectados" = '?' ]; then
+    if systemctl is-active --quiet foundry && [ "${1:-}" != "--agora" ]; then
+      echo "O Foundry está ligado e não respondeu ao /api/status (travado ou ligando): o módulo fica para depois."
+      exit 2
+    fi
+    conectados=0
+  fi
   if [ "$conectados" != "0" ] && [ "${1:-}" != "--agora" ]; then
     echo "Mesa com $conectados conectado(s): o módulo fica para depois."
     exit 2
