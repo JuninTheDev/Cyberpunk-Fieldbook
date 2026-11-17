@@ -146,6 +146,54 @@ test('C28: com gente na mesa do 14, o sistema espera (o .sistema-pendente); com 
   assert.equal(s.ler('foundry14.estado').trim(), 'active');
 });
 
+test('a auditoria de 2026-11-16: o 14 ligado sem responder ao /api/status não conta como mesa vazia; o --agora instala mesmo assim', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {
+  const s = preparar();
+  t.after(s.limpar);
+  // Ligado, sem o status.json: o curl falha, como com o Foundry travado ou com a memória no limite.
+  s.mesa14('active');
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(s.linhas('instalacoes.log').length, 0, 'não instala');
+  assert.ok(!s.linhas('systemctl.log').some(l => /^(stop|start)/.test(l)), 'não para o 14');
+  assert.ok(fs.existsSync(s.pasta('dados/.sistema-pendente')));
+  // A resposta que não é JSON, também.
+  fs.writeFileSync(s.pasta('status.json'), '<html>502</html>');
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(s.linhas('instalacoes.log').length, 0);
+  // Respondeu, vazia: instala.
+  s.mesa14('active', { active: true, world: 'protocolo-morana', users: 0, version: '14.369' });
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(s.linhas('instalacoes.log').length, 1);
+  // O --agora (o instalar-sistema-v14.sh) não espera a resposta.
+  s.mesa14('active');
+  const agora = s.rodar('atualizar-sistema.sh', '--agora');
+  assert.equal(agora.status, 0, agora.stderr + agora.stdout);
+  assert.equal(s.linhas('instalacoes.log').length, 2);
+});
+
+test('a auditoria de 2026-11-16: com uma sessão marcada na Agenda (de 1 h antes até 30 min depois), o 14 não para nem com a mesa vazia', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {
+  const s = preparar();
+  t.after(s.limpar);
+  s.mesa14('active', { active: true, world: 'protocolo-morana', users: 0, version: '14.369' });
+  const agenda = sessoes => fs.writeFileSync(s.pasta('dados/agenda.json'), JSON.stringify({ sessoes }));
+  const daqui = minutos => new Date(Date.now() + minutos * 60000).toISOString();
+  // Começa daqui a 40 minutos.
+  agenda([{ id: 's3', campanha: 'morana', inicio: daqui(40), duracao: 180, titulo: 'Sessão 03' }]);
+  const espera = s.rodar('atualizar-sistema.sh');
+  assert.equal(espera.status, 2, espera.stdout + espera.stderr);
+  assert.match(espera.stdout, /Sessão marcada na Agenda \(Sessão 03, /);
+  assert.equal(s.linhas('instalacoes.log').length, 0);
+  // Acabou há 20 minutos (começou há 200, com 180 de duração): ainda espera. Há 40: instala.
+  agenda([{ id: 's3', campanha: 'morana', inicio: daqui(-200), duracao: 180, titulo: 'Sessão 03' }]);
+  assert.equal(s.rodar('atualizar-sistema.sh').status, 2);
+  agenda([{ id: 's3', campanha: 'morana', inicio: daqui(-220), duracao: 180, titulo: 'Sessão 03' }, { id: 's4', inicio: daqui(120), titulo: 'Sessão 04' }]);
+  certo(s.rodar('atualizar-sistema.sh'));
+  assert.equal(s.linhas('instalacoes.log').length, 1);
+  // A agenda que não se lê não segura nada.
+  fs.writeFileSync(s.pasta('dados/agenda.json'), '{ quebrado');
+  certo(s.rodar('atualizar-sistema.sh'));
+  assert.equal(s.linhas('instalacoes.log').length, 2);
+});
+
 test('C28: o erro na instalação registra uma vez e religa o 14; a mesma versão não tenta de novo, a próxima tenta', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {
   const s = preparar();
   t.after(s.limpar);

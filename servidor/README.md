@@ -262,6 +262,8 @@ O Foundry 14 fica em `/srv/foundry14`, com o Node 24 em `/opt/node24`, a mesma p
 - **O sistema do Foundry 14 se instala sozinho** (desde o C28, quando a `sistema-v14` entrou no master): a cada minuto, o `atualizar.sh` compara a versão do `foundry-sistema/` do master (e a do documento das arquiteturas da campanha, que entra num compêndio) com a instalada, e o `atualizar-sistema.sh` instala a nova.
   - **Com o 12 no ar,** o 14 está parado: instala na hora.
   - **Com o 14 no ar,** espera a mesa dele esvaziar (a barra lateral do mestre mostra "sistema do Foundry 14 esperando a mesa vazia"). Aí para o 14 por alguns segundos, instala e liga de novo, com o mesmo mundo aberto (o `iniciar-foundry.sh` abre o mundo que estava aberto, pelo `--world` do Foundry).
+    - **Sem resposta do 14** (travado, a memória no limite ou ligando), também espera: não se sabe quem está na mesa. O módulo do Foundry 12 faz o mesmo com o 12.
+    - **Com uma sessão marcada na Agenda,** espera de 1 hora antes do começo até 30 minutos depois do fim (sem duração, 4 horas), mesmo com a mesa vazia.
   - **Se der erro,** registra uma vez no `atualizacoes.log` (o resto em `/srv/fieldbook/dados/sistema-ultimo-erro.log`), liga o 14 de novo e espera a próxima versão. Para tentar de novo a mesma, rode o `instalar-sistema-v14.sh`.
   - **A marca** fica em `/srv/fieldbook/dados/.sistema-instalado`. Apagar a marca faz o sistema se instalar de novo no minuto seguinte (com a mesa vazia).
 

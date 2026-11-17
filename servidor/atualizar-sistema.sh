@@ -11,7 +11,8 @@
 #   --pacote: gera também o módulo "Arquivo da mesa": as cenas, os diários e as playlists de um mundo do Foundry 12, com
 #             os arquivos que elas usam (só lê o mundo).
 #   --versao: só escreve a versão do master (a que a marca guarda depois de instalar).
-# Sai com 0 (instalado), 2 (fica para depois: a mesa do 14 ocupada), 3 (não se aplica: sem o Foundry 14 preparado ou
+# Sai com 0 (instalado), 2 (fica para depois: a mesa do 14 ocupada, o 14 sem responder ou uma sessão marcada na
+# Agenda), 3 (não se aplica: sem o Foundry 14 preparado ou
 # sem o foundry-sistema/) ou 1 (erro).
 set -euo pipefail
 # As pastas e o endereço trocam só no teste (tests/isolados/servidor-sistema.test.js).
@@ -49,10 +50,24 @@ estava=inactive
 mundo=''
 if systemctl is-active --quiet foundry14; then
   estava=active
-  # Quantos estão na mesa e o mundo aberto (o /api/status do Foundry; sem resposta, ele está ligando: ninguém na mesa).
-  read -r conectados mundo < <(curl -fsS --max-time 3 "$STATUS" 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let j={};try{j=JSON.parse(s)}catch{}console.log(`${Number(j.users)||0} ${j.active&&j.world?j.world:""}`)})' || echo 0)
-  if [ "${conectados:-0}" != 0 ] && [ -z "$agora" ]; then
+  # Quantos estão na mesa e o mundo aberto (o /api/status do Foundry). Sem resposta (travado, a memória no limite ou
+  # ligando), não se sabe quem está na mesa: fica para depois, como com gente, e o próximo minuto tenta de novo (a
+  # auditoria de 2026-11-16; antes, contava como vazia e parava o 14 com os jogadores dentro).
+  status=$(curl -fsS --max-time 5 "$STATUS" 2>/dev/null || true)
+  read -r conectados mundo < <(printf '%s' "$status" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let j;try{j=JSON.parse(s)}catch{console.log("?");return}console.log(`${Number(j.users)||0} ${j.active&&j.world?j.world:""}`)})' || echo '?')
+  if [ "${conectados:-?}" = '?' ] && [ -z "$agora" ]; then
+    echo "O Foundry 14 está ligado e não respondeu ao /api/status (travado ou ligando): o sistema fica para depois."
+    exit 2
+  fi
+  if [ "${conectados:-?}" != 0 ] && [ "${conectados:-?}" != '?' ] && [ -z "$agora" ]; then
     echo "Mesa do Foundry 14 com $conectados conectado(s): o sistema fica para depois."
+    exit 2
+  fi
+  # A sessão marcada na Agenda da wiki (de 1 h antes do começo até 30 min depois do fim; sem duração, 4 h): o 14 não para
+  # nem com a mesa vazia (o grupo entrando, um intervalo).
+  sessao=$(node -e 'const fs=require("fs");let a;try{a=JSON.parse(fs.readFileSync(process.argv[1],"utf8"))}catch{process.exit(0)}const agora=Date.now();const s=(a.sessoes||[]).find(s=>{const i=Date.parse(s.inicio);if(!Number.isFinite(i))return false;const fim=i+(Number(s.duracao)||240)*60000;return agora>=i-3600000&&agora<=fim+1800000});if(s)console.log(`${s.titulo||"sessão"}, ${s.inicio}`)' "$DADOS/agenda.json" 2>/dev/null || true)
+  if [ -n "$sessao" ] && [ -z "$agora" ]; then
+    echo "Sessão marcada na Agenda ($sessao): o sistema fica para depois."
     exit 2
   fi
 fi
