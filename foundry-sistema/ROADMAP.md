@@ -536,6 +536,23 @@ escolheu o ChatGPT, sem a API):
   - [ ] (só se o usuário quiser) a geração pela API da OpenAI, com um botão "Gerar" no cortador: pede a chave dele e
     custa por imagem.
 
+**A auditoria de 2026-11-16** (no master 4ee2b608; pedido do usuário em 2026-11-17, "Sim, fase 1": a fase 1 do plano
+de conserto, a parte do sistema e dos testes):
+- [~] **C54. O G4 que não engana:** em andamento (sessão KouArt, 2026-11-17). A parte do Foundry pulada não conta como
+  passo aprovado (o resultado diz que não vale como portão e sai com o código 2); sem resposta da wiki online, a mesa do
+  servidor não conta como vazia; e o caso da cura natural que faltava (o HP acima do máximo não desce).
+- [~] **C55. O ataque de área sem quebrar:** em andamento (sessão KouArt, 2026-11-17). O explosivo e o fogo supressivo
+  com um contêiner, um Black ICE ou um demônio por perto davam TypeError (eles não têm perícias) depois de gastar a bala.
+- [~] **C56. O remetente verdadeiro no socket:** em andamento (sessão KouArt, 2026-11-17). Os pedidos ao mestre usavam
+  o usuário escrito na mensagem: um jogador, pelo console, se passava pelo mestre na NET e nos ataques.
+- [~] **C57. A compra no contêiner dentro da fila:** em andamento (sessão KouArt, 2026-11-17). Com dois cliques
+  rápidos, o saldo era conferido antes da primeira compra terminar e ficava negativo.
+- [~] **C58. O pedido da wiki com um item que falta:** em andamento (sessão KouArt, 2026-11-17). Cobrava o total e
+  marcava entregue sem o item; agora não entrega nem cobra, e a wiki mostra o erro.
+- [ ] **C59. O G4 estável:** os passos que caem às vezes no master 4ee2b608, sem mudança nenhuma (QUALITY_GATES,
+  "Instáveis conhecidas"): a lanterna do C16, os dois do C26 ("A nonpersisted Document cannot be updated") e o token
+  dinâmico do C45, parte 2.
+
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
 - o MIGRATION_STATUS com o ciclo.
