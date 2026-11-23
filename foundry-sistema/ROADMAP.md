@@ -553,6 +553,19 @@ de conserto, a parte do sistema e dos testes):
   "Instáveis conhecidas"): a lanterna do C16, os dois do C26 ("A nonpersisted Document cannot be updated") e o token
   dinâmico do C45, parte 2. No ciclo 200, o andar do token dinâmico do C52 também caiu uma vez.
 
+**A fase 2 da auditoria de 2026-11-16** (pedido do usuário em 2026-11-23, "Sim, fase 2"; a parte do sistema e dos testes):
+- [~] **C60. O G4 que não trava e não esconde:** em andamento (sessão KouArt, 2026-11-23). Um prazo por passo (o passo
+  que não termina vira falha, em vez de parar a rodada); a trava sem a corrida de duas sessões esperando o mesmo teste
+  morto e com um teto de espera; os avisos do sistema que se perdiam ao recarregar a página; o 403 e o 409 liberados só
+  onde o passo os espera.
+- [~] **C61. Os laços no tempo do mundo e no updateUser:** em andamento (sessão KouArt, 2026-11-23). As drogas e as
+  munições percorriam todos os atores e tokens a cada rodada; a tripulação refazia todas as cenas a cada flag gravada por
+  qualquer usuário.
+- [~] **C62. A Humanidade máxima pela fórmula:** em andamento (sessão KouArt, 2026-11-23). O cyberware com a fórmula de
+  perda e a média 0 não baixava a Humanidade máxima (system-rules.js:579: "cada peça reduz o máximo em 2").
+- [~] **C63. A versão do sistema e os documentos:** em andamento (sessão KouArt, 2026-11-23). O system.json parado na
+  0.2.0, o README e o MIGRATION_STATUS dizendo que a campanha está no Foundry 12, e as dúvidas já resolvidas.
+
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
 - o MIGRATION_STATUS com o ciclo.
