@@ -182,7 +182,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `system-criacao.js` | Regras de criação: as 10 Roles do RED com os ajustes do Mission Kit, tabelas de STAT, perícias, pacotes e Lifepath de cada Role e o Neuroport de graça. |
 | `personagem-roles.js` | As duas Roles pela regra da mesa: Ranks, habilidades, compatibilidade com personagens antigos e retorno da ficha do Foundry. Compartilhado pela wiki e pela API. |
 | `personagem-cyberware.js` | Locais de instalação de cyberbraços, cyberpernas e cyberolhos, com os lados separados e validação compartilhada entre a wiki e a API. |
-| `loja-catalogo.js` | Catálogo da loja, gerado pelo build do módulo. Não edite à mão. |
+| `loja-catalogo.js`, `loja-do-14.mjs` | Catálogo da loja, gerado pelo build do módulo, com o preço e as armas do catálogo do Foundry 14 (rode `node loja-do-14.mjs` depois de cada build da loja ou do catálogo; o `tests/isolados/catalogos.test.js` confere). Não edite à mão. |
 | `personagens/` | Um arquivo por personagem dos jogadores. Fica fora do git: no servidor, os de verdade estão em `/srv/fieldbook/dados/personagens`; no PC, só servem para teste. |
 | `tests/` | Testes automáticos da wiki (`node tests/rodar.js`). Os do sistema do Foundry 14: `tests/sistema/` (`node --test`), `tests/cenarios/v14.js`. |
 | `eslint.config.mjs` | Lint só do sistema do Foundry 14 e dos testes dele (`npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/cenarios/v14.js`). |

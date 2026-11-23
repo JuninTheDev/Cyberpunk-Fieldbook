@@ -601,13 +601,13 @@ export function balasPorTiro({ modo, perfil, pente = 0, doisCanos = false }) {
 // Munição que não causa dano (a tabela de munição da wiki, system-catalog.js, com o texto dela): quem é pego sofre só o
 // efeito. Os testes e os estados são aplicados por municoes.mjs; a fumaça continua com a mesa.
 export const MUNICAO_SEM_DANO = {
-  biotoxin: 'quem é atingido faz Resistir a Tortura/Drogas DV15 ou sofre 3d6 direto no HP.',
-  emp: 'quem é atingido faz Cybertech DV15 ou o mestre escolhe 2 cyberwares ou eletrônicos que param por 1 minuto.',
-  flashbang: 'quem é atingido faz Resistir a Tortura/Drogas DV15 ou sofre as lesões Olho danificado e Ouvido danificado por 1 minuto, sem dano bônus.',
-  poison: 'quem é atingido faz Resistir a Tortura/Drogas DV13 ou sofre 2d6 direto no HP.',
-  sleep: 'quem é atingido faz Resistir a Tortura/Drogas DV13 ou cai inconsciente por 1 minuto, até sofrer dano ou alguém usar uma Ação para acordá-lo.',
+  biotoxin: 'quem é atingido faz Resistir Tortura/Drogas DV15 ou sofre 3d6 direto no HP.',
+  emp: 'quem é atingido faz Cybertecnologia DV15 ou o mestre escolhe 2 cyberwares ou eletrônicos que param por 1 minuto.',
+  flashbang: 'quem é atingido faz Resistir Tortura/Drogas DV15 ou sofre as lesões Olho danificado e Ouvido danificado por 1 minuto, sem dano bônus.',
+  poison: 'quem é atingido faz Resistir Tortura/Drogas DV13 ou sofre 2d6 direto no HP.',
+  sleep: 'quem é atingido faz Resistir Tortura/Drogas DV13 ou cai inconsciente por 1 minuto, até sofrer dano ou alguém usar uma Ação para acordá-lo.',
   smoke: 'Cobre de fumaça uma área de 10 × 10 m por 1 minuto. Agir dentro dela costuma ter −4.',
-  teargas: 'quem tem olhos de carne faz Resistir a Tortura/Drogas DV13 ou sofre Olho danificado por 1 minuto, sem dano bônus.',
+  teargas: 'quem tem olhos de carne faz Resistir Tortura/Drogas DV13 ou sofre Olho danificado por 1 minuto, sem dano bônus.',
   // A granada Arachnid do Black Chrome (o C48, parte 2; system-blackchrome.js, p. 86): a teia, sem dano.
   arachnid: 'quem é atingido fica coberto de teia: se em 10 rodadas não se banhar em álcool (uma Ação, dele ou de outro), fica agarrado (sem Ação de Movimento, sem arma de duas mãos e com −2 em todas as ações). A teia tem 15 HP; para sair, Briga DV15, que qualquer um ao alcance corpo a corpo pode tentar.'
 };

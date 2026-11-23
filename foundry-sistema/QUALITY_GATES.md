@@ -481,6 +481,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   duração dos passos vizinhos nas rodadas que falham e nas que passam: uma espera de 10 s que se esgota aparece como
   um passo de 20 ou 30 s. Leia também o `servidor.log` do Foundry de teste (`FieldbookTeste/foundry14`), que tem a
   hora de cada operação. Ele é reescrito a cada G4: copie antes da rodada seguinte.
+- **Uma mudança só na wiki também roda o G3** (ciclo 202): os testes do sistema leem os `system-*.js` (o texto das
+  munições, as perícias, o Black Chrome) e a `loja-catalogo.js`, e conferem que o sistema diz o mesmo. A fase 3 da
+  auditoria corrigiu um termo no `system-catalog.js` com o `validar.js` passando e deixou o G3 vermelho no master
+  até este ciclo. Mudou um `system-*.js` ou a loja: `node tests/portoes.js` antes do push.
 
 ## Build
 

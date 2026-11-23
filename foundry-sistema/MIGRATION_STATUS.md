@@ -164,6 +164,13 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **As páginas de regras da wiki e o catálogo do 14 (2026-11-23, sessão KouArt, a fase 3 da auditoria):** a loja segue
+  o catálogo do 14 (decisão do usuário), e as páginas de regras não mudaram. Comparando os 177 cartões do Black Chrome,
+  os 78 do 2077 e as 22 linhas com preço do RED, ficaram três diferenças, para o usuário conferir no livro:
+  - **Popup Shotgun** (BC p. 21): a página diz 1.000eb; o CORE e o 14, 500eb (a loja vende por 500eb);
+  - **Mimic Clothing (Generic Chic)** (BC p. 33): a página diz 100eb; o CORE e o 14, 150eb;
+  - **Air Pistol** (Core p. 347): a página diz "Pistola Muito Pesada"; o CORE e o 14, pistola média exótica.
+
 - **C40, os veículos fora do dano (2026-10-23, sessão Junin, com o Codex):** a fonte é só a wiki (`system-rules.js:538`,
   "Veículos", p. 189–192): o CORE 0.92.4 não automatiza a direção, as manobras nem a batida. As decisões:
   - **do usuário (2026-10-23):** o Traumatismo Cervical da batida vem com os +5 direto no HP (como a Perna Quebrada da
@@ -9818,6 +9825,26 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     fórmula de perda que não conta (S17) e a ficha sem a fórmula (S18); qualquer flag do usuário refazendo as cenas
     (S19); as drogas montando o ator de todos os tokens (S20).
   - **No G4 (2):** as drogas do token solto de fora (F6) e as munições do token solto de fora (F7, depois do passo novo).
+
+### Ciclo 202 (2026-11-23): C64, os termos das munições como os da wiki (sessão KouArt)
+
+- **Por quê:** a fase 3 da auditoria de 2026-11-16 (pedida pelo usuário: "vamos para a próxima fase") corrigiu os
+  termos na wiki (o commit 836c33de): a perícia "Resistir Tortura/Drogas" (era "Resistir a Tortura/Drogas") e
+  "Cybertecnologia" (era "Cybertech"), no `system-catalog.js`. O G3 confere que o texto das munições que não causam
+  dano, no sistema (o `MUNICAO_SEM_DANO` do `regras.mjs`), é o da tabela de munição da wiki, e ficou vermelho no
+  master: o commit da wiki rodou o `validar.js`, não o G3.
+- **Entrega:** os seis textos do `MUNICAO_SEM_DANO` com os termos novos (a biotoxina, o EMP, a flashbang, a venenosa, a
+  sonífera e o gás lacrimogêneo), e a versão `0.3.202`.
+- **Testes de referência:**
+  - **G3:** o `regras.test.mjs` ("Munição que não causa dano"), que já existia e era o que falhava.
+  - **G4:** o passo da granada venenosa confere a nota com o termo novo.
+- **Portões:** G1, 253 arquivos; G2 sem erros; G3, 772/772 (antes do ciclo, 771/772 no master desde o 836c33de); G4
+  completo, 325/325 em 753 s, com a mesa do servidor vazia.
+- **Mutações:** as 2 caíram no G3, e o arquivo voltou exato (md5): o termo antigo na biotoxina (S21) e a perícia em
+  inglês no EMP (S22).
+- **Junto, na wiki (o mesmo commit):** a loja com os dados do catálogo do 14 (o `loja-do-14.mjs` e o
+  `tests/isolados/catalogos.test.js`; a decisão do usuário: "O catálogo do 14"). A única diferença era o dano da Pepper
+  Shaker (0 na loja, do CORE; 2d6 no 14). As três diferenças entre as páginas de regras e o catálogo estão nas Dúvidas.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

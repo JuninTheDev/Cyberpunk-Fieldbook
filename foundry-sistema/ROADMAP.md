@@ -565,6 +565,9 @@ de conserto, a parte do sistema e dos testes):
   perda e a média 0 não baixava a Humanidade máxima (system-rules.js:579: "cada peça reduz o máximo em 2").
 - [x] **C63. A versão do sistema e os documentos:** feito no ciclo 201 (sessão KouArt, 2026-11-23). O system.json parado na
   0.2.0, o README e o MIGRATION_STATUS dizendo que a campanha está no Foundry 12, e as dúvidas já resolvidas.
+- [x] **C64. Os termos das munições como os da wiki:** feito no ciclo 202 (sessão KouArt, 2026-11-23). A fase 3 da
+  auditoria trocou, na wiki, "Resistir a Tortura/Drogas" por "Resistir Tortura/Drogas" (o nome da perícia) e "faz
+  Cybertech" por "faz Cybertecnologia"; o texto das munições que não causam dano, no sistema, tem de ser o da wiki.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);

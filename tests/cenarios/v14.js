@@ -4168,7 +4168,7 @@ module.exports = async ({ edge, servidores, r }) => {
         await a.deleteEmbeddedDocuments('Item', [arma.id, municao.id]);
         return resultado;
       })()`);
-      const nota = 'Grenade (Poison): não causa dano da arma. Quem é atingido faz Resistir a Tortura/Drogas DV13 ou sofre 2d6 direto no HP.';
+      const nota = 'Grenade (Poison): não causa dano da arma. Quem é atingido faz Resistir Tortura/Drogas DV13 ou sofre 2d6 direto no HP.';
       const ok = /explodiu/.test(info.cabecalho) && info.linhas.length === 2 && info.linhas.every(l => l.resultado === 'acertou' && !l.dano && l.notas.includes(nota) && l.resistencia?.passou && l.resistencia.dv === 13)
         && info.depois.alvo === info.antes.alvo && info.depois.capanga === info.antes.capanga && info.desfazer === 0 && info.sobrou === 0;
       return [ok, JSON.stringify(info)];
