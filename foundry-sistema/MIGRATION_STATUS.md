@@ -9846,6 +9846,33 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   `tests/isolados/catalogos.test.js`; a decisão do usuário: "O catálogo do 14"). A única diferença era o dano da Pepper
   Shaker (0 na loja, do CORE; 2d6 no 14). As três diferenças entre as páginas de regras e o catálogo estão nas Dúvidas.
 
+### Ciclo 203 (2026-11-23): C65, o mestre pede um teste aos jogadores (sessão KouArt)
+
+- **Pedido do usuário (2026-11-23):** "Vamos criar uma função no foundry agora para q o mestre possa pedir testes para os
+  jogadores. Estude exemplos e desenvolva um sistema que funcione bem para a mesa."
+- **Os exemplos estudados:** o Monk's TokenBar (selecionar os tokens, pedir, um cartão que mostra quem passou, a DV só para
+  o mestre, os modos de rolagem), o Sephral's Roll Requests (um cartão só que se atualiza a cada resposta), o Let Me Roll
+  That For You (a janela que abre para o jogador), os pedidos do DCC e os enrichers de pedido do dnd5e e do Black Flag (o
+  botão no chat). Do sistema: a janela de defesa e o `pedir` do combate (o jogador rola no computador dele), o perigo do
+  ambiente (o `/perigo`, o botão do HUD) e o teste da ficha com a janela de rolagem. O que não veio: a "DV do grupo" (a
+  média, do D&D 5e), que o RED não tem.
+- **A fonte das regras:** a wiki (`system-rules.js`): o teste básico precisa superar a DV (o empate não passa) e a escala
+  de DV da página (9, 13, 15, 17, 21, 24 e 29), que o G3 confere com a página.
+- **Entrega:** o `regras-pedido-teste.mjs` (a escala, o `/teste`, a perícia da família no ator, o que cada um vê, o resumo, o
+  primeiro resultado que vale) e o `pedido-teste.mjs` (a janela, o cartão que cada cliente mostra do seu jeito, a janela do
+  jogador, a rolagem pela ficha, o socket e o botão do HUD); o estilo do cartão no `tema.css`; a versão `0.3.203`.
+- **No caminho:** a primeira rodada aceitou uma rolagem velha do jogador, reenviada pelo socket, como resposta ao pedido
+  novo (o mestre lia o total da mensagem, mas não a que pedido ela respondia). A rolagem agora leva o pedido e a linha, e o
+  mestre confere os dois. Os dados de quem rola continuam no cliente dele, como em toda rolagem do Foundry.
+- **Testes de referência:**
+  - **G3:** o `pedido-teste.test.mjs` (5); o `combate-alvos.test.mjs` (o ouvinte novo do socket, com o remetente do
+    Foundry) e o `mesa.test.mjs` (as quatro rolagens do pedido no modo dele) com o arquivo novo nas listas.
+  - **G4:** três passos do C65: o pedido público com a DV escondida do jogador e "Rolar os que faltam"; às cegas, a rolagem
+    velha e a falsa do NPC recusadas; o `/teste` com o token selecionado, a família, o `/teste` do jogador recusado e
+    "Encerrar".
+- **Portões:** G1, 256 arquivos; G2 sem erros; G3, 777/777; G4 completo, 328/328 em 711 s, com a mesa do servidor vazia. Antes, duas rodadas de 326/328: o NPC do passo era do jogador pelo padrão do mundo (o passo passou a dizer quem é dono) e o passo do `/teste` não tinha cena nem token ligado (o token sai do protótipo, numa cena do passo).
+- **Mutações:** as 12 caíram, e os arquivos voltaram exatos (md5). **No G3 (9):** o empate que passa (P1), a escala diferente da wiki (P2), o nome mais curto que ganha (P3), a família sem o nome (P4) e sem a melhor (P5), o privado que todos veem (P6), a segunda rolagem que conta (P7), encerrar sem marcar (P8) e o MOVE como teste (P9). **No G4 (3):** a rolagem velha aceita (PG1), a linha de outro ator aceita (PG2) e o cartão igual para todos (PG3).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

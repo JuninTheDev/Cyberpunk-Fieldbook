@@ -753,6 +753,18 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.cartao .alvo .rotulo { padding: 2px 8px; border: 1px solid var(--cp-fraco); color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase; }
 .cpr-fieldbook.cartao .alvo:is(.resultado-acertou, .resultado-suprimido) .rotulo { border-color: var(--cp-vermelho); background: var(--cp-vermelho); color: var(--cp-fundo); }
 .cpr-fieldbook.cartao .alvo:is(.resultado-esquivou, .resultado-firme) .rotulo { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+/* O pedido de teste do mestre (o C65): o estado de cada linha (passou em ciano, falhou em vermelho, esperando tracejado) e o
+   botão de rolar de cada uma, como os botões do fim do cartão. */
+.cpr-fieldbook.cartao.pedido-teste .alvo.resultado-passou .rotulo { border-color: var(--cp-ciano); color: var(--cp-ciano); }
+.cpr-fieldbook.cartao.pedido-teste .alvo.resultado-falhou .rotulo { border-color: var(--cp-vermelho); color: var(--cp-vermelho); }
+.cpr-fieldbook.cartao.pedido-teste .alvo.resultado-esperando .rotulo { border-style: dashed; }
+.cpr-fieldbook.cartao.pedido-teste .alvo button {
+  flex: none; width: auto; height: auto; min-height: 0; margin: 0 0 0 auto; padding: 4px 8px; border: 1px solid var(--cp-amarelo); border-radius: 0;
+  background: transparent; box-shadow: none; color: var(--cp-amarelo); font: 400 11px/1.2 var(--cp-dados); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.cpr-fieldbook.cartao.pedido-teste .alvo button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); }
+.cpr-fieldbook.cartao.pedido-teste.encerrado .alvos { opacity: 0.85; }
+.cpr-fieldbook.pedido-de-teste fieldset.quem { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .cpr-fieldbook.cartao .contra { color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.06em; }
 .cpr-fieldbook.cartao .dano { margin: 4px 0 0; padding-left: 16px; color: var(--cp-texto); font-size: 13px; line-height: 1.35; }
 .cpr-fieldbook.cartao .dano .lesao, .cpr-fieldbook.cartao .dano .lesao b { color: var(--cp-vermelho); }

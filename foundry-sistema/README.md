@@ -552,6 +552,23 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Batida de veículo** (o C40): os tokens selecionados estão no veículo que bateu, e os alvos marcados (T) foram
     atingidos. Todos ganham o Traumatismo Cervical com os +5 no HP; o veículo de quem dirige leva 6d6 (o SDP menos o SP);
     quem está a pé rola DEX + Evasão contra DV13 e, se falhar, leva 6d6 (a armadura absorve).
+- **Pedir teste** (o C65; a wiki, "Teste básico" e "Escala de DV", p. 128–130): o mestre pede um teste a quem quiser, e
+  cada um rola no computador dele.
+  - **Abrir:** o `/teste` no chat (`/teste percepção 15`, `/teste cool`, `/teste linguagem japonês 13`: o número no fim é
+    a DV), o botão do dado no HUD do token ou `game.system.api.pedidoDeTeste.abrir()`. Só o mestre.
+  - **A janela:** o teste (a perícia; a família, com qual: Linguagem, Especialista Local, Ciências, Artes Marciais, Tocar
+    Instrumento; ou só o STAT); a DV da escala da wiki (9 Simples a 29 Lendário), outra ou nenhuma; "Mostrar a DV aos
+    jogadores"; quem vê os resultados (todos, o mestre e quem rolou, só o mestre às cegas); o motivo; e quem rola (os tokens
+    selecionados ou marcados, e, sem nenhum, os personagens dos jogadores).
+  - **O cartão "Teste":** uma linha por personagem (esperando, o total e se passou, ou não rolou) e o resumo ("2 de 3
+    rolaram · 1 passou"). Passa quem supera a DV: o empate não passa. O mestre vê tudo; os jogadores, conforme o modo, e
+    a DV só com "Mostrar". O mestre tem "Rolar" em cada linha, "Rolar os que faltam" (os NPCs, quem não está na mesa) e
+    "Encerrar" (quem não rolou fica "Não rolou").
+  - **No jogador:** a janela "O mestre pede um teste" abre sozinha, com Rolar (um botão por personagem dele) e Depois; o
+    botão continua no cartão. O teste é o da ficha (a janela de rolagem, com os situacionais e a Sorte, menos com "Rolar
+    direto"). A família usa a perícia do personagem com aquele nome (ou a melhor dele); sem nenhuma, o STAT dela.
+  - **O resultado** chega ao mestre pelo socket, e o mestre o lê da rolagem: só vale a que aquele jogador fez, do ator
+    dele, para aquele pedido e aquela linha. O primeiro resultado de cada linha vale.
 - **Direção e manobras** (o C40; a wiki, "Veículos", p. 189–192): com o veículo em uso e "Dirigindo" ligado.
   - **Direção sob pressão:** no combate, no começo do turno, quem tem REF + perícia de controle de 9 ou menos gasta a Ação
     e rola DV10, no computador dele; falhou, perdeu o controle, e o mestre decide (o cartão tem o botão "Batida").

@@ -485,6 +485,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   munições, as perícias, o Black Chrome) e a `loja-catalogo.js`, e conferem que o sistema diz o mesmo. A fase 3 da
   auditoria corrigiu um termo no `system-catalog.js` com o `validar.js` passando e deixou o G3 vermelho no master
   até este ciclo. Mudou um `system-*.js` ou a loja: `node tests/portoes.js` antes do push.
+- **Um resultado que chega pelo socket** (ciclo 203): ler o total da mensagem da rolagem, e não do aviso, não basta.
+  No C65, o jogador reenviou uma rolagem velha dele para o pedido novo, e o mestre aceitou: a rolagem tem de dizer a que
+  pedido e a que linha responde (as flags do teste), e o mestre confere as duas, o autor e o dono do ator. Um passo do G4
+  manda o aviso falso de propósito.
 
 ## Build
 

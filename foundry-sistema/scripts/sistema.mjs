@@ -45,6 +45,7 @@ import * as municoes from './municoes.mjs';
 import { registrarNet } from './netrun/index.mjs';
 import { registrarPainel } from './painel/index.mjs';
 import * as perigos from './perigos.mjs';
+import * as pedidoDeTeste from './pedido-teste.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
@@ -148,12 +149,16 @@ Hooks.once('init', () => {
   game.system.api.tokenDinamico = tokenDinamico.API;
   game.system.api.vinculoVeiculo = vinculoVeiculo;
   game.system.api.tripulacao = tripulacao;
+  // O mestre pede um teste aos jogadores (o C65): o /teste, o botão do HUD do token, o cartão e o aviso do jogador.
+  pedidoDeTeste.registrarPedidoDeTeste();
+  game.system.api.pedidoDeTeste = pedidoDeTeste.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);
 Hooks.once('ready', () => {
   aplicarIconesDosEstados();
   combate.registrarCombate();
+  pedidoDeTeste.registrarSocketDoPedido();
   agarrao.registrarAgarrao();
   artesMarciais.registrarArtesMarciais();
   neuroport.registrarNeuroport();

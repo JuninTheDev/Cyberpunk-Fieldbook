@@ -20649,6 +20649,157 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // ---------- O C65: o mestre pede um teste aos jogadores ----------
+    // Atores próprios: o "C65 PC" (do Jogador, INT 6, COOL 7, Percepção 4 e Linguagem (Japonês) 3) e o "C65 NPC" (capanga,
+    // INT 3, Percepção 2). O Jogador rola no navegador dele, com "Rolar direto".
+    let c65 = null;
+    const c65Ler = (navegador, cartao) => navegador.evaluate(`(async () => {
+      const m = () => game.messages.get('${cartao}');
+      await new Promise(r => setTimeout(r, 300));
+      const el = document.querySelector('[data-message-id="${cartao}"] .cartao.pedido-teste');
+      return { linhas: m().getFlag('${S}', 'pedidoDeTeste').linhas.map(l => [l.estado, l.total, l.porMestre]), texto: el?.textContent.replace(/\\s+/g, ' ').trim(), botoes: [...(el?.querySelectorAll('button') ?? [])].map(b => b.textContent.trim()) };
+    })()`);
+    const c65Esperar = (navegador, cartao, linha, estado = 'rolou') => navegador.evaluate(`(async () => {
+      for (let i = 0; i < 80 && game.messages.get('${cartao}')?.getFlag('${S}', 'pedidoDeTeste').linhas[${linha}].estado !== '${estado}'; i++) await new Promise(r => setTimeout(r, 100));
+      return game.messages.get('${cartao}')?.getFlag('${S}', 'pedidoDeTeste').linhas[${linha}].estado;
+    })()`);
+    // A janela "O mestre pede um teste" no navegador do jogador: o texto, e clica (Rolar ou Depois).
+    const c65Janela = (botao = 'rolar') => jogador.evaluate(`(async () => {
+      let alvo = null;
+      for (let i = 0; i < 60 && !(alvo = document.querySelector('.pedido-de-teste-jogador button[data-action${botao === 'rolar' ? '^="rolar-"' : '="depois"'}]')); i++) await new Promise(r => setTimeout(r, 100));
+      const texto = document.querySelector('.pedido-de-teste-jogador')?.textContent.replace(/\\s+/g, ' ').trim();
+      alvo?.click();
+      return { texto, clicou: Boolean(alvo) };
+    })()`);
+
+    await r.passo('C65: o mestre pede Percepção DV 13 ao PC e ao NPC; a janela abre no jogador, que rola no computador dele; o cartão mostra a DV só ao mestre e o resultado a todos; "Rolar os que faltam" rola o NPC', async () => {
+      c65 = await edge.evaluate(`(async () => {
+        const dono = game.users.getName('Jogador');
+        const pc = await Actor.implementation.create({ name: 'C65 PC', type: 'personagem', system: { atributos: { int: { valor: 6 }, cool: { valor: 7 } }, pericias: { perception: { nivel: 4 }, 'language-japones': { nivel: 3, familia: 'language', nome: 'Japonês' } } }, ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE, [dono.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+        const npc = await Actor.implementation.create({ name: 'C65 NPC', type: 'capanga', system: { atributos: { int: { valor: 3 } }, pericias: { perception: { nivel: 2 } } }, ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE } });
+        // Só o mestre é dono do NPC (o mundo do G4 pode ter mudado o padrão de quem é dono do ator novo).
+        return { pc: pc.uuid, npc: npc.uuid, pcId: pc.id, npcId: npc.id, donos: { pc: pc.ownership, npc: npc.ownership } };
+      })()`);
+      await jogador.evaluate(`(async () => {
+        await game.settings.set('${S}', 'rolarDireto', true);
+        for (let i = 0; i < 60 && !game.actors.get('${c65.pcId}')?.isOwner; i++) await new Promise(r => setTimeout(r, 100));
+        return true;
+      })()`);
+      await fixar(jogador, [[5, 10]]);
+      await fixar(edge, [[4, 10]]);
+      // 5 + INT 6 + Percepção 4 = 15, passa da DV 13; o NPC: 4 + 3 + 2 = 9, não passa.
+      const cartao = await edge.evaluate(`game.system.api.pedidoDeTeste.pedir({ teste: { tipo: 'pericia', id: 'perception' }, dv: 13, motivo: 'Algo se move no beco', atores: ['${c65.pc}', '${c65.npc}'] }).then(m => m.id)`);
+      const janela = await c65Janela();
+      await c65Esperar(edge, cartao, 0);
+      const mestre = await c65Ler(edge, cartao), doJogador = await c65Ler(jogador, cartao);
+      const rolagem = await edge.evaluate(`(() => { const m = game.messages.filter(x => x.getFlag('${S}', 'teste')?.pedido === '${cartao}').at(-1); return { autor: m?.author.name, teste: m?.getFlag('${S}', 'teste'), publica: !m?.whisper.length && !m?.blind }; })()`);
+      await edge.evaluate(`document.querySelector('[data-message-id="${cartao}"] [data-cprf-pedido="rolarTodos"]').click()`);
+      await c65Esperar(edge, cartao, 1);
+      const depois = await c65Ler(edge, cartao);
+      await edge.shot('c65-pedido');
+      const info = { donos: c65.donos, janela, mestre, doJogador, rolagem, depois };
+      const ok = janela.clicou && janela.texto.includes('Percepção') && janela.texto.includes('Algo se move no beco') && !janela.texto.includes('13')
+        && rolagem.autor === 'Jogador' && rolagem.teste.total === 15 && rolagem.teste.linha === 0 && rolagem.publica
+        && JSON.stringify(mestre.linhas) === JSON.stringify([['rolou', 15, false], ['esperando', null, false]])
+        && mestre.texto.includes('DV 13 (Comum)') && mestre.texto.includes('15 · passou') && mestre.texto.includes('1 de 2 rolaram · 1 passou') && mestre.botoes.join() === 'Rolar,Rolar os que faltam,Encerrar'
+        && doJogador.texto.includes('DV oculta') && !doJogador.texto.includes('DV 13') && doJogador.texto.includes('15 · passou') && doJogador.botoes.length === 0
+        && JSON.stringify(depois.linhas) === JSON.stringify([['rolou', 15, false], ['rolou', 9, false]]) && depois.texto.includes('9 · falhou') && depois.texto.includes('2 de 2 rolaram · 1 passou') && depois.botoes.join() === 'Encerrar';
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('C65: às cegas, o jogador rola o COOL sem ver o total (nem no cartão nem na rolagem); o mestre vê; a rolagem velha reenviada e a linha de outro ator não valem', async () => {
+      await fixar(jogador, [[8, 10]]);
+      // 8 + COOL 7 = 15: não supera a DV 15 (o empate não passa).
+      const cego = await edge.evaluate(`game.system.api.pedidoDeTeste.pedir({ teste: { tipo: 'atributo', chave: 'cool' }, dv: 15, modo: 'cegas', atores: ['${c65.pc}'] }).then(m => m.id)`);
+      const janela = await c65Janela();
+      await c65Esperar(edge, cego, 0);
+      const doJogador = await jogador.evaluate(`(async () => {
+        await new Promise(r => setTimeout(r, 300));
+        const rolagem = game.messages.filter(m => m.author.id === game.user.id && m.getFlag('${S}', 'teste')?.pedido === '${cego}').at(-1);
+        return { texto: document.querySelector('[data-message-id="${cego}"] .cartao.pedido-teste')?.textContent.replace(/\\s+/g, ' ').trim(), cega: rolagem?.blind, visivel: rolagem?.isContentVisible };
+      })()`);
+      const mestre = await c65Ler(edge, cego);
+      // Os avisos falsos: a rolagem do pedido anterior (do próprio jogador) para a linha dele e para a do NPC; e uma mensagem
+      // feita à mão, com as flags certas deste pedido e da linha do NPC (que não é dele) e o NPC como quem fala.
+      const falso = await edge.evaluate(`game.system.api.pedidoDeTeste.pedir({ teste: { tipo: 'pericia', id: 'perception' }, dv: 9, atores: ['${c65.npc}', '${c65.pc}'] }).then(m => m.id)`);
+      const depois = await c65Janela('depois');
+      await jogador.evaluate(`(() => {
+        const velha = game.messages.filter(m => m.author.id === game.user.id && m.getFlag('${S}', 'teste')).at(-1);
+        game.socket.emit('system.${S}', { tipo: 'pedidoDeTeste', acao: 'resultado', mensagem: '${falso}', linha: 1, rolagem: velha.id });
+        game.socket.emit('system.${S}', { tipo: 'pedidoDeTeste', acao: 'resultado', mensagem: '${falso}', linha: 0, rolagem: velha.id });
+        return true;
+      })()`);
+      const forjada = await jogador.evaluate(`(async () => {
+        const m = await ChatMessage.implementation.create({ content: 'forjada', speaker: { actor: '${c65.npcId}', alias: 'C65 NPC' }, flags: { '${S}': { teste: { rotulo: 'Percepção', total: 30, critico: null, pedido: '${falso}', linha: 0 } } } });
+        game.socket.emit('system.${S}', { tipo: 'pedidoDeTeste', acao: 'resultado', mensagem: '${falso}', linha: 0, rolagem: m.id });
+        return { criou: Boolean(m), falante: m.speaker.actor };
+      })()`);
+      await edge.sleep(4000);
+      const falsos = await edge.evaluate(`game.messages.get('${falso}').getFlag('${S}', 'pedidoDeTeste').linhas.map(l => l.estado)`);
+      c65.falso = falso;
+      const info = { janela, doJogador, mestre, depois, falsos, forjada };
+      const ok = janela.clicou && janela.texto.includes('COOL') && !janela.texto.includes('15')
+        && doJogador.texto.includes('Rolou') && !/\b15\b/.test(doJogador.texto) && !doJogador.texto.includes('falhou') && doJogador.texto.includes('só o mestre (às cegas)') && doJogador.cega === true && doJogador.visivel === false
+        && mestre.texto.includes('15 · falhou') && mestre.texto.includes('DV 15 (Difícil)') && mestre.texto.includes('0 passaram')
+        && depois.clicou && falsos.join() === 'esperando,esperando';
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('C65: o /teste do mestre abre a janela preenchida (Linguagem, "japonês", DV 13); o PC rola a Linguagem (Japonês) dele; o /teste do jogador é recusado; "Encerrar" marca quem não rolou', async () => {
+      await fixar(jogador, [[2, 10]]);
+      const comando = await edge.evaluate(`(async () => {
+        // O caminho de verdade: o token selecionado na cena (nenhum alvo marcado) e o /teste no chat.
+        const cena = await Scene.implementation.create({ name: 'C65 Pedido', active: false, width: 1000, height: 1000, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+        await cena.view();
+        for (let i = 0; i < 100 && !(canvas.ready && canvas.scene?.id === cena.id); i++) await new Promise(r => setTimeout(r, 100));
+        // Do protótipo, como na mesa: o token do personagem é ligado ao ator (o C65 PC do mundo).
+        const prototipo = await game.actors.get('${c65.pcId}').getTokenDocument({ x: 100, y: 100 });
+        const [token] = await cena.createEmbeddedDocuments('Token', [prototipo.toObject()]);
+        for (let i = 0; i < 50 && !canvas.tokens.get(token.id); i++) await new Promise(r => setTimeout(r, 100));
+        canvas.tokens.setTargets([]);
+        canvas.tokens.get(token.id).control({ releaseOthers: true });
+        ui.chat.processMessage('/teste linguagem japonês 13');
+        let janela = null;
+        for (let i = 0; i < 50 && !(janela = document.querySelector('.pedido-de-teste')); i++) await new Promise(r => setTimeout(r, 100));
+        const f = janela?.querySelector('form') ?? janela;
+        const lido = { teste: f?.querySelector('[name="teste"]')?.value, tipo: f?.querySelector('[name="tipoDaFamilia"]')?.value, dv: f?.querySelector('[name="dv"]')?.value, marcados: f?.querySelectorAll('[name="quem"]:checked').length };
+        const antes = game.messages.size;
+        janela?.querySelector('button[data-action="pedir"]')?.click();
+        for (let i = 0; i < 50 && game.messages.size === antes; i++) await new Promise(r => setTimeout(r, 100));
+        const m = game.messages.contents.at(-1);
+        canvas.tokens.releaseAll();
+        return { ...lido, cena: cena.id, id: m.id, rotulo: m.getFlag('${S}', 'pedidoDeTeste')?.rotulo, linhas: m.getFlag('${S}', 'pedidoDeTeste')?.linhas.map(l => l.nome) };
+      })()`);
+      const janela = await c65Janela();
+      await c65Esperar(edge, comando.id, 0);
+      // 2 + INT 6 + Linguagem (Japonês) 3 = 11.
+      const familia = await edge.evaluate(`(() => { const m = game.messages.filter(x => x.getFlag('${S}', 'teste')?.pedido === '${comando.id}').at(-1); return { rotulo: m?.getFlag('${S}', 'teste').rotulo, total: m?.getFlag('${S}', 'teste').total, linha: game.messages.get('${comando.id}').getFlag('${S}', 'pedidoDeTeste').linhas[0].total }; })()`);
+      // O aviso do jogador fica num aviso trocado só neste passo (o último passo confere os avisos do sistema).
+      const doJogador = await jogador.evaluate(`(async () => {
+        const antes = game.messages.size, original = ui.notifications.warn;
+        let aviso = '';
+        ui.notifications.warn = texto => { aviso = texto; };
+        try { ui.chat.processMessage('/teste cool'); await new Promise(r => setTimeout(r, 500)); } finally { ui.notifications.warn = original; }
+        return { mensagens: game.messages.size - antes, aviso, janela: Boolean(document.querySelector('.pedido-de-teste')) };
+      })()`);
+      const encerrado = await edge.evaluate(`(async () => {
+        document.querySelector('[data-message-id="${c65.falso}"] [data-cprf-pedido="encerrar"]').click();
+        for (let i = 0; i < 50 && game.messages.get('${c65.falso}').getFlag('${S}', 'pedidoDeTeste').aberto; i++) await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 300));
+        const el = document.querySelector('[data-message-id="${c65.falso}"] .cartao.pedido-teste');
+        return { linhas: game.messages.get('${c65.falso}').getFlag('${S}', 'pedidoDeTeste').linhas.map(l => l.estado), botoes: el?.querySelectorAll('button').length, texto: el?.textContent.replace(/\\s+/g, ' ').trim() };
+      })()`);
+      const doJogadorEncerrado = await c65Ler(jogador, c65.falso);
+      await edge.evaluate(`(async () => { await game.scenes.get('${comando.cena}')?.delete(); await Promise.all(['${c65.pcId}', '${c65.npcId}'].map(id => game.actors.get(id)?.delete())); return true; })()`);
+      const info = { comando, janela, familia, doJogador, encerrado, doJogadorEncerrado };
+      const ok = comando.teste === 'familia:language' && comando.tipo === 'japonês' && comando.dv === '13' && comando.marcados === 1 && comando.rotulo === 'Linguagem (japonês)' && comando.linhas.join() === 'C65 PC'
+        && janela.clicou && familia.rotulo === 'Linguagem (Japonês)' && familia.total === 11 && familia.linha === 11
+        && doJogador.mensagens === 0 && doJogador.aviso === 'Só o mestre pede um teste aos jogadores.' && !doJogador.janela
+        && encerrado.linhas.join() === 'naoRolou,naoRolou' && encerrado.botoes === 0 && encerrado.texto.includes('Não rolou') && encerrado.texto.includes('Encerrado')
+        && doJogadorEncerrado.botoes.length === 0 && doJogadorEncerrado.texto.includes('Encerrado');
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];
