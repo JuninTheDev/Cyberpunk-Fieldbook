@@ -41,6 +41,13 @@ case "$1" in
 esac
 `);
   escrever(pasta('bin/runuser'), '#!/usr/bin/env bash\nwhile [ "$1" != -- ]; do shift; done\nshift\nexec "$@"\n');
+  // O sudo de mentira: anota o comando e roda (desde a fase 2 da auditoria, o atualizar.sh roda como o usuário da mesa e
+  // chama o systemctl pelo sudo).
+  escrever(pasta('bin/sudo'), `#!/usr/bin/env bash
+echo "$*" >> "${p(pasta('sudo.log'))}"
+[ "$1" = -n ] && shift
+exec "$@"
+`);
   escrever(pasta('bin/getent'), `#!/usr/bin/env bash\necho "mesa:x:1000:1000::${p(pasta('home'))}:/bin/bash"\n`);
   fs.mkdirSync(pasta('home'));
   fs.mkdirSync(pasta('dados'));
@@ -71,8 +78,11 @@ fs.appendFileSync(${JSON.stringify(pasta('instalacoes.log'))}, [process.env.FOUN
   git(pasta('wiki'), 'config', 'core.autocrlf', 'false');
   const env = {
     ...process.env, PATH: `${pasta('bin')}${path.delimiter}${process.env.PATH}`, FIELDBOOK_WIKI: p(pasta('wiki')), FIELDBOOK_DADOS: p(pasta('dados')),
-    FOUNDRY14_DADOS: p(pasta('foundry14/data')), FOUNDRY_STATUS: `file:///${p(pasta('status.json')).replace(/^\//, '')}`, GIT_CONFIG_PARAMETERS: "'core.autocrlf=false'"
+    FOUNDRY14_DADOS: p(pasta('foundry14/data')), FOUNDRY_STATUS: `file:///${p(pasta('status.json')).replace(/^\//, '')}`, GIT_CONFIG_PARAMETERS: "'core.autocrlf=false'",
+    // A wiki respondendo depois de reiniciar: o saude.json existe (o teste da volta o apaga). Um segundo de espera.
+    FIELDBOOK_SAUDE: `file:///${p(pasta('saude.json')).replace(/^\//, '')}`, FIELDBOOK_ESPERA: '1'
   };
+  fs.writeFileSync(pasta('saude.json'), '{}');
   const rodar = (script, ...args) => spawnSync(BASH, [p(path.join(pasta('wiki'), 'servidor', script)), ...args], { env, encoding: 'utf8' });
   const ler = nome => (fs.existsSync(pasta(nome)) ? fs.readFileSync(pasta(nome), 'utf8') : '');
   const linhas = nome => ler(nome).split('\n').filter(Boolean);
@@ -261,4 +271,92 @@ test('a wiki reinicia quando muda o que o servidor carrega: o server.js, a API, 
   assert.equal(mudar('server.js'), 4);
   assert.equal(mudar('jogadores.html'), 4);
   assert.equal(s.ler('dados/atualizacoes.log').match(/wiki reiniciada/g).length, 4);
+});
+
+test('a fase 2 da auditoria: o server.js com erro de sintaxe não reinicia a wiki; o atualizar.sh volta para a versão de antes e não tenta de novo a mesma', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {
+  const s = preparar();
+  t.after(s.limpar);
+  s.mesa14('inactive');
+  escrever(s.pasta('dev/server.js'), '// a wiki\n');
+  s.publicar('Wiki boa');
+  certo(s.rodar('atualizar.sh'));
+  const boa = s.git(s.pasta('wiki'), 'rev-parse', 'HEAD');
+  const reinicios = () => s.linhas('systemctl.log').filter(l => l === 'restart fieldbook').length;
+  assert.equal(reinicios(), 1);
+  assert.ok(s.linhas('sudo.log').includes('-n systemctl restart fieldbook'), 'como o usuário da mesa, pelo sudo');
+  // A publicação quebrada.
+  escrever(s.pasta('dev/server.js'), 'const x = {;\n');
+  s.publicar('Wiki quebrada');
+  const quebrada = s.git(s.pasta('dev'), 'rev-parse', 'HEAD');
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(s.git(s.pasta('wiki'), 'rev-parse', 'HEAD'), boa, 'voltou para a de antes');
+  assert.equal(reinicios(), 1, 'não reiniciou');
+  assert.equal(s.ler('dados/.commit-recusado').trim(), quebrada);
+  assert.match(s.ler('dados/atualizacoes.log'), /ERRO: erro de sintaxe em server\.js \(a wiki não reiniciou\)\. Voltou para \w+ e não tenta de novo/);
+  // No minuto seguinte, nada (nem o "no ar" de novo).
+  const linhas = s.linhas('dados/atualizacoes.log').length;
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(s.linhas('dados/atualizacoes.log').length, linhas);
+  assert.equal(s.git(s.pasta('wiki'), 'rev-parse', 'HEAD'), boa);
+  // O conserto vai.
+  escrever(s.pasta('dev/server.js'), '// consertada\n');
+  s.publicar('Wiki consertada');
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(s.git(s.pasta('wiki'), 'rev-parse', 'HEAD'), s.git(s.pasta('dev'), 'rev-parse', 'HEAD'));
+  assert.equal(reinicios(), 2);
+});
+
+test('a fase 2 da auditoria: a wiki que não responde depois de reiniciar volta para a versão de antes, que reinicia de novo', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {
+  const s = preparar();
+  t.after(s.limpar);
+  s.mesa14('inactive');
+  certo(s.rodar('atualizar.sh'));
+  const boa = s.git(s.pasta('wiki'), 'rev-parse', 'HEAD');
+  escrever(s.pasta('dev/api-campanhas.js'), '// sobe, mas não responde\n');
+  s.publicar('API que não responde');
+  fs.rmSync(s.pasta('saude.json'));
+  certo(s.rodar('atualizar.sh'));
+  assert.equal(s.git(s.pasta('wiki'), 'rev-parse', 'HEAD'), boa);
+  assert.equal(s.linhas('systemctl.log').filter(l => l === 'restart fieldbook').length, 2, 'reiniciou na nova e na de antes');
+  assert.match(s.ler('dados/atualizacoes.log'), /ERRO: a wiki não respondeu em 1 s depois de reiniciar\. Voltou para/);
+  assert.match(s.ler('dados/atualizacoes.log'), /ERRO: a wiki também não respondeu na versão de antes/);
+  assert.ok(fs.existsSync(s.pasta('dados/.commit-recusado')));
+});
+
+test('a fase 2 da auditoria: o backup para o Foundry com a mesa vazia (e o religa com o mesmo mundo), leva o /etc e grava o sha256; com gente, copia ligado', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {
+  const s = preparar();
+  t.after(s.limpar);
+  const falsa = s.pasta('raiz'), destino = s.pasta('backups');
+  for (const [nome, texto] of [['srv/fieldbook/dados/personagens.json', '[]'], ['srv/foundry14/data/Data/worlds/protocolo-morana/data/actors/000001.ldb', 'banco'],
+    ['srv/foundry14/data/Config/options.json', '{}'], ['etc/fieldbook.env', 'GM_KEY=segredo\n'], ['etc/caddy/Caddyfile', 'wiki.exemplo {}\n']]) escrever(path.join(falsa, nome), texto);
+  fs.mkdirSync(destino);
+  // No Git Bash, o tar lê o C: de um caminho como um servidor remoto: os caminhos vão como /c/...
+  const msys = caminho => p(caminho).replace(/^([A-Za-z]):/, (_, letra) => '/' + letra.toLowerCase());
+  const ambiente = { ...process.env, PATH: `${s.pasta('bin')}${path.delimiter}${process.env.PATH}`, FIELDBOOK_RAIZ: msys(falsa), FIELDBOOK_BACKUPS: msys(destino),
+    FOUNDRY_STATUS: `file:///${p(s.pasta('status.json')).replace(/^\//, '')}` };
+  const backup = () => spawnSync(BASH, [p(path.join(raiz, 'servidor', 'backup.sh'))], { env: ambiente, encoding: 'utf8' });
+  const conteudo = nome => spawnSync(BASH, ['-c', `tar -tzf '${msys(path.join(destino, nome))}'`], { encoding: 'utf8' }).stdout.split('\n').map(l => l.replace(/^\.\//, '')).filter(Boolean);
+  const hoje = `backup-${new Date().toISOString().slice(0, 10)}.tar.gz`;
+  // A mesa vazia: para, copia, religa.
+  s.mesa14('active', { active: true, world: 'protocolo-morana', users: 0, version: '14.369' });
+  const vazia = backup();
+  assert.equal(vazia.status, 0, vazia.stdout + vazia.stderr);
+  assert.match(vazia.stdout, /com o foundry14 parado enquanto copiava os mundos/);
+  assert.deepEqual(s.linhas('systemctl.log').filter(l => /^(stop|start)/.test(l)), ['stop foundry14', 'start foundry14']);
+  assert.equal(s.ler('foundry14.estado').trim(), 'active');
+  assert.equal(fs.readFileSync(path.join(falsa, 'srv/foundry14/data/.mundo-ao-ligar'), 'utf8').trim(), 'protocolo-morana');
+  const lista = conteudo(hoje);
+  for (const parte of ['srv/foundry14/data/Data/worlds/protocolo-morana/data/actors/000001.ldb', 'srv/foundry14/data/Config/options.json', 'srv/fieldbook/dados/personagens.json', 'etc/fieldbook.env', 'etc/caddy/Caddyfile']) {
+    assert.ok(lista.includes(parte), `${parte} no backup: ${lista.join(', ')}`);
+  }
+  const conferido = spawnSync(BASH, ['-c', `cd '${p(destino)}' && sha256sum -c '${hoje}.sha256'`], { encoding: 'utf8' });
+  assert.equal(conferido.status, 0, conferido.stdout + conferido.stderr);
+  // Com gente na mesa: não para, e avisa.
+  fs.rmSync(path.join(destino, hoje));
+  s.mesa14('active', { active: true, world: 'protocolo-morana', users: 2, version: '14.369' });
+  const cheia = backup();
+  assert.equal(cheia.status, 0, cheia.stdout + cheia.stderr);
+  assert.match(cheia.stdout, /com o foundry14 ligado \(2 na mesa\): o banco dos mundos pode ter saído pela metade/);
+  assert.equal(s.linhas('systemctl.log').filter(l => /^(stop|start)/.test(l)).length, 2, 'não parou de novo');
+  assert.ok(conteudo(hoje).includes('etc/fieldbook.env'));
 });

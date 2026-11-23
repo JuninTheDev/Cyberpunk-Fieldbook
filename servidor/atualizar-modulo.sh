@@ -11,7 +11,10 @@
 set -euo pipefail
 WIKI=/srv/fieldbook/wiki
 DATA=/srv/foundry/data/Data
-como_mesa() { runuser -u mesa -- env HOME="$(getent passwd mesa | cut -d: -f6)" FOUNDRY_DATA="$DATA" "$@"; }
+como_mesa() { if [ "$(id -u)" -eq 0 ]; then runuser -u mesa -- env HOME="$(getent passwd mesa | cut -d: -f6)" FOUNDRY_DATA="$DATA" "$@"; else env FOUNDRY_DATA="$DATA" "$@"; fi; }
+# O systemctl que muda alguma coisa: como root direto; como o usuário da mesa (o fieldbook-atualizar.service), pelo sudo,
+# que libera só esses comandos (servidor/servicos.sh).
+servico() { if [ "$(id -u)" -eq 0 ]; then systemctl "$@"; else sudo -n systemctl "$@"; fi; }
 
 [ -d "$DATA/systems/cyberpunk-red-core" ] || { echo "O sistema Cyberpunk RED ainda não está instalado no Foundry do servidor: fica para depois."; exit 2; }
 if ! systemctl is-active --quiet foundry14; then
@@ -30,13 +33,16 @@ if ! systemctl is-active --quiet foundry14; then
     echo "Mesa com $conectados conectado(s): o módulo fica para depois."
     exit 2
   fi
-  systemctl stop foundry
-  trap 'systemctl start foundry' EXIT
+  servico stop foundry
+  trap 'servico start foundry' EXIT
 fi
 # Uma cópia vinda do Windows pode chegar sem permissão de escrita: o build precisa regravar a pasta do módulo
 # (e o instalar do Fluxo de Combate, apagar a do Evasion Workflow).
+# Como o usuário da mesa (o atualizar.sh), só o chmod do que já é dele; o chown, só rodado com sudo.
 for pasta in "$DATA"/modules/cpr-2077 "$DATA"/modules/net-architect "$DATA"/modules/fluxo-de-combate "$DATA"/modules/cpred-evasion-workflow; do
-  [ -d "$pasta" ] && chown -R mesa:mesa "$pasta" && chmod -R u+rwX "$pasta"
+  [ -d "$pasta" ] || continue
+  if [ "$(id -u)" -eq 0 ]; then chown -R mesa:mesa "$pasta"; fi
+  chmod -R u+rwX "$pasta" 2>/dev/null || echo "Aviso: $pasta tem arquivos de outro dono (rode: sudo bash $WIKI/servidor/atualizar-modulo.sh)."
 done
 cd "$WIKI/foundry-2077"
 # Cópia dos compêndios do sistema: na primeira vez, sempre que o sistema for atualizado no Foundry e quando a lista do

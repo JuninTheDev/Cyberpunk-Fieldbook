@@ -2068,15 +2068,17 @@
         table = `<div class="table-status table-${kind}" title="${escapeHtml(text)}"><span class="table-dot" aria-hidden="true"></span><span class="table-text">${escapeHtml(text)}</span></div>
           ${switcher}${mesa.online ? `<a class="action table-link" href="${escapeHtml(mesa.url)}" target="_blank" rel="noopener">Entrar na mesa</a>` : ''}`;
       }
-      // Saúde do servidor (só para o mestre, no servidor online): em vermelho com backup de mais de 2 dias ou disco quase cheio.
+      // Saúde do servidor (só para o mestre, no servidor online): em vermelho com backup de mais de 2 dias, disco quase cheio
+      // ou a última cópia fora do servidor (o baixar-backup.bat do PC ou o Baixar backup) de mais de 8 dias.
       const health = state.servidor;
       let server = '';
       if (health) {
         const days = health.backup ? (Date.now() - new Date(health.backup.data)) / 86400000 : Infinity;
         const free = health.disco && health.disco.total ? health.disco.livre / health.disco.total : 1;
+        const fora = health.copiaFora ? (Date.now() - new Date(health.copiaFora)) / 86400000 : Infinity;
         const when = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.moduloPendente ? 'módulo esperando a mesa vazia' : '', health.sistemaPendente ? 'sistema do Foundry 14 esperando a mesa vazia' : ''].filter(Boolean).join(' · ');
-        server = `<details class="side-server${days > 2 || free < 0.1 ? ' side-server-bad' : ''}"><summary>Servidor: ${escapeHtml(summary)}</summary>${health.backup ? `<p>${escapeHtml(health.backup.nome)}, ${(health.backup.tamanho / 1048576).toFixed(1)} MB</p>` : ''}${health.registro.length ? `<ul>${health.registro.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '<p>Nenhuma publicação ainda.</p>'}</details>`;
+        const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.copiaFora ? `cópia fora há ${Math.floor(fora)} dia${Math.floor(fora) === 1 ? '' : 's'}` : 'sem cópia fora do servidor', health.moduloPendente ? 'módulo esperando a mesa vazia' : '', health.sistemaPendente ? 'sistema do Foundry 14 esperando a mesa vazia' : ''].filter(Boolean).join(' · ');
+        server = `<details class="side-server${days > 2 || free < 0.1 || fora > 8 ? ' side-server-bad' : ''}"><summary>Servidor: ${escapeHtml(summary)}</summary>${health.backup ? `<p>${escapeHtml(health.backup.nome)}, ${(health.backup.tamanho / 1048576).toFixed(1)} MB</p>` : ''}${health.registro.length ? `<ul>${health.registro.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '<p>Nenhuma publicação ainda.</p>'}</details>`;
       }
       box.innerHTML = `${table}${server}`;
       box.hidden = !box.innerHTML.trim();

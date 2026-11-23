@@ -148,7 +148,10 @@ function serverHealth() {
   try { const s = fs.statfsSync(dataDir); disco = { livre: s.bavail * s.bsize, total: s.blocks * s.bsize }; } catch { /* sistema sem statfs */ }
   let registro = [];
   try { registro = fs.readFileSync(path.join(dataDir, 'atualizacoes.log'), 'utf8').trim().split('\n').slice(-6).reverse(); } catch { /* ainda sem publicações */ }
-  return { backup, disco, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), sistemaPendente: fs.existsSync(path.join(dataDir, '.sistema-pendente')), registro, mesas: tablesInstalled() };
+  // A última cópia fora do servidor: o servidor\baixar-backup.bat do PC (conferida) ou o "Baixar backup" da wiki marcam.
+  let copiaFora = null;
+  try { copiaFora = fs.statSync(path.join(dataDir, '.copia-fora')).mtime.toISOString(); } catch { /* nenhuma ainda */ }
+  return { backup, disco, copiaFora, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), sistemaPendente: fs.existsSync(path.join(dataDir, '.sistema-pendente')), registro, mesas: tablesInstalled() };
 }
 
 // ---------------- Troca de mesa: o Foundry 12 ou o 14 (só no servidor) ----------------
@@ -319,7 +322,8 @@ http.createServer((request, response) => {
     if (!newest) return send(response, 404, 'Nenhum backup ainda (o servidor faz um por dia).');
     const file = path.join(backupDir, newest);
     response.writeHead(200, { ...SERVER_VERSION, 'Content-Type': 'application/gzip', 'Content-Length': fs.statSync(file).size, 'Content-Disposition': `attachment; filename="${newest}"`, 'Cache-Control': 'private, no-store' });
-    return void pipeline(fs.createReadStream(file), response, () => {});
+    // O backup que chegou inteiro ao aparelho do mestre conta como a cópia fora do servidor (a barra lateral mostra).
+    return void pipeline(fs.createReadStream(file), response, erro => { if (!erro) fs.promises.writeFile(path.join(dataDir, '.copia-fora'), new Date().toISOString()).catch(() => {}); });
   }
 
   if (pathname === '/api/saude') {

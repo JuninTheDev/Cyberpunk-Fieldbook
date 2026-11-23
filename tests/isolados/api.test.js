@@ -259,3 +259,20 @@ test('a Visão dos jogadores lê a base de agora, e os pontos do mapa são só d
   assert.equal(campaigns.readPublish('morana').publicado.lugares[0].texto, 'O bar de depois.');
   assert.equal(campaigns.readPublish('morana').daBase, depois.toISOString());
 });
+
+test('a fase 2 da auditoria: a saúde do servidor mostra a última cópia fora dele; o Baixar backup do mestre marca', async t => {
+  const backups = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'fieldbook-api-isolada-backups-'));
+  t.after(() => require('node:fs').rmSync(backups, { recursive: true, force: true }));
+  require('node:fs').writeFileSync(require('node:path').join(backups, 'backup-2026-11-20.tar.gz'), 'backup');
+  const servidor = criarServidorIsolado(t, { env: { BACKUPS: backups } });
+  const mestre = await servidor.entrarComoMestre();
+  const saude = async () => (await servidor.pedir('/api/estado', { cookie: mestre })).json.servidor;
+  assert.equal((await saude()).copiaFora, null, 'nenhuma cópia ainda');
+  const baixou = await servidor.pedir('/api/backup', { cookie: mestre });
+  assert.equal(baixou.status, 200);
+  await new Promise(r => setTimeout(r, 100));
+  const marcada = (await saude()).copiaFora;
+  assert.ok(marcada && Date.now() - Date.parse(marcada) < 60000, `marcada agora: ${marcada}`);
+  // Só o mestre baixa (e marca).
+  assert.equal((await servidor.pedir('/api/backup')).status, 403);
+});
