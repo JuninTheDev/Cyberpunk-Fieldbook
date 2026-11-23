@@ -568,6 +568,9 @@ de conserto, a parte do sistema e dos testes):
 - [x] **C64. Os termos das munições como os da wiki:** feito no ciclo 202 (sessão KouArt, 2026-11-23). A fase 3 da
   auditoria trocou, na wiki, "Resistir a Tortura/Drogas" por "Resistir Tortura/Drogas" (o nome da perícia) e "faz
   Cybertech" por "faz Cybertecnologia"; o texto das munições que não causam dano, no sistema, tem de ser o da wiki.
+- [~] **C65. O mestre pede um teste aos jogadores:** em andamento (sessão KouArt, 2026-11-23). Pedido do usuário: "uma função
+  no foundry para que o mestre possa pedir testes para os jogadores". A janela do mestre (a perícia ou o STAT, a DV da
+  escala da wiki, quem rola, quem vê), o cartão do chat que se atualiza a cada rolagem e o jogador rolando no computador dele.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
