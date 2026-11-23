@@ -4,14 +4,15 @@
 // Guarda os arquivos públicos (os mesmos que qualquer jogador baixa) e, da API, só o que é deste aparelho: quem
 // entrou (api/eu) e o que o mestre publicou nas campanhas dele (api/visao). Entrar ou sair apaga essas duas.
 // A wiki do mestre e o resto da API passam direto.
+// A versão dos arquivos públicos: o server.js troca o 'dev' ao servir este arquivo (veja o publicVersion de lá). Uma
+// publicação que muda um deles muda este arquivo, e o navegador instala de novo: a instalação baixa a lista inteira
+// outra vez, e ao ativar sai o que não está mais nela. O nome do cache não muda: os tiles do mapa e quem entrou ficam.
+const VERSAO_DOS_PUBLICOS = 'dev';
 const CACHE = 'fieldbook-jogadores-v17';
 const TILE_VERSION = '20261025';
-const PUBLICOS = [
-  '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/netwire.js', '/wiki-app.js', '/wiki-nomes.js', '/nightcity-map.js',
-  '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
-  '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
-  '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'
-];
+// A lista é a mesma do servidor (o arquivos-publicos.js, a fase 3 da auditoria de 2026-11-16).
+importScripts(`/arquivos-publicos.js?v=${VERSAO_DOS_PUBLICOS}`);
+const PUBLICOS = self.ARQUIVOS_PUBLICOS.guardados;
 const PRIVADOS = ['/api/eu', '/api/visao'];
 const TROCA_DE_QUEM = ['/api/entrar', '/api/sair', '/api/sair-de-todos', '/api/mestre/entrar', '/api/mestre/sair', '/api/mestre/sair-de-todos'];
 // O mapa, seus tiles visíveis e as fontes entram quando forem abertos, não na instalação.
@@ -30,8 +31,12 @@ const limparPrivados = () => caches.open(CACHE).then(cache => cache.keys().then(
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PUBLICOS)).then(() => self.skipWaiting()));
 });
+// Ao ativar: os caches de outras versões saem, e deste sai o arquivo que deixou de ser público (o que não está mais na
+// lista nem é da API ou do mapa).
+const limparForaDaLista = () => caches.open(CACHE).then(cache => cache.keys().then(keys => Promise.all(keys.filter(key => !guardavel(new URL(key.url))).map(key => cache.delete(key)))));
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+    .then(limparForaDaLista).catch(() => null).then(() => self.clients.claim()));
 });
 
 const comPrazo = (request, ms = 4000) => Promise.race([fetch(request), new Promise((_, reject) => setTimeout(() => reject(new Error('rede lenta')), ms))]);

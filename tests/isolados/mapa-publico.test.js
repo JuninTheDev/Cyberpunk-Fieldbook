@@ -109,10 +109,18 @@ function serviceWorker() {
       return undefined;
     }
   };
-  vm.runInNewContext(FONTE_SW, {
+  // O importScripts do service worker: roda o arquivo do repositório (a lista dos públicos) no mesmo contexto.
+  e.importados = [];
+  const importScripts = (...urls) => {
+    for (const url of urls) {
+      e.importados.push(url);
+      vm.runInContext(fs.readFileSync(path.join(raiz, new URL(url, origem).pathname), 'utf8'), contexto);
+    }
+  };
+  const contexto = vm.createContext({
     self: { location: { origin: origem }, addEventListener: (nome, ouvir) => ouvintes.set(nome, ouvir),
       skipWaiting: async () => { e.skipWaiting++; }, clients: { claim: async () => { e.claim++; } } },
-    caches, URL, Response, setTimeout: (fn, ms, ...args) => setTimeout(fn, ms * e.escala, ...args), clearTimeout,
+    importScripts, caches, URL, Response, setTimeout: (fn, ms, ...args) => setTimeout(fn, ms * e.escala, ...args), clearTimeout,
     fetch: async pedido => {
       const url = endereco(pedido); e.fetches.push(url);
       if (e.esperaDaRede) await e.esperaDaRede;
@@ -120,7 +128,8 @@ function serviceWorker() {
       const resposta = e.respostas.get(url);
       return resposta ? resposta.clone() : new Response('rede ' + new URL(url).pathname, { headers: { 'Content-Type': 'image/webp' } });
     }
-  }, { filename: 'sw.js' });
+  });
+  vm.runInContext(FONTE_SW, contexto, { filename: 'sw.js' });
   e.evento = async nome => {
     const pendentes = []; ouvintes.get(nome)({ waitUntil: p => pendentes.push(p) });
     await Promise.all(pendentes);
@@ -282,4 +291,49 @@ test('rede lenta (a auditoria de 2026-11-16): sem a cópia guardada, o api/eu es
   // Sem rede e sem cópia: o erro de rede (não há o que mostrar).
   e.esperaDaRede = null; e.rede = false;
   assert.equal((await e.pedir('/api/visao?campanha=outra')).type, 'error');
+});
+
+// A lista única e a versão (a fase 3 da auditoria de 2026-11-16): o servidor e o service worker leem o mesmo
+// arquivos-publicos.js, e o sw.js sai com a versão dos arquivos que ele guarda.
+const PUBLICOS = require('../../arquivos-publicos.js');
+
+test('a lista única: o visitante baixa tudo o que ela tem, e o service worker guarda exatamente os "guardados"', async t => {
+  const wiki = criarServidorIsolado(t);
+  for (const arquivo of [...PUBLICOS.guardados, ...PUBLICOS.servidos]) assert.equal((await wiki.pedir(arquivo, { method: 'HEAD' })).status, 200, arquivo);
+  assert.equal((await wiki.pedir('/campanha-base.js', { method: 'HEAD' })).status, 403, 'fora da lista, só o mestre');
+  const e = serviceWorker();
+  await e.evento('install');
+  assert.deepEqual(e.importados, ['/arquivos-publicos.js?v=dev']);
+  assert.deepEqual(e.precache, PUBLICOS.guardados);
+});
+
+test('o sw.js sai com a versão dos arquivos públicos (o tamanho e a hora de cada um), com ETag e 304', async t => {
+  const crypto = require('node:crypto');
+  const wiki = criarServidorIsolado(t);
+  const sw = await wiki.pedir('/sw.js');
+  assert.equal(sw.status, 200);
+  assert.match(sw.headers['content-type'], /javascript/); assert.equal(sw.headers['cache-control'], 'no-cache');
+  const partes = [...PUBLICOS.guardados, '/arquivos-publicos.js', '/sw.js'].map(arquivo => {
+    const s = fs.statSync(path.join(raiz, arquivo)); return `${arquivo}:${s.size}:${Math.round(s.mtimeMs)}`;
+  });
+  const versao = crypto.createHash('sha256').update(partes.join('\n')).digest('hex').slice(0, 16);
+  // Só a linha da versão muda; o resto é o arquivo.
+  assert.equal(sw.text, FONTE_SW.replace("const VERSAO_DOS_PUBLICOS = 'dev';", `const VERSAO_DOS_PUBLICOS = '${versao}';`));
+  assert.notEqual(sw.text, FONTE_SW);
+  const confirmado = await wiki.pedir('/sw.js', { headers: { 'If-None-Match': sw.headers.etag } });
+  assert.equal(confirmado.status, 304); assert.equal(confirmado.text, '');
+  const head = await wiki.pedir('/sw.js', { method: 'HEAD' });
+  assert.equal(head.status, 200); assert.equal(head.text, '');
+});
+
+test('ao ativar, sai do cache o arquivo que deixou de ser público; os da lista, a API deste aparelho e o mapa ficam', async () => {
+  const e = serviceWorker();
+  await e.pedir(TILE + '?v=20261025');
+  const cache = e.cache();
+  for (const url of ['/arquivo-que-saiu.js', '/system-rules.js', '/api/eu']) await cache.put(url, new Response('antigo ' + url));
+  await e.evento('install'); await e.evento('activate');
+  const caminhos = await e.caminhos();
+  assert.equal(caminhos.includes('/arquivo-que-saiu.js'), false);
+  for (const fica of ['/system-rules.js', '/api/eu', TILE + '?v=20261025']) assert.ok(caminhos.includes(fica), fica);
+  assert.equal(await (await cache.match('/system-rules.js')).text(), 'precache /system-rules.js', 'a instalação baixou de novo');
 });

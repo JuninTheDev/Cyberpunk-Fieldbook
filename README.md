@@ -18,6 +18,7 @@ A wiki e o Foundry podem rodar num servidor gratuito (Oracle Cloud), sempre liga
   - **Os avisos da CSP:** as páginas saem com uma política de segurança (a CSP) que, por enquanto, só avisa: o navegador não bloqueia nada e conta ao servidor o que bloquearia (um script de outro site, ou um escrito na página por uma falha). A barra lateral mostra quantos avisos chegaram, e eles ficam em `csp-avisos.log`, na pasta dos dados. Depois de uma semana de uso sem aviso estranho, ela passa a bloquear.
 - **No celular, como app:** no menu da conta (canto de cima) aparece **Instalar no celular** (Android e computador; no iPhone, Compartilhar → Adicionar à Tela de Início).
   - Instalada ou não, a wiki guarda no aparelho as regras e o que o mestre publicou nas campanhas do jogador, e abre sem internet. Os personagens e a loja precisam de rede.
+  - Cada publicação que muda um desses arquivos atualiza a cópia inteira no aparelho, na próxima vez que a wiki abrir com rede (o servidor dá ao `sw.js` a versão dos arquivos): sem rede, nunca fica a página nova com um script velho.
   - Com rede, ela sempre busca a versão nova primeiro.
   - A wiki do mestre nunca fica guardada no aparelho.
 - **Dados ao vivo:** no servidor, ficam fora do git (`/srv/fieldbook/dados`).
@@ -170,6 +171,7 @@ Mais de uma campanha ao mesmo tempo, com o mesmo sistema, as mesmas regras e o m
 | `revertidos.js` | Confere se o OneDrive voltou algum arquivo para uma versão antiga. Usado pelo servidor e pelo `publicar.bat`. |
 | `publicar.bat`, `publicar.ps1` | Publicam a wiki no servidor online, pelo GitHub. |
 | `manifest.webmanifest`, `sw.js`, `icones/` | A wiki instalada no celular: o manifesto, o service worker (guarda as regras para abrir sem internet) e os ícones (o `icone.svg` é a fonte dos PNG). |
+| `arquivos-publicos.js` | A lista do que um jogador pode baixar, uma só: o `server.js` libera esses arquivos e o `sw.js` os guarda no aparelho. Arquivo novo para os jogadores entra aqui. |
 | `servidor/` | Instalação e manutenção do servidor online (wiki, Foundry, HTTPS, atualização e backup). Veja o README da pasta. |
 | `api-personagens.js` | A parte do servidor que guarda os personagens e os códigos dos jogadores e decide quem vê o quê em cada campanha. |
 | `api-contas.js` | As sessões de login (o cookie leva só um identificador; sair de todos, desconectar, último acesso) e as preferências de cada conta (`sessoes-jogadores.json`, `preferencias/`, na pasta de dados). |

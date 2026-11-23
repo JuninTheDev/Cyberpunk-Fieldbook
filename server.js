@@ -46,18 +46,10 @@ const contentTypes = {
   '.woff2': 'font/woff2'
 };
 
-// O que um jogador (qualquer aparelho que não seja o do mestre) pode baixar.
-// Os arquivos de regras não têm notas de campanha; elas ficam no index.html. O que o mestre publica em cada campanha
-// não é arquivo: vem pela API (/api/visao), só para quem joga nela. O wiki-nomes.js (os nomes que viram link) é só o
-// código, sem dados: os nomes dos jogadores também vêm pela API.
-const playerFiles = new Set([
-  '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/netwire.js', '/wiki-app.js', '/wiki-nomes.js', '/nightcity-map.js',
-  '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
-  '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
-  '/nightcity-map-base.webp', '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
-  // A wiki instalada no celular: o manifesto, o service worker (sw.js) e os ícones.
-  '/manifest.webmanifest', '/sw.js', '/icones/icone.svg', '/icones/icone-192.png', '/icones/icone-512.png'
-]);
+// O que um jogador (qualquer aparelho que não seja o do mestre) pode baixar: a lista do arquivos-publicos.js, a mesma
+// que o sw.js guarda no celular.
+const publicFiles = require('./arquivos-publicos.js');
+const playerFiles = new Set([...publicFiles.guardados, ...publicFiles.servidos]);
 const playerFolders = ['/cyberpunk-css-main/cyberpunk-css-main/fonts/'];
 // Só os tiles WebP do mapa público: não libera scripts, arquivos de campanha ou a pasta de origem inteira.
 const publicMapTile = /^\/assets\/nightcity-map\/tiles\/[3-7]\/(?:0|[1-9]\d*)\/(?:0|[1-9]\d*)\.webp$/;
@@ -283,6 +275,28 @@ function cspReport(request, response) {
 }
 const cspCount = () => { try { return fs.readFileSync(cspFile, 'utf8').split('\n').filter(Boolean).length; } catch { return 0; } };
 
+// ---------------- O service worker com a versão (a fase 3 da auditoria de 2026-11-16) ----------------
+// O sw.js sai com a versão dos arquivos que ele guarda (o tamanho e a hora de cada um, e da lista): uma publicação que
+// muda um deles muda o sw.js, o navegador instala de novo, e a instalação baixa todos outra vez. Antes, a versão era um
+// número à mão: esquecido, o celular ficava sem rede com a página nova e um script velho que ela nunca pedia de novo.
+const SW_VERSION_LINE = "const VERSAO_DOS_PUBLICOS = 'dev';";
+function publicVersion() {
+  const parts = [...publicFiles.guardados, '/arquivos-publicos.js', '/sw.js'].map(file => {
+    try { const s = fs.statSync(path.join(root, file)); return `${file}:${s.size}:${Math.round(s.mtimeMs)}`; } catch { return `${file}:-`; }
+  });
+  return crypto.createHash('sha256').update(parts.join('\n')).digest('hex').slice(0, 16);
+}
+function serveServiceWorker(request, response) {
+  let source;
+  try { source = fs.readFileSync(path.join(root, 'sw.js'), 'utf8'); } catch { return send(response, 404, 'Not found'); }
+  const body = Buffer.from(source.replace(SW_VERSION_LINE, `const VERSAO_DOS_PUBLICOS = '${publicVersion()}';`), 'utf8');
+  const etag = `W/"sw-${crypto.createHash('sha256').update(body).digest('hex').slice(0, 16)}"`;
+  const headers = { ...SERVER_VERSION, ETag: etag, 'Cache-Control': 'no-cache' };
+  if (request.headers['if-none-match'] === etag) { response.writeHead(304, headers); return response.end(); }
+  response.writeHead(200, { ...headers, 'Content-Type': contentTypes['.js'], 'Content-Length': body.length });
+  response.end(request.method === 'HEAD' ? undefined : body);
+}
+
 const sendJson = (response, status, data, headers = {}) => send(response, status, JSON.stringify(data), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store', ...headers });
 
 // Entrar e sair como mestre (a tela é o mestre.html).
@@ -417,6 +431,7 @@ http.createServer((request, response) => {
   if (!gameMaster && !playerFile) {
     return send(response, 403, 'Área do mestre. A visão dos jogadores fica em /jogadores.html');
   }
+  if (servedPath === '/sw.js') return serveServiceWorker(request, response);
   fs.stat(filePath, (error, stats) => {
     if (error || !stats.isFile()) return send(response, 404, 'Not found');
     const extension = path.extname(filePath).toLowerCase();
