@@ -84,9 +84,26 @@ function Save-FromServer($name) {
   return ('{0} salvo ({1:N1} MB).' -f $name, ((Get-Item $target).Length / 1MB))
 }
 
+# Confere o backup baixado (a fase 2 da auditoria de 2026-11-16): o sha256 que o servidor grava ao lado e o tar, que se
+# lê inteiro. Certo, avisa o servidor: a barra do mestre mostra há quantos dias foi a última cópia fora dele.
+function Test-Backup($name) {
+  $target = Join-Path $destination $name
+  $expected = ("$(@(& ssh @sshArgs $server "sudo cat /srv/backups/$name.sha256 2>/dev/null")[0])".Trim() -split '\s+')[0]
+  if ($expected) {
+    $got = (Get-FileHash -Algorithm SHA256 $target).Hash.ToLower()
+    if ($got -ne $expected.ToLower()) { Remove-Item -Force $target; Stop-WithMessage "O $name chegou diferente do servidor (o sha256 não bate). Apaguei a cópia: rode de novo." }
+  }
+  & tar -tzf $target *> $null
+  if ($LASTEXITCODE -ne 0) { Remove-Item -Force $target; Stop-WithMessage "O $name não se lê inteiro (o tar falhou). Apaguei a cópia: rode de novo." }
+  & ssh @sshArgs $server 'sudo -u mesa touch /srv/fieldbook/dados/.copia-fora' | Out-Null
+  if ($expected) { return 'Conferido (sha256 e tar).' }
+  return 'Conferido (tar; o servidor ainda não grava o sha256).'
+}
+
 $name = Get-Newest 'backup-*.tar.gz' '^backup-[0-9-]+\.tar\.gz$'
 if (-not $name) { Finish 'O servidor ainda não fez nenhum backup (ele faz um por dia, às 4h30).' }
 $messages = @(Save-FromServer $name)
+$messages += Test-Backup $name
 # Os arquivos soltos do Foundry: o servidor só faz um pacote novo quando algum deles muda.
 $pack = Get-Newest 'arquivos-*.tar' '^arquivos-[0-9-]+\.tar$'
 if ($pack) { $messages += Save-FromServer $pack }

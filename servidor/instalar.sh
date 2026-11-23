@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Monta o servidor da mesa num Ubuntu 24.04 novo (Oracle Cloud, ARM): a wiki, o Foundry, o Caddy (HTTPS),
+# Monta o servidor da mesa num Ubuntu 24.04 novo (Oracle Cloud, x86): a wiki, o Foundry, o Caddy (HTTPS),
 # a atualização automática pelo GitHub e o backup diário. Pode rodar de novo sem estragar nada: refaz
 # a configuração e mantém os dados.
 #
@@ -140,6 +140,8 @@ echo "Wiki em $WIKI ($(como_mesa git -C "$WIKI" log -1 --format='%h %s'))"
 
 # ---------------- Configuração da wiki ----------------
 umask 027
+# O que mais estiver no arquivo (as chaves da IA do NetWire, os limites) fica: antes, rodar de novo apagava.
+EXTRAS=$(grep -vE '^(#|MODO=|HOST=|PORT=|GM_KEY=|DADOS=|BACKUPS=|FOUNDRY_URL=|$)' "$AMBIENTE" 2>/dev/null || true)
 cat > "$AMBIENTE" <<EOF
 # Configuração da wiki no servidor (lida pelo fieldbook.service). Mudou? sudo systemctl restart fieldbook
 MODO=hospedado
@@ -150,6 +152,7 @@ DADOS=$DADOS
 BACKUPS=$BACKUPS
 FOUNDRY_URL=https://mesa.$DOMINIO
 EOF
+if [ -n "$EXTRAS" ]; then { echo '# Mantidas da configuração anterior:'; printf '%s\n' "$EXTRAS"; } >> "$AMBIENTE"; fi
 chown "root:$USUARIO" "$AMBIENTE"; chmod 640 "$AMBIENTE"
 umask 022
 
@@ -177,82 +180,8 @@ EOF
 fi
 
 # ---------------- Serviços ----------------
-verde "Serviços: wiki, Foundry, atualização automática e backup"
-cat > /etc/systemd/system/fieldbook.service <<EOF
-[Unit]
-Description=Night City Fieldbook (wiki)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-User=$USUARIO
-WorkingDirectory=$WIKI
-EnvironmentFile=$AMBIENTE
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat > /etc/systemd/system/foundry.service <<EOF
-[Unit]
-Description=Foundry VTT (mesa)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-User=$USUARIO
-WorkingDirectory=$FOUNDRY_APP
-ExecStart=/bin/bash $WIKI/servidor/iniciar-foundry.sh $FOUNDRY_APP $FOUNDRY_DADOS
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat > /etc/systemd/system/fieldbook-atualizar.service <<EOF
-[Unit]
-Description=Puxa do GitHub o que o mestre publicou
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash $WIKI/servidor/atualizar.sh
-EOF
-cat > /etc/systemd/system/fieldbook-atualizar.timer <<EOF
-[Unit]
-Description=Confere o GitHub a cada minuto
-
-[Timer]
-OnBootSec=2min
-OnUnitActiveSec=1min
-AccuracySec=10s
-
-[Install]
-WantedBy=timers.target
-EOF
-
-cat > /etc/systemd/system/fieldbook-backup.service <<EOF
-[Unit]
-Description=Backup diário da wiki e do Foundry
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash $WIKI/servidor/backup.sh
-EOF
-cat > /etc/systemd/system/fieldbook-backup.timer <<EOF
-[Unit]
-Description=Backup diário às 4h30
-
-[Timer]
-OnCalendar=*-*-* 04:30:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
+# A wiki, o Foundry 12, a atualização automática, o backup diário, a swap e o sudo da atualização ficam no
+# servidor/servicos.sh (chamado no fim, depois do Caddy), que também roda sozinho.
 
 # ---------------- Caddy (HTTPS) ----------------
 cat > /etc/caddy/Caddyfile <<EOF
@@ -278,9 +207,7 @@ $DOMINIO, www.$DOMINIO {
 }
 EOF
 
-systemctl daemon-reload
-systemctl enable --now fieldbook.service fieldbook-atualizar.timer fieldbook-backup.timer >/dev/null
-systemctl restart fieldbook.service
+bash "$WIKI/servidor/servicos.sh"
 # Com o Foundry 14 escolhido como mesa (pela wiki ou na virada), o 12 fica parado: ligá-lo desligaria o 14.
 if [ -f "$FOUNDRY_APP/.instalado" ] && ! systemctl is-enabled --quiet foundry14.service 2>/dev/null; then systemctl enable --now foundry.service >/dev/null; systemctl restart foundry.service; fi
 systemctl enable caddy >/dev/null

@@ -197,7 +197,7 @@ Feche o Foundry do PC e dê dois cliques em **`servidor\enviar-para-servidor.bat
 - **`abrir-online.bat` e o `cloudflared` não são mais necessários.**
 - **Recomendado: tire a pasta da wiki do OneDrive.** O GitHub já é o backup, e o OneDrive é quem volta arquivos para versões antigas.
   - Feche o VS Code e mova a pasta para fora do OneDrive (por exemplo, `C:\Users\kouar\Documents\Cyberpunk Fieldbook`, se Documentos não estiver sincronizado).
-- **Backup no PC:** o servidor faz um backup por dia (dados da wiki e mundos do Foundry) e guarda 14 dias, mas só lá dentro. Se a máquina da Oracle se perder, eles se perdem junto. Para ter uma cópia fora dele:
+- **Backup no PC:** o servidor faz um backup por dia (dados da wiki, mundos do Foundry e a configuração do servidor) e guarda 14 dias, mas só lá dentro. Se a máquina da Oracle se perder, eles se perdem junto. Para ter uma cópia fora dele:
   - Dê dois cliques em **`servidor\baixar-backup.bat`**. Ele traz o mais recente para `C:\Users\kouar\Backups\Night City Fieldbook` (fora do OneDrive) e guarda os 8 últimos.
   - Ele traz também o pacote dos arquivos soltos do Foundry (`arquivos-<data>.tar`) e guarda os 2 últimos.
     - O pacote leva os mapas, vídeos, músicas e retratos da pasta Data, a pasta `modules/Mapas` e as imagens que ficaram dentro do sistema CORE.
@@ -206,6 +206,9 @@ Feche o Foundry do PC e dê dois cliques em **`servidor\enviar-para-servidor.bat
     - O Windows passa a baixar sozinho todo domingo ao meio-dia, ou na primeira vez que o PC ligar depois disso. O registro fica em `registro.txt`, na mesma pasta.
     - Para desligar: `servidor\baixar-backup.bat -Desagendar`.
   - Ele usa o servidor e a chave que o `enviar-para-servidor.bat` salvou. Também dá para baixar pela wiki: barra lateral → **Baixar backup** (só o backup diário, sem o pacote dos arquivos).
+  - **Ele confere o que baixou** (desde a fase 2 da auditoria de 2026-11-16): o `.sha256` que o servidor grava ao lado e o `tar`, que tem de se ler inteiro. Certo, avisa o servidor, e a barra lateral do mestre mostra "cópia fora há N dias" (em vermelho depois de 8). O **Baixar backup** da wiki também conta.
+  - **O que o backup diário leva:** os dados da wiki, os mundos e a configuração dos Foundry e a do servidor (o `/etc/fieldbook.env`, com a senha do mestre e as chaves da IA; o Caddyfile; os serviços; o sudo). Guarde a cópia do PC fora de pastas compartilhadas.
+  - **Com a mesa vazia, o Foundry para por alguns segundos** às 4h30, para os mundos saírem inteiros, e volta com o mesmo mundo aberto. Com gente na mesa, copia ligado, e o registro avisa que o banco pode ter saído pela metade.
 - **Backup completo, antes de uma mudança grande** (como a troca para o Foundry 14):
   - Com a mesa vazia, rode `sudo bash /srv/fieldbook/wiki/servidor/backup-completo.sh`.
   - Ele guarda o programa e a pasta de dados do Foundry inteiros, os dados da wiki e a configuração dos serviços em `/srv/backups/foundry12-completo-<data>.tar`, com o `.sha256` ao lado.
@@ -232,7 +235,9 @@ Entre no servidor com `ssh -i "$HOME\.ssh\oracle.key" ubuntu@IP`, no PowerShell 
 | Reiniciar a wiki / o Foundry | `sudo systemctl restart fieldbook` / `sudo systemctl restart foundry` |
 | Ver erros da wiki / do Foundry | `journalctl -u fieldbook -n 50` / `journalctl -u foundry -n 50` |
 | Gerar o módulo agora (derruba quem estiver na mesa) | `sudo bash /srv/fieldbook/wiki/servidor/atualizar-modulo.sh --agora` |
-| Trocar a senha do mestre, o domínio ou instalar o Foundry | `sudo bash /srv/fieldbook/wiki/servidor/instalar.sh` (Enter mantém o resto) |
+| Trocar a senha do mestre, o domínio ou instalar o Foundry | `sudo bash /srv/fieldbook/wiki/servidor/instalar.sh` (Enter mantém o resto; as outras linhas do `/etc/fieldbook.env`, como as chaves da IA, ficam) |
+| Refazer só os serviços, o sudo da atualização, a swap e a cópia do backup | `sudo bash /srv/fieldbook/wiki/servidor/servicos.sh` (o registro avisa quando o `servicos.sh` ou o `backup.sh` mudam) |
+| Publicar de novo uma versão recusada | `sudo rm /srv/fieldbook/dados/.commit-recusado` (no minuto seguinte, a atualização tenta) |
 | Reiniciar o servidor todo | `sudo reboot` (tudo volta sozinho) |
 
 - **Atualizar o Foundry:** dentro da versão 12, pela própria tela de configuração dele (*Update Software*).
@@ -276,16 +281,17 @@ O Foundry 14 fica em `/srv/foundry14`, com o Node 24 em `/opt/node24`, a mesma p
 | `/srv/foundry/app` e `/srv/foundry/data` | O programa do Foundry 12 e os dados dele. |
 | `/srv/foundry14/app` e `/srv/foundry14/data` | O Foundry 14 e os dados dele, ao lado do 12 (o Node 24 fica em `/opt/node24`). |
 | `/srv/backups` | Os backups diários (14 dias), os pacotes dos arquivos soltos (os 3 últimos) e os backups completos. |
-| `/etc/fieldbook.env` | A configuração da wiki: senha do mestre, endereço da mesa. |
+| `/etc/fieldbook.env` | A configuração da wiki: senha do mestre, endereço da mesa, as chaves da IA e os limites opcionais (`NETWIRE_IA_LIMITE`, `NETWIRE_TETO_MENSAL_USD`, `DISCO_MIN_LIVRE_MB`: com menos que isso livre no disco, padrão 300 MB, a wiki para de gravar personagens; cada jogador cria, apaga ou manda retrato até 30 vezes por hora). |
 | `/etc/caddy/Caddyfile` | Os endereços e o HTTPS. |
 
 | Script | Para que serve |
 |---|---|
 | `instalar.sh` | Monta ou refaz o servidor. |
-| `atualizar.sh` | Roda a cada minuto e puxa o GitHub. |
+| `atualizar.sh` | Roda a cada minuto e puxa o GitHub, como o usuário `mesa` (o sudo libera só reiniciar a wiki e parar e ligar os Foundry). Mudou o `server.js` ou a API: confere a sintaxe antes e, depois, que a wiki respondeu; se não, volta para a versão de antes e não tenta de novo a mesma. |
+| `servicos.sh` | Os serviços (a wiki no Node 24), o sudo da atualização, a swap, a rotação do registro e a cópia do backup em `/usr/local/sbin`. O `instalar.sh` chama no fim. |
 | `atualizar-modulo.sh` | Gera o módulo cpr-2077 e instala os outros (`foundry-*/instalar.mjs`); sozinho, só com a mesa vazia. |
 | `atualizar-sistema.sh` | Instala no Foundry 14 o sistema do master (`foundry-sistema/`); sozinho, só com a mesa do 14 vazia. |
-| `backup.sh` | Faz o backup diário e, quando algum mapa ou retrato muda, o pacote dos arquivos soltos. |
+| `backup.sh` | Faz o backup diário (com o `.sha256`) e, quando algum mapa ou retrato muda, o pacote dos arquivos soltos. Roda como root da cópia `/usr/local/sbin/fieldbook-backup`, que só o `servicos.sh` troca. |
 | `backup-completo.sh` | Faz o backup completo do Foundry e da wiki (à mão, antes de uma mudança grande). |
 | `receber.sh` | Recebe o envio do PC. |
 | `iniciar-foundry.sh` | Liga o Foundry (o 12 com o Node do sistema; o 14 com o Node 24). |

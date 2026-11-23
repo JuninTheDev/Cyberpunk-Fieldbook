@@ -21,7 +21,11 @@ DADOS=${FIELDBOOK_DADOS:-/srv/fieldbook/dados}
 F14=${FOUNDRY14_DADOS:-/srv/foundry14/data}
 F12=${FOUNDRY12_DATA:-/srv/foundry/data/Data}
 STATUS=${FOUNDRY_STATUS:-http://127.0.0.1:30000/api/status}
-como_mesa() { runuser -u mesa -- env HOME="$(getent passwd mesa | cut -d: -f6)" "$@"; }
+# Como o usuário da mesa: quem roda já é ele (o atualizar.sh, desde a auditoria de 2026-11-16); com sudo, o runuser troca.
+como_mesa() { if [ "$(id -u)" -eq 0 ]; then runuser -u mesa -- env HOME="$(getent passwd mesa | cut -d: -f6)" "$@"; else "$@"; fi; }
+# O systemctl que muda alguma coisa: como root direto; como o usuário da mesa (o fieldbook-atualizar.service), pelo sudo,
+# que libera só esses comandos (servidor/servicos.sh).
+servico() { if [ "$(id -u)" -eq 0 ]; then systemctl "$@"; else sudo -n systemctl "$@"; fi; }
 versao() {
   local sistema documento
   sistema=$(como_mesa git -C "$WIKI" rev-parse -q --verify 'HEAD:foundry-sistema' 2>/dev/null) || return 0
@@ -71,10 +75,10 @@ if systemctl is-active --quiet foundry14; then
     exit 2
   fi
 fi
-trap 'if [ "$estava" = active ] && ! systemctl is-active --quiet foundry14; then systemctl start foundry14; fi' EXIT
+trap 'if [ "$estava" = active ] && ! systemctl is-active --quiet foundry14; then servico start foundry14; fi' EXIT
 if [ "$estava" = active ]; then
   if [ -n "$mundo" ]; then como_mesa bash -c 'printf "%s\n" "$1" > "$2"' _ "$mundo" "$F14/.mundo-ao-ligar"; fi
-  systemctl stop foundry14
+  servico stop foundry14
 fi
 
 echo "Sistema do master: $(como_mesa git -C "$WIKI" log -1 --format='%h %s' -- foundry-sistema)"

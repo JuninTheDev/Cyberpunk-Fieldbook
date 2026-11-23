@@ -142,7 +142,7 @@
         ${themeList()}
         <div class="account-section">${app.hasPage('playerView') ? `<a class="account-item" href="jogadores.html?campanha=${encodeURIComponent(active.id || '')}" target="_blank" rel="noopener">Abrir a visão dos jogadores</a>` : '<a class="account-item" href="./">Wiki do mestre</a>'}
         ${state.backup ? '<a class="account-item" href="api/backup">Baixar backup</a>' : ''}${install()}
-        ${state.modo === 'hospedado' ? '<button type="button" class="account-item account-danger" data-gm-logout>Sair do modo mestre</button>' : ''}${version}</div>`;
+        ${state.modo === 'hospedado' ? '<button type="button" class="account-item account-danger" data-gm-logout>Sair do modo mestre</button><button type="button" class="account-item account-danger" data-gm-logout-all>Sair de todos os aparelhos</button>' : ''}${version}</div>`;
     }
     const doc = selectedDoc();
     const here = campaign();
