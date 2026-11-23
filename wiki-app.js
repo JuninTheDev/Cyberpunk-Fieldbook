@@ -2091,6 +2091,12 @@
         .catch(() => { /* servidor antigo ou sem rede: sem barra */ });
     }
     document.addEventListener('click', event => {
+      if (event.target.closest('[data-gm-logout-all]')) {
+        // Tira o mestre de todos os aparelhos, este inclusive (o tablet perdido, o PC de outra pessoa).
+        if (!window.confirm('Sair do modo mestre em todos os aparelhos? Cada um vai pedir a senha de novo.')) return;
+        fetch('api/mestre/sair-de-todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(() => { location.href = './'; });
+        return;
+      }
       if (!event.target.closest('[data-gm-logout]')) return;
       fetch('api/mestre/sair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(() => { location.href = './'; });
     });

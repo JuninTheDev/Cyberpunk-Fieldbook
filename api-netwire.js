@@ -41,6 +41,19 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
   const fileOf = id => path.join(dataDir, 'campanhas', id, 'netwire.json');
   const drafter = createDrafter({ ia, docsDir, campaigns });
   const dailyLimit = Math.max(1, Number(ia.limite) || 30);
+  // O teto do mês em US$, somando todas as campanhas (a fase 2 da auditoria de 2026-11-16): o limite diário é por
+  // campanha, e cada campanha nova ganhava mais 30 pedidos. Fica em ia-uso.json.
+  const monthlyCap = Number.isFinite(Number(ia.tetoMensal)) && Number(ia.tetoMensal) >= 0 ? Number(ia.tetoMensal) : 5;
+  const monthFile = path.join(dataDir, 'ia-uso.json');
+  const thisMonth = () => new Date().toLocaleDateString('sv-SE').slice(0, 7);
+  const readMonth = () => {
+    try { const data = JSON.parse(fs.readFileSync(monthFile, 'utf8')); if (data.mes === thisMonth()) return { mes: data.mes, custo: Number(data.custo) || 0, pedidos: Number(data.pedidos) || 0 }; } catch { /* nenhum uso ainda */ }
+    return { mes: thisMonth(), custo: 0, pedidos: 0 };
+  };
+  const addMonth = uso => lockOn(monthFile, async () => {
+    const now = readMonth();
+    await writeJsonAtomic(monthFile, { mes: now.mes, pedidos: now.pedidos + 1, custo: Math.round((now.custo + (uso ? uso.custo : 0)) * 1e6) / 1e6 });
+  });
   function read(id) {
     try {
       const data = JSON.parse(fs.readFileSync(fileOf(id), 'utf8'));
@@ -50,9 +63,10 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
   // O uso da IA de hoje (dia no fuso do servidor) e os últimos pedidos, com o custo estimado de cada um.
   const today = () => new Date().toLocaleDateString('sv-SE');
   const usageToday = data => (data.ia && data.ia.dia === today() ? { pedidos: data.ia.pedidos || 0, custo: data.ia.custo || 0 } : { pedidos: 0, custo: 0 });
-  function recordUsage(data, uso) {
+  // reservado: o pedido já contou ao reservar a vaga (antes de chamar a IA).
+  function recordUsage(data, uso, { reservado = false } = {}) {
     const now = usageToday(data);
-    data.ia = { dia: today(), pedidos: now.pedidos + 1, custo: Math.round((now.custo + (uso ? uso.custo : 0)) * 1e6) / 1e6, registro: [...((data.ia && data.ia.registro) || []), ...(uso ? [{ quando: new Date().toISOString(), ...uso }] : [])].slice(-50) };
+    data.ia = { dia: today(), pedidos: now.pedidos + (reservado ? 0 : 1), custo: Math.round((now.custo + (uso ? uso.custo : 0)) * 1e6) / 1e6, registro: [...((data.ia && data.ia.registro) || []), ...(uso ? [{ quando: new Date().toISOString(), ...uso }] : [])].slice(-50) };
   }
   // Toda mudança passa pela fila do arquivo: relê, muda e grava sem esperar nada no meio.
   // change(dados) muda; { status, data } desiste; o que devolver vai na resposta.
@@ -160,7 +174,7 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
       mensagens: [...virtualMessages(id), ...data.mensagens.map(message => ({ ...message, entregue: delivered(message, at) }))],
       aguardando: waiting,
       // A IA na Caixa: ligada (há chave), os modelos, o padrão e o uso de hoje.
-      ia: { ligada: drafter.enabled, modelos: drafter.models(), padrao: drafter.defaultModel, limite: dailyLimit, hoje: usageToday(data), ultimos: ((data.ia && data.ia.registro) || []).slice(-5) },
+      ia: { ligada: drafter.enabled, modelos: drafter.models(), padrao: drafter.defaultModel, limite: dailyLimit, hoje: usageToday(data), mes: { ...readMonth(), teto: monthlyCap }, ultimos: ((data.ia && data.ia.registro) || []).slice(-5) },
       atualizado: updated(id)
     };
   }
@@ -324,7 +338,16 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
       }
       const channel = before.canais.find(item => item.id === request.canal);
       if (!channel) return json(response, 404, { erro: 'Canal não encontrado.' });
-      if (usageToday(before).pedidos >= dailyLimit) return json(response, 429, { erro: `Chegou ao limite de ${dailyLimit} pedidos de hoje à IA nesta campanha.` });
+      // O teto do mês e a vaga de hoje, reservada na fila do arquivo antes de chamar a IA: os pedidos ao mesmo tempo
+      // passavam todos pela conferência (a chamada leva até 2 minutos, e o uso só contava depois).
+      const month = readMonth();
+      if (month.custo >= monthlyCap) return json(response, 429, { erro: `Chegou ao teto de US$ ${monthlyCap.toFixed(2).replace('.', ',')} deste mês para a IA (somando as campanhas). Volta no mês que vem; escreva à mão, ou mude o NETWIRE_TETO_MENSAL_USD no servidor.` });
+      const reserved = await update(id, data => {
+        if (usageToday(data).pedidos >= dailyLimit) return fail(429, `Chegou ao limite de ${dailyLimit} pedidos de hoje à IA nesta campanha.`);
+        recordUsage(data, null);
+        return {};
+      });
+      if (reserved.status !== 200) return reply(reserved);
       const at = now();
       const messages = before.mensagens.filter(item => item.canal === channel.id && delivered(item, at));
       // O que se guarda para refazer depois (sem a instrução da variação, que é desta vez só).
@@ -334,13 +357,16 @@ function createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia = {}, d
         result = await drafter.draft({ campaign: id, channel, messages, request });
       } catch (error) {
         // Mesmo um pedido que falhou pode ter custado (a recusa, a resposta cortada): conta no uso de hoje.
-        if (error.uso) await update(id, data => { recordUsage(data, error.uso); return {}; });
+        if (error.uso) { await update(id, data => { recordUsage(data, error.uso, { reservado: true }); return {}; }); await addMonth(error.uso); }
+        // Sem custo (a chave recusada, a rede), a vaga reservada volta.
+        else await update(id, data => { const hoje = usageToday(data); if (hoje.pedidos > 0) data.ia = { ...data.ia, pedidos: hoje.pedidos - 1 }; return {}; });
         return json(response, error.status || 500, { erro: error.message });
       }
       const price = result.uso.custo < 0.01 ? 'menos de US$ 0,01' : `US$ ${result.uso.custo.toFixed(2).replace('.', ',')}`;
+      await addMonth(result.uso);
       return reply(await update(id, data => {
         if (!data.canais.some(item => item.id === channel.id)) return fail(404, 'Canal não encontrado.');
-        recordUsage(data, result.uso);
+        recordUsage(data, result.uso, { reservado: true });
         const created = result.rascunhos.map(item => ({
           id: newId(), canal: channel.id, autor: { tipo: 'npc', nome: item.autor || channel.contato.nome || channel.nome }, texto: item.texto.slice(0, MAX_TEXT_GM),
           quando: null, criada: now(), estado: 'rascunho', origem: 'ia', nota: text(`${item.nota ? `${item.nota} · ` : ''}IA: ${result.uso.modelo}, ${price}`, 500), pedido: kept

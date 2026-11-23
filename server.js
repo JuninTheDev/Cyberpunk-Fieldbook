@@ -1,5 +1,6 @@
 const { execFile } = require('child_process');
 const crypto = require('crypto');
+const { createAccountStores } = require('./api-contas');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
@@ -71,16 +72,26 @@ const sameSecret = (given, expected) => {
 // Pelo túnel do Cloudflare (abrir-online.ps1) toda conexão chega de 127.0.0.1, mas vem de fora de casa.
 // O túnel sempre põe estes cabeçalhos: quem os traz é jogador, a não ser que tenha o cookie do mestre.
 const viaTunnel = request => Boolean(request.headers['cf-connecting-ip'] || request.headers['x-forwarded-for']);
-// O cookie guarda uma assinatura da senha, não a senha: trocar a GM_KEY desconecta todos os aparelhos.
-// O cookie com a própria senha (o de antes da assinatura) não vale mais: por ele, qualquer um testava senhas sem o
-// limite de tentativas do /api/mestre/entrar (a auditoria de 2026-11-16). O aparelho com esse cookie pede a senha uma vez.
-const gmToken = gmKey ? crypto.createHmac('sha256', gmKey).update('fieldbook-mestre-v1').digest('hex') : '';
-const hasGmCookie = request => {
-  if (!gmKey) return false;
+// O cookie do mestre é uma sessão (desde a fase 2 da auditoria de 2026-11-16): um identificador aleatório, com o hash
+// guardado em sessoes-mestre.json (o api-contas.js, como as dos jogadores). "Sair" tira a deste aparelho, e "Sair de
+// todos" tira todas: o tablet perdido deixa de ser mestre. Antes, o cookie era uma assinatura fixa da senha, que valia
+// um ano em qualquer aparelho, e só trocar a GM_KEY tirava. Os cookies antigos (a assinatura e a própria senha) não
+// valem mais: cada aparelho pede a senha uma vez. Sem uso por 6 meses, a sessão acaba.
+const gmSessions = createAccountStores({ dataDir: charactersDataDir, writeJsonAtomic, sessionsName: 'sessoes-mestre.json' }).sessions;
+const GM_ACCOUNT = 'mestre';
+const gmSessionOf = request => {
+  if (!gmKey) return null;
   let given;
-  try { given = decodeURIComponent(cookieKey(request)); } catch { return false; }
-  return sameSecret(given, gmToken);
+  try { given = decodeURIComponent(cookieKey(request)); } catch { return null; }
+  const session = gmSessions.find(given);
+  return session && session.conta === GM_ACCOUNT ? session : null;
 };
+const hasGmCookie = request => {
+  const session = gmSessionOf(request);
+  if (session) gmSessions.touch(session).catch(() => null);
+  return Boolean(session);
+};
+const newGmCookie = async request => gmCookie(await gmSessions.create(GM_ACCOUNT, request.headers['user-agent']), 31536000);
 const isGameMaster = request => (!hosted && isLoopback(request.socket.remoteAddress) && !viaTunnel(request)) || hasGmCookie(request);
 // O endereço de quem chegou: no servidor, o que o Caddy escreve; em casa, o do túnel (veja o ipDoCliente).
 const { ipDoCliente, limiteDeTentativas } = require('./api-personagens');
@@ -233,7 +244,7 @@ async function gmLogin(request, response) {
   // Quantas ainda cabem nos 10 minutos (a tela do mestre mostra).
   if (!sameSecret(senha, gmKey)) return sendJson(response, 403, { erro: 'Senha incorreta.', restantes: loginAttempts.restantes(ip) });
   loginAttempts.esquecer(ip);
-  return sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie(gmToken, 31536000) });
+  return sendJson(response, 200, { ok: true }, { 'Set-Cookie': await newGmCookie(request) });
 }
 
 // Grava primeiro num arquivo temporário e depois troca: nunca fica um JSON pela metade.
@@ -264,8 +275,8 @@ async function writeJsonAtomic(file, data) {
 const { ROUTES: characterApiRoutes } = require('./api-personagens');
 // A IA do NetWire (api-netwire-ia.js), que rascunha mensagens na Caixa do mestre: o Claude (ANTHROPIC_API_KEY) e/ou o
 // Gemini (GEMINI_API_KEY); sem nenhuma das duas, desligada.
-const netwireIa = { chave: process.env.ANTHROPIC_API_KEY || '', url: process.env.ANTHROPIC_BASE_URL || '', gemini: { chave: process.env.GEMINI_API_KEY || '', url: process.env.GEMINI_BASE_URL || '' }, modelo: process.env.NETWIRE_MODELO || '', limite: Number(process.env.NETWIRE_IA_LIMITE) || 30, fetch: (...args) => fetch(...args) };
-const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js'), secureCookies: hosted, hospedado: hosted, ia: netwireIa });
+const netwireIa = { chave: process.env.ANTHROPIC_API_KEY || '', url: process.env.ANTHROPIC_BASE_URL || '', gemini: { chave: process.env.GEMINI_API_KEY || '', url: process.env.GEMINI_BASE_URL || '' }, modelo: process.env.NETWIRE_MODELO || '', limite: Number(process.env.NETWIRE_IA_LIMITE) || 30, tetoMensal: process.env.NETWIRE_TETO_MENSAL_USD === undefined || process.env.NETWIRE_TETO_MENSAL_USD === '' ? 5 : Number(process.env.NETWIRE_TETO_MENSAL_USD), fetch: (...args) => fetch(...args) };
+const characterApi = require('./api-personagens')({ dataDir: charactersDataDir, legacyDir: dataDir, docsDir: path.join(root, 'documentos'), isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl, catalogFile: path.join(root, 'loja-catalogo.js'), secureCookies: hosted, hospedado: hosted, ia: netwireIa, discoMinimoLivre: Number(process.env.DISCO_MIN_LIVRE_MB || 300) * 1024 * 1024 });
 
 // A mesa na barra lateral, para cada um. Mundo ligado a uma campanha (o "mundo do Foundry" dela): quem joga nela vê
 // a mesa aberta e o nome da campanha; quem não joga vê o Foundry sem mundo aberto (não fica sabendo de outra mesa).
@@ -295,14 +306,25 @@ http.createServer((request, response) => {
   if (gmKey && url.searchParams.has('mestre')) {
     if (hosted) { response.writeHead(302, { ...SERVER_VERSION, Location: '/mestre' }); return response.end(); }
     if (!sameSecret(url.searchParams.get('mestre'), gmKey)) return send(response, 403, 'Senha do mestre incorreta.');
-    response.writeHead(302, { ...SERVER_VERSION, 'Cache-Control': 'private, no-store', 'Set-Cookie': gmCookie(gmToken, 31536000), Location: '/' });
-    return response.end();
+    return void newGmCookie(request).then(cookie => {
+      response.writeHead(302, { ...SERVER_VERSION, 'Cache-Control': 'private, no-store', 'Set-Cookie': cookie, Location: '/' });
+      response.end();
+    }, error => send(response, 500, error.message));
   }
 
   const gameMaster = isGameMaster(request);
 
   if (pathname === '/api/mestre/entrar' && request.method === 'POST') return void gmLogin(request, response);
-  if (pathname === '/api/mestre/sair' && request.method === 'POST') return sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie('', 0) });
+  // Sair: a sessão deste aparelho; sair de todos (só o mestre): todas as do mestre.
+  if (pathname === '/api/mestre/sair' && request.method === 'POST') {
+    let token = '';
+    try { token = decodeURIComponent(cookieKey(request)); } catch { /* cookie malformado: só apaga */ }
+    return void gmSessions.remove(token).catch(() => null).then(() => sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie('', 0) }));
+  }
+  if (pathname === '/api/mestre/sair-de-todos' && request.method === 'POST') {
+    if (!gmSessionOf(request)) return sendJson(response, 403, { erro: 'Só o mestre, com a sessão dele.' });
+    return void gmSessions.removeAccount(GM_ACCOUNT).then(() => sendJson(response, 200, { ok: true }, { 'Set-Cookie': gmCookie('', 0) }), error => sendJson(response, 500, { erro: error.message }));
+  }
   // Trocar a mesa entre o Foundry 12 e o 14 (só o mestre, só no servidor).
   if (pathname === '/api/mestre/mesa' && request.method === 'POST') {
     if (!gameMaster) return sendJson(response, 403, { erro: 'Só o mestre.' });

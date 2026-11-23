@@ -281,7 +281,7 @@ O Foundry 14 fica em `/srv/foundry14`, com o Node 24 em `/opt/node24`, a mesma p
 | `/srv/foundry/app` e `/srv/foundry/data` | O programa do Foundry 12 e os dados dele. |
 | `/srv/foundry14/app` e `/srv/foundry14/data` | O Foundry 14 e os dados dele, ao lado do 12 (o Node 24 fica em `/opt/node24`). |
 | `/srv/backups` | Os backups diários (14 dias), os pacotes dos arquivos soltos (os 3 últimos) e os backups completos. |
-| `/etc/fieldbook.env` | A configuração da wiki: senha do mestre, endereço da mesa. |
+| `/etc/fieldbook.env` | A configuração da wiki: senha do mestre, endereço da mesa, as chaves da IA e os limites opcionais (`NETWIRE_IA_LIMITE`, `NETWIRE_TETO_MENSAL_USD`, `DISCO_MIN_LIVRE_MB`: com menos que isso livre no disco, padrão 300 MB, a wiki para de gravar personagens; cada jogador cria, apaga ou manda retrato até 30 vezes por hora). |
 | `/etc/caddy/Caddyfile` | Os endereços e o HTTPS. |
 
 | Script | Para que serve |

@@ -13,7 +13,7 @@ const PUBLICOS = [
   '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'
 ];
 const PRIVADOS = ['/api/eu', '/api/visao'];
-const TROCA_DE_QUEM = ['/api/entrar', '/api/sair', '/api/sair-de-todos', '/api/mestre/entrar', '/api/mestre/sair'];
+const TROCA_DE_QUEM = ['/api/entrar', '/api/sair', '/api/sair-de-todos', '/api/mestre/entrar', '/api/mestre/sair', '/api/mestre/sair-de-todos'];
 // O mapa, seus tiles visíveis e as fontes entram quando forem abertos, não na instalação.
 const MAPA = '/nightcity-map-base.webp';
 const TILES = /^\/assets\/nightcity-map\/tiles\/[3-7]\/(?:0|[1-9]\d*)\/(?:0|[1-9]\d*)\.webp$/;

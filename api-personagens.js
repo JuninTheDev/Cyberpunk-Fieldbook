@@ -58,9 +58,19 @@ function limiteDeTentativas({ maximo = 10, janela = 10 * 60 * 1000, teto = 5000,
   };
 }
 
-module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false, hospedado = false, ia = {} }) {
+module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, docsDir = '', isGameMaster, send, writeJsonAtomic, sameSecret, foundryUrl = '', catalogFile = '', secureCookies = false, hospedado = false, ia = {}, discoMinimoLivre = 300 * 1024 * 1024 }) {
   const campaigns = createCampaigns({ dataDir, legacyDir, writeJsonAtomic, docsDir });
   const { sessions, preferences } = createAccountStores({ dataDir, writeJsonAtomic });
+  // O disco e o ritmo de quem escreve (a fase 2 da auditoria de 2026-11-16): criar, subir o retrato e apagar num laço
+  // enchia o disco do servidor (o apagado e o retrato ficam), sem limite. Agora, por conta de jogador, 30 por hora dessas
+  // escritas pesadas; e, com menos de 300 MB livres (o DISCO_MIN_LIVRE_MB do server.js), nenhuma escrita de personagem.
+  const pesadas = limiteDeTentativas({ maximo: 30, janela: 60 * 60 * 1000 });
+  const semEspaco = () => { try { const s = fs.statfsSync(dataDir); return s.bavail * s.bsize < discoMinimoLivre; } catch { return false; } };
+  function barrarEscrita(identity, { pesada = false } = {}) {
+    if (semEspaco()) return { status: 507, erro: 'O servidor está sem espaço em disco: nada foi gravado. Avise o mestre.' };
+    if (pesada && identity.papel === 'jogador' && pesadas.excedeu(identity.conta.id)) return { status: 429, erro: 'Muitos personagens criados, apagados ou retratos enviados seguidos: espere uma hora.' };
+    return null;
+  }
   // Documentos do mestre: os .md de documentos/<id da campanha>/ no projeto (vêm pelo git, como o resto da wiki).
   // documentos/night-city/ é de todas as campanhas. O título é o primeiro "# " do arquivo.
   function documentsOf(folder) {
@@ -740,6 +750,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         }
         if (method === 'POST') {
           if (identity.papel === 'visitante') return reply(401, { erro: 'Entre com o seu código para criar um personagem.' });
+          const barrado = barrarEscrita(identity, { pesada: true });
+          if (barrado) return reply(barrado.status, { erro: barrado.erro });
           const input = await readJson(request);
           // A campanha: a pedida (o jogador, só uma das dele) ou a primeira.
           const campanha = chosenCampaign(identity, input.campanha);
@@ -1018,6 +1030,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         }
         if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
         if (method === 'POST') {
+          const barrado = barrarEscrita(identity, { pesada: true });
+          if (barrado) return reply(barrado.status, { erro: barrado.erro });
           const { imagem, original, recorte } = await readJson(request, 3 * 1024 * 1024);
           const buffer = portraitBuffer(imagem);
           const source = original === undefined || original === null ? null : portraitBuffer(original);
@@ -1112,6 +1126,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       }
       if (!canEdit(identity, stored)) return reply(identity.papel === 'visitante' ? 401 : 403, { erro: 'Este personagem é de outro jogador.' });
       if (method === 'PUT') {
+        const barrado = barrarEscrita(identity);
+        if (barrado) return reply(barrado.status, { erro: barrado.erro });
         const input = await readJson(request);
         const done = await update(current => {
           // Alguém salvou antes (outra aba, outro aparelho): devolve a versão atual em vez de apagar o trabalho.
@@ -1136,6 +1152,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         return answer(done, doc => reply(200, { personagem: forViewer(identity, withLinks(doc)) }));
       }
       if (method === 'DELETE') {
+        const barrado = barrarEscrita(identity, { pesada: true });
+        if (barrado) return reply(barrado.status, { erro: barrado.erro });
         await lockOn(fileOf(id), async () => {
           const trash = path.join(charactersDir, 'apagados');
           fs.mkdirSync(trash, { recursive: true });

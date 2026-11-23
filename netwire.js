@@ -231,7 +231,9 @@
   function aiUsageHtml() {
     const ia = data.ia || {};
     const today = ia.hoje || { pedidos: 0, custo: 0 };
-    return `<p class="note-status nw-ai-usage">Hoje: ${today.pedidos} de ${ia.limite || 30} pedidos · ${dollars(today.custo || 0)}</p>`;
+    // O mês, somando as campanhas, contra o teto (a fase 2 da auditoria de 2026-11-16).
+    const month = ia.mes ? ` · mês: ${dollars(ia.mes.custo || 0)} de ${dollars(ia.mes.teto || 0)}` : '';
+    return `<p class="note-status nw-ai-usage">Hoje: ${today.pedidos} de ${ia.limite || 30} pedidos · ${dollars(today.custo || 0)}${month}</p>`;
   }
   function aiPanelHtml(channelId) {
     const ia = data.ia || {};

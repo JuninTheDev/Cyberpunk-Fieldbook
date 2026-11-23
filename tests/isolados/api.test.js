@@ -276,3 +276,59 @@ test('a fase 2 da auditoria: a saúde do servidor mostra a última cópia fora d
   // Só o mestre baixa (e marca).
   assert.equal((await servidor.pedir('/api/backup')).status, 403);
 });
+
+test('a fase 2 da auditoria: o mestre entra com uma sessão por aparelho; sair tira a deste, e sair de todos tira todas', async t => {
+  const servidor = criarServidorIsolado(t);
+  const tablet = await servidor.entrarComoMestre();
+  const pc = await servidor.entrarComoMestre();
+  assert.notEqual(tablet, pc, 'uma sessão por aparelho');
+  const mestre = async cookie => (await servidor.pedir('/api/estado', { cookie })).json.mestre;
+  assert.equal(await mestre(tablet), true);
+  assert.equal(await mestre(pc), true);
+  // O arquivo guarda o hash, não o identificador do cookie.
+  const arquivo = require('node:fs').readFileSync(require('node:path').join(servidor.dados, 'sessoes-mestre.json'), 'utf8');
+  assert.ok(!arquivo.includes(decodeURIComponent(tablet.slice(3))));
+  // O cookie antigo, a assinatura fixa da senha, não vale mais.
+  const assinatura = require('node:crypto').createHmac('sha256', servidor.senha).update('fieldbook-mestre-v1').digest('hex');
+  assert.equal(await mestre(`gm=${assinatura}`), false);
+  // Sair no tablet: o PC continua.
+  assert.equal((await servidor.pedir('/api/mestre/sair', { method: 'POST', cookie: tablet, body: {} })).status, 200);
+  assert.equal(await mestre(tablet), false);
+  assert.equal(await mestre(pc), true);
+  // Sair de todos: só com a sessão do mestre; tira todas.
+  const outro = await servidor.entrarComoMestre();
+  assert.equal((await servidor.pedir('/api/mestre/sair-de-todos', { method: 'POST', body: {} })).status, 403);
+  const todos = await servidor.pedir('/api/mestre/sair-de-todos', { method: 'POST', cookie: pc, body: {} });
+  assert.equal(todos.status, 200);
+  assert.match(todos.headers['set-cookie'], /gm=;.*Max-Age=0/);
+  assert.equal(await mestre(pc), false);
+  assert.equal(await mestre(outro), false);
+});
+
+test('a fase 2 da auditoria: o jogador tem 30 escritas pesadas por hora (criar, apagar, retrato), e sem disco ninguém grava personagem', async t => {
+  const servidor = criarServidorIsolado(t);
+  const mestre = await servidor.entrarComoMestre();
+  const conta = (await servidor.pedir('/api/contas', { method: 'POST', cookie: mestre, body: { nome: 'Laço' } })).json.conta;
+  await servidor.pedir(`/api/contas/${conta.id}`, { method: 'PUT', cookie: mestre, body: { campanhas: ['morana'] } });
+  const login = await servidor.pedir('/api/entrar', { method: 'POST', body: { codigo: conta.codigo } });
+  const jogador = servidor.cookieDe(login);
+  const estados = [];
+  for (let i = 0; i < 16; i++) {
+    const criado = await servidor.pedir('/api/personagens', { method: 'POST', cookie: jogador, body: { nome: `Laço ${i}` } });
+    estados.push(criado.status);
+    if (criado.status !== 201) break;
+    estados.push((await servidor.pedir(`/api/personagens/${criado.json.personagem.id}`, { method: 'DELETE', cookie: jogador })).status);
+  }
+  assert.deepEqual(estados.slice(0, 30), Array.from({ length: 30 }, (_, i) => (i % 2 ? 200 : 201)), 'as 30 primeiras passam');
+  assert.equal(estados[30], 429, 'a 31ª espera');
+  // O mestre não tem esse limite.
+  assert.equal((await servidor.pedir('/api/personagens', { method: 'POST', cookie: mestre, body: { nome: 'Do mestre', dono: conta.id } })).status, 201);
+});
+
+test('a fase 2 da auditoria: sem o espaço mínimo em disco, nenhuma escrita de personagem (507), nem do mestre', async t => {
+  const servidor = criarServidorIsolado(t, { env: { DISCO_MIN_LIVRE_MB: String(1e12) } });
+  const mestre = await servidor.entrarComoMestre();
+  const resposta = await servidor.pedir('/api/personagens', { method: 'POST', cookie: mestre, body: { nome: 'Sem disco' } });
+  assert.equal(resposta.status, 507);
+  assert.match(resposta.json.erro, /sem espaço em disco/);
+});

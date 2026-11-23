@@ -4,6 +4,8 @@
 // guardava o próprio código). Assim dá para sair de todos os aparelhos, trocar o código de alguém sem refazer a conta
 // e saber quando cada um entrou pela última vez. No arquivo fica o hash do identificador, nunca ele.
 //   sessoes-jogadores.json → { sessoes: [{ id: sha256(token), conta, criada, visto, aparelho }] }
+// As do mestre (o server.js, desde a fase 2 da auditoria de 2026-11-16) ficam à parte, em sessoes-mestre.json, com a
+// conta "mestre": o "Sair de todos" do mestre tira todas, e o aparelho perdido deixa de entrar.
 //
 // Preferências: o que cada pessoa ajusta na wiki (páginas fixadas, grupos recolhidos, o personagem em uso, o que já
 // viu...) acompanha a conta, em qualquer aparelho. Uma chave, um valor; quem grava manda só o que mudou.
@@ -19,8 +21,8 @@ const PREF_KEY = /^[\w:.-]{1,100}$/;
 const PREF_MAX_KEYS = 300;
 const PREF_MAX_BYTES = 200 * 1024;
 
-function createAccountStores({ dataDir, writeJsonAtomic }) {
-  const sessionsFile = path.join(dataDir, 'sessoes-jogadores.json');
+function createAccountStores({ dataDir, writeJsonAtomic, sessionsName = 'sessoes-jogadores.json' }) {
+  const sessionsFile = path.join(dataDir, sessionsName);
   const prefsDir = path.join(dataDir, 'preferencias');
   const readFile = file => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
   const hash = token => crypto.createHash('sha256').update(String(token)).digest('hex');
