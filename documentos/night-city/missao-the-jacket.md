@@ -72,7 +72,7 @@ Os pings são modulares: dá para pular um ou dois se faltar tempo, ou inventar 
 - **Inimigos:** um socorrista da Reo por personagem, menos um (no mínimo um). Luta fácil, para aprender as regras.
 - **Falco** age por último. Para simplificar: 1d10; de 4 para cima, acerta um socorrista e causa 4d6.
 - **Netrunner:** no começo do turno, um teste de Percepção (DV13) mostra um holofote industrial no mapa. Hackear com Interface DV6 (uma Ação) cega um socorrista: −4 em tudo que depende da visão até o fim da luta.
-- Socorrista a 0 PV falha o Death Save e morre. Se metade cair, o resto foge na ambulância; Falco manda deixar ir.
+- Socorrista a 0 HP falha o Death Save e morre. Se metade cair, o resto foge na ambulância; Falco manda deixar ir.
 
 ## 2. Conhecendo Falco
 
@@ -102,9 +102,9 @@ Daqui o grupo vai ao El Coyote Cojo ou espera o próximo sinal (tempo livre).
 
 *Kit p. 97.* O grupo volta a esta cena várias vezes: de um a três dias de folga antes do próximo sinal. É hora de mostrar quem os personagens são fora do tiroteio.
 
-- **Cura:** a cada dia, quem pode começar a curar recupera PV igual ao BODY.
+- **Cura:** a cada dia, quem pode começar a curar recupera HP igual ao BODY.
 - **Uma atividade por dia**, à escolha de cada um:
-  - **Ripperdoc:** 100eb, recupera BODY + WILL em PV. Não vale para quem recebeu Speedheal de um Medtech desde a última luta.
+  - **Ripperdoc:** 100eb, recupera BODY + WILL em HP. Não vale para quem recebeu Speedheal de um Medtech desde a última luta.
   - **Tirar uma lesão crítica:** 500eb no ripperdoc, ou com um Medtech do grupo.
   - **Um Medtech** trata a lesão crítica de outro personagem (não a própria), com o teste do Kit.
   - **Comprar** (a lista está em "Compras e vendas", abaixo) ou **vender o que pegou** dos inimigos.
@@ -147,7 +147,7 @@ Daqui o grupo vai à estação do NCART ou volta ao tempo livre.
 - **A quarentena:** três AVs da NCPD fecham o prédio e jogam gás lacrimogêneo. Na confusão, a Shingen fica no chão. Educação ou Malandragem DV13: a NCPD leva quarentena a sério. Quem não sair agora fica preso por semanas.
 - **As saídas** (Percepção DV15: cada sucesso no grupo revela uma):
   - **Os dutos:** tirar a grade (um Tech tira sem teste; senão, Atletismo DV15 ou Armas Brancas DV13 com uma alavanca). O navegador faz Educação DV15 ou Percepção DV17: 30 minutos até a garagem; falhando, 60. Na garagem, com 30 minutos, dois policiais distraídos (Furtividade DV9 para todos); com 60, um policial por personagem, atentos (Furtividade DV13). Dá para lutar, ou fazer a ligação direta num carro (Tecnologia Eletrônica/Segurança DV15, DV13 para um Nomad) e furar o bloqueio (Conduzir Veículo Terrestre DV17). Atropelar: Conduzir contra Evasão, 6d6.
-  - **O elevador quebrado:** Tecnologia Eletrônica/Segurança DV15 ou Interface DV9 faz funcionar. Senão, a escada no poço: Concentração DV9 (falhando, Atletismo DV13, ou 1d6 direto no PV) e Resistir Tortura/Drogas DV15 (falhando, o primeiro dia do próximo tempo livre é só descanso).
+  - **O elevador quebrado:** Tecnologia Eletrônica/Segurança DV15 ou Interface DV9 faz funcionar. Senão, a escada no poço: Concentração DV9 (falhando, Atletismo DV13, ou 1d6 direto no HP) e Resistir Tortura/Drogas DV15 (falhando, o primeiro dia do próximo tempo livre é só descanso).
   - **O salto de base:** paraquedas num armário trancado (Arrombamento DV9, ou uma arma branca). Os AVs atiram: Atletismo DV13 para pôr o prédio entre você e eles. Quem falha cai; um único personagem pode tentar segurar com Atletismo DV15. Falhou, morre, sem Death Save. Pergunte "tem certeza?" e lembre da Sorte.
 - **Por trás:** Dalton trocou a Shingen por informação sobre o bando dos nômades mortos, para devolver o carro roubado e fugir com eles.
 
@@ -157,7 +157,7 @@ Daqui o grupo vai à estação do NCART ou volta ao tempo livre.
 
 - Um agente de baixo escalão da Arasaka contratou edgerunners e um netrunner que falsificou o sinal. São **um agente** (ficha do soldado da Arasaka), **um netrunner inimigo** e **um gonk edgerunner para cada dois personagens** (no mínimo um).
 - Percepção DV13 de alguém do grupo percebe a tocaia a tempo. Senão, cada emboscador tem um ataque grátis antes da Iniciativa (os emboscadores tiveram tempo: +2 na Furtividade, se você rolar).
-- Os gonks lutam até cair. O agente e o netrunner fogem com 5 PV ou menos; a 0 PV, morrem.
+- Os gonks lutam até cair. O agente e o netrunner fogem com 5 HP ou menos; a 0 HP, morrem.
 - Um gonk vivo conta tudo sem teste: queriam a jaqueta, o chefe do agente paga bem. O agente tem uma tatuagem da Arasaka na nuca; quem viu a câmera do Tom's Diner reconhece um dos homens de terno. Dalton nunca esteve aqui.
 
 ## 7. O último ping: o Sunset Motel
@@ -207,7 +207,7 @@ Escolha conforme o que o grupo fez.
 
 *Kit p. 111–112.* Se o grupo decidiu entregar Dalton: ela paga só por ele vivo, na garagem do Megaprédio H5, em Vista del Rey.
 
-- No caminho, Dalton percebe o rumo errado, a não ser que alguém o distraia (Conversação DV15). Para segurá-lo: reduzir a 5 PV ou menos, agarrar e estrangular, ou a arma na cabeça com Persuasão DV13. Se ele pular do carro: um agarrão (Briga resistida) ou Conduzir Veículo Terrestre DV15 numa curva. Depois do Lizzie's Bar, convencer o casal a entrar no carro pede Persuasão DV17, e os testes acima sobem para DV17.
+- No caminho, Dalton percebe o rumo errado, a não ser que alguém o distraia (Conversação DV15). Para segurá-lo: reduzir a 5 HP ou menos, agarrar e estrangular, ou a arma na cabeça com Persuasão DV13. Se ele pular do carro: um agarrão (Briga resistida) ou Conduzir Veículo Terrestre DV15 numa curva. Depois do Lizzie's Bar, convencer o casal a entrar no carro pede Persuasão DV17, e os testes acima sobem para DV17.
 - Dalton pede pela vida dele e pela de Summer, que só sai do carro empurrada (Briga DV13).
 - Na garagem, Maria e um gonk por personagem. Se der tudo certo, eles levam Dalton (e Summer, se ela não fugir: Persuasão DV21 para convencê-la). De manhã, mais dois para a loteria dos corpos.
 - **Jogar sujo:** os Valentinos atiram. Dalton luta do lado do grupo, se estiver em bons termos (1d10; de 6 para cima, 3d6). Maria e os Valentinos lutam até a morte: Gustavo não perdoa fracasso.

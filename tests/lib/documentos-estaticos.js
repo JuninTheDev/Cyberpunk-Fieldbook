@@ -53,6 +53,7 @@ async function validarDocumentos({ raiz, r }) {
       [/Engana[cç][aã]o/i, 'não é perícia do RED: use Atuação ou Persuasão'],
       [/Eletr[oô]nica\/Tec\./, 'a perícia é "Tecnologia Eletrônica/Segurança"'],
       [/Resistir [àa] Tortura/, 'a perícia é "Resistir Tortura/Drogas"'],
+      [/\bPV\b/, 'os pontos de vida são "HP", como na ficha e no Foundry'],
       [/\*\*Bases:\*\*[^\n]*\bAutofire\b/, 'nas bases, a perícia é "Disparo Automático"']
     ];
     const achados = docs.flatMap(doc => linhas(doc).flatMap(({ texto, onde }) => proibidos.filter(([re]) => re.test(semCodigo(texto))).map(([, dica]) => `${onde} (${dica})`)));

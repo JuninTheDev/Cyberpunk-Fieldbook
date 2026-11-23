@@ -163,7 +163,7 @@
 :root[data-tema="2077"] .topbar { border-bottom: 0; background: rgb(25 26 30 / 94%); box-shadow: 0 2px 0 #e8615a, 0 2px 5px #e8615a; }
 :root[data-tema="2077"] .topbar .brand-name { color: #e8615a; font: 400 20px/1 var(--lbl); letter-spacing: .06em; text-shadow: -9px -6px 40px currentcolor; }
 :root[data-tema="2077"] .brand-name em { color: #e8615a; }
-:root[data-tema="2077"] .search-wrap input { border-color: #9c3230; background: #1e181e; color: #e8615a; font: 500 16px var(--ui); clip-path: var(--nw-notch-path); }
+:root[data-tema="2077"] .search-wrap input { border-color: #c4403c; background: #1e181e; color: #e8615a; font: 500 16px var(--ui); clip-path: var(--nw-notch-path); }
 :root[data-tema="2077"] .search-wrap input::placeholder { color: #c27b75; }
 :root[data-tema="2077"] .search-wrap input:focus { border-color: #e8615a; }
 :root[data-tema="2077"] .search-glyph { color: #e8615a; }

@@ -220,3 +220,23 @@ test('restaurar versão conserva a fonte e o recorte atuais em vez dos metadados
   for (const campo of ['retrato', 'retratoOriginal', 'retratoRecorte']) assert.deepEqual(restaurada.json.personagem[campo], antes[campo], campo);
   assert.deepEqual(ctx.arquivos(), arquivos);
 });
+
+test('a fase 3 da auditoria: o retrato por link não vale mais (não se grava, e o que ficou gravado não aparece para ninguém)', async t => {
+  const ctx = await preparar(t, { retratoLink: 'https://example.com/rastreia.png' });
+  assert.equal(ctx.doc.retratoLink, '', 'não se grava ao criar');
+  const atual = await ctx.ler();
+  const salva = await ctx.wiki.pedir(ctx.url, { method: 'PUT', cookie: ctx.ana.cookie, body: { ...atual, retratoLink: 'https://example.com/outro.png' } });
+  assert.equal(salva.status, 200, salva.text);
+  assert.equal(salva.json.personagem.retratoLink, '', 'não se grava ao editar');
+  // Um link gravado antes da mudança: sai na leitura (o dono, o mestre, a lista pública e o Foundry não o recebem).
+  const arquivo = path.join(ctx.wiki.dados, 'personagens', `${ctx.doc.id}.json`);
+  const gravado = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
+  fs.writeFileSync(arquivo, JSON.stringify({ ...gravado, retratoLink: 'https://example.com/antigo.png' }));
+  for (const cookie of [ctx.ana.cookie, ctx.mestre]) {
+    const lido = (await ctx.wiki.pedir(ctx.url, { cookie })).json.personagem;
+    assert.equal(lido.retratoLink, '');
+    assert.ok(!lido.retrato, 'sem retrato');
+  }
+  const lista = await ctx.wiki.pedir('/api/personagens', { cookie: ctx.bruno.cookie });
+  assert.ok(!lista.text.includes('example.com'), 'a lista pública não leva o link');
+});

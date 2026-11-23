@@ -149,7 +149,7 @@
     const writing = Boolean(document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-nw-texto]'));
     root.innerHTML = `<div class="nw-app">
       <nav class="nw-list" aria-label="Canais e conversas">${group('Feeds', channels.filter(channel => channel.tipo !== 'direto'))}${group('Direto', channels.filter(channel => channel.tipo === 'direto'))}</nav>
-      <section class="nw-feed" aria-live="polite">${current ? `
+      <section class="nw-feed">${current ? `
         <header class="nw-topbar"><div><span class="nw-overline">NetWire_Seed: ${esc(current.id)}</span><h3 class="nw-title">${channelLabel(current)}</h3>${current.contato && current.contato.descricao ? `<p class="nw-contact">${esc(current.contato.descricao)}</p>` : ''}</div></header>
         <div class="nw-feed-body" data-nw-feed>${messages.length ? messages.map(messageHtml).join('') : '<p class="nw-system">— Nenhuma mensagem ainda —</p>'}</div>
         ${current.aceitaResposta ? `<form class="nw-reply" data-nw-reply><div class="nw-reply-field"><label class="nw-label" for="nw-texto">Mensagem</label><div class="nw-field"><textarea id="nw-texto" data-nw-texto rows="3" maxlength="1000" placeholder="Responder a ${esc(current.contato && current.contato.nome ? current.contato.nome : current.nome)}… (Ctrl+Enter envia)">${esc(draft)}</textarea></div></div><button type="submit" class="nw-btn nw-btn--primary nw-btn--xl">Enviar</button><p class="note-status nw-reply-status" data-nw-status role="status"></p></form>` : '<p class="nw-system">— Canal só de leitura —</p>'}` : '<p class="nw-system">— Nenhum canal ainda. O mestre abre as conversas. —</p>'}

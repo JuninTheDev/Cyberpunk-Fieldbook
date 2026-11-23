@@ -224,8 +224,15 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   const transferFile = id => path.join(charactersDir, 'transferencias', `${id}.json`);
   const transferInfo = id => { try { const { de, quando, nomeAtor } = JSON.parse(fs.readFileSync(transferFile(id), 'utf8')); return { de, quando, nomeAtor }; } catch { return null; } };
   const validId = id => /^[a-z0-9]{6,16}$/.test(id);
+  // O retrato por link (o retratoLink) não vale mais (a fase 3 da auditoria de 2026-11-16, decisão do usuário: só o
+  // upload): quem abria a ficha carregava a imagem do site do jogador, que via o IP e a hora de cada um e podia trocar a
+  // imagem depois. O que ficou gravado sai na leitura, e o jogador manda a imagem de novo.
   const readCharacter = id => {
-    try { return JSON.parse(fs.readFileSync(fileOf(id), 'utf8')); } catch { return null; }
+    try {
+      const doc = JSON.parse(fs.readFileSync(fileOf(id), 'utf8'));
+      if (doc && doc.retratoLink) doc.retratoLink = '';
+      return doc;
+    } catch { return null; }
   };
   const allCharacters = () => {
     try { return fs.readdirSync(charactersDir).filter(file => file.endsWith('.json')).map(file => readCharacter(file.slice(0, -5))).filter(Boolean); } catch { return []; }
@@ -241,8 +248,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     const doc = validId(id) ? readCharacter(id) : null;
     return doc && identity.conta && doc.dono === identity.conta.id && campaignOf(doc) === campaign ? String(doc.apelido || doc.nome || '').slice(0, 60) || null : null;
   };
-  // Retrato: o arquivo enviado (servido por esta API) ou um link https colado pelo jogador.
-  const portraitOf = doc => doc.retrato || (/^https:\/\/[^\s"'<>]+$/.test(doc.retratoLink || '') ? doc.retratoLink : '');
+  // Retrato: o arquivo enviado (servido por esta API). O link de outro site não vale mais (veja o readCharacter).
+  const portraitOf = doc => doc.retrato || '';
   // O que os outros jogadores da campanha veem: nome, apelido, Role e retrato. O resto só o dono e o mestre.
   const roleSummary = doc => {
     const mesa = characterRoles.listaMesa(doc);
@@ -334,8 +341,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       const roles = characterRoles.resultados(doc, creationRules);
       doc.resultado = { ...(doc.resultado && typeof doc.resultado === 'object' && !Array.isArray(doc.resultado) ? doc.resultado : {}), role: roles[0], roles };
     }
-    if (doc.retratoLink && !/^https:\/\/[^\s"'<>]+$/.test(String(doc.retratoLink))) doc.retratoLink = '';
-    if (doc.retratoLink) doc.retratoLink = String(doc.retratoLink).slice(0, 500);
+    // Só o retrato enviado (a fase 3 da auditoria): o link colado não se grava.
+    if ('retratoLink' in doc) doc.retratoLink = '';
     cleanCyberware(doc);
     return doc;
   }

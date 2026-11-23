@@ -608,7 +608,7 @@
       // A linha em ciano (o eyebrow) em cima do título, como nos exemplos de 2026.
       // A coluna da direita troca junto (o índice volta quando a página monta o dela).
       side.innerHTML = '';
-      content.innerHTML = `<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h">${page.title}</h2></div>${pinnable(id) ? `<div class="page-actions">${pinButton(id)}<button type="button" class="pin-page" data-copy-link title="Copiar o endereço desta página (com a seção)">⧉ Copiar link</button></div>` : ''}</header>${tabs}<p class="lede">${page.lede}</p>${page.html}`;
+      content.innerHTML = `<header class="page-head"><div class="page-title"><p class="eyebrow">${page.eyebrow || ''}</p><h2 class="cyber-h" tabindex="-1">${page.title}</h2></div>${pinnable(id) ? `<div class="page-actions">${pinButton(id)}<button type="button" class="pin-page" data-copy-link title="Copiar o endereço desta página (com a seção)">⧉ Copiar link</button></div>` : ''}</header>${tabs}<p class="lede">${page.lede}</p>${page.html}`;
       tocClicked = -1;
       // A página nova entra com um esmaecer curto (netwire.css; só a opacidade: as medidas da página não mudam).
       if (historyMode !== 'none') { content.classList.remove('nw-entra'); void content.offsetWidth; content.classList.add('nw-entra'); }
@@ -618,6 +618,9 @@
       navigation.querySelector('.nav-item.active')?.closest('.nav-group.collapsed')?.classList.remove('collapsed');
       if (document.body.classList.contains('sidebar-open')) setDrawer(false);
       document.dispatchEvent(new CustomEvent('wiki:pagina', { detail: { id, target } }));
+      // Quem usa o leitor de tela ouve o título da página nova (o foco vai para ele), e não a página inteira (o #content
+      // não é mais uma região "aria-live": a fase 3 da auditoria de 2026-11-16). Só na troca pelo menu, não na primeira.
+      if (historyMode !== 'none' && !target) content.querySelector('h2.cyber-h')?.focus({ preventScroll: true });
       const setup = { notes: setupNotes, campaignMap: setupCampaignMap, screen: setupScreen, skills: setupSkills, indice: setupIndex, ...(config.pageSetup || {}) }[id]
         || (mapPages.includes(id) ? setupCampaignMap : null);
       if (setup) setup(content, { recentPages, clockState, openPage, escapeHtml, target });
@@ -2077,7 +2080,7 @@
         const free = health.disco && health.disco.total ? health.disco.livre / health.disco.total : 1;
         const fora = health.copiaFora ? (Date.now() - new Date(health.copiaFora)) / 86400000 : Infinity;
         const when = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.copiaFora ? `cópia fora há ${Math.floor(fora)} dia${Math.floor(fora) === 1 ? '' : 's'}` : 'sem cópia fora do servidor', health.moduloPendente ? 'módulo esperando a mesa vazia' : '', health.sistemaPendente ? 'sistema do Foundry 14 esperando a mesa vazia' : ''].filter(Boolean).join(' · ');
+        const summary = [health.backup ? `backup ${when(health.backup.data)}` : 'sem backup ainda', health.disco ? `${Math.round(free * 100)}% do disco livre` : '', health.copiaFora ? `cópia fora há ${Math.floor(fora)} dia${Math.floor(fora) === 1 ? '' : 's'}` : 'sem cópia fora do servidor', health.moduloPendente ? 'módulo esperando a mesa vazia' : '', health.sistemaPendente ? 'sistema do Foundry 14 esperando a mesa vazia' : '', health.csp ? `${health.csp} aviso${health.csp === 1 ? '' : 's'} da CSP (csp-avisos.log)` : ''].filter(Boolean).join(' · ');
         server = `<details class="side-server${days > 2 || free < 0.1 || fora > 8 ? ' side-server-bad' : ''}"><summary>Servidor: ${escapeHtml(summary)}</summary>${health.backup ? `<p>${escapeHtml(health.backup.nome)}, ${(health.backup.tamanho / 1048576).toFixed(1)} MB</p>` : ''}${health.registro.length ? `<ul>${health.registro.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : '<p>Nenhuma publicação ainda.</p>'}</details>`;
       }
       box.innerHTML = `${table}${server}`;

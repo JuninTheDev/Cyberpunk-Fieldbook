@@ -661,7 +661,8 @@
 
   // ---------------- Retrato ----------------
   // A imagem enviada (servida pela API da wiki) vale no lugar do link colado.
-  const portraitUrl = doc => doc.retrato || (/^https:\/\//.test(doc.retratoLink || '') ? doc.retratoLink : '');
+  // Só o retrato enviado: o link de outro site não vale mais (a fase 3 da auditoria de 2026-11-16).
+  const portraitUrl = doc => doc.retrato || '';
   const portraitImg = (url, cls, alt = '') => (url ? `<img class="${cls}" src="${esc(url)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer">` : '');
   const portraitData = canvas => {
     const webp = canvas.toDataURL('image/webp', 0.85);
@@ -2276,7 +2277,7 @@
         const item = catalog.get(line.id) || {};
         return `<li><div class="shop-line"><span><b>${esc(item.nome || line.id)}</b> ×${line.qtd}<small>${esc(item.sub || '')}${item.lote > 1 ? ` · ${eb(item.preco)} por ${item.lote}` : ` · ${eb(item.preco || 0)} cada`}</small></span><b>${eb(cartCost(line))}</b></div>
           ${item.cyber ? '<small class="cc-wait">O mestre instala pela ficha (Humanidade e instalação).</small>' : ''}
-          <div class="cc-mount-controls">${ammoSelect(line, index)}${placeSelect(line, index)}<span class="shop-stepper"><button type="button" data-pedido-menos="${index}" aria-label="Menos">−</button><button type="button" data-pedido-mais="${index}" aria-label="Mais">+</button></span><button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-tirar="${index}">Tirar</button></div></li>`;
+          <div class="cc-mount-controls">${ammoSelect(line, index)}${placeSelect(line, index)}<span class="shop-stepper"><button type="button" data-pedido-menos="${index}" aria-label="Menos ${esc(item.nome || line.id)}">−</button><button type="button" data-pedido-mais="${index}" aria-label="Mais ${esc(item.nome || line.id)}">+</button></span><button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-tirar="${index}">Tirar</button></div></li>`;
       }).join('')}</ul>
         <div class="shop-total"><span>Total</span><b>${eb(total)}</b></div>
         ${left !== null ? `<div class="shop-total shop-after"><span>Saldo após o pedido</span><span class="${left < 0 ? 'cc-bad' : ''}">${eb(left)}</span></div>` : ''}
@@ -2292,7 +2293,7 @@
       const foot = item => {
         const qty = inCart.get(item.id) || 0;
         const tooMuch = left !== null && !qty && item.preco > left;
-        if (qty) return `${priceOf(item)}<span class="shop-stepper"><button type="button" data-pedido-card-menos="${item.id}" aria-label="Diminuir">−</button><b>${qty}</b><button type="button" data-pedido-por="${item.id}" aria-label="Aumentar">+</button></span>`;
+        if (qty) return `${priceOf(item)}<span class="shop-stepper"><button type="button" data-pedido-card-menos="${item.id}" aria-label="Menos ${esc(item.nome || item.id)}">−</button><b>${qty}</b><button type="button" data-pedido-por="${item.id}" aria-label="Mais ${esc(item.nome || item.id)}">+</button></span>`;
         return `${priceOf(item, tooMuch)}${tooMuch ? '<button class="action" type="button" disabled>Sem saldo</button>' : `<button class="action" type="button" data-pedido-por="${item.id}">Adicionar</button>`}`;
       };
       target.innerHTML = `<div class="shop-layout${narrowShop(target) ? ' shop-narrow' : ''}">
@@ -2639,9 +2640,8 @@
       return `${box('Quem é', `<div class="cc-form"><label>Nome<input data-campo="nome" value="${esc(doc.nome)}" maxlength="80"></label><label>Apelido (handle)<input data-campo="apelido" value="${esc(doc.apelido)}" maxlength="80"></label><label class="cc-wide">Aparência e jeito<textarea data-campo="aparencia" rows="2" maxlength="2000">${esc(doc.aparencia)}</textarea></label></div>`)}
         ${box('Retrato', `<div class="cc-portrait-edit">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait cc-portrait-empty">sem retrato</div>'}
           <div class="cc-portrait-tools"><p><label class="action cc-file">Enviar imagem<input type="file" accept="image/png,image/jpeg,image/webp" data-portrait-file></label>${portraitUrl(doc) ? ' <button type="button" class="action" data-portrait-adjust>Ajustar recorte</button> <button type="button" class="action cc-danger" data-portrait-remove>Tirar retrato</button>' : ''}</p>
-          <label>Ou cole um link de imagem (https)<input data-campo="retratoLink" value="${esc(doc.retratoLink || '')}" maxlength="500" placeholder="https://…" inputmode="url"></label>
           <p class="cc-msg" data-portrait-msg role="status"></p>
-          <p class="note-status">Escolha o enquadramento antes de salvar. O retrato fica quadrado, com 512 px, e a imagem inteira fica guardada para ajustar depois. A imagem enviada vale no lugar do link e vai para a ficha e o token no Foundry.</p></div></div>`)}
+          <p class="note-status">Escolha o enquadramento antes de salvar. O retrato fica quadrado, com 512 px, e a imagem inteira fica guardada para ajustar depois. A imagem vai para a ficha e o token no Foundry. Só vale a imagem enviada: um link de outro site entregaria a quem o pôs o endereço de quem abre a ficha.</p></div></div>`)}
         ${lockBox(`${box('Role', `<div class="cc-choices">${C.roles.map(item => `<button type="button" class="cc-choice${item.id === doc.role ? ' active' : ''}" data-role="${item.id}"><b>${item.nome}</b><small>${esc(item.habilidade)}</small><span>${esc(item.resumo)}</span></button>`).join('')}</div>
           <p><label>Rank da Role principal <select data-role-rank="principal"${role ? '' : ' disabled'}>${rankOptions(rankOf(doc) || 4)}</select></label></p>
           ${role && role.especializacoes ? `<h4>Especialização de ${role.nome}</h4><div class="cc-choices">${role.especializacoes.map(item => `<button type="button" class="cc-choice${item.id === doc.especializacao ? ' active' : ''}" data-spec="${item.id}"><b>${item.nome}</b><span>Soma o Rank em ${item.pericias.map(skillPt).join(', ')}.</span></button>`).join('')}</div>` : ''}
@@ -2731,11 +2731,11 @@
         const info = skillInfo.get(name) || {};
         const special = C.specializedSkills[name];
         return `<tr${suggested.has(name) ? ' class="cc-suggested"' : ''}><td>${info.basica ? `<b>${esc(info.pt)}</b>` : esc(special ? special.nome : info.pt || name)}${info.x2 ? ' <small>×2</small>' : ''}${suggested.has(name) ? ' <small class="cc-tag">sugerida</small>' : ''}${special ? ` ${typeSelect(name, doc.tipos[name], `data-tipo="${esc(name)}"`)}` : ''}${name === 'Local Expert (Your Home)' ? ` <select data-casa aria-label="Seu bairro"><option value="">Bairro…</option>${C.homeDistricts.map(place => `<option${place === doc.casa ? ' selected' : ''}>${place}</option>`).join('')}</select>` : ''}${info.desc ? `<small class="cc-desc">${esc(info.desc)}</small>` : ''}</td>
-          <td>${info.stat || ''}</td><td class="cc-level">${editable ? `<button type="button" class="action" data-skill-minus="${esc(name)}" aria-label="Diminuir">−</button><b>${level}</b><button type="button" class="action" data-skill-plus="${esc(name)}" aria-label="Aumentar">+</button>` : `<b>${level}</b>`}</td><td><b>${level + (stats[info.stat] || 0)}</b></td></tr>`;
+          <td>${info.stat || ''}</td><td class="cc-level">${editable ? `<button type="button" class="action" data-skill-minus="${esc(name)}" aria-label="Diminuir ${esc(special ? special.nome : info.pt || name)}">−</button><b>${level}</b><button type="button" class="action" data-skill-plus="${esc(name)}" aria-label="Aumentar ${esc(special ? special.nome : info.pt || name)}">+</button>` : `<b>${level}</b>`}</td><td><b>${level + (stats[info.stat] || 0)}</b></td></tr>`;
       };
       const specialSuggested = doc.metodo === 'pacote' ? (C.streetratSkills[(roleById(doc.role) || {}).tabelas] || []).filter(([name]) => C.specializedSkills[name]) : [];
       const extras = doc.metodo === 'pacote' ? `<h4>Perícias de escolha extras</h4><p class="note-status">Outras línguas, artes marciais (×2), instrumentos ou ciências.${specialSuggested.length ? ` Sugerida para ${esc(roleName(doc.role))}: ${specialSuggested.map(([name, level]) => `${esc(C.specializedSkills[name].nome)} (${level})`).join(', ')}.` : ''}</p>
-        ${doc.extras.map((extra, index) => `<div class="cc-extra">${esc(C.specializedSkills[extra.base].nome)} ${typeSelect(extra.base, extra.tipo, `data-extra-tipo="${index}"`)} <span class="cc-level"><button type="button" class="action" data-extra-minus="${index}">−</button><b>${extra.nivel}</b><button type="button" class="action" data-extra-plus="${index}">+</button></span> <button type="button" class="action cc-danger" data-extra-remove="${index}">Tirar</button></div>`).join('')}
+        ${doc.extras.map((extra, index) => `<div class="cc-extra">${esc(C.specializedSkills[extra.base].nome)} ${typeSelect(extra.base, extra.tipo, `data-extra-tipo="${index}"`)} <span class="cc-level"><button type="button" class="action" data-extra-minus="${index}" aria-label="Diminuir ${esc(C.specializedSkills[extra.base].nome)}">−</button><b>${extra.nivel}</b><button type="button" class="action" data-extra-plus="${index}" aria-label="Aumentar ${esc(C.specializedSkills[extra.base].nome)}">+</button></span> <button type="button" class="action cc-danger" data-extra-remove="${index}">Tirar</button></div>`).join('')}
         <p>${SPECIAL.map(base => `<button type="button" class="action" data-extra-add="${base}">+ ${C.specializedSkills[base].nome}</button>`).join(' ')}</p>` : '';
       return `${box('Língua da origem (4 níveis grátis)', `<p>${origin ? `Pela sua origem (Lifepath), as opções são: ${origin.map(en => C.languages[en]).join(', ')}. Pode escolher outra.` : 'Role a Origem cultural no Lifepath (passo 4) para ver as línguas da sua região, ou escolha agora.'}</p>${typeSelect('Language', doc.lingua, 'data-lingua')}`)}
         ${box('Perícias', `${header}<div class="table-wrap dense"><table><thead><tr><th>Perícia</th><th>STAT</th><th>Nível</th><th>Base</th></tr></thead><tbody>${rows.map(line).join('')}</tbody></table></div>${extras}`)}`;
@@ -3175,7 +3175,7 @@
         const list = Array.from({ length: rankOf(doc, contextId) }, (_, index) => (state.oficina || [])[index] || '');
         list[Number(target.dataset.oficina)] = target.value; state.oficina = list;
       }
-      else if (target.matches('[data-campo="retratoLink"]')) { doc.retratoLink = target.value.trim(); }
+
       else if (target.matches('[data-portrait-file]')) { const file = target.files && target.files[0]; target.value = ''; uploadPortrait(file); return; }
       else if (target.matches('[data-quickhack]')) {
         const id = target.dataset.quickhack;

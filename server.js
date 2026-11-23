@@ -162,7 +162,7 @@ function serverHealth() {
   // A última cópia fora do servidor: o servidor\baixar-backup.bat do PC (conferida) ou o "Baixar backup" da wiki marcam.
   let copiaFora = null;
   try { copiaFora = fs.statSync(path.join(dataDir, '.copia-fora')).mtime.toISOString(); } catch { /* nenhuma ainda */ }
-  return { backup, disco, copiaFora, moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), sistemaPendente: fs.existsSync(path.join(dataDir, '.sistema-pendente')), registro, mesas: tablesInstalled() };
+  return { backup, disco, copiaFora, csp: cspCount(), moduloPendente: fs.existsSync(path.join(dataDir, '.modulo-pendente')), sistemaPendente: fs.existsSync(path.join(dataDir, '.sistema-pendente')), registro, mesas: tablesInstalled() };
 }
 
 // ---------------- Troca de mesa: o Foundry 12 ou o 14 (só no servidor) ----------------
@@ -232,6 +232,55 @@ function readJsonBody(request, limit = 10_000) {
     request.on('error', reject);
   });
 }
+// ---------------- A CSP, só avisando (a fase 3 da auditoria de 2026-11-16) ----------------
+// As páginas saem com a Content-Security-Policy-Report-Only: o navegador não bloqueia nada, só avisa o que bloquearia (um
+// script de fora, um script escrito na página por uma falha de escape) no /api/csp, que guarda em csp-avisos.log. Depois
+// de uma semana de uso, olhando os avisos, ela passa a bloquear (a Content-Security-Policy). Os scripts escritos na
+// própria página (dois em cada uma) entram pelo hash, calculado do arquivo servido.
+const inlineHashes = new Map();
+function scriptHashes(file, mtimeMs) {
+  const known = inlineHashes.get(file);
+  if (known && known.mtimeMs === mtimeMs) return known.hashes;
+  let hashes = [];
+  try {
+    const html = fs.readFileSync(file, 'utf8');
+    hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => `'sha256-${crypto.createHash('sha256').update(match[1], 'utf8').digest('base64')}'`);
+  } catch { /* o arquivo sumiu: sem hashes */ }
+  inlineHashes.set(file, { mtimeMs, hashes });
+  return hashes;
+}
+const cspFor = (file, mtimeMs) => [
+  "default-src 'self'", `script-src 'self' ${scriptHashes(file, mtimeMs).join(' ')}`.trim(), "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'", "media-src 'self' data: blob:", "worker-src 'self'",
+  "object-src 'none'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", 'report-uri /api/csp'
+].join('; ');
+const cspFile = path.join(dataDir, 'csp-avisos.log');
+const CSP_MAX_BYTES = 1024 * 1024;
+const cspAttempts = limiteDeTentativas({ maximo: 60, janela: 10 * 60 * 1000 });
+// O aviso do navegador: guarda uma linha (a página, a diretiva, o que seria bloqueado), até 1 MB no arquivo.
+function cspReport(request, response) {
+  const ip = clientIp(request);
+  let size = 0;
+  let body = '';
+  request.setEncoding('utf8');
+  request.on('data', chunk => { size += chunk.length; if (size <= 16384) body += chunk; });
+  request.on('end', () => {
+    response.writeHead(204, { ...SERVER_VERSION, 'Cache-Control': 'no-store' });
+    response.end();
+    if (size > 16384 || cspAttempts.excedeu(ip)) return;
+    let report = null;
+    try { const data = JSON.parse(body); report = data['csp-report'] || (Array.isArray(data) ? data[0]?.body : data.body) || null; } catch { /* não é JSON */ }
+    if (!report || typeof report !== 'object') return;
+    const field = name => String(report[name] || report[name.replace(/-(\w)/g, (_, c) => c.toUpperCase())] || '').slice(0, 300);
+    const line = JSON.stringify({ quando: new Date().toISOString(), pagina: field('document-uri'), diretiva: field('violated-directive') || field('effective-directive'), bloqueado: field('blocked-uri'), linha: report['line-number'] || report.lineNumber || null, amostra: field('script-sample') || field('sample') });
+    fs.stat(cspFile, (error, stats) => {
+      if (!error && stats.size > CSP_MAX_BYTES) return;
+      fs.appendFile(cspFile, `${line}\n`, () => {});
+    });
+  });
+}
+const cspCount = () => { try { return fs.readFileSync(cspFile, 'utf8').split('\n').filter(Boolean).length; } catch { return 0; } };
+
 const sendJson = (response, status, data, headers = {}) => send(response, status, JSON.stringify(data), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store', ...headers });
 
 // Entrar e sair como mestre (a tela é o mestre.html).
@@ -348,6 +397,7 @@ http.createServer((request, response) => {
     return void pipeline(fs.createReadStream(file), response, erro => { if (!erro) fs.promises.writeFile(path.join(dataDir, '.copia-fora'), new Date().toISOString()).catch(() => {}); });
   }
 
+  if (pathname === '/api/csp' && request.method === 'POST') return cspReport(request, response);
   if (pathname === '/api/saude') {
     if (!gameMaster) return send(response, 403, 'Só o mestre.');
     return health().then(reverted => send(response, 200, JSON.stringify({ git: reverted !== null, revertidos: reverted || [] }), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store' }));
@@ -388,7 +438,8 @@ http.createServer((request, response) => {
       'Content-Length': stats.size,
       'Content-Type': contentTypes[extension] || 'application/octet-stream',
       'Cache-Control': cacheControl,
-      ...(cacheable ? { ETag: etag } : {})
+      ...(cacheable ? { ETag: etag } : {}),
+      ...(extension === '.html' ? { 'Content-Security-Policy-Report-Only': cspFor(filePath, stats.mtimeMs) } : {})
     });
     if (request.method === 'HEAD') return response.end();
     // A conexão pode ter caído enquanto o stat rodava: aí o arquivo nem é aberto

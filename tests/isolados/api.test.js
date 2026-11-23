@@ -332,3 +332,42 @@ test('a fase 2 da auditoria: sem o espaço mínimo em disco, nenhuma escrita de 
   assert.equal(resposta.status, 507);
   assert.match(resposta.json.erro, /sem espaço em disco/);
 });
+
+test('a fase 3 da auditoria: as páginas saem com a CSP só avisando (os scripts da própria página pelo hash), e o /api/csp guarda o aviso', async t => {
+  const crypto = require('node:crypto');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const servidor = criarServidorIsolado(t);
+  const pagina = await servidor.pedir('/jogadores.html');
+  assert.equal(pagina.status, 200);
+  const csp = pagina.headers['content-security-policy-report-only'];
+  assert.ok(csp, 'só avisando: o cabeçalho que não bloqueia');
+  assert.equal(pagina.headers['content-security-policy'], undefined, 'ainda não bloqueia');
+  for (const parte of ["default-src 'self'", "object-src 'none'", "frame-ancestors 'none'", "img-src 'self' data: blob:", 'report-uri /api/csp']) assert.ok(csp.includes(parte), parte);
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'jogadores.html'), 'utf8');
+  const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  assert.ok(inline.length >= 1);
+  for (const [, codigo] of inline) assert.ok(csp.includes(`'sha256-${crypto.createHash('sha256').update(codigo, 'utf8').digest('base64')}'`), 'o hash do script da página');
+  // O aviso do navegador vira uma linha no csp-avisos.log, e a saúde do servidor conta.
+  const aviso = await servidor.pedir('/api/csp', { method: 'POST', headers: { 'content-type': 'application/csp-report' }, body: JSON.stringify({ 'csp-report': { 'document-uri': 'https://wiki/jogadores.html', 'violated-directive': 'script-src', 'blocked-uri': 'inline', 'line-number': 12, 'script-sample': 'alert(1)' } }) });
+  assert.equal(aviso.status, 204);
+  await new Promise(r => setTimeout(r, 100));
+  const linhas = fs.readFileSync(path.join(servidor.dados, 'csp-avisos.log'), 'utf8').trim().split('\n').map(l => JSON.parse(l));
+  assert.deepEqual([linhas[0].pagina, linhas[0].diretiva, linhas[0].bloqueado, linhas[0].amostra], ['https://wiki/jogadores.html', 'script-src', 'inline', 'alert(1)']);
+  const mestre = await servidor.entrarComoMestre();
+  assert.equal((await servidor.pedir('/api/estado', { cookie: mestre })).json.servidor.csp, 1);
+  // O lixo não grava nada.
+  assert.equal((await servidor.pedir('/api/csp', { method: 'POST', body: 'não é JSON' })).status, 204);
+  await new Promise(r => setTimeout(r, 100));
+  const linhasDoLog = () => fs.readFileSync(path.join(servidor.dados, 'csp-avisos.log'), 'utf8').trim().split('\n').length;
+  assert.equal(linhasDoLog(), 1);
+  // Um aviso com mais de 16 KB também não (e não conta no limite).
+  const aviso1 = amostra => JSON.stringify({ 'csp-report': { 'document-uri': 'https://wiki/index.html', 'violated-directive': 'script-src', 'blocked-uri': 'inline', 'script-sample': amostra } });
+  assert.equal((await servidor.pedir('/api/csp', { method: 'POST', body: aviso1('x'.repeat(17000)) })).status, 204);
+  await new Promise(r => setTimeout(r, 100));
+  assert.equal(linhasDoLog(), 1, 'o aviso grande não grava');
+  // E 60 por 10 minutos de cada IP: o válido e o lixo já contaram 2, então destes 60 só 58 gravam.
+  for (let i = 0; i < 60; i += 1) assert.equal((await servidor.pedir('/api/csp', { method: 'POST', body: aviso1(`n${i}`) })).status, 204);
+  await new Promise(r => setTimeout(r, 200));
+  assert.equal(linhasDoLog(), 59, 'o limite por IP');
+});

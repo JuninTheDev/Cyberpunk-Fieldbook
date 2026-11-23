@@ -481,6 +481,8 @@ details.roll-table summary { cursor: pointer; color: var(--cyan); }
 .cc-pick tr.cc-picked td { background: #2a2a1a; color: var(--yellow); }
 .cc-level { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
 .cc-level .action { padding: 2px 8px; }
+/* No celular, os botões − e + com 32 px no mínimo (eram uns 20): a fase 3 da auditoria de 2026-11-16. */
+@media (pointer: coarse) { .cc-level .action, .shop-stepper button { min-width: 32px; min-height: 32px; } }
 .cc-level b { min-width: 1.2em; text-align: center; }
 .cc-extra, .cc-lp-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
 .cc-lp-grid { display: grid; gap: 8px; }
