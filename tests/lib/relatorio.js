@@ -3,16 +3,24 @@
 // aprovado: o resultado diz que a rodada não vale como portão, e o código de saída é 2 (o C54, da auditoria de
 // 2026-11-16; antes, o pulo saía como ✓ e "Tudo certo", com o código 0). PERMITIR_PULAR=1 sai com 0 mesmo assim.
 
+// prazoMs: o tempo de um passo (o C60, da auditoria de 2026-11-16). O passo que não termina (uma janela que espera para
+// sempre, um evaluate preso) vira falha, e a rodada segue, em vez de parar sem relatório. 0: sem prazo.
 class Relatorio {
-  constructor() { this.itens = []; }
+  constructor({ prazoMs = 0 } = {}) { this.itens = []; this.prazoMs = prazoMs; }
   // fn devolve [ok, detalhe]; um erro conta como falha, com a mensagem.
   async passo(nome, fn) {
     const inicio = Date.now();
+    let relogio = null;
     try {
-      const [ok, detalhe = ''] = await fn();
+      const prazo = this.prazoMs > 0 ? new Promise((_, rejeitar) => {
+        relogio = setTimeout(() => rejeitar(new Error(`o passo passou de ${Math.round(this.prazoMs / 1000)} s sem terminar (PASSO_MS)`)), this.prazoMs);
+      }) : null;
+      const [ok, detalhe = ''] = await (prazo ? Promise.race([fn(), prazo]) : fn());
       this.itens.push({ nome, ok: Boolean(ok), detalhe: String(detalhe), ms: Date.now() - inicio });
     } catch (error) {
       this.itens.push({ nome, ok: false, detalhe: `erro: ${error.message}`, ms: Date.now() - inicio });
+    } finally {
+      clearTimeout(relogio);
     }
   }
   // A parte do cenário que não rodou, e por quê: não é falha, mas também não é aprovação.

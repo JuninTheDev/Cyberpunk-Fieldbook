@@ -32,8 +32,10 @@ fs.mkdirSync(saida, { recursive: true });
     for (const file of escolhidos) {
       const cenario = require(path.join(pastaCenarios, file));
       const nome = path.basename(file, '.js');
-      const relatorio = new Relatorio();
-      const edge = await abrirEdge({ porta: porta++, saida, prefixo: `${nome}-` });
+      // O prazo de cada passo: 5 minutos (PASSO_MS muda; 0, sem prazo).
+      const relatorio = new Relatorio({ prazoMs: Number(process.env.PASSO_MS ?? 300000) });
+      // O cenário diz os códigos HTTP que espera (o httpPermitido dele; sem ele, o padrão da suíte da wiki).
+      const edge = await abrirEdge({ porta: porta++, saida, prefixo: `${nome}-`, ...(cenario.httpPermitido ? { httpPermitido: cenario.httpPermitido } : {}) });
       const inicio = Date.now();
       try {
         await cenario({ edge, servidores, r: relatorio });
@@ -41,6 +43,8 @@ fs.mkdirSync(saida, { recursive: true });
         relatorio.itens.push({ nome: 'cenário', ok: false, detalhe: `parou com erro: ${error.message}` });
       } finally {
         const erros = edge.erros.filter(erro => !/favicon/.test(erro));
+        // Os 403 e 409 que o navegador deixou passar (MOSTRAR_IGNORADOS=1), para conferir quais os passos esperam.
+        if (process.env.MOSTRAR_IGNORADOS && edge.ignorados?.length) console.log(`  (403/409 deixados passar em ${nome}: ${[...new Set(edge.ignorados)].join(' · ')})`);
         relatorio.itens.push({ nome: 'sem erros de JS na página', ok: erros.length === 0, detalhe: erros.slice(0, 3).join(' | ') });
         await edge.fechar();
       }

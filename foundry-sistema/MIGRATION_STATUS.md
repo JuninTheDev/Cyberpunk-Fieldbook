@@ -5,8 +5,8 @@ Architect, Painel Tático).
 
 **Destino:** Foundry 14 (verificado no 14.369) com este sistema, `cpr-fieldbook`.
 
-A campanha real continua no Foundry 12, no servidor. Este status é do sistema, não da campanha. Migrar a campanha exige
-os bloqueadores abaixo resolvidos, backup e autorização.
+No servidor, a mesa é o Foundry 14 com este sistema; o Foundry 12 fica parado ao lado, para consulta (até o ciclo 200,
+este parágrafo dizia que a campanha continuava no 12). Este status é do sistema, não da campanha.
 
 ## Compatibilidade com o Foundry 14 (evidência)
 
@@ -442,6 +442,9 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
     Supressivo comum (10 balas) continua? E o supressivo carregado esfria a arma?
   - **"Dispara três balas Smart"** (Yukimura, Chao, Kappa, Shingen) **e "só dispara em rajadas de três"** (Nowaki,
     Masamune): cada tiro gasta 3 balas? O Foundry 12 gasta 1, e o sistema também, por enquanto.
+  - **Respondida em parte (ciclo 113; anotado no ciclo 201):** as que disparam três balas gastam 3 por tiro
+    (`regras.balasPorTiro`), com o dano menor quando o pente tem menos. A carga Tech da Satara, da Burya e da Senkoh
+    continua com o mestre.
 
 - **Sorte: preparada na ficha, não numa janela de rolagem.** O CORE pergunta a Sorte na janela de cada rolagem; aqui
   não há essa janela, e a regra da wiki ("antes de rolar, gaste pontos") virou os botões − e + no indicador da Sorte,
@@ -9775,6 +9778,44 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     - a NET com o usuário da mensagem (F3);
     - a compra fora da fila (F4);
     - o pedido com item que falta entregue e cobrado (F5).
+
+### Ciclo 201 (2026-11-23): C60 a C63, a fase 2 da auditoria de 2026-11-16 (sessão KouArt)
+
+- **Pedido do usuário (2026-11-23):** "Sim, fase 2": a fase 2 do plano de conserto da auditoria. A parte do servidor e
+  da wiki foi em commits próprios: 1a2d371b (a atualização sem root e com volta, o backup inteiro e conferido, a swap,
+  a wiki no Node 24) e a5f2161f (as sessões do mestre que se revogam, o limite das escritas pesadas, a IA do NetWire).
+  O `servicos.sh` rodou no servidor pelo ssh, com o pedido do usuário. Este ciclo é a do sistema e dos testes.
+- **Entrega:**
+  - **C60, o G4 que não trava e não esconde:**
+    - o prazo por passo no `tests/lib/relatorio.js` (5 minutos, `PASSO_MS`): o passo que não termina vira falha;
+    - a trava (`tests/lib/trava.js`): a velha só sai se ainda é a que foi lida (o `soltarSeAinda`), e a espera tem
+      teto (`TRAVA_MAX_MS`, 6 h);
+    - os avisos do sistema de todas as páginas do navegador (o `edge.avisos`, pelo `Runtime.consoleAPICalled`), e não
+      só os do `window.__avisos` da página de agora;
+    - os navegadores do G4 sem 403 nem 409 (o `httpPermitido`; a suíte da wiki continua com os dois). Numa rodada com
+      o `MOSTRAR_IGNORADOS=1`, o v14 não teve nenhum;
+    - o `tests/portoes.js`: o G1 a G3 (e, com `--g4` e `--servidor`, o G4 e o teste do servidor) com a lista num lugar só.
+  - **C61:** as drogas e as munições só montam o ator sintético dos tokens soltos com a marca no delta (a droga sob
+    efeito; a munição especial e o EMP); a tripulação refaz as cenas só quando muda o papel ou o personagem de um
+    usuário (o `mudancaDeUsuarioImporta`).
+  - **C62:** a Humanidade máxima conta a peça com a fórmula de perda e a média em 0 (a ficha passa a fórmula).
+  - **C63:** a versão do `system.json` é `0.3.201` (o ciclo; o G3 confere que sobe junto com o registro); o README, o
+    cabeçalho deste arquivo e o `instalar.mjs` não dizem mais que a mesa é o Foundry 12; a dúvida das três balas por
+    tiro ficou anotada como respondida no ciclo 113.
+- **Testes de referência:**
+  - **G3:** o `g4-prazo.test.mjs` (5), o `fase2-sistema.test.mjs` (5) e os casos novos no `regras.test.mjs`.
+  - **G4:** um passo novo do C61, o EMP no item do capanga solto numa cena fora da vista.
+- **No caminho:** a mutação das munições do token solto (F7) sobreviveu ao G4 inteiro: nenhum passo conferia o prazo
+  da munição num capanga solto. O passo novo entrou, e ela caiu.
+- **Portões:** G1, 253 arquivos; G2 sem erros (com o `edge.js` e o `portoes.js`); G3, 772/772; G4 completo, 325/325 em 707 s,
+  com a mesa do servidor vazia. Antes, pelo `node tests/portoes.js --g4`, uma rodada de 323/325 (os dois do token
+  dinâmico, instáveis conhecidas, que passaram na rodada seguinte) e uma em que o Foundry de teste não abriu o mundo.
+- **Mutações:** as 12 caíram, e os arquivos voltaram exatos (md5).
+  - **No G3 (10):** o passo sem prazo (S11); a trava que sai sem reler (S12) e a espera sem teto (S13); os avisos só da
+    página de agora (S14); o 403 e o 409 sempre liberados (S15) e os navegadores do G4 com o padrão da wiki (S16); a
+    fórmula de perda que não conta (S17) e a ficha sem a fórmula (S18); qualquer flag do usuário refazendo as cenas
+    (S19); as drogas montando o ator de todos os tokens (S20).
+  - **No G4 (2):** as drogas do token solto de fora (F6) e as munições do token solto de fora (F7, depois do passo novo).
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

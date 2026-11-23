@@ -430,6 +430,8 @@ async function repararCena(cena) {
   }
 }
 
+export const mudancaDeUsuarioImporta = (mudancas = {}) => ['role', 'character'].some(chave => chave in mudancas);
+
 export function registrarTripulacao() {
   integrarArrasto();
   Hooks.on('renderTokenHUD', botaoNoHud);
@@ -489,7 +491,10 @@ export function registrarTripulacao() {
     });
     if (mestreAtivo()) for (const cena of game.scenes) naFila(cena, () => repararCena(cena));
   });
-  Hooks.on('updateUser', () => {
+  // Só quando muda o papel (quem é mestre) ou o personagem de um usuário: qualquer flag gravada (a pasta aberta na árvore
+  // de itens, a aba da ficha) refazia todas as cenas, com os tokens e os ocupantes (o C61).
+  Hooks.on('updateUser', (_usuario, mudancas) => {
+    if (!mudancaDeUsuarioImporta(mudancas)) return;
     if (mestreAtivo()) for (const cena of game.scenes) naFila(cena, () => repararCena(cena));
   });
 }

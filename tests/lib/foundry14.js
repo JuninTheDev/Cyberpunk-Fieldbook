@@ -135,8 +135,15 @@ async function capturarAvisos(edge) {
     }
   })();` });
 }
-// Os avisos e erros que vêm do sistema (no texto ou na pilha).
-const avisosDoSistema = edge => edge.evaluate(`(window.__avisos || []).filter(a => /systems\\/${SISTEMA}\\//.test(a.texto + ' ' + a.pilha)).map(a => a.nivel + ': ' + a.texto.slice(0, 300))`);
+// Os avisos e erros que vêm do sistema (no texto ou na pilha): os da página de agora (window.__avisos, com a pilha da
+// chamada) e os de todas as páginas deste navegador, pelo console (edge.avisos, o C60): os de antes de recarregar a página
+// ou de entrar como outro usuário se perdiam.
+const doSistema = new RegExp(`systems/${SISTEMA}/`);
+async function avisosDoSistema(edge) {
+  const daPagina = await edge.evaluate(`(window.__avisos || []).filter(a => /systems\\/${SISTEMA}\\//.test(a.texto + ' ' + a.pilha)).map(a => a.nivel + ': ' + a.texto.slice(0, 300))`);
+  const deTodas = (edge.avisos || []).filter(a => doSistema.test(`${a.texto} ${a.pilha}`)).map(a => `${a.nivel}: ${a.texto.slice(0, 300)}`);
+  return [...new Set([...(daPagina || []), ...deTodas])];
+}
 
 async function esperarJogo(edge) {
   for (let i = 0; i < 120; i++) {

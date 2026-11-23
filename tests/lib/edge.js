@@ -40,7 +40,10 @@ async function encerrar(proc, perfil, porta) {
   console.warn(`O perfil do Edge ficou em ${perfil}: apague à mão.`);
 }
 
-async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 1000 }) {
+// httpPermitido: os códigos de erro HTTP que não contam como erro da página. O padrão (403 e 409) é o da suíte da wiki: o
+// 403 da área do mestre nos testes da visão dos jogadores e o 409 do conflito do criador, conferidos à parte. O G4
+// (tests/cenarios/v14.js) não espera nenhum: lá, um 403 é uma permissão quebrada (o C60).
+async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 1000, httpPermitido = [403, 409] }) {
   const edge = candidates.find(file => fs.existsSync(file));
   if (!edge) throw new Error('Microsoft Edge não encontrado.');
   const perfil = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-testes-edge-'));
@@ -57,16 +60,24 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
   let id = 0;
   const pending = {};
   const erros = [];
+  // Os avisos e erros do console de todas as páginas deste navegador (o C60): o window.__avisos de cada página some quando
+  // ela recarrega. E os 403 e 409 que não contam como erro (os passos que os esperam conferem à parte).
+  const avisos = [];
+  const ignorados = [];
   ws.onmessage = event => {
     const message = JSON.parse(event.data);
     if (message.id && pending[message.id]) { pending[message.id](message); delete pending[message.id]; }
     if (message.method === 'Runtime.exceptionThrown') erros.push(message.params.exceptionDetails.exception?.description || message.params.exceptionDetails.text);
     if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') erros.push(`console: ${message.params.args.map(arg => arg.value ?? arg.description ?? '').join(' ')}`);
+    if (message.method === 'Runtime.consoleAPICalled' && ['warning', 'error'].includes(message.params.type)) {
+      avisos.push({ nivel: message.params.type === 'warning' ? 'warn' : 'error', texto: message.params.args.map(arg => arg.value ?? arg.description ?? '').join(' ').slice(0, 1500),
+        pilha: (message.params.stackTrace?.callFrames || []).map(quadro => `${quadro.url}:${quadro.lineNumber}`).join(' | ') });
+    }
     if (message.method === 'Network.responseReceived') {
       const { status, url } = message.params.response;
-      // 403 da área do mestre é esperado nos testes da visão dos jogadores, e 409 no teste de conflito do criador;
-      // os testes conferem essas respostas à parte.
-      if (status >= 400 && status !== 403 && status !== 409 && !url.endsWith('favicon.ico')) erros.push(`http ${status} ${url}`);
+      // Os permitidos (httpPermitido) os testes conferem à parte.
+      if (status >= 400 && !httpPermitido.includes(status) && !url.endsWith('favicon.ico')) erros.push(`http ${status} ${url}`);
+      else if (status >= 400 && httpPermitido.includes(status)) ignorados.push(`${status} ${url}`);
     }
   };
   const send = (method, params = {}) => new Promise(resolve => { const i = ++id; pending[i] = resolve; ws.send(JSON.stringify({ id: i, method, params })); });
@@ -109,7 +120,7 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
   // Sem janela, a aba às vezes fica "oculta" e o navegador pausa a rolagem suave e o requestAnimationFrame.
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
   await send('Page.bringToFront');
-  return { send, evaluate, shot, ir, celular, fechar, erros, sleep };
+  return { send, evaluate, shot, ir, celular, fechar, erros, avisos, ignorados, sleep };
 }
 
 module.exports = { abrirEdge, sleep };

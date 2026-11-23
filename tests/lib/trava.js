@@ -11,13 +11,24 @@ const TRAVA = path.join(process.env.LOCALAPPDATA || os.tmpdir(), 'FieldbookTeste
 const ILEGIVEL = 60000;
 
 const vivo = pid => { try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; } };
-const ler = arquivo => { try { return JSON.parse(fs.readFileSync(arquivo, 'utf8')); } catch { return null; } };
+const lerTexto = arquivo => { try { return fs.readFileSync(arquivo, 'utf8'); } catch { return null; } };
+const ler = arquivo => { try { return JSON.parse(lerTexto(arquivo)); } catch { return null; } };
 const idade = arquivo => { try { return Date.now() - fs.statSync(arquivo).mtimeMs; } catch { return 0; } };
+// Apaga a trava velha só se ela ainda é a que foi lida (o C60): duas sessões esperando o mesmo teste morto liam o dono
+// morto, uma apagava e gravava a dela, e a outra apagava a da primeira; ficavam dois G4 ao mesmo tempo.
+function soltarSeAinda(arquivo, lida) {
+  if (lerTexto(arquivo) !== lida) return false;
+  fs.rmSync(arquivo, { force: true });
+  return true;
+}
+// O teto da espera: um PID reaproveitado pelo Windows deixa o dono morto "vivo" para sempre (TRAVA_MAX_MS; 6 h).
+const TETO = Number(process.env.TRAVA_MAX_MS || 6 * 3600000);
 
 // Espera a vez e pega a trava. Devolve a função que a solta (que também roda na saída do processo).
-async function travar({ arquivo = TRAVA, espera = 5000, avisar = texto => console.log(texto) } = {}) {
+async function travar({ arquivo = TRAVA, espera = 5000, teto = TETO, avisar = texto => console.log(texto) } = {}) {
   fs.mkdirSync(path.dirname(arquivo), { recursive: true });
   let avisou = false;
+  const comeco = Date.now();
   for (;;) {
     try {
       fs.writeFileSync(arquivo, JSON.stringify({ pid: process.pid, pasta: path.resolve(__dirname, '..', '..'), desde: new Date().toISOString() }), { flag: 'wx' });
@@ -27,8 +38,11 @@ async function travar({ arquivo = TRAVA, espera = 5000, avisar = texto => consol
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
     }
-    const dono = ler(arquivo);
-    if (dono ? !vivo(dono.pid) : idade(arquivo) > ILEGIVEL) { fs.rmSync(arquivo, { force: true }); continue; }
+    const lida = lerTexto(arquivo);
+    let dono = null;
+    try { dono = JSON.parse(lida); } catch { /* ilegível */ }
+    if (dono ? !vivo(dono.pid) : idade(arquivo) > ILEGIVEL) { soltarSeAinda(arquivo, lida); continue; }
+    if (Date.now() - comeco > teto) throw new Error(`A trava (${arquivo}) continua com outro teste depois de ${Math.round(teto / 60000)} min: confira se ele está vivo (o pid ${dono?.pid ?? '?'}).`);
     if (!avisou) {
       avisar(`Outro teste está rodando${dono ? ` (${dono.pasta}, desde ${dono.desde})` : ''}: esperando ele terminar (a trava: ${arquivo}).`);
       avisou = true;
@@ -37,4 +51,4 @@ async function travar({ arquivo = TRAVA, espera = 5000, avisar = texto => consol
   }
 }
 
-module.exports = { travar, TRAVA };
+module.exports = { travar, soltarSeAinda, TRAVA };

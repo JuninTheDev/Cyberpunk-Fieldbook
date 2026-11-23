@@ -115,9 +115,14 @@ async function encerrar(droga) {
 }
 
 // Só o mestre ativo resolve os prazos; também confere os capangas soltos de todas as cenas e a volta ao mundo.
+const comFlag = (colecao, flag) => Boolean(colecao?.some(doc => doc.getFlag?.(SISTEMA, flag)));
 export async function expirarDrogas() {
   if (!game.user.isGM || game.users.activeGM?.id !== game.user.id) return;
-  const atores = new Set([...game.actors, ...game.scenes.contents.flatMap(c => c.tokens.filter(t => !t.actorLink).map(t => t.actor).filter(Boolean))]);
+  // Dos tokens soltos (os capangas), só os que têm uma droga sob efeito no delta: montar o ator sintético de todos os
+  // tokens de todas as cenas, a cada rodada, pesava no mestre (o C61, da auditoria de 2026-11-16). A droga que veio do
+  // ator base, sem mudar, expira com ele.
+  const soltos = game.scenes.contents.flatMap(c => c.tokens.filter(t => !t.actorLink && comFlag(t.delta?.items, 'sobEfeito')).map(t => t.actor).filter(Boolean));
+  const atores = new Set([...game.actors, ...soltos]);
   for (const ator of atores) for (const droga of ator.items.filter(i => i.type === 'droga')) {
     const sob = droga.getFlag(SISTEMA, 'sobEfeito');
     if (Number.isFinite(sob?.fim) && sob.fim <= game.time.worldTime) await acabouOEfeito(droga);

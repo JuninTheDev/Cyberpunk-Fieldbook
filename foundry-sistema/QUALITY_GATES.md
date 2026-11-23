@@ -7,7 +7,7 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
 | Portão | Como roda | Passa quando | Estado |
 | --- | --- | --- | --- |
 | G1 Sintaxe | `node --check` em cada `.mjs` do sistema (com as subpastas, como `scripts/netrun/`) e nos testes | nenhum erro | ativo |
-| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/relatorio.js tests/lib/foundry.js tests/lib/c34-*.js tests/lib/c41-*.js tests/rodar.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
+| G2 Lint | `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/relatorio.js tests/lib/foundry.js tests/lib/edge.js tests/lib/c34-*.js tests/lib/c41-*.js tests/rodar.js tests/cenarios/v14.js` (configuração em `eslint.config.mjs`, na raiz, sem node_modules) | nenhum erro | ativo |
 | G3 Regras | `node --test "tests/sistema/*.test.mjs"` (com a pasta no lugar do glob, o Node 24 tenta rodar a pasta como arquivo) | todos passam: as regras puras com os valores de referência, e o conteúdo gerado contra a própria wiki (tabelas de DV faixa por faixa, lesões pelo 2d6, perícias, os itens da loja) | ativo |
 | G4 Foundry 14 | `node tests/rodar.js v14` (o Foundry 14 do PC, sem janela, pasta descartável; neste PC, com `FOUNDRY14_APP=%LOCALAPPDATA%\FieldbookTeste\foundry14-app` e o `node24\node.exe` dessa pasta) | todas as checagens passam (as instáveis conhecidas, abaixo, só quando caem também no master sem a mudança), e nada pulado: com a parte do Foundry pulada, sai com o código 2 e não vale (o C54), inclusive a de nenhum aviso de compatibilidade nem erro vindo do sistema (capturados com a pilha no navegador do mestre e no do jogador) | ativo |
 | G5 Wiki | `node tests/rodar.js` (a suíte inteira) | nenhuma falha nova; as conhecidas estão listadas abaixo | ativo |
@@ -31,6 +31,16 @@ mudança (ou a rodada seguinte passa). O C59 é para consertá-las.
   duas na mesma rodada (2 de 4 rodadas do master; 1 das 5 mutações do G4).
 - **`inventário (C16)`, a luz da lanterna nos dois clientes:** 1 de 4 rodadas do master.
 - **`tokens dinâmicos (o C45, parte 2)`:** 2 de 4 rodadas do master; e o `andar do token dinâmico (o C52)`, junto, uma vez.
+
+**O ciclo 201 (o C60):** os portões de uma vez, com a lista dos arquivos num lugar só: `node tests/portoes.js` (o G1 a G3),
+`--g4` (o G4, com o Foundry 14 e o Node 24 da pasta descartável) e `--servidor` (o teste dos scripts do servidor). O
+G4 tem um prazo por passo (5 minutos, `PASSO_MS`): o passo preso vira falha e a rodada segue. Os navegadores do G4 não
+deixam passar nenhum 403 nem 409 (o padrão da suíte da wiki deixa os dois). Os avisos do sistema de todas as páginas do
+navegador contam (o `edge.avisos`), e não só os da página de agora. A versão do `system.json` é `0.3.<ciclo>`: suba
+junto com o registro do ciclo (o G3 confere).
+
+**A lição do ciclo 201:** a mutação que sobrevive pode mostrar o que nenhum passo cobre. A das munições do token solto
+(o C61) sobreviveu ao G4 inteiro: nada conferia o EMP no item de um capanga fora da cena vista, e o passo novo entrou.
 
 **A lição do ciclo 200:** um passo novo no meio do G4 não mexe no que os vizinhos usam: os atores do combate (o Atrás,
 a Atiradora), o escondido dos tokens, as armas e a munição de outro ator, e os ouvintes do socket no navegador do

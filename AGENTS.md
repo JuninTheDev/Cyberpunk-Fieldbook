@@ -55,7 +55,8 @@ lerem regras diferentes. Mudou uma regra aqui, mudou para todas.
 7. **A documentação:**
    - o README (o que o sistema faz agora);
    - o ROADMAP (`[x]` com o número do ciclo);
-   - o MIGRATION_STATUS (o registro do ciclo, no formato dos anteriores);
+   - o MIGRATION_STATUS (o registro do ciclo, no formato dos anteriores) e a versão do `system.json` (`0.3.<ciclo>`;
+     o G3 confere);
    - o QUALITY_GATES (a lição, quando houver).
 8. **`git fetch`, commit e push no `master`, no fim de cada ciclo** (na `sistema-v14` até o C28). O número do ciclo segue
    o MIGRATION_STATUS. Se outra sessão já publicou o mesmo número, ela fica com ele, e o seu passa para o seguinte. Num
@@ -69,12 +70,14 @@ Rode da raiz do clone.
 - **G1, sintaxe:** `node --check` em cada `.mjs` de `foundry-sistema/` (com as subpastas, sem `.cache/` e `packs/`), nos
   de `tests/sistema/`, no `tests/lib/foundry14.js`, no `tests/lib/trava.js`, no `tests/lib/relatorio.js`, no
   `tests/lib/foundry.js`, no `tests/rodar.js` e no `tests/cenarios/v14.js`.
-- **G2, lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/relatorio.js tests/lib/foundry.js tests/lib/c34-*.js tests/lib/c41-*.js tests/rodar.js tests/cenarios/v14.js`.
+- **G2, lint:** `npx --yes eslint@10.12.0 foundry-sistema tests/sistema tests/lib/foundry14.js tests/lib/trava.js tests/lib/relatorio.js tests/lib/foundry.js tests/lib/edge.js tests/lib/c34-*.js tests/lib/c41-*.js tests/rodar.js tests/cenarios/v14.js`.
 - **G3, regras:** `node --test "tests/sistema/*.test.mjs"`. Sem falhas conhecidas desde o ciclo 116 (QUALITY_GATES).
 - **G4, Foundry 14:** `node tests/rodar.js v14`. Neste PC, com `FOUNDRY14_APP=%LOCALAPPDATA%\FieldbookTeste\foundry14-app` e o
   `node24\node.exe` dessa pasta (sem eles, a parte do Foundry é pulada). Sem falhas conhecidas desde o ciclo 116; desde
   2026-11-17, quatro instáveis conhecidas, que caem também no master sem mudança (QUALITY_GATES, "Instáveis
   conhecidas"; o C59 do ROADMAP).
+- **De uma vez:** `node tests/portoes.js` roda o G1 a G3 com a mesma lista (desde o ciclo 201); `--g4` roda também o G4
+  (com o Foundry 14 e o Node 24 da pasta descartável) e `--servidor`, o teste dos scripts do servidor.
 - **Os scripts do servidor** (`servidor/*.sh`, quando mudam): `node --test tests/isolados/servidor-sistema.test.js` (com o
   Git Bash; roda os scripts num repositório e com comandos de mentira).
 - **Os hooks dos agentes** (`.claude/hooks/*` e `.claude/settings.json`, quando mudam):

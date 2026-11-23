@@ -14,7 +14,7 @@ const manifesto = JSON.parse(fs.readFileSync(path.join(fonte, 'system.json'), 'u
 const data = process.env.FOUNDRY_DATA || path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'FoundryVTT', 'Data');
 const destino = path.join(data, 'systems', manifesto.id);
 
-// Só instala num Foundry 14: o sistema não roda no 12, e a mesa real (no servidor) é Foundry 12. A versão sai do log do
+// Só instala num Foundry 14: o sistema não roda no 12 (no servidor, o 12 fica parado ao lado do 14, que é a mesa). A versão sai do log do
 // próprio Foundry ao lado da pasta Data ("Foundry Virtual Tabletop - Version 14 Build 369"), do log mais recente. Uma
 // pasta que nunca abriu um Foundry não tem log: aí vale FOUNDRY_VERSAO=14 (o teste usa, porque cria a pasta).
 function versaoDaPasta(pastaData) {

@@ -46,6 +46,11 @@ test('Humanidade máxima: EMP × 10, menos 2 por peça instalada com perda e 4 p
   assert.equal(regras.humanidadeMaxima(5), 50);
   assert.equal(regras.humanidadeMaxima(5, [{ tipo: 'neuralWare', perda: 14 }]), 48, 'Kerenzikov');
   assert.equal(regras.humanidadeMaxima(5, [{ tipo: 'fashionware', perda: 0 }]), 50, 'peça sem perda não reduz');
+  // O C62 (a auditoria de 2026-11-16): a fórmula de perda com a média em 0 também é perda; a fórmula "0" ou vazia, não.
+  assert.equal(regras.humanidadeMaxima(5, [{ tipo: 'cyberArm', perda: 0, formula: '2d6' }]), 48, 'a fórmula 2d6 com a média 0');
+  assert.equal(regras.humanidadeMaxima(5, [{ tipo: 'cyberArm', perda: 0, formula: '0' }]), 50, 'a fórmula 0');
+  assert.equal(regras.humanidadeMaxima(5, [{ tipo: 'cyberArm', perda: 0, formula: ' 0 ' }]), 50, 'a fórmula 0 com espaço');
+  assert.equal(regras.humanidadeMaxima(5, [{ tipo: 'cyberArm', perda: 0, formula: '' }]), 50, 'sem fórmula');
   assert.equal(regras.humanidadeMaxima(5, [{ tipo: 'borgware', perda: 14 }]), 46, 'borgware reduz 4');
   assert.equal(regras.humanidadeMaxima(6, [{ tipo: 'cyberArm', perda: 7 }, { tipo: 'neuralWare', perda: 7 }, { tipo: 'borgware', perda: 0 }]), 52,
     'o CORE tira 4 de todo borgware, até sem perda');

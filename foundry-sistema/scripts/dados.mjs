@@ -146,7 +146,7 @@ export class DadosPersonagem extends foundry.abstract.TypeDataModel {
     for (const chave of ['ref', 'dex', 'move']) a[chave].valor = Math.max(0, a[chave].valor - this.penalidadeArmadura);
     this.hp.max = regras.hpMaximo(corpo.daVida, a.will.valor);
     const instalados = this.parent.items.filter(item => item.type === 'cyberware' && item.system.instalado)
-      .map(item => ({ tipo: item.system.tipo, perda: item.system.perdaHumanidade.media }));
+      .map(item => ({ tipo: item.system.tipo, perda: item.system.perdaHumanidade.media, formula: item.system.perdaHumanidade.formula }));
     this.humanidade.max = regras.humanidadeMaxima(a.emp.valor, instalados);
     // O atual nunca passa do máximo, venha de onde vier (o C31; o CORE, cpr-actor.js:370-380): o HP e a Humanidade, aqui na
     // memória. Abaixo, fica (a Humanidade negativa é a ciberpsicose extrema; o C21). O que se grava também para no máximo

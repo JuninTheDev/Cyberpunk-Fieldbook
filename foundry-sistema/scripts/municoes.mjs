@@ -236,9 +236,14 @@ export async function encerrarEfeitos(mensagem, uuid) {
   return true;
 }
 
+const comFlag = (colecao, flag) => Boolean(colecao?.some(doc => doc.getFlag?.(SISTEMA, flag)));
 export async function expirarTemporarios() {
   if (!souOMestreAtivo()) return;
-  const atores = new Set([...game.actors, ...game.scenes.contents.flatMap(c => c.tokens.filter(t => !t.actorLink).map(t => t.actor).filter(Boolean))]);
+  // Dos tokens soltos, só os que têm no delta um efeito ou um item com prazo (a munição especial, o EMP): montar o ator
+  // sintético de todos os tokens de todas as cenas, a cada rodada, pesava no mestre (o C61).
+  const comPrazo = t => comFlag(t.delta?.effects, 'municao') || comFlag(t.delta?.items, 'municao') || comFlag(t.delta?.items, 'emp');
+  const soltos = game.scenes.contents.flatMap(c => c.tokens.filter(t => !t.actorLink && comPrazo(t)).map(t => t.actor).filter(Boolean));
+  const atores = new Set([...game.actors, ...soltos]);
   for (const ator of atores) {
     const expirou = estado => Number.isFinite(estado?.fim) && estado.fim <= game.time.worldTime;
     for (const [tipo, colecao] of [['ActiveEffect', ator.effects], ['Item', ator.items]]) {

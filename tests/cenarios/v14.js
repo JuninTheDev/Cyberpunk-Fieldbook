@@ -8,7 +8,10 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 const foundry14 = require('../lib/foundry14');
 const { mesaOcupada } = require('../lib/foundry');
-const { abrirEdge } = require('../lib/edge');
+// Os navegadores do G4 não deixam passar nenhum 403 nem 409 (o C60): o padrão da suíte da wiki deixava, e um 403 aqui é
+// uma permissão quebrada.
+const { abrirEdge: abrirEdgeDaWiki } = require('../lib/edge');
+const abrirEdge = opcoes => abrirEdgeDaWiki({ httpPermitido: [], ...opcoes });
 
 module.exports = async ({ edge, servidores, r }) => {
   // O compêndio "Arquiteturas da NET": as do documento da campanha, se a wiki o tiver (as da trama antiga saíram do master
@@ -3736,6 +3739,29 @@ module.exports = async ({ edge, servidores, r }) => {
       return [info.durante.humanidade === 0 && info.durante.perdeu === 2 && info.durante.fim === 172800 && info.durante.doses === 0 && info.durante.dados === 1
         && info.fim.humanidade === 2 && !info.fim.sob && !info.fim.vicio && !info.fim.primario
         && info.outro.humanidade === 2 && info.outro.doses === 2 && info.base.humanidade === 2 && info.base.doses === 2 && info.sobrou === 0, JSON.stringify(info)];
+    });
+
+    await r.passo('C61 (a fase 2 da auditoria de 2026-11-16): o EMP no item do capanga solto, numa cena fora da vista, expira com o prazo, e o outro capanga e o ator base continuam sem EMP', async () => {
+      // As munições só montam o ator sintético dos tokens soltos com a marca no delta (o C61): o capanga com o EMP entra, o
+      // outro não precisa.
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo(), api = game.system.api.municoes;
+        const a = await Actor.implementation.create({ name: 'C61 Capanga', type: 'capanga', items: [foundry.utils.deepClone(cat['core_weapons:heavy-pistol'])] });
+        const cena = await Scene.implementation.create({ name: 'C61 Fora da cena', active: false, width: 1200, height: 1000 });
+        const base = (await a.getTokenDocument({ x: 300, y: 300 })).toObject();
+        await cena.createEmbeddedDocuments('Token', [base, { ...base, _id: undefined, x: 600 }]);
+        const [um, outro] = cena.tokens.contents.sort((x, y) => x.x - y.x).map(t => t.actor);
+        const inicio = game.time.worldTime;
+        try {
+          const arma = um.items.getName('Heavy Pistol');
+          await arma.setFlag('${S}', 'emp', { fim: game.time.worldTime + 10, ataque: 'c61' });
+          const antes = { um: Boolean(arma.getFlag('${S}', 'emp')), noDelta: Boolean(cena.tokens.contents.sort((x, y) => x.x - y.x)[0].delta?.items?.some(i => i.getFlag('${S}', 'emp'))) };
+          await game.time.advance(11);
+          await api.expirarTemporarios();
+          return { antes, um: Boolean(um.items.getName('Heavy Pistol').getFlag('${S}', 'emp')), outro: Boolean(outro.items.getName('Heavy Pistol').getFlag('${S}', 'emp')), base: Boolean(a.items.getName('Heavy Pistol').getFlag('${S}', 'emp')) };
+        } finally { await cena.delete(); await a.delete(); await game.time.advance(inicio - game.time.worldTime); }
+      })()`);
+      return [info.antes.um && info.antes.noDelta && !info.um && !info.outro && !info.base, JSON.stringify(info)];
     });
 
     await r.passo('inventário (C16): Medscanner e Techscanner não acumulam, inclusive com o cyberware; guardar ou desligar o primeiro deixa a outra cópia valer, e os demais bônus continuam', async () => {
@@ -20644,3 +20670,6 @@ module.exports = async ({ edge, servidores, r }) => {
     await mesa.parar();
   }
 };
+
+// O navegador do mestre (o que o tests/rodar.js abre), também sem 403 nem 409 (o C60).
+module.exports.httpPermitido = [];

@@ -476,9 +476,12 @@ export const penalidadeDoFerimento = (ferimento, supressaoDeDor = false) => (sup
 // Humanidade máxima: EMP × 10, menos 2 por peça de cyberware instalada com perda de Humanidade (borgware, menos 4). Peça
 // sem perda (fashionware, o cyberware grátis de 2077) não reduz. Fonte: a wiki ("cada peça reduz o máximo em 2
 // (borgware, em 4). Peças com 0 de perda não reduzem") e o CORE (_calcMaxHumanity, que olha a perda estática da peça).
-// cyberware: [{ tipo, perda }] das peças instaladas, com a perda estática (a média do livro).
+// cyberware: [{ tipo, perda, formula }] das peças instaladas, com a perda estática (a média do livro) e a fórmula. A peça
+// com a fórmula de perda (que não é "0") e a média em 0 (o mestre criou a peça e não preencheu a média) também tem perda
+// (o C62, da auditoria de 2026-11-16): a cirurgia e a ficha do item já a contavam assim.
+const temPerda = peca => Number(peca.perda) > 0 || (Boolean(peca.formula) && String(peca.formula).trim() !== '0');
 export const humanidadeMaxima = (emp, cyberware = []) =>
-  Number(emp) * 10 - cyberware.reduce((soma, peca) => soma + (peca.tipo === 'borgware' ? 4 : Number(peca.perda) > 0 ? 2 : 0), 0);
+  Number(emp) * 10 - cyberware.reduce((soma, peca) => soma + (peca.tipo === 'borgware' ? 4 : temPerda(peca) ? 2 : 0), 0);
 
 // A EMP de agora é a Humanidade / 10 (para baixo), nunca acima da base.
 export const empAtual = (humanidade, empBase) => Math.max(0, Math.min(Number(empBase), Math.floor(Number(humanidade) / 10)));

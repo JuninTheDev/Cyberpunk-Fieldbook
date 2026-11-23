@@ -28,7 +28,7 @@ agentes de IA ficam no `AGENTS.md` da raiz):
   pega itens fora dela (decisão do usuário, 2026-10-17).
 - **Uma pasta por sessão** (a worktree ou o clone de cada uma) e um teste com navegador por vez no PC: a trava do
   `tests/rodar.js` (ciclo 86).
-- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 201). É um ciclo por item, ou por parte dele, com os
+- **Ciclos:** seguem a numeração do MIGRATION_STATUS (o próximo é o 202). É um ciclo por item, ou por parte dele, com os
   portões e o registro, e push no fim de cada ciclo.
 - **A branch:** desde o C28 (ciclo 195, 2026-10-28), o `master`. O push de um ciclo põe o sistema no Foundry 14 da mesa
   sozinho, com a mesa vazia; a `sistema-v14` ficou parada no merge do C28.
@@ -554,16 +554,16 @@ de conserto, a parte do sistema e dos testes):
   dinâmico do C45, parte 2. No ciclo 200, o andar do token dinâmico do C52 também caiu uma vez.
 
 **A fase 2 da auditoria de 2026-11-16** (pedido do usuário em 2026-11-23, "Sim, fase 2"; a parte do sistema e dos testes):
-- [~] **C60. O G4 que não trava e não esconde:** em andamento (sessão KouArt, 2026-11-23). Um prazo por passo (o passo
+- [x] **C60. O G4 que não trava e não esconde:** feito no ciclo 201 (sessão KouArt, 2026-11-23). Um prazo por passo (o passo
   que não termina vira falha, em vez de parar a rodada); a trava sem a corrida de duas sessões esperando o mesmo teste
   morto e com um teto de espera; os avisos do sistema que se perdiam ao recarregar a página; o 403 e o 409 liberados só
   onde o passo os espera.
-- [~] **C61. Os laços no tempo do mundo e no updateUser:** em andamento (sessão KouArt, 2026-11-23). As drogas e as
+- [x] **C61. Os laços no tempo do mundo e no updateUser:** feito no ciclo 201 (sessão KouArt, 2026-11-23). As drogas e as
   munições percorriam todos os atores e tokens a cada rodada; a tripulação refazia todas as cenas a cada flag gravada por
   qualquer usuário.
-- [~] **C62. A Humanidade máxima pela fórmula:** em andamento (sessão KouArt, 2026-11-23). O cyberware com a fórmula de
+- [x] **C62. A Humanidade máxima pela fórmula:** feito no ciclo 201 (sessão KouArt, 2026-11-23). O cyberware com a fórmula de
   perda e a média 0 não baixava a Humanidade máxima (system-rules.js:579: "cada peça reduz o máximo em 2").
-- [~] **C63. A versão do sistema e os documentos:** em andamento (sessão KouArt, 2026-11-23). O system.json parado na
+- [x] **C63. A versão do sistema e os documentos:** feito no ciclo 201 (sessão KouArt, 2026-11-23). O system.json parado na
   0.2.0, o README e o MIGRATION_STATUS dizendo que a campanha está no Foundry 12, e as dúvidas já resolvidas.
 
 **Pronto, para cada item:**
