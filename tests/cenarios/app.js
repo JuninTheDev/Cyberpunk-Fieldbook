@@ -38,6 +38,15 @@ module.exports = async ({ edge, servidores, r }) => {
       const mestre = chaves.filter(chave => ['/', '/index.html', '/mestre-npcs.js', '/campaign-map.js', '/campanhas-painel.js', '/jogadores-mestre.json', '/api/campanhas', '/api/night-city'].includes(chave) || chave.endsWith('.md') || chave.includes('/publicar'));
       return [!mestre.length, mestre.join(', ') || 'nada do mestre'];
     });
+    // A CSP só avisando (a fase 3 da auditoria de 2026-11-16): as duas wikis abertas acima no Edge, e nenhum aviso. Os
+    // scripts da própria página entram pelo hash, que tem de ser o do navegador (o HTML com \n no lugar do CRLF).
+    await r.passo('as duas wikis abrem sem nenhum aviso da CSP (os scripts da própria página batem com o hash)', async () => {
+      await edge.sleep(1500);
+      const arquivo = require('node:path').join(servidores.dados, 'csp-avisos.log');
+      let avisos = [];
+      try { avisos = require('node:fs').readFileSync(arquivo, 'utf8').trim().split('\n').filter(Boolean).map(linha => JSON.parse(linha)); } catch { /* sem o arquivo: nenhum aviso */ }
+      return [!avisos.length, avisos.slice(0, 3).map(aviso => `${aviso.pagina} ${aviso.diretiva} ${aviso.bloqueado} linha ${aviso.linha}`).join(' · ') || 'nenhum aviso'];
+    });
     await r.passo('sem internet (servidor desligado): a wiki dos jogadores abre e mostra as regras', async () => {
       servidor.kill();
       servidor = null;

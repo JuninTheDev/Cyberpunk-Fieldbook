@@ -347,7 +347,9 @@ test('a fase 3 da auditoria: as páginas saem com a CSP só avisando (os scripts
   const html = fs.readFileSync(path.join(__dirname, '..', '..', 'jogadores.html'), 'utf8');
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   assert.ok(inline.length >= 1);
-  for (const [, codigo] of inline) assert.ok(csp.includes(`'sha256-${crypto.createHash('sha256').update(codigo, 'utf8').digest('base64')}'`), 'o hash do script da página');
+  // O hash do navegador: o HTML com as quebras de linha trocadas por \n (o arquivo é CRLF; o hash dos bytes crus não bate).
+  assert.ok(html.includes('\r\n'), 'o jogadores.html é CRLF: é o caso que o teste confere');
+  for (const [, codigo] of inline) assert.ok(csp.includes(`'sha256-${crypto.createHash('sha256').update(codigo.replace(/\r\n?/g, '\n'), 'utf8').digest('base64')}'`), 'o hash do script da página');
   // O aviso do navegador vira uma linha no csp-avisos.log, e a saúde do servidor conta.
   const aviso = await servidor.pedir('/api/csp', { method: 'POST', headers: { 'content-type': 'application/csp-report' }, body: JSON.stringify({ 'csp-report': { 'document-uri': 'https://wiki/jogadores.html', 'violated-directive': 'script-src', 'blocked-uri': 'inline', 'line-number': 12, 'script-sample': 'alert(1)' } }) });
   assert.equal(aviso.status, 204);

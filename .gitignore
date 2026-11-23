@@ -17,6 +17,8 @@ regras-loja.json
 campanhas.json
 campanhas/
 noticias-night-city.json
+# Os avisos da CSP (server.js) quando o servidor roda no PC sem a pasta de dados.
+csp-avisos.log
 # Sessões de login e preferências de cada conta (api-contas.js).
 sessoes-jogadores.json
 preferencias/

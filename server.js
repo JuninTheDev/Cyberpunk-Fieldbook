@@ -236,7 +236,8 @@ function readJsonBody(request, limit = 10_000) {
 // As páginas saem com a Content-Security-Policy-Report-Only: o navegador não bloqueia nada, só avisa o que bloquearia (um
 // script de fora, um script escrito na página por uma falha de escape) no /api/csp, que guarda em csp-avisos.log. Depois
 // de uma semana de uso, olhando os avisos, ela passa a bloquear (a Content-Security-Policy). Os scripts escritos na
-// própria página (dois em cada uma) entram pelo hash, calculado do arquivo servido.
+// própria página (dois em cada uma) entram pelo hash, calculado do arquivo servido. O navegador lê o HTML com as quebras
+// de linha trocadas por \n (os arquivos são CRLF) e só então calcula o hash: aqui também.
 const inlineHashes = new Map();
 function scriptHashes(file, mtimeMs) {
   const known = inlineHashes.get(file);
@@ -244,7 +245,7 @@ function scriptHashes(file, mtimeMs) {
   let hashes = [];
   try {
     const html = fs.readFileSync(file, 'utf8');
-    hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => `'sha256-${crypto.createHash('sha256').update(match[1], 'utf8').digest('base64')}'`);
+    hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => `'sha256-${crypto.createHash('sha256').update(match[1].replace(/\r\n?/g, '\n'), 'utf8').digest('base64')}'`);
   } catch { /* o arquivo sumiu: sem hashes */ }
   inlineHashes.set(file, { mtimeMs, hashes });
   return hashes;
@@ -254,7 +255,8 @@ const cspFor = (file, mtimeMs) => [
   "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'", "media-src 'self' data: blob:", "worker-src 'self'",
   "object-src 'none'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", 'report-uri /api/csp'
 ].join('; ');
-const cspFile = path.join(dataDir, 'csp-avisos.log');
+// Com os dados (no servidor, o DADOS; no PC, a pasta de teste dos personagens, e não a do repositório).
+const cspFile = path.join(charactersDataDir, 'csp-avisos.log');
 const CSP_MAX_BYTES = 1024 * 1024;
 const cspAttempts = limiteDeTentativas({ maximo: 60, janela: 10 * 60 * 1000 });
 // O aviso do navegador: guarda uma linha (a página, a diretiva, o que seria bloqueado), até 1 MB no arquivo.
