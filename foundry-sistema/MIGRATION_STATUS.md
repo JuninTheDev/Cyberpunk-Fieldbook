@@ -9809,7 +9809,9 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   da munição num capanga solto. O passo novo entrou, e ela caiu.
 - **Portões:** G1, 253 arquivos; G2 sem erros (com o `edge.js` e o `portoes.js`); G3, 772/772; G4 completo, 325/325 em 707 s,
   com a mesa do servidor vazia. Antes, pelo `node tests/portoes.js --g4`, uma rodada de 323/325 (os dois do token
-  dinâmico, instáveis conhecidas, que passaram na rodada seguinte) e uma em que o Foundry de teste não abriu o mundo.
+  dinâmico, instáveis conhecidas, que passaram na rodada seguinte) e uma em que o Foundry de teste não abriu o mundo. Depois da mescla
+  com o master (a wiki da fase 2: as sessões do mestre), 324/325: só o token dinâmico do C45, parte 2 (instável conhecida,
+  que cai também no master sem mudança).
 - **Mutações:** as 12 caíram, e os arquivos voltaram exatos (md5).
   - **No G3 (10):** o passo sem prazo (S11); a trava que sai sem reler (S12) e a espera sem teto (S13); os avisos só da
     página de agora (S14); o 403 e o 409 sempre liberados (S15) e os navegadores do G4 com o padrão da wiki (S16); a
