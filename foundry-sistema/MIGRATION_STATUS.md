@@ -9873,6 +9873,39 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1, 256 arquivos; G2 sem erros; G3, 777/777; G4 completo, 328/328 em 711 s, com a mesa do servidor vazia. Antes, duas rodadas de 326/328: o NPC do passo era do jogador pelo padrão do mundo (o passo passou a dizer quem é dono) e o passo do `/teste` não tinha cena nem token ligado (o token sai do protótipo, numa cena do passo).
 - **Mutações:** as 12 caíram, e os arquivos voltaram exatos (md5). **No G3 (9):** o empate que passa (P1), a escala diferente da wiki (P2), o nome mais curto que ganha (P3), a família sem o nome (P4) e sem a melhor (P5), o privado que todos veem (P6), a segunda rolagem que conta (P7), encerrar sem marcar (P8) e o MOVE como teste (P9). **No G4 (3):** a rolagem velha aceita (PG1), a linha de outro ator aceita (PG2) e o cartão igual para todos (PG3).
 
+### Ciclo 204 (2026-11-23): C66, as regras das modificações de armas e os situacionais pela arma (sessão KouArt)
+
+- **Pedido do usuário (2026-11-23):** "um sistema completo de modificação de armas, que podem dar vantagens para as armas
+  em algumas situações ou gerais... tornar cada arma única, para que os jogadores tenham apego às suas próprias armas",
+  na wiki e no Foundry, ligados como a ficha. O planejamento foi de uma equipe (as regras, os jogadores, o mestre e a
+  técnica), e o plano ficou no ROADMAP (o C66 ao C73).
+- **As decisões do usuário (2026-11-23):** regra da casa, ligada à Invention Expertise do Tech (RED p. 147–148; nenhum
+  livro da mesa tem modificações além dos acessórios); slots próprios de modificação; a modificação permanente; nenhum
+  bônus fixo no ataque, uma de ataque por arma (+1 numa situação) e o teto de +3 por rolagem; o defeito sorteado; as
+  marcas de história só com história. A lista inicial das modificações (as 26 da proposta) foi aprovada e entra no C68.
+- **A fonte das regras:** as decisões no ROADMAP, que o G3 confere; a página da regra da casa na wiki vem no C68.
+- **Entrega:**
+  - o `regras-modificacoes.mjs`: os slots, o formato da modificação (a condição e o efeito, validados), onde ela cabe
+    (o encaixe, a mesma duas vezes, uma de ataque, um defeito, os slots), o que entra no ataque e no dano (ligado, não sei
+    ou fora; a mesma não soma; no mesmo grupo, a maior), o que muda a arma (o pente, se se esconde, até onde emperra) e o
+    teto de +3;
+  - no `documentos.mjs`, o situacional de uma arma (o efeito dela ou o do acessório instalado nela) só no ataque com
+    ela. Antes, um efeito na pistola A aparecia no ataque da pistola B, que usa a mesma perícia (nenhum item do catálogo
+    tem um assim: o problema era das modificações que viriam);
+  - a versão `0.3.204`.
+- **No caminho:** o `detalhes-da-ficha.test.mjs` vigia a linha dos situacionais; o filtro da arma foi para uma linha à
+  parte (QUALITY_GATES).
+- **Fica para depois:** o acessório solto (fora de qualquer arma) continua valendo sempre, como o tipo upgrade valia
+  (regras-efeitos, "o resto vale sempre"); a arma exótica é a de longo alcance com menos de 3 slots (regras.armaExotica),
+  e o C67 confere isso nas de 2077 e do Black Chrome.
+- **Testes de referência:**
+  - **G3:** o `modificacoes.test.mjs` (5): as decisões no ROADMAP e os números, as recusas, a condição de três valores,
+    onde cabe, e o ataque, o dano, a arma e o teto.
+  - **G4:** um passo do C66: duas pistolas com a mesma perícia, um efeito em cada, um acessório com efeito na A e um no
+    personagem; cada ataque mostra só o da arma e o do personagem, e o acessório passado para a B vai junto.
+- **Portões:** G1, 258 arquivos; G2 sem erros; G3, 782/782; G4 completo, 329/329 em 691 s, com a mesa do servidor vazia (a primeira rodada deu 328/329: o passo novo contava com a ordem dos itens criados, que o Foundry não garante; ele passou a achar cada pistola pelo nome).
+- **Mutações:** as 12 caíram, e os arquivos voltaram exatos (md5). No G3, 10 no regras-modificacoes.mjs: o "não sei" na frente do "não" no todos, o bônus fixo de ataque, o dano contra gente, a arma ruim com 2 slots, dois defeitos com dois slots, duas de ataque, o "não sei" ligado, o último do grupo no lugar do maior, o teto em +4 e o "se esconde" que ganha (duas sobreviveram na primeira rodada, o M5 e o M8, e o teste ganhou a exótica com dois defeitos e as duas ordens do grupo). No G4, 2 no documentos.mjs: o situacional de outra arma no ataque e o acessório de outra arma como do personagem.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

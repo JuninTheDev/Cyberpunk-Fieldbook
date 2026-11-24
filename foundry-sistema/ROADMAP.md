@@ -581,7 +581,7 @@ ligada à Invention Expertise do Tech (RED p. 147–148); os acessórios do livr
 permanente (só o Tech tira, e tirar destrói); nenhuma dá bônus fixo no ataque, no máximo uma de ataque por arma (+1
 numa situação) e a arma soma até +3 por rolagem; as marcas de história só contam história. A lista inicial das
 modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68).
-- [~] **C66. As regras das modificações e os situacionais pela arma:** em andamento (sessão KouArt, 2026-11-23). As regras
+- [x] **C66. As regras das modificações e os situacionais pela arma:** feito no ciclo 204 (sessão KouArt, 2026-11-23). As regras
   puras (a condição e o efeito de cada modificação, o teto, o mesmo efeito que não soma duas vezes, os slots) e o
   situacional da arma que aparece só no ataque com ela.
 - [ ] **C67. As modificações no Foundry:** a rolagem, a ficha do item e o cartão do ataque.

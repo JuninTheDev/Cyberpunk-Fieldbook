@@ -236,24 +236,33 @@ export class AtorCPR extends Actor {
     const familia = periciaId ? this.system.pericias[periciaId]?.familia : '';
     return new Set(['system.bonus.todasAcoes', ...[periciaId, familia].filter(Boolean).map(id => `system.bonus.pericias.${id}`)]);
   }
-  // Os efeitos situacionais dos itens em uso que mexem nestas chaves.
-  #efeitosSituacionais(chaves) {
+  // Os efeitos situacionais dos itens em uso que mexem nestas chaves. vale: o filtro do ataque (os da arma).
+  #efeitosSituacionais(chaves, vale = () => true) {
     const lista = [];
     for (const efeito of this.allApplicableEffects()) {
       const dados = efeito.system;
       if (!dados?.situacional?.sim || efeito.disabled || dados.foraDeUso) continue;
+      if (!vale(efeito)) continue;
       const valor = dados.changes.filter(mudanca => chaves.has(mudanca.key)).reduce((soma, mudanca) => soma + (Number(mudanca.value) || 0), 0);
       const origem = efeito.parent instanceof Item ? efeito.parent.name : efeito.name;
       if (valor) lista.push({ id: efeito.uuid, rotulo: `${origem}: ${dados.situacional.alvo}`, valor, ligado: dados.situacional.ligadoPorPadrao });
     }
     return lista;
   }
-  // Os situacionais de um ataque: os efeitos na perícia da arma e em todas as ações (os de Role não: são de teste) e, num
+  // A arma de onde vem o efeito: a do próprio efeito, ou a arma onde está instalado o upgrade dele. null: não vem de arma.
+  armaDoEfeito(efeito) {
+    const item = efeito.parent instanceof Item ? efeito.parent : null;
+    if (item?.type === 'arma') return item;
+    const onde = item?.type === 'upgrade' && item.system.instaladoEm ? this.items.get(item.system.instaladoEm) : null;
+    return onde?.type === 'arma' ? onde : null;
+  }
+  // Os situacionais de um ataque: os efeitos na perícia da arma e em todas as ações (os de Role não: são de teste; os de
+  // outra arma, ou de um acessório instalado em outra arma, também não: o C66, a modificação que só vale na arma dela) e, num
   // tiro único ou mirado com arma à distância, os bônus de longe (a 51 m ou mais, wiki), ligados quando a regra vale: os
   // TeleOptics instalados que servem nesse tiro (regras.teleopticsNoTiro) e a luneta de precisão da arma, que não acumula
   // com cyberware óptico (regras.lunetaVale).
   situacionaisDoAtaque(arma, { pericia, modo, local = 'corpo', metros = null }) {
-    const lista = this.#efeitosSituacionais(this.#chavesDoTeste(pericia));
+    const lista = this.#efeitosSituacionais(this.#chavesDoTeste(pericia), efeito => [null, arma.id].includes(this.armaDoEfeito(efeito)?.id ?? null));
     if (!arma.system.aDistancia || !ehTiroUnico(modo)) return lista;
     const mirado = Boolean(LOCAIS_MIRADOS[local]);
     const tiro = mirado ? 'tiro mirado' : 'tiro único';

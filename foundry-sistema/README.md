@@ -620,6 +620,16 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   - **Roupas** guardam o tipo e o estilo, com os nomes da loja da wiki.
   - **Netrunning:** o cyberdeck (os slots, com os programas instalados nele e quantos slots ocupam) e os programas (classe, ATK, DEF, REZ, o dano e o deck onde estão). Só aparece na ficha de quem tem um dos dois. O combate na NET fica na aba NET.
   - **Upgrades e acessórios:** cada um diz onde instala (arma, cyberdeck ou veículo), quantos slots ocupa e em que item está. Instalado numa arma, o carregador estendido ou tambor troca o tamanho do pente (o rifle de assalto vai de 25 a 35 ou 45, como a tabela de carregadores da wiki), e o Smartgun Link dá +1 nos ataques à distância, com os plugs de interface ou o plug subdérmico instalados (o mesmo acessório duas vezes não soma). Na arma, o que não cabe nos slots (3 na de longo alcance que não é exótica) e o segundo carregador são recusados, com o aviso (o C11, parte 4, ciclo 136); a montagem que vem da wiki entra como veio. Tirado o carregador, o pente que passa do máximo volta a ele, e as balas a mais voltam para a munição. O hardware ocupa slots do deck.
+  - **O situacional da arma** (o C66): o efeito situacional de uma arma, ou de um acessório instalado nela, só aparece
+    na janela de rolagem do ataque com ela, e não no de outra arma com a mesma perícia; o do personagem (e o dos outros
+    itens em uso) aparece em todas. No teste da perícia, fora do ataque, continuam todos.
+  - **As modificações de armas** (as regras do C66; a rolagem, a ficha e a loja vêm do C67 ao C73): a regra da casa que o
+    usuário decidiu em 2026-11-23 (o ROADMAP), ligada à Invention Expertise do Tech. Os slots de modificação são à parte
+    dos de acessório: 2 em toda arma, a branca também; 1 na exótica e na de qualidade ruim; o defeito (sorteado) dá +1, até
+    3, e só cabe um. Nenhuma modificação dá bônus fixo no ataque: no máximo uma de ataque por arma, de +1 numa situação, e
+    a arma soma até +3 por rolagem. O dano a mais nunca vale contra gente. Cada modificação diz a condição de cada efeito
+    (o modo, o mirado, a distância, a munição, o alvo, se quem atira é o dono, ou o texto que só a mesa sabe): o efeito
+    vem ligado na janela quando a condição vale, desligado quando o sistema não sabe e fora quando não vale.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

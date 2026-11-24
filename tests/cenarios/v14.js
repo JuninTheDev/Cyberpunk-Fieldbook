@@ -20800,6 +20800,36 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('C66: o situacional de uma arma (o efeito dela ou o do acessório instalado nela) só aparece no ataque com ela, não no de outra arma com a mesma perícia; o do personagem aparece nas duas', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const efeito = (nome, valor) => ({ name: nome, type: 'base', transfer: true, system: { situacional: { sim: true, ligadoPorPadrao: true, alvo: nome }, changes: [{ key: 'system.bonus.pericias.handgun', type: 'add', value: String(valor), phase: 'initial', priority: null }] } });
+        const pistola = nome => { const d = pegar('core_weapons:heavy-pistol'); d.name = nome; d.system.equipada = true; return d; };
+        const ator = await Actor.implementation.create({ name: 'C66 Atirador', type: 'personagem', system: { pericias: { handgun: { nivel: 4 } } }, effects: [efeito('mão firme', 1)] });
+        try {
+          // O Foundry não devolve os itens criados na ordem pedida: cada pistola pelo nome.
+          const criadas = await ator.createEmbeddedDocuments('Item', [{ ...pistola('C66 Pistola A'), effects: [efeito('cabo da A', 1)] }, { ...pistola('C66 Pistola B'), effects: [efeito('cabo da B', 2)] }]);
+          const [a, b] = ['C66 Pistola A', 'C66 Pistola B'].map(nome => criadas.find(item => item.name === nome));
+          const [mod] = await ator.createEmbeddedDocuments('Item', [{ name: 'C66 Mod da A', type: 'upgrade', system: { alvo: 'arma', tamanho: 1, instaladoEm: a.id }, effects: [efeito('mira da A', 1)] }]);
+          const ler = arma => ator.situacionaisDoAtaque(arma, { pericia: 'handgun', modo: 'tiro', local: 'corpo', metros: 10 }).map(s => s.rotulo + ' ' + s.valor).sort();
+          const antes = { a: ler(a), b: ler(b), teste: ator.situacionaisDoTeste('handgun').length, origem: [a, b, mod].map(item => ator.armaDoEfeito(item.effects.contents[0])?.name ?? null) };
+          // A mod passa para a B: o efeito dela vai junto.
+          await mod.update({ 'system.instaladoEm': b.id });
+          const trocada = { a: ler(a), b: ler(b) };
+          return { antes, trocada, instalada: ator.items.get(mod.id).system.instaladoEm === b.id };
+        } finally { await ator.delete(); }
+      })()`);
+      const { antes, trocada } = info;
+      const ok = antes.a.join() === 'C66 Mod da A: mira da A 1,C66 Pistola A: cabo da A 1,mão firme: mão firme 1'.split(',').sort().join()
+        && antes.b.join() === 'C66 Pistola B: cabo da B 2,mão firme: mão firme 1'.split(',').sort().join()
+        // O teste da perícia (fora do ataque) continua com todos os itens em uso, como antes.
+        && antes.teste === 4 && antes.origem.join() === 'C66 Pistola A,C66 Pistola B,C66 Pistola A'
+        && info.instalada && trocada.a.join() === 'C66 Pistola A: cabo da A 1,mão firme: mão firme 1'.split(',').sort().join()
+        && trocada.b.join() === 'C66 Mod da A: mira da A 1,C66 Pistola B: cabo da B 2,mão firme: mão firme 1'.split(',').sort().join();
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

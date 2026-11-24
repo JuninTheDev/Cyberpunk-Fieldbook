@@ -489,6 +489,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   No C65, o jogador reenviou uma rolagem velha dele para o pedido novo, e o mestre aceitou: a rolagem tem de dizer a que
   pedido e a que linha responde (as flags do teste), e o mestre confere as duas, o autor e o dono do ator. Um passo do G4
   manda o aviso falso de propósito.
+- **O teste que vigia uma linha do código** (ciclo 204): o `detalhes-da-ficha.test.mjs` confere a linha que tira os
+  efeitos desligados e fora de uso dos situacionais. No C66, juntar o filtro da arma nessa linha derrubou o G3; a
+  condição nova vai numa linha à parte, e a vigiada fica como está.
 
 ## Build
 
