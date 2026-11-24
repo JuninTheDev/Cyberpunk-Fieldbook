@@ -591,10 +591,17 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
   build e os pedidos.
 - [x] **C69. A identidade da arma no Foundry:** feito no ciclo 207 (sessão KouArt, 2026-11-24). O nome próprio, o diário
   (abates, críticos, primeiro sangue, sessões e os marcos), a nota do mestre e a volta para a wiki.
-- [ ] **C70. O cartão da arma e o Arsenal na wiki:** com a ida e a volta para o Foundry.
+- [~] **C70. O Arsenal e a bancada da arma na wiki:** em andamento (sessão KouArt, 2026-11-24). A bancada de cada arma no
+  jeito da aba Cyberware (o esboço "Bancada da arma" de 2026-11-24, aprovado pelo usuário: "Gostei de como está, só
+  adapte o visual para o visual da wiki"): a arma em holograma, os slots de acessório e de modificação, o defeito, o teto
+  e o que cabe em cada slot livre, e a identidade; com a ida e a volta para o Foundry.
 - [ ] **C71. A oficina do mestre:** criar uma modificação sem programar e os defeitos escondidos.
 - [ ] **C72. A economia:** o Tech que instala (o teste pelo C65), o presente do mestre, o Night Market e o teto por campanha.
 - [ ] **C73. O risco:** a arma quebrada, a relíquia e reforjar.
+- [ ] **C74. A bancada da arma no Foundry:** pedido do usuário (2026-11-24): "uma tela onde vc pode ver a arma e as
+  modificações e itens equipadas nela... através de uma tela de modificação da arma". A aba Bancada da ficha da arma, com
+  os dados da bancada da wiki (o C70): o acessório entra arrastando do inventário; a modificação, só pelo Tech ou pelo
+  mestre.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
