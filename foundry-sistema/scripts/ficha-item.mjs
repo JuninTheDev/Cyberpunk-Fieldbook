@@ -5,6 +5,8 @@ import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { PERICIAS } from './gerado.mjs';
 import { descreverEfeito, TIPOS as TIPOS_DE_MOD, validarMod } from './regras-modificacoes.mjs';
+import { contadores, descreverEvento, diario, LIMITES as LIMITES_DA_IDENTIDADE } from './regras-identidade.mjs';
+import { anotarMarco, temIdentidade, tornarDono } from './identidade.mjs';
 import { bonusDoCritico, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
@@ -90,7 +92,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       atacar: FichaItem.#atacar, recarregar: FichaItem.#recarregar, ablar: FichaItem.#ablar, rodar: FichaItem.#rodar, restaurarRez: FichaItem.#restaurarRez,
       adicionarJanela: FichaItem.#adicionarJanela, removerJanela: FichaItem.#removerJanela, ajustarVidros: FichaItem.#ajustarVidros, prepararArmaVeicular: FichaItem.#prepararArmaVeicular,
       porVeiculoNaCena: FichaItem.#porVeiculoNaCena, perceberArmadura: FichaItem.#perceberArmadura,
-      corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga
+      corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga,
+      anotarMarco: FichaItem.#anotarMarco, tornarDono: FichaItem.#tornarDono
     }
   };
 
@@ -102,6 +105,13 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static TABS = {
     item: { tabs: [{ id: 'detalhes', label: 'Detalhes' }, { id: 'descricao', label: 'Descrição' }, { id: 'efeitos', label: 'Efeitos' }], initial: 'detalhes' }
   };
+
+  // A aba História (o C69) só na arma de um personagem que tem diário (regras de identidade.temIdentidade).
+  _getTabsConfig(grupo) {
+    const config = super._getTabsConfig(grupo);
+    if (grupo !== 'item' || !config || !temIdentidade(this.item)) return config;
+    return { ...config, tabs: [...config.tabs, { id: 'historia', label: 'História' }] };
+  }
 
   async _onRender(contexto, opcoes) {
     await super._onRender(contexto, opcoes);
@@ -185,6 +195,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       slotsUsados: item.slotsUsados,
       modsDaArma: tipo === 'arma' && item.actor ? { ...item.slotsDeModificacao, nomes: item.modificacoes.map(i => i.name).join(', ') } : null,
       modificacao: tipo === 'upgrade' && item.getFlag(SISTEMA, 'mod') ? modificacaoDaFicha(item.getFlag(SISTEMA, 'mod')) : null,
+      // A identidade da arma (o C69): o nome próprio no alto e a aba História.
+      apelidoDaArma: tipo === 'arma' ? item.identidade.apelido : '',
+      historia: temIdentidade(item) ? historiaDaFicha(item) : null,
       // A opção instalada de um ator: a fundação onde está, entre as instaladas em que ela cabe (e a de agora), ou nenhuma.
       fundacoes: item.type === 'cyberware' && item.actor && item.system.instalado && !item.system.fundacional
         ? Object.fromEntries([['', 'Sem fundação'], ...[...new Set([item.instaladoNo, ...item.actor.fundacoesPara(item)].filter(Boolean))].map(fundacao => [fundacao.id, fundacao.name])])
@@ -242,6 +255,15 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static #restaurarRez() {
     return this.item.restaurarRez();
   }
+  // O marco à mão e o dono (a aba História, o C69).
+  static async #anotarMarco() {
+    const campo = this.element.querySelector('.marco-novo');
+    if (!campo?.value.trim()) return null;
+    await anotarMarco(this.item, campo.value);
+    campo.value = '';
+    return null;
+  }
+  static #tornarDono() { return tornarDono(this.item); }
   // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
   static #rolarHumanidade() {
     return this.item.rolarHumanidade();
@@ -273,4 +295,16 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
 function modificacaoDaFicha(mod) {
   const invalida = validarMod(mod);
   return invalida ? { invalida } : { tipo: TIPOS_DE_MOD[mod.tipo], tamanho: mod.tamanho, efeitos: mod.efeitos.map(descreverEfeito) };
+}
+
+// A aba História da arma (o C69): a identidade, os contadores, o diário (os mais novos primeiro) e, só para o mestre, o
+// dono e a nota dele.
+function historiaDaFicha(item) {
+  const identidade = item.identidade;
+  const conta = contadores(identidade);
+  return {
+    ...identidade, ...conta, limites: LIMITES_DA_IDENTIDADE, dono: identidade.dono?.nome ?? '', carregaEhDono: !identidade.dono || identidade.dono.id === item.actor.id,
+    primeiroSangue: conta.primeiroSangue ? descreverEvento({ tipo: 'primeiroSangue', ...conta.primeiroSangue }) : '',
+    diario: diario(identidade, 50), podeAnotar: item.isOwner, mestre: game.user.isGM, nota: game.user.isGM ? item.getFlag(SISTEMA, 'notaDoMestre') ?? '' : ''
+  };
 }

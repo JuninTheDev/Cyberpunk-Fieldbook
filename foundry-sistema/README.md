@@ -647,6 +647,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     categoria delas (o `loja-do-14.mjs`), e o pedido entrega a modificação solta no inventário; a instalação é pela ficha.
     O encaixe também diz a classe do Kit: o defletor de ricochete só entra numa arma Power (a do Rebuild também), e a
     carga silenciosa, numa Tech.
+  - **A identidade da arma** (o C69): a flag `arma` da arma de um personagem (não a Briga, as Artes Marciais nem a arma
+    de um cyberware ou acessório) guarda o nome próprio, a frase, a aparência, quem a fez, o dono e o diário. O dono é o
+    personagem que a recebe primeiro (a cópia na mão de outro continua do dono; o mestre passa a arma com "vira o dono"),
+    e a condição "dono" das modificações lê dele. O diário conta sozinho o primeiro sangue, os abates (o alvo que passa de
+    1 HP ou mais para menos de 1), os críticos e as sessões (o primeiro ataque do dia com ela), e o "Desfazer" do cartão
+    tira os eventos do golpe; os contadores saem dos eventos. No 5.º, 10.º, 25.º, 50.º e 100.º abate, um aviso sussurrado
+    ao dono e ao mestre, uma vez. A rolagem e a aba Combate mostram "Apelido · Modelo" (o nome do item continua o modelo).
+    A aba História da ficha da arma tem os campos, os contadores, o diário, o "Anotar um marco" e, só para o mestre, a
+    nota dele (outra flag, que não vai para a wiki; o jogador dono do item a lê pelo console, então não é segredo de
+    verdade). A ficha que volta para a wiki leva a identidade (`identidade` na linha da arma, com os 30 eventos mais
+    novos). A API: `game.system.api.identidade`.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

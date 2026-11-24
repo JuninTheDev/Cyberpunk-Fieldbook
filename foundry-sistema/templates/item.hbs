@@ -7,6 +7,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <img class="retrato" src="{{item.img}}" alt="{{item.name}}" data-action="editImage" data-edit="img" role="button" tabindex="0" aria-label="Trocar a imagem do item">
       <div class="nome-e-resumo">
         <input class="nome" type="text" name="name" aria-label="Nome do item" value="{{item.name}}" {{#unless editavel}}disabled{{/unless}}>
+        {{#if apelidoDaArma}}<p class="apelido-da-arma">{{apelidoDaArma}}</p>{{/if}}
         {{#if resumo}}<p class="resumo">{{resumo}}</p>{{/if}}
         {{#if etiquetas.length}}<p class="etiquetas">{{#each etiquetas}}<span class="etiqueta {{classe}}">{{texto}}</span>{{/each}}</p>{{/if}}
       </div>
@@ -191,6 +192,25 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
     {{#if sistema.fonte.livro}}<p class="fonte">{{sistema.fonte.livro}}, p. {{sistema.fonte.pagina}}</p>{{/if}}
   </section>
 
+  {{#if historia}}
+  {{!-- A identidade da arma (o C69): o nome próprio, a frase, a aparência, quem fez, o dono, os contadores e o diário, que
+  conta sozinho (o primeiro sangue, os abates, os críticos e as sessões) e guarda os marcos à mão. A nota do mestre só
+  aparece para o mestre. --}}
+  <section class="tab historia-da-arma {{tabs.historia.cssClass}}" data-group="item" data-tab="historia">
+    <div class="campos">
+      <label class="celula"><span>Nome próprio</span><input type="text" name="flags.cpr-fieldbook.arma.apelido" value="{{historia.apelido}}" maxlength="{{historia.limites.apelido}}" placeholder="Velha Senhora"></label>
+      <label class="celula"><span>Quem fez</span><input type="text" name="flags.cpr-fieldbook.arma.feitaPor" value="{{historia.feitaPor}}" maxlength="{{historia.limites.feitaPor}}"></label>
+      <label class="celula larga"><span>Frase</span><input type="text" name="flags.cpr-fieldbook.arma.frase" value="{{historia.frase}}" maxlength="{{historia.limites.frase}}"></label>
+      <label class="celula larga"><span>Aparência</span><input type="text" name="flags.cpr-fieldbook.arma.aparencia" value="{{historia.aparencia}}" maxlength="{{historia.limites.aparencia}}"></label>
+      <p class="nota dono-da-arma">Dono: {{#if historia.dono}}{{historia.dono}}{{else}}quem a carrega{{/if}}{{#if historia.mestre}}{{#unless historia.carregaEhDono}} <button type="button" data-action="tornarDono">{{item.actor.name}} vira o dono</button>{{/unless}}{{/if}}</p>
+    </div>
+    <p class="contadores-da-arma"><span><b>{{historia.abates}}</b> abates</span><span><b>{{historia.criticos}}</b> críticos</span><span><b>{{historia.sessoes}}</b> sessões</span></p>
+    {{#if historia.primeiroSangue}}<p class="nota primeiro-sangue">{{historia.primeiroSangue}}</p>{{/if}}
+    {{#if historia.podeAnotar}}<div class="anotar-marco"><input type="text" class="marco-novo" maxlength="{{historia.limites.texto}}" aria-label="Um momento da arma" placeholder="O tiro que derrubou o Gato de Watson"><button type="button" data-action="anotarMarco">Anotar um marco</button></div>{{/if}}
+    <ol class="diario-da-arma">{{#each historia.diario}}<li class="evento-{{tipo}}">{{texto}}</li>{{else}}<li>O diário começa no primeiro ataque.</li>{{/each}}</ol>
+    {{#if historia.mestre}}<div class="campos"><label class="celula larga nota-do-mestre"><span>Nota do mestre (fora da ficha do jogador e da wiki)</span><input type="text" name="flags.cpr-fieldbook.notaDoMestre" value="{{historia.nota}}"></label></div>{{/if}}
+  </section>
+  {{/if}}
   <section class="tab efeitos-do-item {{tabs.efeitos.cssClass}}" data-group="item" data-tab="efeitos">
     <ol class="efeitos">
       {{#each efeitos}}

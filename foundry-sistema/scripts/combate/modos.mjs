@@ -12,6 +12,7 @@ import { rolarDano } from '../rolagens.mjs';
 import { dvDoArremesso, ehArremesso, ignorarNoArremesso } from '../arremessar.mjs';
 import { ehArmaDaCombinacao } from '../armas-cyberware.mjs';
 import { derivadosDaArma, efeitosDoDano, emperraPelaMod } from '../regras-modificacoes.mjs';
+import { anotarGolpe } from '../identidade.mjs';
 import { danoPorAlvo, falhaNaCombinacao, lesaoDupla, MENOS_DA_SUCATA, MUNICAO_SUCATA, PONTO_FRACO } from '../regras-black-chrome.mjs';
 import { escudoHumanoDe, usadoComoEscudo, danoNoEscudoHumano } from '../escudo-humano.mjs';
 import { STATUS_COBERTURA, STATUS_SUPRIMIDO, ROTULO, precisaRolar, centroDe, combateDe, conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular, distancia, esc, jogadorDe, montadaNoVeiculo } from './apoio.mjs';
@@ -494,6 +495,8 @@ export async function ferir(ctx, linha, dano, { escudo = false, lesaoDoCritico =
   const sofreu = deflexao > 0 && efeito.entrou > 0;
   if (sofreu) await marcarRodada(ctx, ator, 'deflexao');
   linha.dano = { ...efeito, critico: dano.critico, formula: dano.formula, pontoFraco: dano.pontoFraco || 0, deflexao: sofreu ? deflexao : 0, lesoes: [] };
+  // O diário da arma (o C69): o primeiro sangue, o abate e o crítico, com a chave do golpe para o "Desfazer".
+  await anotarGolpe(ctx, linha, efeito, Boolean(dano.critico));
   const modo = config('lesaoCritica');
   const lesao = async opcoes => {
     if (borracha) {

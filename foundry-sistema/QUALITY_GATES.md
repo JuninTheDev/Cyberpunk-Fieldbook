@@ -494,6 +494,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   condição nova vai numa linha à parte, e a vigiada fica como está.
 - **A ordem dos itens criados** (ciclos 204 e 205): o `createEmbeddedDocuments` não devolve os itens na ordem pedida.
   No C66, o passo pegou a pistola B como se fosse a A; ache cada item pelo nome (ou pelo id que o passo guardou).
+- **A flag do item não guarda segredo do dono dele** (ciclo 207): o jogador dono do ator lê qualquer flag dos itens
+  dele (pelo console, ou pela API). O que é só do mestre e precisa ser segredo de verdade vai para o servidor da wiki; no
+  Foundry, a ficha só deixa de mostrar.
 
 ## Build
 

@@ -589,8 +589,8 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
   cartão do ataque.
 - [x] **C68. A página da regra da casa, o catálogo e a loja:** feito no ciclo 206 (sessão KouArt, 2026-11-24). A wiki, o
   build e os pedidos.
-- [~] **C69. A identidade da arma no Foundry:** em andamento (sessão KouArt, 2026-11-24). O nome próprio, o diário (abates,
-  críticos, primeiro sangue, sessões e os marcos), a nota do mestre e a volta para a wiki.
+- [x] **C69. A identidade da arma no Foundry:** feito no ciclo 207 (sessão KouArt, 2026-11-24). O nome próprio, o diário
+  (abates, críticos, primeiro sangue, sessões e os marcos), a nota do mestre e a volta para a wiki.
 - [ ] **C70. O cartão da arma e o Arsenal na wiki:** com a ida e a volta para o Foundry.
 - [ ] **C71. A oficina do mestre:** criar uma modificação sem programar e os defeitos escondidos.
 - [ ] **C72. A economia:** o Tech que instala (o teste pelo C65), o presente do mestre, o Night Market e o teto por campanha.

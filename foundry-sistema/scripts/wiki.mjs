@@ -12,6 +12,7 @@ import { aplicarRetrato, retratoMudou } from './wiki-retrato.mjs';
 export { avisosDaWiki } from './wiki-avisos.mjs';
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
+import { paraAWiki as identidadeParaAWiki } from './regras-identidade.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { ehBaseNatural, ladoValido, linhaDoExtrato, moradiaDaMesa, moradiaDaWiki, moradiaParaAWiki, periciaPropria } from './regras.mjs';
@@ -516,6 +517,10 @@ export function fichaParaAWiki(ator) {
       });
       const veicular = item.getFlag(SISTEMA, 'armaVeicular');
       if (veicular) linha.armaVeicular = foundry.utils.deepClone(veicular);
+      // A identidade da arma (o C69): o nome próprio, a frase, os contadores e o diário, para o cartão da arma na wiki (o
+      // C70). A nota do mestre é outra flag e não vai.
+      const identidade = item.getFlag(SISTEMA, 'arma');
+      if (identidade) linha.identidade = identidadeParaAWiki(identidade);
     }
     if (item.type === 'armadura') Object.assign(linha, { cabeca: x.sp.cabeca.max ? x.sp.cabeca.value : 0, corpo: x.sp.corpo.max ? x.sp.corpo.value : 0 });
     // O lado (o C30): "local" no instalado, "localPlanejado" no que espera instalar, como o cpr-2077; e o tipo, o tamanho e

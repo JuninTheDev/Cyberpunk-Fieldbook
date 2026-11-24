@@ -15,6 +15,8 @@ import {
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { efeitosDoAtaque, modCabe, slotsDeModificacao, validarMod } from './regras-modificacoes.mjs';
+import { nomeDeExibicao, normalizar as normalizarIdentidade } from './regras-identidade.mjs';
+import { identidadeAoCriar } from './identidade.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { modoDaMesa } from './mesa.mjs';
 import { avisarCiberpsicose, estadoMental } from './terapia.mjs';
@@ -759,6 +761,9 @@ export class ItemCPR extends Item {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
     limparVinculosCopiados(this, opcoes);
     if (this.type === 'arma' && this.system.instaladoEm) this.updateSource({ 'system.equipada': false });
+    // A identidade da arma (o C69): o personagem que a recebe sem dono vira o dono, e o diário ganha a origem.
+    const identidade = identidadeAoCriar(this);
+    if (identidade) this.updateSource({ [`flags.${SISTEMA}.arma`]: identidade });
     // A modificação de arma (o C67) só nasce válida (regras-modificacoes.validarMod).
     const mod = this.type === 'upgrade' ? this.getFlag(SISTEMA, 'mod') : null;
     const invalida = mod ? validarMod(mod) : '';
@@ -873,6 +878,14 @@ export class ItemCPR extends Item {
   // As modificações instaladas na arma e o que a regra delas lê da arma (a de 2077 diz se é exótica).
   get modificacoes() {
     return this.type === 'arma' ? this.instalados.filter(item => item.modificacao) : [];
+  }
+  // A identidade da arma (o C69; regras-identidade.mjs): o nome próprio, a frase, o dono e o diário. O nome do item
+  // continua o modelo (o catálogo e as regras acham a arma por ele); a ficha e a rolagem mostram "Apelido · Modelo".
+  get identidade() {
+    return this.type === 'arma' ? normalizarIdentidade(this.getFlag(SISTEMA, 'arma')) : null;
+  }
+  get nomeDeExibicao() {
+    return this.type === 'arma' ? nomeDeExibicao(this.name, this.getFlag(SISTEMA, 'arma')?.apelido) : this.name;
   }
   get paraModificacoes() {
     const { aDistancia, slots, qualidade, tipo } = this.system;

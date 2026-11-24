@@ -15,6 +15,8 @@ import { testar } from './rolagens.mjs';
 import { ehArremesso, podeArremessar } from './arremessar.mjs';
 import { impedimentoDoBlackChrome } from './regras-black-chrome.mjs';
 import { parteDoTeto } from './regras-modificacoes.mjs';
+import { ehDono } from './regras-identidade.mjs';
+import { anotarSessao } from './identidade.mjs';
 import { CANAL, combateDe, conferirArmaVeicular, conferirDestinos, distancia, esc, montadaNoVeiculo, tokenNaCena } from './combate/apoio.mjs';
 import { resolver } from './combate/modos.mjs';
 import { naFila } from './combate/socket.mjs';
@@ -148,7 +150,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // arma montada de outro dono não é o dono dela.
   const tipoDoAlvo = lista[0]?.actor?.type;
   const alvoDaMod = ['personagem', 'capanga'].includes(tipoDoAlvo) ? 'pessoa' : tipoDoAlvo === 'veiculo' ? 'veiculo' : null;
-  const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null, alvo: alvoDaMod, dono: !alheia });
+  const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null, alvo: alvoDaMod, dono: !alheia && ehDono(arma.getFlag(SISTEMA, 'arma'), atacante.id) });
   const escolha = perguntar ? await perguntarTeste(atacante, { rotulo: `${arma.name}: ${descricao}`, partes, situacionais }) : null;
   if (perguntar && !escolha) return null;
   if (perguntar && !conferirMira()) return null;
@@ -172,10 +174,12 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const ferrolho = Boolean(perfil?.ferrolho && arma.system.aDistancia);
   if (!montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const { total, mensagem } = await testar(atacante, {
-    rotulo: `${arma.name}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: resolverAtaques && config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
+    rotulo: `${arma.nomeDeExibicao}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: resolverAtaques && config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   if (!conferirArmaVeicular(arma, modo, { atacante, tokenAtq }) || !conferirDestinos(lista, destinos, { modo, local })) return null;
+  // O diário da arma (o C69): o primeiro ataque do dia com ela conta a sessão.
+  if (!alheia) await anotarSessao(arma).catch(erro => console.warn(`${SISTEMA} | o diário de ${arma.name}:`, erro));
   // Na arma montada, só gasta o pente depois de conferir a instalação ao fim da rolagem (a de outro dono, no mestre).
   if (balas && montada) {
     if (arma.system.pente.value < balas) { ui.notifications.warn(`${arma.name}: precisa de ${balas} balas no pente (tem ${arma.system.pente.value}). Recarregue.`); return null; }

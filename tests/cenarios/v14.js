@@ -21024,6 +21024,99 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...info, status })];
     });
 
+    await r.passo('C69: a arma ganha o dono e a origem; o nome próprio vai à rolagem; o golpe que mata com dois 6 conta o primeiro sangue, o abate, o crítico e a sessão, e o Desfazer tira; o quinto abate avisa uma vez; a aba História, o marco à mão e a volta para a wiki sem a nota do mestre; a cópia na mão de outro continua do dono', async () => {
+      await fixar(edge, [[9, 10], [6, 6], [6, 6], [1, 6]]);
+      const info = await edge.evaluate(`(async () => {
+        const id = game.system.api.identidade;
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = chave => foundry.utils.deepClone(cat[chave]);
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const cena = await Scene.implementation.create({ name: 'C69 Estande', active: false, width: 1200, height: 600, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+        await cena.view();
+        await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        const atiradora = await Actor.implementation.create({ name: 'C69 Atiradora', type: 'personagem', prototypeToken: { actorLink: true }, system: { atributos: { ref: { valor: 8 } } } });
+        const ladra = await Actor.implementation.create({ name: 'C69 Ladra', type: 'personagem' });
+        const alvo = await Actor.implementation.create({ name: 'C69 Alvo', type: 'capanga', system: { hp: { value: 1 }, atributos: { ref: { valor: 2 } } } });
+        const capanga = await Actor.implementation.create({ name: 'C69 Capanga', type: 'capanga' });
+        // O ataque resolvido (a defesa e o dano automático, sem janelas), como no passo do Fluxo (o C26); o cenário desliga o
+        // fluxo no fim dos combates.
+        const fluxo = { ativo: true, rolagemManual: false, dano: 'automatico', jogadorRolaDano: false, defesaDosNpcs: 'automatica', animacoes: 'nao' };
+        const antes = Object.fromEntries(Object.keys(fluxo).map(chave => [chave, game.settings.get('${S}', chave)]));
+        for (const [chave, valor] of Object.entries(fluxo)) await game.settings.set('${S}', chave, valor);
+        try {
+          const dados = pegar('core_weapons:heavy-pistol'); dados.name = 'C69 Pistola'; dados.system.pente.value = 8; dados.system.equipada = true;
+          const criadas = await atiradora.createEmbeddedDocuments('Item', [dados, pegar('core_ammo:heavy-pistol-basic')]);
+          const arma = criadas.find(i => i.type === 'arma');
+          await arma.update({ 'system.carregada': criadas.find(i => i.type === 'municao').id });
+          const nasceu = { dono: arma.identidade.dono?.nome, origem: arma.identidade.eventos.map(e => e.texto).join() };
+          await arma.update({ 'flags.${S}.arma.apelido': 'Velha Senhora', 'flags.${S}.arma.frase': 'Nunca falhou.', 'flags.${S}.notaDoMestre': 'Rastreada pela Arasaka' });
+          const exibicao = arma.nomeDeExibicao;
+          const prototipo = await atiradora.getTokenDocument({ x: 100, y: 200 });
+          await cena.createEmbeddedDocuments('Token', [prototipo.toObject(), { name: 'C69 Alvo', actorId: alvo.id, x: 300, y: 200 }]);
+          await esperar(() => canvas.tokens.placeables.length >= 2);
+          const tokenAlvo = cena.tokens.find(t => t.name === 'C69 Alvo');
+          const mensagensAntes = game.messages.size;
+          const resultado = await arma.atacar({ alvo: tokenAlvo });
+          await esperar(() => game.messages.contents.slice(mensagensAntes).some(m => m.getFlag('${S}', 'ataque')));
+          await new Promise(r => setTimeout(r, 300));
+          const novas = game.messages.contents.slice(mensagensAntes);
+          const teste = novas.find(m => m.getFlag('${S}', 'teste')?.ataque);
+          const cartao = novas.find(m => m.getFlag('${S}', 'ataque'));
+          const golpe = { hp: tokenAlvo.actor.system.hp.value, rolagem: textoDe(new DOMParser().parseFromString((teste?.flavor ?? '') + (teste?.content ?? ''), 'text/html').body), linha: resultado?.linhas?.[0]?.resultado,
+            conta: id.contadores(arma.getFlag('${S}', 'arma')), diarioNoCartao: cartao?.getFlag('${S}', 'diario')?.length ?? 0 };
+          await game.system.api.combate.desfazer(cartao);
+          const desfeito = id.contadores(arma.getFlag('${S}', 'arma'));
+          // O mesmo dia não conta outra sessão; cinco abates avisam uma vez, só ao dono e ao mestre.
+          await id.registrarEventos(arma, [id.eventoDeSessao(new Date().toISOString())]);
+          const antesDoMarco = game.messages.size;
+          const abates = n => Array.from({ length: n }, (_, i) => ({ chave: 'c69:' + n + ':' + i, tipo: 'abate', data: new Date().toISOString(), alvo: 'Alvo ' + i }));
+          await id.registrarEventos(arma, abates(5));
+          await id.registrarEventos(arma, abates(2));
+          const avisos = game.messages.contents.slice(antesDoMarco).filter(m => m.getFlag('${S}', 'marcoDaArma'));
+          const marco = { quantos: avisos.length, texto: textoDe(new DOMParser().parseFromString(avisos[0]?.content ?? '', 'text/html').body), sussurro: avisos[0]?.whisper.length > 0 };
+          await id.anotarMarco(arma, 'O tiro que derrubou o Gato de Watson');
+          const conta = id.contadores(arma.getFlag('${S}', 'arma'));
+          // A ficha: o nome próprio no alto, a aba História com os contadores, o diário e a nota do mestre.
+          await arma.sheet.render({ force: true });
+          await esperar(() => arma.sheet.element?.querySelector('[data-tab="historia"]'));
+          const el = arma.sheet.element;
+          const ficha = {
+            aba: Boolean(el.querySelector('nav [data-tab="historia"]')), apelido: textoDe(el.querySelector('.apelido-da-arma')), contadores: [...el.querySelectorAll('.contadores-da-arma span')].map(textoDe).join('|'),
+            diario: [...el.querySelectorAll('.diario-da-arma li')].map(textoDe), nota: el.querySelector('[name="flags.${S}.notaDoMestre"]')?.value ?? null,
+            marcoNovo: Boolean(el.querySelector('.marco-novo'))
+          };
+          await arma.sheet.close();
+          const naWiki = game.system.api.wiki.fichaParaAWiki(atiradora).itens.find(l => l.id === arma.id)?.identidade ?? null;
+          // A cópia na mão da ladra continua da atiradora; a arma nova dela é dela; a do capanga não tem diário.
+          const [copia] = await ladra.createEmbeddedDocuments('Item', [arma.toObject()]);
+          const [daLadra] = await ladra.createEmbeddedDocuments('Item', [pegar('core_weapons:heavy-pistol')]);
+          const [doCapanga] = await capanga.createEmbeddedDocuments('Item', [pegar('core_weapons:heavy-pistol')]);
+          const maos = { copia: id.ehDono(copia.getFlag('${S}', 'arma'), ladra.id), donoDaCopia: copia.identidade.dono?.nome, daLadra: daLadra.identidade.dono?.nome,
+            capanga: id.temIdentidade(doCapanga), flagDoCapanga: Boolean(doCapanga.getFlag('${S}', 'arma')) };
+          await id.tornarDono(copia);
+          maos.depois = id.ehDono(copia.getFlag('${S}', 'arma'), ladra.id);
+          return { nasceu, exibicao, golpe, desfeito, marco, conta, ficha, naWiki, maos };
+        } finally {
+          for (const [chave, valor] of Object.entries(antes)) await game.settings.set('${S}', chave, valor);
+          await game.scenes.getName('C69 Estande')?.delete();
+          for (const a of [atiradora, ladra, alvo, capanga]) await a.delete();
+        }
+      })()`);
+      const { nasceu, golpe, desfeito, marco, conta, ficha, naWiki, maos } = info;
+      const ok = nasceu.dono === 'C69 Atiradora' && nasceu.origem === 'Chegou às mãos de C69 Atiradora' && info.exibicao === 'Velha Senhora · C69 Pistola'
+        && golpe.linha === 'acertou' && golpe.hp < 1 && golpe.rolagem.includes('Velha Senhora · C69 Pistola') && golpe.diarioNoCartao === 1
+        && golpe.conta.abates === 1 && golpe.conta.criticos === 1 && golpe.conta.sessoes === 1 && golpe.conta.primeiroSangue?.alvo === 'C69 Alvo'
+        && desfeito.abates === 0 && desfeito.criticos === 0 && desfeito.primeiroSangue === null && desfeito.sessoes === 1
+        && marco.quantos === 1 && marco.texto === 'Velha Senhora chegou a 5 abates.' && marco.sussurro
+        && conta.abates === 7 && conta.sessoes === 1
+        && ficha.aba && ficha.apelido === 'Velha Senhora' && ficha.contadores === '7 abates|0 críticos|1 sessões' && ficha.diario[0].endsWith('O tiro que derrubou o Gato de Watson (mestre)')
+        && ficha.diario.at(-1).endsWith('Chegou às mãos de C69 Atiradora') && ficha.nota === 'Rastreada pela Arasaka' && ficha.marcoNovo
+        && naWiki?.apelido === 'Velha Senhora' && naWiki.frase === 'Nunca falhou.' && naWiki.dono === 'C69 Atiradora' && naWiki.abates === 7 && !JSON.stringify(naWiki).includes('Arasaka')
+        && maos.copia === false && maos.donoDaCopia === 'C69 Atiradora' && maos.daLadra === 'C69 Ladra' && maos.capanga === false && maos.flagDoCapanga === false && maos.depois === true;
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

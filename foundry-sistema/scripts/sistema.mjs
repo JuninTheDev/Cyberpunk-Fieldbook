@@ -47,6 +47,7 @@ import { registrarPainel } from './painel/index.mjs';
 import * as perigos from './perigos.mjs';
 import * as pedidoDeTeste from './pedido-teste.mjs';
 import * as modificacoes from './modificacoes.mjs';
+import * as identidade from './identidade.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
@@ -156,6 +157,7 @@ Hooks.once('init', () => {
   // As modificações de armas (o C67): a arma que sai leva as dela, e as contas na API.
   modificacoes.registrarModificacoes();
   game.system.api.modificacoes = modificacoes.API;
+  game.system.api.identidade = identidade.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);

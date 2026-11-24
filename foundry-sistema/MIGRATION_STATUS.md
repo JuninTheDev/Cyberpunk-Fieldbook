@@ -164,6 +164,15 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C69, a identidade da arma (2026-11-24, sessão KouArt):** ficam para o usuário:
+  - **a nota do mestre não é segredo de verdade:** ela não aparece na ficha do jogador nem vai para a wiki, mas o jogador
+    é dono do item e lê qualquer flag dele pelo console. O segredo de verdade (como o defeito escondido do C71) tem de
+    ficar no servidor da wiki;
+  - **a sessão** conta o dia em que a arma atacou (o primeiro ataque do dia), e não o dia em que ela estava equipada: a
+    mesa abre o mundo para preparar sem ser sessão;
+  - **o abate** é o alvo que passa de 1 HP ou mais para menos de 1 (mortalmente ferido ou morto), pelo dano desta arma:
+    quem estava mortalmente ferido e morre de outro golpe não conta outro abate.
+
 - **C68, as modificações de armas (2026-11-24, sessão KouArt):** a lista é a da proposta aprovada (as 26), sem mudar
   nenhuma regra; ficam para o usuário:
   - **o teste da instalação** (a DV e o tempo do Tech): a proposta tinha DV 13, 17 e 21 pela categoria, e 1 hora, mas não
@@ -9981,6 +9990,42 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     `termos-regras.test.js`, `validacao-estatica.test.js`, `acessibilidade-wiki.test.js` e `nomes.test.js` passam.
 - **Portões:** G1 260 arquivos; G2 sem erros; G3 785/785; G4 332/332 (709 s). A primeira rodada do G4 deu 330/332: caíram só as duas instáveis conhecidas do C26 (estados e as chaves do Fluxo, "A nonpersisted Document cannot be updated"), juntas, como no master; a rodada seguinte passou inteira. Os isolados da loja, dos arquivos públicos e dos termos passam.
 - **Mutações:** seis no G3 (N1 a N6: o defletor numa arma que não é Power, a classe que não existe, a loja que duplica ao rodar de novo, os defeitos à venda, o preço da wiki diferente do catálogo e a tabela dos defeitos fora da ordem) e uma no G4 (F1: a arma que não diz a classe, e o defletor nunca cabe); todas morreram, e os arquivos voltaram com o md5 igual.
+
+### Ciclo 207 (2026-11-24): C69, a identidade da arma no Foundry (sessão KouArt)
+
+- **Pedido do usuário (2026-11-24):** "Sim, o C69" (o plano das modificações de armas, o C66 ao C73 do ROADMAP).
+- **A fonte:** o plano do ROADMAP (o nome próprio, o diário, a nota do mestre e a volta para a wiki) e a proposta da equipe
+  de 2026-11-23 (o nome como "Velha Senhora · Militech M-10AF", os contadores que contam sozinhos, o aviso do marco uma vez
+  só, o "Desfazer" sem contar duas vezes, a nota só do mestre). Não há regra do RED nova: a identidade não muda número.
+- **Entrega:**
+  - `regras-identidade.mjs` (novo): a identidade normalizada, o nome de exibição, o dono, os eventos do golpe, da sessão,
+    do marco e da origem, juntar sem repetir (com o marco de abates), tirar pela chave, os contadores, o diário e o que vai
+    para a wiki;
+  - `identidade.mjs` (novo): quem tem identidade, o dono e a origem ao criar, a fila de escrita por arma, o golpe, a
+    sessão, o marco, o aviso sussurrado, o "vira o dono" do mestre e a API;
+  - no `documentos.mjs`: o dono no `_preCreate`, e os getters `identidade` e `nomeDeExibicao`;
+  - no `combate.mjs`: a condição "dono" pela identidade, o nome próprio na rolagem e a sessão no ataque;
+  - no `combate/modos.mjs` (o `ferir`): o golpe no diário; no `combate/cartao.mjs`: a chave do golpe no cartão
+    (`diario`) e o "Desfazer" que a tira;
+  - na ficha do item: a aba História (só na arma com identidade), o nome próprio no alto e as ações; na aba Combate do
+    personagem, o nome próprio; o estilo no `tema.css`;
+  - no `wiki.mjs`: a identidade na linha da arma da ficha que volta para a wiki;
+  - a versão `0.3.207`.
+- **Fica para depois:** o cartão da arma na wiki e a ida da identidade da wiki para o Foundry (o C70: importar de novo cria
+  a arma sem a identidade); o "Marcar momento" no cartão do ataque (o marco é anotado pela aba História); o retrato da
+  arma; a relíquia, o reforjar e a herança entre personagens (o C73; o "vira o dono" do mestre já passa a arma). As
+  dúvidas estão nas Dúvidas.
+- **Testes de referência:**
+  - **G3:** o `identidade.test.mjs` (novo, 6 testes): o plano do ROADMAP, o nome próprio, a normalização, o dono, a origem,
+    o golpe (o primeiro sangue uma vez, o abate pelo HP, o crítico), sem repetir, a sessão por dia, o "Desfazer", o marco de
+    abates (uma vez, e o salto avisa só o maior), o diário e o que vai para a wiki (sem a nota, os 30 mais novos).
+  - **G4:** um passo do C69: a arma nasce com o dono e a origem; o nome próprio vai à rolagem; o ataque de verdade que mata
+    com dois 6 conta o primeiro sangue, o abate, o crítico e a sessão, e o "Desfazer" do cartão tira os três primeiros; o
+    quinto abate avisa uma vez, sussurrado; o marco à mão; a aba História com o nome, os contadores, o diário e a nota do
+    mestre; a volta para a wiki sem a nota; a cópia na mão da ladra continua da atiradora, a arma nova dela é dela, a do
+    capanga não tem diário, e o "vira o dono" passa a cópia.
+- **Portões:** G1 263 arquivos; G2 sem erros; G3 791/791; G4 333/333 (718 s). Uma rodada antes deu 331/333: o passo do C69 (o HP lido do ator de base, e não do token, corrigido) e, uma vez, o passo da NET 'o encontro e o ataque dos inimigos', que passou na rodada seguinte sem mudança no sistema.
+- **Mutações:** seis no G3 (N1 a N6) e seis no G4 (F1 a F6); todas morreram, md5 igual.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

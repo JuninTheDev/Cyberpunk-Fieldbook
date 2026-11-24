@@ -1,6 +1,7 @@
 // Cartão do resultado, destinatários, efeitos na mesa e os botões do chat.
 
 import { SISTEMA } from '../config.mjs';
+import { desfazerEventos } from '../identidade.mjs';
 import { config } from '../configuracoes.mjs';
 import { animar, textoFlutuante } from '../efeitos.mjs';
 import { aplicarPerdaDeHumanidade } from '../humanidade.mjs';
@@ -49,7 +50,7 @@ export async function cartaoDoResultado(ctx) {
   const danoDoArremesso = resumo.arremesso && ctx.pedido.total !== null && config('dano') === 'manual' && !R.MUNICAO_SEM_DANO[ctx.arma.municaoCarregada?.system.efeito] && linhas.some(l => l.resultado === 'acertou');
   const content = await renderizar('ataque.hbs', { ...resumo, danoDoArremesso, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 || (ctx.devolver?.length ?? 0) > 0 });
   const para = destinatarios(ctx);
-  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, ...(danoDoArremesso ? { armaDoArremesso: ctx.arma.uuid } : {}), desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [] } } });
+  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, ...(danoDoArremesso ? { armaDoArremesso: ctx.arma.uuid } : {}), desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [], diario: ctx.diario ?? [] } } });
   mostrarNaMesa(ctx, para);
   return resumo;
 }
@@ -125,6 +126,11 @@ export async function desfazer(mensagem) {
     if (!doc) continue;
     await doc.unsetFlag(SISTEMA, chave);
     if (valor !== null && valor !== undefined) await doc.setFlag(SISTEMA, chave, valor);
+  }
+  // O diário da arma (o C69): os eventos dos golpes deste ataque saem, e os contadores voltam.
+  for (const { arma: uuid, chave } of mensagem.getFlag(SISTEMA, 'diario') ?? []) {
+    const arma = await fromUuid(uuid);
+    if (arma) await desfazerEventos(arma, chave);
   }
   await mensagem.update({ [`flags.${SISTEMA}.desfeito`]: true });
   return true;
