@@ -658,6 +658,13 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     nota dele (outra flag, que não vai para a wiki; o jogador dono do item a lê pelo console, então não é segredo de
     verdade). A ficha que volta para a wiki leva a identidade (`identidade` na linha da arma, com os 30 eventos mais
     novos). A API: `game.system.api.identidade`.
+  - **A bancada da arma** (o C70): a ficha que volta para a wiki leva, na linha de cada arma com identidade, a `bancada`:
+    os slots de acessório e de modificação (usados e o total, o defeito já contado), as peças instaladas (o acessório com
+    o id do catálogo e os slots que ocupa; a modificação com o id dela e o tipo) e os bônus de ataque que vêm da arma (os
+    fixos e os de uma situação, com o teto de +3), para a aba Arsenal da wiki desenhar sem repetir as regras. Importar de
+    novo (pela ficha da mesa, ou pela criação depois que a ficha da mesa chegou à wiki) traz a identidade de volta: o
+    nome, a frase, a aparência, quem fez, o diário que a wiki guardou e os contadores (o que a wiki contava a mais que os
+    30 eventos fica no `antes` da flag), com os marcos de abates até ali já avisados; o dono é quem recebe a arma.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

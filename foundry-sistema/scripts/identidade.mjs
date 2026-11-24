@@ -23,7 +23,9 @@ export function identidadeAoCriar(item) {
   const atual = R.normalizar(item.getFlag(SISTEMA, 'arma'));
   if (atual.dono) return null;
   const data = new Date().toISOString();
-  return { ...atual, dono: { id: ator.id, nome: ator.name }, eventos: [...atual.eventos, R.eventoDeOrigem({ nome: ator.name, wikiUid: item.getFlag(SISTEMA, 'wikiUid') ?? '', data })] };
+  // A arma que voltou da wiki (o C70) já tem a origem: fica a dela.
+  const origem = atual.eventos.some(evento => evento.tipo === 'origem') ? [] : [R.eventoDeOrigem({ nome: ator.name, wikiUid: item.getFlag(SISTEMA, 'wikiUid') ?? '', data })];
+  return { ...atual, dono: { id: ator.id, nome: ator.name }, eventos: [...atual.eventos, ...origem] };
 }
 
 // Uma escrita por vez em cada arma: os golpes do autofogo e a sessão chegam juntos.

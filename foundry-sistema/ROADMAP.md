@@ -591,7 +591,7 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
   build e os pedidos.
 - [x] **C69. A identidade da arma no Foundry:** feito no ciclo 207 (sessão KouArt, 2026-11-24). O nome próprio, o diário
   (abates, críticos, primeiro sangue, sessões e os marcos), a nota do mestre e a volta para a wiki.
-- [~] **C70. O Arsenal e a bancada da arma na wiki:** em andamento (sessão KouArt, 2026-11-24). A bancada de cada arma no
+- [x] **C70. O Arsenal e a bancada da arma na wiki:** feito no ciclo 208 (sessão KouArt, 2026-11-24). A bancada de cada arma no
   jeito da aba Cyberware (o esboço "Bancada da arma" de 2026-11-24, aprovado pelo usuário: "Gostei de como está, só
   adapte o visual para o visual da wiki"): a arma em holograma, os slots de acessório e de modificação, o defeito, o teto
   e o que cabe em cada slot livre, e a identidade; com a ida e a volta para o Foundry.
