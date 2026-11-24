@@ -573,6 +573,26 @@ de conserto, a parte do sistema e dos testes):
   ou o STAT, a DV da escala da wiki, quem rola, quem vê), o cartão do chat que se atualiza a cada rolagem e o jogador
   rolando no computador dele.
 
+**As modificações de armas** (pedido do usuário em 2026-11-23: "um sistema completo de modificação de armas, que podem dar
+vantagens para as armas em algumas situações ou gerais... tornar cada arma única, para que os jogadores tenham apego";
+na wiki e no Foundry, ligados como a ficha). As decisões do usuário (2026-11-23): é regra da casa, declarada na wiki e
+ligada à Invention Expertise do Tech (RED p. 147–148); os acessórios do livro não mudam; slots próprios de modificação
+(2 em toda arma, a branca também; 1 na exótica e na ruim; um defeito, sorteado, dá +1, até 3); a modificação é
+permanente (só o Tech tira, e tirar destrói); nenhuma dá bônus fixo no ataque, no máximo uma de ataque por arma (+1
+numa situação) e a arma soma até +3 por rolagem; as marcas de história só contam história. A lista inicial das
+modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68).
+- [~] **C66. As regras das modificações e os situacionais pela arma:** em andamento (sessão KouArt, 2026-11-23). As regras
+  puras (a condição e o efeito de cada modificação, o teto, o mesmo efeito que não soma duas vezes, os slots) e o
+  situacional da arma que aparece só no ataque com ela.
+- [ ] **C67. As modificações no Foundry:** a rolagem, a ficha do item e o cartão do ataque.
+- [ ] **C68. A página da regra da casa, o catálogo e a loja:** a wiki, o build e os pedidos.
+- [ ] **C69. A identidade da arma no Foundry:** o nome próprio, o diário (abates, críticos, primeiro sangue, sessões e os
+  marcos), a nota do mestre e a volta para a wiki.
+- [ ] **C70. O cartão da arma e o Arsenal na wiki:** com a ida e a volta para o Foundry.
+- [ ] **C71. A oficina do mestre:** criar uma modificação sem programar e os defeitos escondidos.
+- [ ] **C72. A economia:** o Tech que instala (o teste pelo C65), o presente do mestre, o Night Market e o teto por campanha.
+- [ ] **C73. O risco:** a arma quebrada, a relíquia e reforjar.
+
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
 - o MIGRATION_STATUS com o ciclo.
