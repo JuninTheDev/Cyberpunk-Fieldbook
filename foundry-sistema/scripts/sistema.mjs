@@ -46,6 +46,7 @@ import { registrarNet } from './netrun/index.mjs';
 import { registrarPainel } from './painel/index.mjs';
 import * as perigos from './perigos.mjs';
 import * as pedidoDeTeste from './pedido-teste.mjs';
+import * as modificacoes from './modificacoes.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
@@ -152,6 +153,9 @@ Hooks.once('init', () => {
   // O mestre pede um teste aos jogadores (o C65): o /teste, o botão do HUD do token, o cartão e o aviso do jogador.
   pedidoDeTeste.registrarPedidoDeTeste();
   game.system.api.pedidoDeTeste = pedidoDeTeste.API;
+  // As modificações de armas (o C67): a arma que sai leva as dela, e as contas na API.
+  modificacoes.registrarModificacoes();
+  game.system.api.modificacoes = modificacoes.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);

@@ -14,6 +14,7 @@ import {
   classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild, BALAS_RAJADA
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
+import { efeitosDoAtaque, modCabe, slotsDeModificacao, validarMod } from './regras-modificacoes.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { modoDaMesa } from './mesa.mjs';
 import { avisarCiberpsicose, estadoMental } from './terapia.mjs';
@@ -236,8 +237,9 @@ export class AtorCPR extends Actor {
     const familia = periciaId ? this.system.pericias[periciaId]?.familia : '';
     return new Set(['system.bonus.todasAcoes', ...[periciaId, familia].filter(Boolean).map(id => `system.bonus.pericias.${id}`)]);
   }
-  // Os efeitos situacionais dos itens em uso que mexem nestas chaves. vale: o filtro do ataque (os da arma).
-  #efeitosSituacionais(chaves, vale = () => true) {
+  // Os efeitos situacionais dos itens em uso que mexem nestas chaves. vale: o filtro do ataque (os da arma); daArma: os que
+  // vêm da arma do ataque (o teto de +3).
+  #efeitosSituacionais(chaves, vale = () => true, daArma = () => false) {
     const lista = [];
     for (const efeito of this.allApplicableEffects()) {
       const dados = efeito.system;
@@ -245,7 +247,7 @@ export class AtorCPR extends Actor {
       if (!vale(efeito)) continue;
       const valor = dados.changes.filter(mudanca => chaves.has(mudanca.key)).reduce((soma, mudanca) => soma + (Number(mudanca.value) || 0), 0);
       const origem = efeito.parent instanceof Item ? efeito.parent.name : efeito.name;
-      if (valor) lista.push({ id: efeito.uuid, rotulo: `${origem}: ${dados.situacional.alvo}`, valor, ligado: dados.situacional.ligadoPorPadrao });
+      if (valor) lista.push({ id: efeito.uuid, rotulo: `${origem}: ${dados.situacional.alvo}`, valor, ligado: dados.situacional.ligadoPorPadrao, ...(daArma(efeito) ? { daArma: true } : {}) });
     }
     return lista;
   }
@@ -261,8 +263,13 @@ export class AtorCPR extends Actor {
   // tiro único ou mirado com arma à distância, os bônus de longe (a 51 m ou mais, wiki), ligados quando a regra vale: os
   // TeleOptics instalados que servem nesse tiro (regras.teleopticsNoTiro) e a luneta de precisão da arma, que não acumula
   // com cyberware óptico (regras.lunetaVale).
-  situacionaisDoAtaque(arma, { pericia, modo, local = 'corpo', metros = null }) {
-    const lista = this.#efeitosSituacionais(this.#chavesDoTeste(pericia), efeito => [null, arma.id].includes(this.armaDoEfeito(efeito)?.id ?? null));
+  // As modificações da arma (o C67; regras-modificacoes.efeitosDoAtaque) entram com a condição de cada efeito: o modo, o
+  // mirado, a distância, a munição no pente, o alvo (pessoa ou veículo: o primeiro marcado) e se quem atira é o dono.
+  // daArma: o bônus que vem da arma (o efeito dela, a luneta, a modificação), para o teto de +3 (combate.mjs).
+  situacionaisDoAtaque(arma, { pericia, modo, local = 'corpo', metros = null, alvo = null, dono = true }) {
+    const lista = this.#efeitosSituacionais(this.#chavesDoTeste(pericia), efeito => [null, arma.id].includes(this.armaDoEfeito(efeito)?.id ?? null), efeito => this.armaDoEfeito(efeito)?.id === arma.id);
+    const contexto = { modo, mirado: Boolean(LOCAIS_MIRADOS[local]), aDistancia: arma.system.aDistancia, metros, municao: arma.municaoCarregada?.system.tipo ?? null, alvo, dono };
+    lista.push(...efeitosDoAtaque(arma.modificacoes.map(item => item.modificacao), contexto).situacionais.map(situacional => ({ ...situacional, daArma: true })));
     if (!arma.system.aDistancia || !ehTiroUnico(modo)) return lista;
     const mirado = Boolean(LOCAIS_MIRADOS[local]);
     const tiro = mirado ? 'tiro mirado' : 'tiro único';
@@ -272,7 +279,7 @@ export class AtorCPR extends Actor {
     const luneta = arma.instalados.find(item => item.type === 'upgrade' && !item.inoperante && ehLuneta(item.name, item.getFlag(SISTEMA, 'catalogo')));
     if (luneta) {
       const bonusOptico = (mirado ? this.system.bonus.tiroMirado : this.system.bonus.tiroUnico) + (teleoptics.length && deLonge(metros) ? 1 : 0);
-      lista.push({ id: luneta.uuid, rotulo: `${luneta.name}: alvo a ${LUNETA.metros} m ou mais`, valor: LUNETA.valor, ligado: lunetaVale({ metros, bonusOptico }) });
+      lista.push({ id: luneta.uuid, rotulo: `${luneta.name}: alvo a ${LUNETA.metros} m ou mais`, valor: LUNETA.valor, ligado: lunetaVale({ metros, bonusOptico }), daArma: true });
     }
     return lista;
   }
@@ -752,6 +759,10 @@ export class ItemCPR extends Item {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
     limparVinculosCopiados(this, opcoes);
     if (this.type === 'arma' && this.system.instaladoEm) this.updateSource({ 'system.equipada': false });
+    // A modificação de arma (o C67) só nasce válida (regras-modificacoes.validarMod).
+    const mod = this.type === 'upgrade' ? this.getFlag(SISTEMA, 'mod') : null;
+    const invalida = mod ? validarMod(mod) : '';
+    if (invalida) { ui.notifications.warn(`${this.name}: a modificação não vale (${invalida}).`); return false; }
   }
   // O EMP não desinstala nem guarda o item. A fundação parada leva suas opções; os estados originais ficam intactos.
   get inoperante() {
@@ -796,9 +807,21 @@ export class ItemCPR extends Item {
       const { cabe, motivo } = naFrotaDaFamilia({ catalogo, acesso: sistema.acessoNomade, rank });
       if (!cabe) { ui.notifications.warn(`${this.name} não entra na frota da família: ${motivo}.`); return false; }
     }
+    // A modificação de arma (o C67): é permanente (não sai da arma nem passa para outra: tirar é apagar, e ela se destrói) e
+    // entra pelos slots de modificação, à parte dos de acessório (regras-modificacoes.modCabe). A montagem da wiki entra como
+    // veio.
+    const mod = this.type === 'upgrade' ? this.getFlag(SISTEMA, 'mod') : null;
+    if (mod && destino !== undefined && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
+      const atual = this.actor.items.get(this.system.instaladoEm);
+      if (atual?.type === 'arma') { ui.notifications.warn(`${this.name} é permanente em ${atual.name}: não sai nem passa para outra arma. Para tirar, apague a modificação (ela se destrói).`); return false; }
+      const arma = destino ? this.actor.items.get(destino) : null;
+      if (destino && arma?.type !== 'arma') { ui.notifications.warn(`${this.name} é uma modificação de arma: só entra numa arma.`); return false; }
+      const { cabe, motivo } = arma ? modCabe(arma.paraModificacoes, arma.modificacoes.filter(item => item.id !== this.id).map(item => item.modificacao), mod) : { cabe: true };
+      if (!cabe) { ui.notifications.warn(`${this.name} não cabe em ${arma.name}: ${motivo}.`); return false; }
+    }
     // O acessório que entra numa arma (o C11, parte 4): os slots dela e um carregador por vez. A montagem que vem da wiki
     // (a importação e a migração da mesa) preserva o estado recebido, como a equipagem (o C12).
-    if (this.type === 'upgrade' && destino && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
+    if (this.type === 'upgrade' && !mod && destino && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
       const arma = this.actor.items.get(destino);
       if (arma?.type === 'arma') {
         const outros = arma.instalados.filter(item => item.id !== this.id);
@@ -840,6 +863,24 @@ export class ItemCPR extends Item {
   get instalados() {
     const recebe = ['cyberdeck', 'arma', 'veiculo'].includes(this.type) || (this.type === 'cyberware' && this.system.fundacional);
     return recebe ? this.actor?.items.filter(item => item.system.instaladoEm === this.id && !(this.type === 'arma' && ehArmaDaCombinacao(item))) ?? [] : [];
+  }
+
+  // A modificação de arma (o C67): a do upgrade com a flag mod válida. null: não é.
+  get modificacao() {
+    const mod = this.type === 'upgrade' ? this.getFlag(SISTEMA, 'mod') : null;
+    return mod && !validarMod(mod) ? mod : null;
+  }
+  // As modificações instaladas na arma e o que a regra delas lê da arma (a de 2077 diz se é exótica).
+  get modificacoes() {
+    return this.type === 'arma' ? this.instalados.filter(item => item.modificacao) : [];
+  }
+  get paraModificacoes() {
+    const { aDistancia, slots, qualidade, tipo } = this.system;
+    return { aDistancia, slots, qualidade, tipo, exotica: this.getFlag(SISTEMA, 'arma2077')?.exotica ?? null };
+  }
+  get slotsDeModificacao() {
+    const mods = this.modificacoes.map(item => item.modificacao);
+    return { usados: mods.reduce((soma, mod) => soma + mod.tamanho, 0), total: slotsDeModificacao(this.paraModificacoes, mods.filter(mod => mod.tipo === 'defeito').length) };
   }
 
   get slotsUsados() {
@@ -987,6 +1028,8 @@ export class ItemCPR extends Item {
   }
   // Os slots que um item ocupa nesta arma: o Rebuild, 1 na arma exótica e 2 nas outras (o C47); o resto, o tamanho dele.
   tamanhoNaArma(item) {
+    // A modificação (o C67) não ocupa slot de acessório: tem os dela.
+    if (item.getFlag?.(SISTEMA, 'mod')) return 0;
     return classeDoRebuild(item.getFlag?.(SISTEMA, 'arma2077')) ? tamanhoDoRebuild(this.system) : Number(item.system.tamanho) || 0;
   }
 
@@ -1055,8 +1098,8 @@ export class ItemCPR extends Item {
     const pericia = arremesso ? 'athletics' : ['autofogo', 'supressivo'].includes(modo) ? 'autofire' : periciaDoGolpe ?? this.periciaDaArma;
     const { pericia: p, partes } = ator.partesDaPericia(pericia, { situacionais: [] });
     partes[0] = { rotulo: SIGLA[atributo], valor: ator.system.atributos[atributo].valor };
-    if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque });
-    if (this.system.aDistancia && this.perfil2077?.smart) partes.push({ rotulo: 'Arma Smart', valor: BONUS_SMART });
+    if (this.system.bonusAtaque) partes.splice(2, 0, { rotulo: 'Arma', valor: this.system.bonusAtaque, daArma: true });
+    if (this.system.aDistancia && this.perfil2077?.smart) partes.push({ rotulo: 'Arma Smart', valor: BONUS_SMART, daArma: true });
     const daLesao = this.system.aDistancia || arremesso ? ator.system.bonus.distancia : ator.system.bonus.corpoACorpo;
     if (daLesao) partes.push({ rotulo: 'Lesões', valor: daLesao });
     if (ator.system.consciencia.ataque) partes.push({ rotulo: 'Ataque de Precisão', valor: ator.system.consciencia.ataque });
@@ -1065,8 +1108,10 @@ export class ItemCPR extends Item {
     // Acessórios com bônus de ataque (o Smartgun Link: só à distância e com os plugs de interface ou o plug subdérmico, o C11,
     // parte 4). O mesmo acessório duas vezes não faz nada (wiki).
     const vale = item => !ehSmartgunLink(item.name, item.getFlag(SISTEMA, 'catalogo')) || smartgunLinkVale({ aDistancia: this.system.aDistancia, ligado: ator.temLigacaoSmart });
-    const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && !item.inoperante && item.system.modificadores.ataque && vale(item)).map(item => [item.name, item.system.modificadores.ataque]));
-    for (const [rotulo, valor] of comBonus) partes.push({ rotulo, valor });
+    const comBonus = new Map(this.instalados.filter(item => item.type === 'upgrade' && !item.getFlag(SISTEMA, 'mod') && !item.inoperante && item.system.modificadores.ataque && vale(item)).map(item => [item.name, item.system.modificadores.ataque]));
+    for (const [rotulo, valor] of comBonus) partes.push({ rotulo, valor, daArma: true });
+    // As modificações (o C67): o efeito sem condição (só os negativos, dos defeitos) é parte fixa; os outros são situacionais.
+    for (const parte of efeitosDoAtaque(this.modificacoes.map(item => item.modificacao)).partes) partes.push({ ...parte, daArma: true });
     return { pericia: p, partes };
   }
 

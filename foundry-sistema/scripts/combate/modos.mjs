@@ -11,6 +11,7 @@ import { techAtravessaVidro } from '../regras-veiculos.mjs';
 import { rolarDano } from '../rolagens.mjs';
 import { dvDoArremesso, ehArremesso, ignorarNoArremesso } from '../arremessar.mjs';
 import { ehArmaDaCombinacao } from '../armas-cyberware.mjs';
+import { derivadosDaArma, efeitosDoDano, emperraPelaMod } from '../regras-modificacoes.mjs';
 import { danoPorAlvo, falhaNaCombinacao, lesaoDupla, MENOS_DA_SUCATA, MUNICAO_SUCATA, PONTO_FRACO } from '../regras-black-chrome.mjs';
 import { escudoHumanoDe, usadoComoEscudo, danoNoEscudoHumano } from '../escudo-humano.mjs';
 import { STATUS_COBERTURA, STATUS_SUPRIMIDO, ROTULO, precisaRolar, centroDe, combateDe, conferirArmaVeicular, conferirDestinos, destinoEstrutural, destinoVeicular, distancia, esc, jogadorDe, montadaNoVeiculo } from './apoio.mjs';
@@ -38,16 +39,30 @@ async function contexto(pedido, usuario) {
     modo: pedido.modo, local: pedido.local, descricao: pedido.arremesso ? 'Arremesso' : R.descreverAtaque(pedido), nomeAtq: tokenAtq?.name ?? atacante.name,
     perfil: arma.perfil2077,
     // devolver: o que o "Desfazer" põe de volta (a carga Tech que o ataque gastou).
-    linhas: [], notas: notasDe2077(pedido, arma), rolagens: [], marcas: [], devolver: [...(pedido.carga ? [{ doc: arma.uuid, chave: 'cargaTech', valor: pedido.carga }] : []), ...(pedido.ferrolho ? [{ doc: arma.uuid, chave: 'ferrolhoPendente', valor: null }] : [])],
+    linhas: [], notas: [...notasDe2077(pedido, arma), ...notasDasModificacoes(arma, alvos[0])], rolagens: [], marcas: [], devolver: [...(pedido.carga ? [{ doc: arma.uuid, chave: 'cargaTech', valor: pedido.carga }] : []), ...(pedido.ferrolho ? [{ doc: arma.uuid, chave: 'ferrolhoPendente', valor: null }] : [])],
     lesoesDoAtirador: [], cabecalho: '',
-    falhaDaArma: falhaDaArma(arma, game.messages.get(pedido.mensagem)?.getFlag(SISTEMA, 'teste')?.critico)
+    falhaDaArma: falhaDaArma(arma, game.messages.get(pedido.mensagem)?.getFlag(SISTEMA, 'teste')?.critico, game.messages.get(pedido.mensagem)?.rolls[0]?.dice[0]?.results[0]?.result)
   };
+}
+
+// O dano a mais das modificações (o C67): nunca contra gente, e o sistema não sabe quando o alvo é a cobertura ou um objeto;
+// fica no cartão, para o mestre somar.
+function notasDasModificacoes(arma, alvo) {
+  const tipo = alvo?.actor?.type;
+  const contexto = { alvo: ['personagem', 'capanga'].includes(tipo) ? 'pessoa' : tipo === 'veiculo' ? 'veiculo' : null };
+  return efeitosDoDano(arma.modificacoes?.map(item => item.modificacao) ?? [], contexto)
+    .map(({ rotulo, dados, ligado }) => `${rotulo}: +${dados} no dano${ligado ? '' : ' quando o alvo for este (o mestre decide e soma)'}.`);
 }
 
 // A falha da arma ruim (regras.falhaDaArma). Na Combinação do Black Chrome (o C48, parte 2), o emperramento é só do modo
 // que disparou, menos na que emperra os dois (a Sternmeyer).
-function falhaDaArma(arma, critico) {
-  const falha = R.falhaDaArma({ qualidade: arma.system.qualidade, efeito: arma.system.falhaCritica, critico });
+// O defeito que emperra (o C67, o gatilho sensível): o d10 natural até o número dele emperra a arma de qualquer qualidade.
+function falhaDaArma(arma, critico, natural = null) {
+  const mods = arma.modificacoes?.map(item => item.modificacao) ?? [];
+  const pelaMod = emperraPelaMod(natural, derivadosDaArma(mods).emperraAte);
+  const defeito = pelaMod ? mods.find(mod => mod.efeitos.some(efeito => efeito.entao.some(({ alvo }) => alvo === 'emperraAte'))) : null;
+  const falha = R.falhaDaArma({ qualidade: arma.system.qualidade, efeito: arma.system.falhaCritica, critico })
+    ?? (defeito ? { efeito: 'jammed', texto: `${R.FALHAS_DA_ARMA.jammed.texto.replace('.', ` (${defeito.nome}).`)}` } : null);
   if (falha?.efeito !== 'jammed' || !(arma.system.combinacao?.ataca || ehArmaDaCombinacao(arma))) return falha;
   return { ...falha, texto: falhaNaCombinacao(falha.texto, { emperraJunto: Boolean(arma.perfilDoBlackChrome?.emperraJunto) }) };
 }

@@ -948,7 +948,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const permitido = () => podeApagarItem(this.actor, item, contexto());
     if (!permitido()) return;
     const nome = foundry.utils.escapeHTML(item.name);
-    const montagem = junto => apagarComInstalados(item.id, this.actor.items.map(outro => ({ id: outro.id, instaladoEm: outro.system.instaladoEm ?? '', propria: ehArmaMontadaEmItem(outro) })), junto);
+    const montagem = junto => apagarComInstalados(item.id, this.actor.items.map(outro => ({ id: outro.id, instaladoEm: outro.system.instaladoEm ?? '', propria: ehArmaMontadaEmItem(outro) || Boolean(outro.getFlag(SISTEMA, 'mod')) })), junto);
     const locais = lugaresDaInstalacao(item, this.actor.items.contents);
     const mudouDeLugar = () => lugaresDaInstalacao(item, this.actor.items.contents).some(local => !locais.includes(local));
     const aviso = locais.length ? '<p class="dica">Instalado em: ' + locais.map(local => foundry.utils.escapeHTML(local)).join(', ') + '.</p>' : '';

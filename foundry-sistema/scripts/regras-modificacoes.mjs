@@ -138,10 +138,10 @@ export function validarMod(mod) {
 // A modificação de ataque: a que tem um efeito de ataque positivo (só cabe uma por arma).
 export const ehDeAtaque = mod => (mod?.efeitos ?? []).some(efeito => efeito.entao.some(({ alvo, valor }) => alvo === 'ataque' && valor > 0));
 
-// Os slots de modificação da arma: 2; 1 na exótica (a de longo alcance com menos de 3 slots de acessório, regras.armaExotica)
-// e na de qualidade ruim; o defeito dá +1, até 3.
-export function slotsDeModificacao({ aDistancia = true, slots = 3, qualidade = 'standard' } = {}, defeitos = 0) {
-  const reduzida = (aDistancia && armaExotica({ slots })) || qualidade === 'poor';
+// Os slots de modificação da arma: 2; 1 na exótica e na de qualidade ruim; o defeito dá +1, até 3. exotica: o que a arma diz
+// (as de 2077 trazem na flag); sem isso, a de longo alcance com menos de 3 slots de acessório (regras.armaExotica).
+export function slotsDeModificacao({ aDistancia = true, slots = 3, qualidade = 'standard', exotica = null } = {}, defeitos = 0) {
+  const reduzida = (exotica ?? (aDistancia && armaExotica({ slots }))) || qualidade === 'poor';
   const base = reduzida ? SLOTS.reduzido : SLOTS.normal;
   return Math.min(SLOTS.maximo, base + Math.min(SLOTS.defeitos, defeitos) * SLOTS.porDefeito);
 }
@@ -226,6 +226,23 @@ export function derivadosDaArma(mods) {
     }
   }
   return derivados;
+}
+
+// O defeito que emperra (o gatilho sensível): o d10 natural até o número dele emperra a arma, de qualquer qualidade.
+export const emperraPelaMod = (natural, emperraAte) => Boolean(emperraAte) && Number(natural) >= 1 && Number(natural) <= emperraAte;
+
+// O efeito numa linha, para a ficha: "Mira de médio alcance: +1 no ataque (tiro único ou mirado de 13 a 50 m)".
+const sinal = valor => (valor > 0 ? `+${valor}` : `−${Math.abs(valor)}`);
+export function descreverEfeito(efeito) {
+  const mudancas = efeito.entao.map(({ alvo, valor }) => {
+    if (alvo === 'ataque') return `${sinal(valor)} no ataque`;
+    if (alvo === 'dano') return `+${valor} no dano`;
+    if (alvo === 'pente') return `${sinal(valor)} no pente`;
+    if (alvo === 'ocultavel') return valor ? 'a arma se esconde' : 'a arma não se esconde';
+    const numeros = Array.from({ length: valor }, (_, i) => i + 1);
+    return `emperra no ${numeros.length > 1 ? `${numeros.slice(0, -1).join(', no ')} e no ${numeros.at(-1)}` : numeros[0]}`;
+  }).join(', ');
+  return `${mudancas} (${efeito.rotulo})`;
 }
 
 // O teto da arma numa rolagem: os bônus positivos que vêm da arma (a qualidade, a arma Smart, os acessórios, a luneta e

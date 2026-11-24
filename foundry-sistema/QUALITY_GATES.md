@@ -492,6 +492,8 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O teste que vigia uma linha do código** (ciclo 204): o `detalhes-da-ficha.test.mjs` confere a linha que tira os
   efeitos desligados e fora de uso dos situacionais. No C66, juntar o filtro da arma nessa linha derrubou o G3; a
   condição nova vai numa linha à parte, e a vigiada fica como está.
+- **A ordem dos itens criados** (ciclos 204 e 205): o `createEmbeddedDocuments` não devolve os itens na ordem pedida.
+  No C66, o passo pegou a pistola B como se fosse a A; ache cada item pelo nome (ou pelo id que o passo guardou).
 
 ## Build
 

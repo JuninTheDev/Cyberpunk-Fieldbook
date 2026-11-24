@@ -14,6 +14,7 @@ import * as R from './regras.mjs';
 import { testar } from './rolagens.mjs';
 import { ehArremesso, podeArremessar } from './arremessar.mjs';
 import { impedimentoDoBlackChrome } from './regras-black-chrome.mjs';
+import { parteDoTeto } from './regras-modificacoes.mjs';
 import { CANAL, combateDe, conferirArmaVeicular, conferirDestinos, distancia, esc, montadaNoVeiculo, tokenNaCena } from './combate/apoio.mjs';
 import { resolver } from './combate/modos.mjs';
 import { naFila } from './combate/socket.mjs';
@@ -143,7 +144,11 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const contra = lista.length ? `contra ${lista.map(alvo => alvo.name).join(', ')}` : 'a até 25 m';
   // Os situacionais (a luneta, pela distância do primeiro alvo) e a janela de rolagem: fechada ou cancelada, não ataca nem
   // gasta bala. Sem a janela, entram os ligados por padrão.
-  const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null });
+  // O alvo das modificações (o C67): pessoa (o personagem e o capanga) ou veículo, pelo primeiro marcado; quem atira com a
+  // arma montada de outro dono não é o dono dela.
+  const tipoDoAlvo = lista[0]?.actor?.type;
+  const alvoDaMod = ['personagem', 'capanga'].includes(tipoDoAlvo) ? 'pessoa' : tipoDoAlvo === 'veiculo' ? 'veiculo' : null;
+  const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null, alvo: alvoDaMod, dono: !alheia });
   const escolha = perguntar ? await perguntarTeste(atacante, { rotulo: `${arma.name}: ${descricao}`, partes, situacionais }) : null;
   if (perguntar && !escolha) return null;
   if (perguntar && !conferirMira()) return null;
@@ -155,6 +160,11 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // A munição Smart melhorada na arma Smart: as penalidades de visão não contam; as outras voltam na segunda chance.
   const smartMelhorada = R.smartMelhoradaVale({ perfil, municao: municao?.getFlag(SISTEMA, 'arma2077') });
   const extras = smartMelhorada ? escolhidas.filter(parte => !R.ehPenalidadeDeVisao(parte)) : escolhidas;
+  // O teto da arma (o C67; regras-modificacoes.parteDoTeto): os bônus que vêm da arma (a qualidade, a arma Smart, os
+  // acessórios, a luneta, o efeito dela e as modificações) somam até +3 na rolagem.
+  const daArma = new Set([...partes, ...situacionais].filter(parte => parte.daArma).map(parte => parte.rotulo));
+  const teto = parteDoTeto([...partes, ...extras].filter(parte => daArma.has(parte.rotulo)).map(parte => parte.valor));
+  if (teto) extras.push(teto);
   if (!conferirArmaVeicular(arma, modo, { atacante, tokenAtq }) || !conferirDestinos(lista, destinos, { modo, local })) return null;
   if (balas && !montada) await arma.update({ 'system.pente.value': arma.system.pente.value - balas });
   // O ataque gasta a carga (a Omaha fica carregada até o fim do turno em que disparou); a Grad pede o ferrolho. O

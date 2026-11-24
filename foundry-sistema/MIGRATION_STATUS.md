@@ -9906,6 +9906,36 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1, 258 arquivos; G2 sem erros; G3, 782/782; G4 completo, 329/329 em 691 s, com a mesa do servidor vazia (a primeira rodada deu 328/329: o passo novo contava com a ordem dos itens criados, que o Foundry não garante; ele passou a achar cada pistola pelo nome).
 - **Mutações:** as 12 caíram, e os arquivos voltaram exatos (md5). No G3, 10 no regras-modificacoes.mjs: o "não sei" na frente do "não" no todos, o bônus fixo de ataque, o dano contra gente, a arma ruim com 2 slots, dois defeitos com dois slots, duas de ataque, o "não sei" ligado, o último do grupo no lugar do maior, o teto em +4 e o "se esconde" que ganha (duas sobreviveram na primeira rodada, o M5 e o M8, e o teste ganhou a exótica com dois defeitos e as duas ordens do grupo). No G4, 2 no documentos.mjs: o situacional de outra arma no ataque e o acessório de outra arma como do personagem.
 
+### Ciclo 205 (2026-11-24): C67, as modificações de armas no Foundry (sessão KouArt)
+
+- **Pedido do usuário (2026-11-24):** "Sim, o C67" (o plano das modificações de armas, o C66 ao C73 do ROADMAP).
+- **A fonte das regras:** as decisões do usuário de 2026-11-23 no ROADMAP e as contas do C66; a lista das modificações e
+  a página da wiki vêm no C68 (as do G4 são as da proposta aprovada).
+- **Entrega:**
+  - no `documentos.mjs`: a modificação (o upgrade com a flag `mod` válida), as da arma, os slots de modificação (a de
+    2077 diz se é exótica: a Liberty, com 1 slot de acessório, tem 2), a recusa da inválida ao criar, a permanência e o
+    `modCabe` ao instalar, a modificação fora dos slots de acessório, as partes fixas e os situacionais do ataque e a marca
+    `daArma` (a qualidade, a arma Smart, os acessórios, a luneta, o efeito da arma e as modificações);
+  - no `combate.mjs`: o alvo (pessoa ou veículo) e o dono no contexto, e o teto de +3 depois da janela;
+  - no `combate/modos.mjs`: o defeito que emperra (o d10 natural) e o dano a mais no cartão;
+  - no `dados.mjs`: o pente e o ocultável pelas modificações (que não são carregador);
+  - o `modificacoes.mjs`: a arma apagada leva as modificações, e a API; na ficha do personagem, a modificação não fica
+    solta no "Só tirar";
+  - na ficha do item: as modificações da arma à parte dos acessórios, e a modificação com os efeitos (sem os campos do
+    acessório);
+  - no `regras-modificacoes.mjs`: a exótica que a arma diz, o `emperraPelaMod` e o `descreverEfeito`;
+  - a versão `0.3.205`.
+- **Fica para depois:** o dano a mais automático (o sistema não sabe quando o alvo é a cobertura ou um objeto); o dono
+  da arma é quem a carrega (o C69 traz quem a fez e de quem ela é); criar uma modificação sem programar (o C71).
+- **Testes de referência:**
+  - **G3:** o `modificacoes.test.mjs` ganhou um teste (6): a exótica pela flag, o gatilho que emperra no 1 e no 2, e
+    cada efeito numa linha.
+  - **G4:** dois passos do C67: a instalação (os slots, as recusas, a inválida, a permanência, o pente, o ocultável, a
+    ficha, a de 2077, tirar e a arma apagada) e o ataque (a mira a 30 m e a 60 m, o defeito fixo, o teto de +3 e o
+    gatilho sensível no 2 natural, no cartão).
+- **Portões:** G1 259 arquivos; G2 sem erros; G3 783/783; G4 331/331 (712 s).
+- **Mutações:** três no G3 (N1 a N3: a exótica pela flag, o gatilho que emperra e a linha de cada efeito) e dez no G4 (F1 a F10: a modificação que sai da arma, no slot de acessório, sem o teto de +3, o gatilho que não emperra, a arma apagada que deixa as modificações soltas, o situacional fora da janela, o defeito fixo fora do ataque, a que não cabe e entra, a inválida que nasce e o compensador sem o ocultável); todas morreram, e os arquivos voltaram com o md5 igual.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

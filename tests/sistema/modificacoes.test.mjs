@@ -133,3 +133,17 @@ test('o que entra no ataque e no dano, o que muda a arma e o teto de +3', () => 
   assert.deepEqual(M.parteDoTeto([2, 1, 1, -2, '1']), { rotulo: 'Teto da arma (+3)', valor: -2 });
   assert.equal(M.parteDoTeto([]), null);
 });
+
+test('C67: a exótica que a arma diz (as de 2077), o defeito que emperra e o efeito numa linha da ficha', () => {
+  // A de 2077 com 1 slot de acessório não é exótica (a flag diz): 2 slots de modificação; a exótica, 1; sem a flag, pelos slots.
+  assert.deepEqual([M.slotsDeModificacao({ ...exotica, exotica: false }), M.slotsDeModificacao({ ...rifle, exotica: true }), M.slotsDeModificacao({ ...exotica, exotica: null })], [2, 1, 1]);
+  assert.equal(M.slotsDeModificacao({ ...exotica, exotica: false, qualidade: 'poor' }), 1);
+  // O gatilho sensível: o 1 e o 2 emperram; o 3 e o 10, não; sem o defeito, nada.
+  assert.deepEqual([1, 2, 3, 10].map(natural => M.emperraPelaMod(natural, 2)), [true, true, false, false]);
+  assert.deepEqual([M.emperraPelaMod(1, null), M.emperraPelaMod(null, 2), M.emperraPelaMod(0, 2)], [false, false, false]);
+  assert.deepEqual([mira, compensador, cano, gatilho, descalibrada, pente].flatMap(mod => mod.efeitos.map(M.descreverEfeito)), [
+    '+1 no ataque (tiro único ou mirado de 13 a 50 m)', '+1 no ataque (autofogo)', 'a arma não se esconde (não se esconde)', '+1d6 no dano (contra cobertura e objetos)',
+    'emperra no 1 e no 2 (emperra no 1 e no 2)', '−2 no ataque (na mão de quem não é o dono)', '+2 no pente (mais balas)'
+  ]);
+  assert.equal(M.descreverEfeito({ rotulo: 'x', entao: [{ alvo: 'emperraAte', valor: 3 }, { alvo: 'ocultavel', valor: true }] }), 'emperra no 1, no 2 e no 3, a arma se esconde (x)');
+});

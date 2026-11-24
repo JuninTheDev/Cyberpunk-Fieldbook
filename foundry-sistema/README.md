@@ -630,6 +630,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     a arma soma até +3 por rolagem. O dano a mais nunca vale contra gente. Cada modificação diz a condição de cada efeito
     (o modo, o mirado, a distância, a munição, o alvo, se quem atira é o dono, ou o texto que só a mesa sabe): o efeito
     vem ligado na janela quando a condição vale, desligado quando o sistema não sabe e fora quando não vale.
+  - **A modificação no Foundry** (o C67): é um upgrade com a regra dela (a flag `mod`, que só nasce válida). Instalada
+    numa arma, usa os slots de modificação, e não os de acessório, e recusa, com o motivo, a segunda de ataque, o segundo
+    defeito e a que não cabe. É permanente: não sai da arma nem passa para outra; para tirar, apague a modificação (ela se
+    destrói), e a arma apagada leva as dela. No ataque, cada efeito entra na janela de rolagem pela condição (a distância
+    do primeiro alvo, o modo, o mirado, a munição no pente, o alvo pessoa ou veículo, e se quem atira é o dono); o defeito
+    sem condição é parte fixa. Os bônus que vêm da arma (a qualidade, a arma Smart, os acessórios, a luneta, o efeito dela
+    e as modificações) somam até +3: o que passa vira a parte "Teto da arma (+3)". O pente soma, o "não se esconde"
+    troca o ocultável, e o gatilho sensível emperra a arma (de qualquer qualidade) no d10 natural até o número dele, com
+    o nome no cartão. O dano a mais (nunca contra gente) fica no cartão, para o mestre somar: o sistema não sabe quando o
+    alvo é a cobertura ou um objeto. A ficha da arma mostra as modificações à parte dos acessórios ("Modificações: 2 de 3
+    slots"), e a do upgrade, cada efeito numa linha. A API: `game.system.api.modificacoes` (as contas e o `cabeNaArma`).
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

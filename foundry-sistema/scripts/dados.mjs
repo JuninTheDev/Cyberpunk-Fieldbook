@@ -10,6 +10,7 @@ import { scannerPreferido, tipoDeScanner } from './regras-inventario.mjs';
 import { armaduraDoLocal, armaduraMonitoradaDoLocal } from './regras-armadura.mjs';
 import { penalidadeDeDeathSave } from './tratamento.mjs';
 import { corpoComQuadro } from './regras-black-chrome.mjs';
+import { derivadosDaArma, validarMod } from './regras-modificacoes.mjs';
 
 const { fields } = foundry.data;
 const inteiro = (initial = 0, opcoes = {}) => new fields.NumberField({ required: true, nullable: false, integer: true, initial, ...opcoes });
@@ -309,9 +310,15 @@ export class DadosArma extends foundry.abstract.TypeDataModel {
 
   // Com um carregador instalado (um upgrade do mesmo ator com instaladoEm = esta arma), o pente é o dele. A wiki diz que
   // só cabe um carregador por vez; com mais de um, vale o maior.
+  // As modificações (o C67; regras-modificacoes.derivadosDaArma) somam no pente e dizem se a arma se esconde; elas não são
+  // carregador.
   prepareDerivedData() {
     const item = this.parent;
-    this.pente.max = regras.penteComCarregador(this.pente.max, item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id).map(a => a.system.modificadores.pente));
+    const instalados = item?.actor?.items.filter(outro => outro.type === 'upgrade' && outro.system.instaladoEm === item.id) ?? [];
+    const mods = instalados.map(outro => outro.flags?.[SISTEMA]?.mod).filter(mod => mod && !validarMod(mod));
+    const derivados = derivadosDaArma(mods);
+    this.pente.max = Math.max(0, regras.penteComCarregador(this.pente.max, instalados.filter(outro => !outro.flags?.[SISTEMA]?.mod).map(a => a.system.modificadores.pente)) + derivados.pente);
+    if (derivados.ocultavel !== null) this.ocultavel = derivados.ocultavel;
   }
 }
 

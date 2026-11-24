@@ -4,6 +4,7 @@ import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA,
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { PERICIAS } from './gerado.mjs';
+import { descreverEfeito, TIPOS as TIPOS_DE_MOD, validarMod } from './regras-modificacoes.mjs';
 import { bonusDoCritico, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
@@ -179,8 +180,11 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       // conta como não instalado.
       lugares: { '': tipo === 'programa' ? 'Fora do deck' : 'Não instalado', ...Object.fromEntries((item.actor?.items.filter(i => i.type === tipoDoLugar) ?? []).map(i => [i.id, i.name])) },
       lugarAtual: tipoDoLugar && item.instaladoNo?.type === tipoDoLugar ? item.instaladoNo.id : '',
-      instalados: item.instalados.map(i => i.name).join(', '),
+      // Na arma, as modificações (o C67) têm os slots delas: os acessórios e as modificações em linhas à parte.
+      instalados: item.instalados.filter(i => !(tipo === 'arma' && i.getFlag(SISTEMA, 'mod'))).map(i => i.name).join(', '),
       slotsUsados: item.slotsUsados,
+      modsDaArma: tipo === 'arma' && item.actor ? { ...item.slotsDeModificacao, nomes: item.modificacoes.map(i => i.name).join(', ') } : null,
+      modificacao: tipo === 'upgrade' && item.getFlag(SISTEMA, 'mod') ? modificacaoDaFicha(item.getFlag(SISTEMA, 'mod')) : null,
       // A opção instalada de um ator: a fundação onde está, entre as instaladas em que ela cabe (e a de agora), ou nenhuma.
       fundacoes: item.type === 'cyberware' && item.actor && item.system.instalado && !item.system.fundacional
         ? Object.fromEntries([['', 'Sem fundação'], ...[...new Set([item.instaladoNo, ...item.actor.fundacoesPara(item)].filter(Boolean))].map(fundacao => [fundacao.id, fundacao.name])])
@@ -263,4 +267,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     const efeito = this.item.effects.get(alvo.dataset.efeito);
     return efeito?.update({ disabled: !efeito.disabled });
   }
+}
+
+// A modificação de arma (o C67) na ficha do upgrade: o tipo, os slots e cada efeito numa linha; a que não vale diz o motivo.
+function modificacaoDaFicha(mod) {
+  const invalida = validarMod(mod);
+  return invalida ? { invalida } : { tipo: TIPOS_DE_MOD[mod.tipo], tamanho: mod.tamanho, efeitos: mod.efeitos.map(descreverEfeito) };
 }

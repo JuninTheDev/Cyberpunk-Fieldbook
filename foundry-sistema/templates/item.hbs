@@ -36,6 +36,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
       <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
+      {{#if modsDaArma}}<p class="nota modificacoes-da-arma">Modificações: {{modsDaArma.usados}} de {{modsDaArma.total}} slots{{#if modsDaArma.nomes}}: {{modsDaArma.nomes}}{{/if}}.</p>{{/if}}
       <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
       {{#if armaDe}}<div class="celula arma-do-cyberware"><span>{{armaDe.rotulo}}</span><b>{{armaDe.nome}}</b></div><p class="nota">Os dados desta arma vêm de {{armaDe.nome}}: mude-os na ficha dele.</p>
       {{else if armaDeAtor}}<label class="celula"><span>Montada no veículo</span><select name="system.instaladoEm">{{selectOptions veiculosDaArma selected=fonte.instaladoEm}}</select></label>{{/if}}
@@ -132,12 +133,21 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{else}}<p class="nota">Sem janelas registradas. Cada janela conserva seu próprio HP.</p>{{/each}}
       {{/if}}
       {{#if eh.upgrade}}
+      {{#if modificacao}}
+      {{!-- A modificação de arma (o C67): o que ela faz vem da regra dela, não dos campos do acessório. --}}
+      <div class="modificacao">
+        {{#if modificacao.invalida}}<p class="nota">Esta modificação não vale: {{modificacao.invalida}}.</p>
+        {{else}}<p class="nota"><b>Modificação {{modificacao.tipo}}</b> · {{#if (eq modificacao.tipo "Defeito")}}não ocupa slot: dá mais um à arma.{{else}}ocupa {{modificacao.tamanho}} {{#if (eq modificacao.tamanho 1)}}slot{{else}}slots{{/if}} de modificação.{{/if}} Permanente: não sai da arma; para tirar, apague (ela se destrói).</p>
+        <ul class="efeitos-da-modificacao">{{#each modificacao.efeitos}}<li>{{this}}</li>{{else}}<li>Sem efeito na regra: é a história da arma.</li>{{/each}}</ul>{{/if}}
+      </div>
+      {{else}}
       <label class="celula"><span>Para</span><select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
       <label class="celula"><span>Slots</span><input type="number" name="system.tamanho" value="{{fonte.tamanho}}" min="0"></label>
       <label class="celula" data-tooltip="O pente que o carregador dá à arma: troca o da arma, não soma"><span>Pente (carregador)</span><input type="number" name="system.modificadores.pente" value="{{fonte.modificadores.pente}}" min="0"></label>
       <label class="celula"><span>Ataque (+ ou −)</span><input type="number" name="system.modificadores.ataque" value="{{fonte.modificadores.ataque}}"></label>
       <label class="celula"><span>SDP do veículo (+ ou −)</span><input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
       <label class="celula"><span>Assentos do veículo (+ ou −)</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
+      {{/if}}
       <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
       {{#if prepararArma}}{{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="prepararArmaVeicular">PREPARAR ARMA</button></div>{{/if}}{{/if}}
       {{/if}}

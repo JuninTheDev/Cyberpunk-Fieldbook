@@ -20830,6 +20830,142 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    // As modificações do C67 (o formato do regras-modificacoes.mjs), como os dois passos as usam.
+    const c67Mods = `({
+      mira: { versao: 1, id: 'mira-medio-alcance', nome: 'Mira de médio alcance', tipo: 'tatica', tamanho: 1, encaixe: { aDistancia: true }, efeitos: [{ rotulo: 'tiro único ou mirado de 13 a 50 m', quando: { todos: [{ modo: ['tiro'] }, { metros: { min: 13, max: 50 } }] }, entao: [{ alvo: 'ataque', valor: 1 }] }] },
+      compensador: { versao: 1, id: 'compensador', nome: 'Compensador', tipo: 'tatica', tamanho: 1, encaixe: { aDistancia: true }, efeitos: [{ rotulo: 'autofogo', quando: { modo: ['autofogo'] }, entao: [{ alvo: 'ataque', valor: 1 }] }, { rotulo: 'não se esconde', entao: [{ alvo: 'ocultavel', valor: false }] }] },
+      pente: { versao: 1, id: 'pente-extra', nome: 'Pente extra', tipo: 'tatica', tamanho: 1, efeitos: [{ rotulo: 'mais balas', entao: [{ alvo: 'pente', valor: 2 }] }] },
+      grife: { versao: 1, id: 'acabamento-de-grife', nome: 'Acabamento de grife', tipo: 'sabor', tamanho: 1, efeitos: [] },
+      gatilho: { versao: 1, id: 'gatilho-sensivel', nome: 'Gatilho sensível', tipo: 'defeito', tamanho: 0, efeitos: [{ rotulo: 'emperra no 1 e no 2', entao: [{ alvo: 'emperraAte', valor: 2 }] }] },
+      torta: { versao: 1, id: 'coronha-torta', nome: 'Coronha torta', tipo: 'defeito', tamanho: 0, efeitos: [{ rotulo: 'sempre', entao: [{ alvo: 'ataque', valor: -1 }] }] },
+      fixo: { versao: 1, id: 'bonus-fixo', nome: 'Bônus fixo', tipo: 'tatica', tamanho: 1, efeitos: [{ rotulo: 'sempre', entao: [{ alvo: 'ataque', valor: 1 }] }] }
+    })`;
+
+    await r.passo('C67: a modificação instala nos slots dela (2, o defeito dá o terceiro), recusa a segunda de ataque, a que não cabe e a inválida, não sai nem passa para outra arma, muda o pente e o "não se esconde", aparece na ficha e sai com a arma; a de 2077 diz se é exótica', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const mods = ${c67Mods};
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const avisos = [], original = ui.notifications.warn;
+        ui.notifications.warn = texto => { avisos.push(texto); };
+        const ator = await Actor.implementation.create({ name: 'C67 Oficina', type: 'personagem' });
+        try {
+          const rifleDados = pegar('core_weapons:assault-rifle'); rifleDados.name = 'C67 Rifle';
+          const [rifle] = await ator.createEmbeddedDocuments('Item', [rifleDados]);
+          const [outra] = await ator.createEmbeddedDocuments('Item', [pegar('core_weapons:heavy-pistol')]);
+          const penteAntes = rifle.system.pente.max;
+          const criar = async mod => (await ator.createEmbeddedDocuments('Item', [{ name: mod.nome, type: 'upgrade', system: { alvo: 'arma', tamanho: 1 }, flags: { '${S}': { mod } } }]))[0] ?? null;
+          const instalar = async (item, arma) => { await item.update({ 'system.instaladoEm': arma.id }); return ator.items.get(item.id).system.instaladoEm === arma.id; };
+          const invalida = await criar(mods.fixo);
+          const m = {};
+          for (const chave of ['mira', 'compensador', 'pente', 'grife', 'gatilho']) m[chave] = await criar(mods[chave]);
+          const passos = {
+            mira: await instalar(m.mira, rifle), compensador: await instalar(m.compensador, rifle), pente: await instalar(m.pente, rifle),
+            grifeSemSlot: await instalar(m.grife, rifle), gatilho: await instalar(m.gatilho, rifle), grifeComDefeito: await instalar(m.grife, rifle)
+          };
+          const arma = ator.items.get(rifle.id);
+          const montada = { slots: arma.system.slots, acessorios: arma.slotsUsados, mods: arma.slotsDeModificacao, pente: arma.system.pente.max - penteAntes, ocultavel: arma.system.ocultavel };
+          // Permanente: não passa para a outra arma nem sai.
+          const passa = await instalar(m.mira, outra);
+          await m.mira.update({ 'system.instaladoEm': '' });
+          const permanente = { passa, sai: ator.items.get(m.mira.id).system.instaladoEm };
+          // O compensador na pistola: entra (é a de ataque dela) e a pistola não se esconde mais.
+          const naPistola = { entra: await instalar(m.compensador, outra), ocultavel: ator.items.get(outra.id).system.ocultavel };
+          // A ficha: a arma diz as modificações à parte dos acessórios; a modificação, os efeitos (sem os campos do acessório).
+          await arma.sheet.render({ force: true });
+          for (let i = 0; i < 50 && !arma.sheet.element?.querySelector('.modificacoes-da-arma'); i++) await new Promise(r => setTimeout(r, 100));
+          const fichaDaArma = arma.sheet.element?.querySelector('.modificacoes-da-arma')?.textContent.replace(/\\s+/g, ' ').trim();
+          await arma.sheet.close();
+          await m.mira.sheet.render({ force: true });
+          for (let i = 0; i < 50 && !m.mira.sheet.element?.querySelector('.efeitos-da-modificacao'); i++) await new Promise(r => setTimeout(r, 100));
+          const fichaDaMod = [...(m.mira.sheet.element?.querySelectorAll('.efeitos-da-modificacao li') ?? [])].map(li => li.textContent.trim());
+          const campoDeAtaque = Boolean(m.mira.sheet.element?.querySelector('[name="system.modificadores.ataque"]'));
+          await m.mira.sheet.close();
+          // A de 2077: a Liberty (1 slot de acessório, não exótica) tem 2; a Lexington (exótica), 1.
+          const de2077 = [];
+          for (const id of ['armas-2077:constitutional-arms-liberty', 'armas-2077:militech-m-10af-lexington']) {
+            const [item] = await ator.createEmbeddedDocuments('Item', [pegar(id)]);
+            de2077.push(ator.items.get(item.id).slotsDeModificacao.total);
+          }
+          // Tirar é apagar; a arma apagada leva as dela.
+          await m.grife.delete();
+          const depoisDeTirar = ator.items.get(rifle.id).slotsDeModificacao;
+          await ator.items.get(rifle.id).delete();
+          for (let i = 0; i < 50 && ator.items.some(item => item.getFlag('${S}', 'mod') && item.system.instaladoEm === rifle.id); i++) await new Promise(r => setTimeout(r, 100));
+          const sobraram = ator.items.filter(item => item.getFlag('${S}', 'mod')).map(item => item.name).sort();
+          return { invalida: Boolean(invalida), passos, montada, permanente, naPistola, fichaDaArma, fichaDaMod, campoDeAtaque, de2077, depoisDeTirar, sobraram, avisos };
+        } finally { ui.notifications.warn = original; await ator.delete(); }
+      })()`);
+      const { passos, montada, permanente, naPistola, avisos } = info;
+      const ok = !info.invalida && avisos.some(a => a.includes('a modificação não vale') && a.includes('nenhuma modificação dá bônus fixo'))
+        && passos.mira && !passos.compensador && passos.pente && !passos.grifeSemSlot && passos.gatilho && passos.grifeComDefeito
+        && avisos.some(a => a.includes('só cabe uma modificação de ataque por arma')) && avisos.some(a => a.includes('não há slot de modificação livre (a arma tem 2)'))
+        && montada.slots === 3 && montada.acessorios === 0 && montada.mods.usados === 3 && montada.mods.total === 3 && montada.pente === 2 && montada.ocultavel === false
+        && !permanente.passa && permanente.sai !== '' && avisos.filter(a => a.includes('é permanente em C67 Rifle')).length === 2
+        && naPistola.entra && naPistola.ocultavel === false
+        && info.fichaDaArma === 'Modificações: 3 de 3 slots: Mira de médio alcance, Pente extra, Acabamento de grife, Gatilho sensível.'
+        && info.fichaDaMod.join() === '+1 no ataque (tiro único ou mirado de 13 a 50 m)' && !info.campoDeAtaque
+        && info.de2077.join() === '2,1' && info.depoisDeTirar.usados === 2 && info.sobraram.join() === 'Compensador';
+      return [ok, JSON.stringify(info)];
+    });
+
+    await r.passo('C67: no ataque, a mira de médio alcance entra ligada a 30 m, o defeito sem condição é parte fixa e o teto corta o que passa de +3 da arma; o gatilho sensível emperra no 2 natural', async () => {
+      await fixar(edge, [[5, 10], [2, 10]]);
+      const info = await edge.evaluate(`(async () => {
+        const mods = ${c67Mods};
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const cena = await Scene.implementation.create({ name: 'C67 Estande', active: false, width: 2000, height: 600, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+        await cena.view();
+        for (let i = 0; i < 100 && !(canvas.ready && canvas.scene?.id === cena.id); i++) await new Promise(r => setTimeout(r, 100));
+        const atirador = await Actor.implementation.create({ name: 'C67 Atirador', type: 'personagem', prototypeToken: { actorLink: true }, system: { atributos: { ref: { valor: 2 } } } });
+        const alvo = await Actor.implementation.create({ name: 'C67 Alvo', type: 'capanga', system: { hp: { value: 40 }, atributos: { ref: { valor: 2 } } } });
+        try {
+          const rifleDados = pegar('core_weapons:assault-rifle'); rifleDados.name = 'C67 Rifle +3'; Object.assign(rifleDados.system, { bonusAtaque: 3, equipada: true }); rifleDados.system.pente.value = 25;
+          const pistolaDados = pegar('core_weapons:heavy-pistol'); pistolaDados.name = 'C67 Pistola'; pistolaDados.system.pente.value = 8;
+          const criadas = await atirador.createEmbeddedDocuments('Item', [rifleDados, pistolaDados]);
+          const arma = criadas.find(i => i.name === 'C67 Rifle +3'), outra = criadas.find(i => i.name === 'C67 Pistola');
+          await atirador.createEmbeddedDocuments('Item', [
+            { name: 'Mira de médio alcance', type: 'upgrade', system: { alvo: 'arma', instaladoEm: arma.id }, flags: { '${S}': { mod: mods.mira } } },
+            { name: 'Coronha torta', type: 'upgrade', system: { alvo: 'arma', instaladoEm: arma.id }, flags: { '${S}': { mod: mods.torta } } },
+            { name: 'Gatilho sensível', type: 'upgrade', system: { alvo: 'arma', instaladoEm: outra.id }, flags: { '${S}': { mod: mods.gatilho } } }
+          ]);
+          const prototipo = await atirador.getTokenDocument({ x: 100, y: 200 });
+          await cena.createEmbeddedDocuments('Token', [prototipo.toObject(), { name: 'C67 Alvo', actorId: alvo.id, x: 1600, y: 200 }]);
+          for (let i = 0; i < 50 && canvas.tokens.placeables.length < 2; i++) await new Promise(r => setTimeout(r, 100));
+          const tokenAlvo = cena.tokens.find(t => t.name === 'C67 Alvo');
+          const textoDe = el => el.textContent.replace(/\\s+/g, ' ').trim();
+          const partesDa = m => [...new DOMParser().parseFromString(m.content, 'text/html').querySelectorAll('.partes li')].map(textoDe);
+          const pericia = arma.system.pericia;
+          const situacionais = atirador.situacionaisDoAtaque(arma, { pericia, modo: 'tiro', local: 'corpo', metros: 30 }).filter(s => s.daArma).map(s => s.rotulo + ' ' + s.valor + (s.ligado ? ' [x]' : ' [ ]'));
+          const longe = atirador.situacionaisDoAtaque(arma, { pericia, modo: 'tiro', local: 'corpo', metros: 60 }).filter(s => s.daArma).length;
+          const ataques = [];
+          for (const item of [arma, outra]) {
+            if (item === outra) { await arma.update({ 'system.equipada': false }); await outra.update({ 'system.equipada': true }); }
+            const antes = game.messages.size;
+            await item.atacar({ alvo: tokenAlvo });
+            for (let i = 0; i < 50 && !game.messages.contents.slice(antes).some(m => m.getFlag('${S}', 'ataque')); i++) await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 500));
+            const novas = game.messages.contents.slice(antes);
+            const teste = novas.find(m => m.getFlag('${S}', 'teste')?.ataque);
+            const cartao = novas.filter(m => m.getFlag('${S}', 'ataque')).at(-1);
+            ataques.push({ partes: teste ? partesDa(teste) : null, natural: teste?.rolls[0]?.dice[0]?.results[0]?.result, cartao: cartao ? textoDe(new DOMParser().parseFromString(cartao.content, 'text/html').body) : '' });
+          }
+          return { situacionais, longe, ataques };
+        } finally {
+          await game.scenes.getName('C67 Estande')?.delete();
+          await atirador.delete(); await alvo.delete();
+        }
+      })()`);
+      const [rifle, pistola] = info.ataques;
+      const ok = info.situacionais.join() === 'Mira de médio alcance: tiro único ou mirado de 13 a 50 m 1 [x]' && info.longe === 0
+        && rifle.partes?.includes('Arma +3') && rifle.partes.includes('Mira de médio alcance: tiro único ou mirado de 13 a 50 m +1')
+        && rifle.partes.includes('Coronha torta: sempre -1') && rifle.partes.includes('Teto da arma (+3) -1') && rifle.natural === 5
+        && !rifle.cartao.includes('emperrou')
+        && pistola.natural === 2 && !pistola.partes?.some(p => p.startsWith('Teto')) && pistola.cartao.includes('A arma emperrou (Gatilho sensível).');
+      return [ok, JSON.stringify(info)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];
