@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import { converter2077 } from './conteudo-2077.mjs';
 import { corrigirBlackChrome } from './conteudo-blackchrome.mjs';
+import { converterMods } from './conteudo-mods.mjs';
 import { iconeNeon } from '../scripts/regras-icones.mjs';
 
 const VERSAO = 'v0.92.4';
@@ -562,6 +563,10 @@ async function main() {
     contagem[prefixo] = (contagem[prefixo] || 0) + 1;
   }
   Object.assign(itens, de2077);
+  // As modificações de armas, a regra da casa (build/conteudo-mods.mjs, da wiki: system-modificacoes.js).
+  const mods = converterMods({ raizDaWiki: path.join(raiz, '..'), slug });
+  contagem['mods-armas'] = Object.keys(mods).length;
+  Object.assign(itens, mods);
   // Os Black ICE da tabela da wiki, como programas do netrunner.
   const net = netDaWiki();
   for (const ice of net.ice) itens[`black-ice:${ice.id}`] = programaDeBlackIce(ice);

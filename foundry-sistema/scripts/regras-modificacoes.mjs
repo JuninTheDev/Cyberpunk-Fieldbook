@@ -15,6 +15,9 @@ export const BONUS_DE_ATAQUE = 1;
 export const TETO_DA_ARMA = 3;
 
 export const TIPOS = { tatica: 'Tática', sabor: 'Sabor', defeito: 'Defeito' };
+// As classes das armas do Mission Kit (p. 31–32): a modificação que só serve numa delas (o defletor de ricochete, na Power;
+// a carga silenciosa, na Tech; o C68).
+export const CLASSES = { power: 'Power', smart: 'Smart', tech: 'Tech' };
 // O que um efeito muda: o ataque (soma; o positivo só com condição e até +1), o dano (os dados a mais, nunca contra gente:
 // a condição tem de dizer o alvo, sem "pessoa"), o pente (soma), se a arma se esconde e até que número do dado ela emperra
 // (o gatilho sensível: no 1 e no 2).
@@ -104,8 +107,9 @@ export function validarMod(mod) {
   if (!Number.isInteger(mod.tamanho) || mod.tamanho < 0 || mod.tamanho > 2) return 'a modificação ocupa de 0 a 2 slots';
   if (mod.tipo === 'defeito' && mod.tamanho !== 0) return 'o defeito não ocupa slot: ele dá um';
   if (mod.encaixe !== undefined) {
-    const { aDistancia, tipos, ...resto } = mod.encaixe ?? {};
-    if (Object.keys(resto).length || (aDistancia !== undefined && typeof aDistancia !== 'boolean') || (tipos !== undefined && (!Array.isArray(tipos) || !tipos.length))) return 'o encaixe é { aDistancia, tipos }';
+    const { aDistancia, tipos, classe, ...resto } = mod.encaixe ?? {};
+    if (Object.keys(resto).length || (aDistancia !== undefined && typeof aDistancia !== 'boolean') || (tipos !== undefined && (!Array.isArray(tipos) || !tipos.length))
+      || (classe !== undefined && !CLASSES[classe])) return 'o encaixe é { aDistancia, tipos, classe }';
   }
   if (!Array.isArray(mod.efeitos) || mod.efeitos.length > 4) return 'a modificação tem até 4 efeitos';
   for (const efeito of mod.efeitos) {
@@ -146,15 +150,16 @@ export function slotsDeModificacao({ aDistancia = true, slots = 3, qualidade = '
   return Math.min(SLOTS.maximo, base + Math.min(SLOTS.defeitos, defeitos) * SLOTS.porDefeito);
 }
 
-// A modificação nova cabe na arma? arma: { aDistancia, slots, qualidade, tipo }; instaladas: as modificações que já estão
-// nela. Devolve { cabe, motivo }.
+// A modificação nova cabe na arma? arma: { aDistancia, slots, qualidade, tipo, classe }; instaladas: as modificações que já
+// estão nela. Devolve { cabe, motivo }.
 export function modCabe(arma, instaladas, nova) {
   const recusa = motivo => ({ cabe: false, motivo });
   const invalida = validarMod(nova);
   if (invalida) return recusa(invalida);
-  const { aDistancia, tipos } = nova.encaixe ?? {};
+  const { aDistancia, tipos, classe } = nova.encaixe ?? {};
   if (aDistancia !== undefined && Boolean(arma.aDistancia) !== aDistancia) return recusa(aDistancia ? 'esta modificação só serve em arma de longo alcance' : 'esta modificação só serve em arma branca');
   if (tipos && !tipos.includes(arma.tipo)) return recusa('esta modificação não serve neste tipo de arma');
+  if (classe && arma.classe !== classe) return recusa(`esta modificação só serve em arma ${CLASSES[classe]}`);
   if (instaladas.some(mod => mod.id === nova.id)) return recusa('a arma já tem esta modificação');
   const defeitos = instaladas.filter(mod => mod.tipo === 'defeito').length + (nova.tipo === 'defeito' ? 1 : 0);
   if (defeitos > SLOTS.defeitos) return recusa('só cabe um defeito por arma');

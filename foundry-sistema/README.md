@@ -641,6 +641,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     o nome no cartão. O dano a mais (nunca contra gente) fica no cartão, para o mestre somar: o sistema não sabe quando o
     alvo é a cobertura ou um objeto. A ficha da arma mostra as modificações à parte dos acessórios ("Modificações: 2 de 3
     slots"), e a do upgrade, cada efeito numa linha. A API: `game.system.api.modificacoes` (as contas e o `cabeNaArma`).
+  - **As modificações da wiki** (o C68): as 26 da regra da casa vêm da página "Modificações de armas" da wiki
+    (`system-modificacoes.js`, a fonte única) e estão no catálogo como `mods-armas:<id>` (o build, pelo
+    `build/conteudo-mods.mjs`): 20 à venda e 6 defeitos (preço 0, que o mestre sorteia). A loja da wiki as vende numa
+    categoria delas (o `loja-do-14.mjs`), e o pedido entrega a modificação solta no inventário; a instalação é pela ficha.
+    O encaixe também diz a classe do Kit: o defletor de ricochete só entra numa arma Power (a do Rebuild também), e a
+    carga silenciosa, numa Tech.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

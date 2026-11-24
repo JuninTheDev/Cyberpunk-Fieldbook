@@ -580,14 +580,15 @@ ligada à Invention Expertise do Tech (RED p. 147–148); os acessórios do livr
 (2 em toda arma, a branca também; 1 na exótica e na ruim; um defeito, sorteado, dá +1, até 3); a modificação é
 permanente (só o Tech tira, e tirar destrói); nenhuma dá bônus fixo no ataque, no máximo uma de ataque por arma (+1
 numa situação) e a arma soma até +3 por rolagem; as marcas de história só contam história. A lista inicial das
-modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68).
+modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da proposta, que vivem na wiki
+(`system-modificacoes.js`, a fonte única do catálogo e da loja).
 - [x] **C66. As regras das modificações e os situacionais pela arma:** feito no ciclo 204 (sessão KouArt, 2026-11-23). As regras
   puras (a condição e o efeito de cada modificação, o teto, o mesmo efeito que não soma duas vezes, os slots) e o
   situacional da arma que aparece só no ataque com ela.
 - [x] **C67. As modificações no Foundry:** feito no ciclo 205 (sessão KouArt, 2026-11-24). A rolagem, a ficha do item e o
   cartão do ataque.
-- [~] **C68. A página da regra da casa, o catálogo e a loja:** em andamento (sessão KouArt, 2026-11-24). A wiki, o build e
-  os pedidos.
+- [x] **C68. A página da regra da casa, o catálogo e a loja:** feito no ciclo 206 (sessão KouArt, 2026-11-24). A wiki, o
+  build e os pedidos.
 - [ ] **C69. A identidade da arma no Foundry:** o nome próprio, o diário (abates, críticos, primeiro sangue, sessões e os
   marcos), a nota do mestre e a volta para a wiki.
 - [ ] **C70. O cartão da arma e o Arsenal na wiki:** com a ida e a volta para o Foundry.

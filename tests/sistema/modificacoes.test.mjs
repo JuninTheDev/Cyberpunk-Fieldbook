@@ -4,7 +4,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 import * as M from '../../foundry-sistema/scripts/regras-modificacoes.mjs';
+import { CATEGORIA_DAS_MODS, modsNaLoja } from '../../loja-do-14.mjs';
 
 const roadmap = fs.readFileSync(new URL('../../foundry-sistema/ROADMAP.md', import.meta.url), 'utf8').replace(/\s+/g, ' ');
 
@@ -146,4 +148,102 @@ test('C67: a exótica que a arma diz (as de 2077), o defeito que emperra e o efe
     'emperra no 1 e no 2 (emperra no 1 e no 2)', '−2 no ataque (na mão de quem não é o dono)', '+2 no pente (mais balas)'
   ]);
   assert.equal(M.descreverEfeito({ rotulo: 'x', entao: [{ alvo: 'emperraAte', valor: 3 }, { alvo: 'ocultavel', valor: true }] }), 'emperra no 1, no 2 e no 3, a arma se esconde (x)');
+});
+
+// O C68: a lista da wiki (system-modificacoes.js, a fonte única) é a proposta que o usuário aprovou em 2026-11-23 ("Aprovo":
+// as 26), e o catálogo do 14 e a loja batem com ela.
+const lerDaRaiz = arquivo => fs.readFileSync(new URL(`../../${arquivo}`, import.meta.url), 'utf8');
+const daWiki = (arquivo, chave) => {
+  const contexto = { window: {} };
+  vm.runInNewContext(lerDaRaiz(arquivo), contexto);
+  return JSON.parse(JSON.stringify(contexto.window[chave], (_, valor) => (typeof valor === 'function' ? undefined : valor)));
+};
+
+test('C68: as 26 modificações da wiki (a proposta aprovada), cada uma válida, com o preço da categoria e onde ela serve', () => {
+  const contexto = { window: {} };
+  vm.runInNewContext(lerDaRaiz('system-modificacoes.js'), contexto);
+  const wiki = contexto.window.systemModificacoes;
+  const mods = JSON.parse(JSON.stringify(wiki.data.mods));
+  assert.equal(mods.length, 26);
+  assert.match(roadmap, /A lista inicial das modificações foi aprovada pelo usuário em 2026-11-23/, 'o ROADMAP guarda a aprovação da lista');
+  const porGrupo = grupo => mods.filter(mod => mod.grupo === grupo).map(mod => mod.nome);
+  assert.deepEqual(porGrupo('situacional'), ['Mira holográfica', 'Mira de médio alcance', 'Compensador', 'Bipé', 'Cano de alta pressão', 'Lanterna tática', 'Defletor de ricochete', 'Guarda de punho']);
+  assert.deepEqual(porGrupo('geral'), ['Correia de retenção', 'Pente de troca rápida', 'Supressor', 'Cabo balanceado', 'Carga silenciosa', 'Trava biométrica', 'Cano de troca']);
+  assert.deepEqual(porGrupo('sabor'), ['Coronha oca', 'Acabamento de grife', 'Marca de gangue ou de lenda', 'Nome gravado', 'Afinação pessoal']);
+  assert.deepEqual(porGrupo('defeito'), ['Gatilho sensível', 'Mira descalibrada para estranhos', 'Coice brutal', 'Superaquece', 'Barulhenta e chamativa', 'Cano serrado']);
+  assert.equal(new Set(mods.map(mod => mod.id)).size, 26);
+  for (const mod of mods) {
+    const regra = JSON.parse(JSON.stringify(wiki.regra(mod)));
+    assert.equal(M.validarMod(regra), '', mod.nome);
+    if (mod.grupo === 'defeito') { assert.equal(mod.eb, 0, mod.nome); assert.equal(regra.tamanho, 0, mod.nome); continue; }
+    assert.equal(regra.tamanho, 1, mod.nome);
+    assert.ok([50, 100, 500].includes(mod.eb), `${mod.nome}: ${mod.eb}eb`);
+  }
+  const preco = Object.fromEntries(mods.map(mod => [mod.id, mod.eb]));
+  assert.deepEqual([preco['mira-holografica'], preco['compensador'], preco['lanterna-tatica'], preco['supressor'], preco['nome-gravado'], preco['acabamento-de-grife']], [100, 500, 50, 500, 50, 100]);
+  // As de ataque: só +1, numa situação (a mira, o compensador, o bipé); os defeitos que tiram.
+  const deAtaque = mods.filter(mod => M.ehDeAtaque(wiki.regra(mod))).map(mod => mod.id);
+  assert.deepEqual(deAtaque, ['mira-holografica', 'mira-medio-alcance', 'compensador', 'bipe']);
+  const contexto12 = { modo: 'tiro', metros: 10 };
+  const holo = M.efeitosDoAtaque([JSON.parse(JSON.stringify(wiki.regra(mods[0])))], contexto12);
+  assert.deepEqual(holo.situacionais.map(s => [s.valor, s.ligado]), [[1, true]]);
+  assert.deepEqual(M.efeitosDoAtaque([JSON.parse(JSON.stringify(wiki.regra(mods[0])))], { modo: 'tiro', metros: 13 }).situacionais, []);
+  const serrado = JSON.parse(JSON.stringify(wiki.regra(mods.find(mod => mod.id === 'cano-serrado'))));
+  assert.deepEqual(M.derivadosDaArma([serrado]), { pente: 0, ocultavel: true, emperraAte: null });
+  assert.deepEqual(M.efeitosDoAtaque([serrado], { modo: 'cartucho', metros: 30 }).situacionais.map(s => s.valor), [-2]);
+  // Onde serve: a classe do Kit (o defletor só na Power, a carga silenciosa só na Tech), o tipo (o cano serrado na espingarda).
+  const regraDe = id => JSON.parse(JSON.stringify(wiki.regra(mods.find(mod => mod.id === id))));
+  assert.deepEqual(M.modCabe({ ...rifle, classe: null }, [], regraDe('defletor-de-ricochete')), { cabe: false, motivo: 'esta modificação só serve em arma Power' });
+  assert.equal(M.modCabe({ ...rifle, classe: 'power' }, [], regraDe('defletor-de-ricochete')).cabe, true);
+  assert.equal(M.modCabe({ ...rifle, classe: 'power' }, [], regraDe('carga-silenciosa')).motivo, 'esta modificação só serve em arma Tech');
+  assert.equal(M.modCabe({ ...rifle, tipo: 'shotgun' }, [], regraDe('cano-serrado')).cabe, true);
+  assert.equal(M.modCabe(rifle, [], regraDe('cano-serrado')).cabe, false);
+  assert.equal(M.validarMod({ ...regraDe('carga-silenciosa'), encaixe: { classe: 'laser' } }), 'o encaixe é { aDistancia, tipos, classe }');
+  assert.deepEqual(['defletor-de-ricochete', 'carga-silenciosa', 'cano-serrado', 'cabo-balanceado', 'guarda-de-punho'].map(id => wiki.serveEm(mods.find(mod => mod.id === id))),
+    ['arma Power', 'arma Tech', 'espingarda', 'branca leve ou branca média', 'arma branca']);
+  // A página: a regra da casa declarada, a Invention Expertise, a tabela de 1d6 dos defeitos e o botão do sorteio.
+  const html = wiki.pages.modsArmas.html.replace(/\s+/g, ' ');
+  assert.match(html, /Regra da casa\.<\/b> Isto não está no RED nem no Mission Kit/);
+  assert.match(html, /Invention Expertise/);
+  assert.match(html, /<b>sorteado<\/b>, nunca escolhido/);
+  assert.match(html, /<b>6<\/b><\/td><td>Cano serrado/);
+  assert.match(html, /data-mods-defeito/);
+  assert.match(html, /só conta história/);
+});
+
+test('C68: o catálogo do 14 e a loja da wiki com as modificações (os defeitos no catálogo, fora da loja), e a página no menu', () => {
+  const wiki = daWiki('system-modificacoes.js', 'systemModificacoes');
+  const contexto = { window: {} };
+  vm.runInNewContext(lerDaRaiz('system-modificacoes.js'), contexto);
+  const regra = mod => JSON.parse(JSON.stringify(contexto.window.systemModificacoes.regra(mod)));
+  const catalogo = JSON.parse(lerDaRaiz('foundry-sistema/dados/catalogo.json')).itens;
+  for (const mod of wiki.data.mods) {
+    const item = catalogo[`mods-armas:${mod.id}`];
+    assert.ok(item, mod.nome);
+    assert.equal(item.type, 'upgrade');
+    assert.equal(item.name, mod.nome);
+    assert.equal(item.system.alvo, 'arma');
+    assert.equal(item.system.preco, mod.eb);
+    assert.deepEqual(item.flags['cpr-fieldbook'].mod, regra(mod));
+    assert.match(item.system.descricao, /Permanente: não sai da arma/);
+  }
+  assert.equal(Object.keys(catalogo).filter(id => id.startsWith('mods-armas:')).length, 26);
+  const loja = daWiki('loja-catalogo.js', 'shopCatalog');
+  const daLoja = loja.itens.filter(item => item.cat === CATEGORIA_DAS_MODS.id);
+  assert.equal(daLoja.length, 20);
+  assert.ok(loja.categorias.some(categoria => categoria.id === 'modificacoes' && categoria.nome === 'Modificações de arma'));
+  assert.ok(daLoja.every(item => item.preco === catalogo[item.id].system.preco && !item.acessorio && item.modificacao.tamanho === 1));
+  assert.equal(daLoja.find(item => item.id === 'mods-armas:cano-serrado'), undefined, 'o defeito não se vende');
+  assert.equal(daLoja.find(item => item.id === 'mods-armas:supressor').resumo, '1 slot de modificação · arma de longo alcance');
+  // O loja-do-14 refaz a categoria e os itens: rodar de novo não duplica.
+  const outra = structuredClone(loja);
+  assert.equal(modsNaLoja(outra, { itens: catalogo }, contexto.window.systemModificacoes), 20);
+  assert.equal(outra.itens.length, loja.itens.length);
+  assert.equal(outra.categorias.filter(categoria => categoria.id === 'modificacoes').length, 1);
+  // A página na wiki: o script nas duas wikis, a página no menu e no conteúdo, e o arquivo guardado na instalação.
+  for (const pagina of ['index.html', 'jogadores.html']) assert.match(lerDaRaiz(pagina), /<script src="system-modificacoes\.js"><\/script>/, pagina);
+  const app = lerDaRaiz('wiki-app.js');
+  assert.match(app, /\{ id: 'modsArmas', label: 'Modificações de armas', icon: 'MA' \}/);
+  assert.match(app, /\(window\.systemModificacoes \|\| \{\}\)\.pages/);
+  assert.match(lerDaRaiz('arquivos-publicos.js'), /'\/system-modificacoes\.js'/);
 });

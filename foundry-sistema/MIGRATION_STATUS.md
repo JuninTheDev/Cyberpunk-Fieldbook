@@ -164,6 +164,17 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C68, as modificações de armas (2026-11-24, sessão KouArt):** a lista é a da proposta aprovada (as 26), sem mudar
+  nenhuma regra; ficam para o usuário:
+  - **o teste da instalação** (a DV e o tempo do Tech): a proposta tinha DV 13, 17 e 21 pela categoria, e 1 hora, mas não
+    foi decidido; a página diz que, por enquanto, o mestre decide na hora (o C72 traz o teste);
+  - **o cabo balanceado:** no sistema, toda arma branca já se arremessa (`scripts/arremessar.mjs`, RED p. 177); como está
+    escrito, ele não muda nada. Uma vantagem para ele (sem a penalidade, mais alcance?) é decisão do mestre;
+  - **o cano de alta pressão contra veículos:** ficou fora (só cobertura e objetos), como a proposta deixou para o mestre;
+  - **a afinação pessoal** (a Sorte da arma): a página diz que é o efeito mais forte e que o mestre decide se a mesa usa;
+  - **a lanterna tática:** o −1 de "Iluminação noturna ou fraca" é da tabela dos testes de perícia (RED p. 130); a lista o
+    aplica ao ataque, como a proposta.
+
 - **As páginas de regras da wiki e o catálogo do 14 (2026-11-23, sessão KouArt, a fase 3 da auditoria):** a loja segue
   o catálogo do 14 (decisão do usuário), e as páginas de regras não mudaram. Comparando os 177 cartões do Black Chrome,
   os 78 do 2077 e as 22 linhas com preço do RED, ficaram três diferenças, para o usuário conferir no livro:
@@ -9935,6 +9946,41 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     gatilho sensível no 2 natural, no cartão).
 - **Portões:** G1 259 arquivos; G2 sem erros; G3 783/783; G4 331/331 (712 s).
 - **Mutações:** três no G3 (N1 a N3: a exótica pela flag, o gatilho que emperra e a linha de cada efeito) e dez no G4 (F1 a F10: a modificação que sai da arma, no slot de acessório, sem o teto de +3, o gatilho que não emperra, a arma apagada que deixa as modificações soltas, o situacional fora da janela, o defeito fixo fora do ataque, a que não cabe e entra, a inválida que nasce e o compensador sem o ocultável); todas morreram, e os arquivos voltaram com o md5 igual.
+
+### Ciclo 206 (2026-11-24): C68, a página da regra da casa, o catálogo e a loja das modificações (sessão KouArt)
+
+- **Pedido do usuário (2026-11-24):** "Sim, o C68" (o plano das modificações de armas, o C66 ao C73 do ROADMAP).
+- **A fonte das regras:** as decisões do usuário de 2026-11-23 (o ROADMAP) e a lista das 26 modificações que ele aprovou
+  ("Aprovo"), com os efeitos, os preços e onde cada uma serve; o C66 e o C67 (as contas e o Foundry).
+- **Entrega:**
+  - a wiki: a página "Modificações de armas" (Catálogos), no `system-modificacoes.js` (a fonte única da lista): a regra da
+    casa declarada e ligada à Invention Expertise, os slots, a permanência, o teto, o preço, os defeitos sorteados (a
+    tabela de 1d6 e o botão do sorteio), as marcas de história e os cartões das 26, com o que o Foundry faz de cada uma;
+    o script nas duas wikis (`index.html` e `jogadores.html`), no menu e no conteúdo (`wiki-app.js`), guardado na
+    instalação (`arquivos-publicos.js`), e a linha no README da raiz;
+  - o catálogo: o `build/conteudo-mods.mjs` faz um upgrade de arma por modificação (`mods-armas:<id>`, com a regra na
+    flag `mod`, conferida no build), e o `build/conteudo.mjs` o chama; o build só acrescentou os 26 (nenhum outro item
+    mudou);
+  - a loja: o `loja-do-14.mjs` põe a categoria "Modificações de arma" e as 20 à venda (os defeitos não), refeitas a cada
+    vez; o pedido aprovado na wiki entrega a modificação solta, cobrada, pelo catálogo;
+  - as regras: o encaixe com a classe do Kit (`CLASSES`; o `modCabe` recusa "só serve em arma Power"), e a arma diz a
+    classe dela (`paraModificacoes`, pelo `perfil2077`, com o Rebuild);
+  - a versão `0.3.206`.
+- **Fica para depois:** o teste da instalação (o C72); a modificação instalada direto pelo pedido (o "Encaixar em" da loja
+  é dos acessórios; a modificação é permanente e quem instala é o Tech); o +2 em perícia do acabamento de grife e da
+  marca de gangue, à mão; o que a wiki mostra de uma arma com as modificações (o C70). As dúvidas da lista estão nas
+  Dúvidas.
+- **Testes de referência:**
+  - **G3:** o `modificacoes.test.mjs` ganhou dois testes (8): as 26 da wiki, por grupo, válidas, com o preço e onde
+    servem (a classe e o tipo), a página (a regra da casa, a tabela dos defeitos e o sorteio), o catálogo igual à wiki, a
+    loja (20, sem os defeitos, e sem duplicar ao rodar de novo) e a página no menu e nas duas wikis.
+  - **G4:** um passo do C68: o pedido de verdade na wiki (a mira holográfica) chega solto e cobrado, e instala no rifle;
+    o defletor recusado no rifle comum e aceito depois do Power Rebuild; o cano serrado recusado no rifle e aceito na
+    espingarda, que passa a se esconder (com o terceiro slot do defeito).
+  - **Isolados:** `catalogos.test.js` (a loja e o catálogo), `mapa-publico.test.js` (os arquivos guardados),
+    `termos-regras.test.js`, `validacao-estatica.test.js`, `acessibilidade-wiki.test.js` e `nomes.test.js` passam.
+- **Portões:** G1 260 arquivos; G2 sem erros; G3 785/785; G4 332/332 (709 s). A primeira rodada do G4 deu 330/332: caíram só as duas instáveis conhecidas do C26 (estados e as chaves do Fluxo, "A nonpersisted Document cannot be updated"), juntas, como no master; a rodada seguinte passou inteira. Os isolados da loja, dos arquivos públicos e dos termos passam.
+- **Mutações:** seis no G3 (N1 a N6: o defletor numa arma que não é Power, a classe que não existe, a loja que duplica ao rodar de novo, os defeitos à venda, o preço da wiki diferente do catálogo e a tabela dos defeitos fora da ordem) e uma no G4 (F1: a arma que não diz a classe, e o defletor nunca cabe); todas morreram, e os arquivos voltaram com o md5 igual.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

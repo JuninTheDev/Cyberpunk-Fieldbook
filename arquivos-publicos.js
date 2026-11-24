@@ -12,7 +12,7 @@
   // Guardados no aparelho quando a wiki é instalada (e de novo a cada publicação que muda um deles).
   guardados: [
     '/jogadores.html', '/mestre.html', '/wiki.css', '/netwire.css', '/netwire.js', '/wiki-app.js', '/wiki-nomes.js', '/nightcity-map.js',
-    '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-glossario.js',
+    '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-modificacoes.js', '/system-glossario.js',
     '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
     '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
     // A wiki instalada no celular: o manifesto e os ícones.

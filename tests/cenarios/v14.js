@@ -20966,6 +20966,64 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('C68: a modificação da loja da wiki chega solta pelo pedido (cobrada) e instala na arma; as do catálogo servem onde a wiki diz (o defletor só na arma Power, o cano serrado só na espingarda, que passa a se esconder)', async () => {
+      // O pedido de verdade, pela wiki: a mira holográfica (100eb), da categoria das modificações da loja.
+      const { pedido } = await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'mods-armas:mira-holografica', qtd: 1 }] });
+      await api(`/api/personagens/${solo.id}/pedidos/${pedido.id}/aprovar`, 'POST', {});
+      const info = await edge.evaluate(`(async () => {
+        const id = ${JSON.stringify(solo.id)};
+        const a = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === id);
+        await a.update({ 'system.dinheiro': a.system.dinheiro + 200 });
+        const antes = a.system.dinheiro;
+        const avisos = [];
+        const original = ui.notifications.warn;
+        ui.notifications.warn = texto => { avisos.push(String(texto)); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = chave => foundry.utils.deepClone(cat[chave]);
+        const ator = await Actor.implementation.create({ name: 'C68 Oficina', type: 'personagem' });
+        try {
+          const resultado = await game.system.api.wiki.entregarPedido(a, id, ${JSON.stringify(pedido)}).then(r => r.ok, e => e.message);
+          const mira = a.items.find(item => String(item.getFlag('${S}', 'wikiUid') || '').startsWith('pedido:' + ${JSON.stringify(pedido.id)}));
+          const rifleDoSolo = a.items.getName('Assault Rifle');
+          const chegou = { nome: mira?.name, solta: mira?.system.instaladoEm, mod: mira?.modificacao?.id, dinheiro: antes - a.system.dinheiro };
+          await mira?.update({ 'system.instaladoEm': rifleDoSolo.id });
+          const naArma = { em: a.items.get(mira?.id)?.system.instaladoEm === rifleDoSolo.id, slots: a.items.get(rifleDoSolo.id).slotsDeModificacao };
+          // O defletor de ricochete: recusado no rifle comum, aceito depois do Power Rebuild.
+          const rifleDados = pegar('core_weapons:assault-rifle'); rifleDados.name = 'C68 Rifle';
+          const [rifle] = await ator.createEmbeddedDocuments('Item', [rifleDados]);
+          const [espingarda] = await ator.createEmbeddedDocuments('Item', [pegar('core_weapons:shotgun')]);
+          const [defletor] = await ator.createEmbeddedDocuments('Item', [pegar('mods-armas:defletor-de-ricochete')]);
+          const [serrado] = await ator.createEmbeddedDocuments('Item', [pegar('mods-armas:cano-serrado')]);
+          const instalar = async (item, arma) => { await item.update({ 'system.instaladoEm': arma.id }); return ator.items.get(item.id).system.instaladoEm === arma.id; };
+          const defletorSemPower = await instalar(defletor, rifle);
+          const [rebuild] = await ator.createEmbeddedDocuments('Item', [pegar('armas-2077:power-rebuild')]);
+          await rebuild.update({ 'system.instaladoEm': rifle.id });
+          const classe = ator.items.get(rifle.id).perfil2077?.classe ?? null;
+          const defletorComPower = await instalar(defletor, rifle);
+          const ocultavelAntes = espingarda.system.ocultavel;
+          const serradoNoRifle = await instalar(serrado, ator.items.get(rifle.id));
+          const serradoNaEspingarda = await instalar(serrado, espingarda);
+          const modsNoCatalogo = Object.keys(cat).filter(chave => chave.startsWith('mods-armas:')).length;
+          return {
+            resultado, chegou, naArma, defletorSemPower, classe, defletorComPower, serradoNoRifle, serradoNaEspingarda, ocultavelAntes,
+            ocultavelDepois: ator.items.get(espingarda.id).system.ocultavel, slotsDaEspingarda: ator.items.get(espingarda.id).slotsDeModificacao, modsNoCatalogo, avisos
+          };
+        } finally {
+          ui.notifications.warn = original;
+          await ator.delete();
+        }
+      })()`);
+      const doc = (await api(`/api/personagens/${solo.id}`)).personagem;
+      const status = doc.pedidos.find(p => p.id === pedido.id)?.status;
+      const ok = info.resultado === true && status === 'entregue' && info.chegou.nome === 'Mira holográfica' && info.chegou.solta === '' && info.chegou.mod === 'mira-holografica'
+        && info.chegou.dinheiro === 100 && info.naArma.em && info.naArma.slots.usados === 1 && info.naArma.slots.total === 2
+        && info.defletorSemPower === false && info.classe === 'power' && info.defletorComPower === true
+        && info.serradoNoRifle === false && info.serradoNaEspingarda === true && info.ocultavelAntes === false && info.ocultavelDepois === true
+        && info.slotsDaEspingarda.total === 3 && info.modsNoCatalogo === 26
+        && info.avisos.some(aviso => aviso.includes('só serve em arma Power')) && info.avisos.some(aviso => aviso.includes('não serve neste tipo de arma'));
+      return [ok, JSON.stringify({ ...info, status })];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

@@ -876,7 +876,7 @@ export class ItemCPR extends Item {
   }
   get paraModificacoes() {
     const { aDistancia, slots, qualidade, tipo } = this.system;
-    return { aDistancia, slots, qualidade, tipo, exotica: this.getFlag(SISTEMA, 'arma2077')?.exotica ?? null };
+    return { aDistancia, slots, qualidade, tipo, exotica: this.getFlag(SISTEMA, 'arma2077')?.exotica ?? null, classe: this.perfil2077?.classe ?? null };
   }
   get slotsDeModificacao() {
     const mods = this.modificacoes.map(item => item.modificacao);

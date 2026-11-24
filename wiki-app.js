@@ -158,7 +158,8 @@
       { id: 'weapons2077', label: 'Armas de 2077', icon: 'W' },
       { id: 'cyberware2077', label: 'Cyberware de 2077', icon: 'CW' },
       { id: 'cyberware', label: 'Cyberware do RED', icon: 'K' },
-      { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' }
+      { id: 'gear', label: 'Armas e equipamento do RED', icon: 'E' },
+      { id: 'modsArmas', label: 'Modificações de armas', icon: 'MA' }
     ]},
     { group: 'Black Chrome', pages: [
       { id: 'bcGuia', label: 'Como usar o Black Chrome', icon: 'BC' },
@@ -184,7 +185,7 @@
     os2077: { id: 'cyberware2077', section: 'berserk-e-sandevistan' },
     ...(config.aliases || {})
   };
-  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemBlackChrome || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
+  const pageContent = Object.assign({}, window.systemCatalog || {}, (window.systemRules || {}).pages || {}, (window.systemNet || {}).pages || {}, (window.system2077 || {}).pages || {}, (window.systemBlackChrome || {}).pages || {}, (window.systemModificacoes || {}).pages || {}, (window.systemGlossary || {}).pages || {}, (window.characterCreator || {}).pages || {}, config.pageContent || {});
   Object.entries(markdownDocs).forEach(([id, doc]) => {
     pageContent[id] = { eyebrow: doc.eyebrow, title: doc.title, lede: doc.lede, html: `<div class="md-doc" id="md-doc">Carregando ${doc.file}…</div>` };
   });

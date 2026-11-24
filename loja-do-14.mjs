@@ -3,6 +3,8 @@
 // 2026-11-16, decisão do usuário: "O catálogo do 14"). Os textos em português (o nome, o grupo, a descrição, as
 // etiquetas) continuam os do foundry-2077/build/loja.mjs, que lê os compêndios do CORE: o catálogo do 14 corrige o que o
 // CORE traz errado (a Pepper Shaker com dano 0, por exemplo), e a loja mostrava o do CORE.
+// As modificações de armas (o C68, a regra da casa: system-modificacoes.js) só existem no 14: entram aqui, numa categoria
+// delas, com os dados do catálogo; os defeitos (preço 0) não se vendem.
 // Uso: node loja-do-14.mjs (depois do foundry-2077/build/loja.mjs, e a cada build do catálogo do 14). O teste
 // tests/isolados/catalogos.test.js confere que a loja e o catálogo batem.
 import fs from 'node:fs';
@@ -24,6 +26,32 @@ function resumoDaArma(resumo, arma) {
   partes[0] = String(arma.dano);
   return partes.map(parte => parte.replace(/^CDT \d+$/, `CDT ${arma.cdt}`).replace(/^pente \d+$/, `pente ${arma.pente}`)
     .replace(/^\d+ mãos?$/, `${arma.maos} ${arma.maos > 1 ? 'mãos' : 'mão'}`)).join(' · ');
+}
+
+// As modificações de armas na loja: a categoria e um item por modificação à venda, refeitos a cada vez (o que o
+// foundry-2077/build/loja.mjs gera não as tem). A entrega pelo pedido usa o id: o item do catálogo chega solto. wiki: o
+// system-modificacoes.js (o grupo e onde cada uma serve).
+export const CATEGORIA_DAS_MODS = { id: 'modificacoes', nome: 'Modificações de arma' };
+const texto = html => String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+export function modsNaLoja(loja, catalogo, wiki) {
+  const daWiki = new Map(wiki.data.mods.map(entrada => [entrada.id, entrada]));
+  const mods = Object.values(catalogo.itens).filter(item => item.flags['cpr-fieldbook'].mod && item.system.preco > 0);
+  loja.itens = loja.itens.filter(item => !String(item.id).startsWith('mods-armas:'));
+  loja.categorias = loja.categorias.filter(categoria => categoria.id !== CATEGORIA_DAS_MODS.id);
+  const depois = loja.categorias.findIndex(categoria => categoria.id === 'acessorios');
+  loja.categorias.splice(depois + 1, 0, { ...CATEGORIA_DAS_MODS });
+  for (const item of mods) {
+    const mod = item.flags['cpr-fieldbook'].mod;
+    const entrada = daWiki.get(mod.id);
+    if (!entrada) throw new Error(`A modificação ${mod.id} do catálogo não está na wiki (system-modificacoes.js).`);
+    loja.itens.push({
+      id: item.flags['cpr-fieldbook'].catalogo, preco: item.system.preco, nome: item.name, cat: CATEGORIA_DAS_MODS.id,
+      sub: `${wiki.grupos[entrada.grupo]} (regra da casa)`,
+      resumo: `${mod.tamanho} slot de modificação · ${wiki.serveEm(entrada)}`,
+      desc: texto(item.system.descricao), modificacao: { tipo: mod.tipo, tamanho: mod.tamanho }
+    });
+  }
+  return mods.length;
 }
 
 export function lojaComO14(loja, catalogo) {
@@ -52,8 +80,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   vm.runInNewContext(texto, contexto);
   const catalogo = JSON.parse(fs.readFileSync(path.join(raiz, 'foundry-sistema', 'dados', 'catalogo.json'), 'utf8'));
   const { loja, mudancas, semPar } = lojaComO14(contexto.window.shopCatalog, catalogo);
+  const wiki = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(raiz, 'system-modificacoes.js'), 'utf8'), wiki);
+  const mods = modsNaLoja(loja, catalogo, wiki.window.systemModificacoes);
   if (semPar.length) throw new Error(`Itens da loja fora do catálogo do 14: ${semPar.join(', ')}`);
   const nl = texto.includes('\r\n') ? '\r\n' : '\n';
   fs.writeFileSync(arquivoLoja, `${CABECALHO}${nl}window.shopCatalog = ${JSON.stringify(loja)};${nl}`);
   console.log(mudancas.length ? `A loja com o catálogo do 14: ${mudancas.length} mudança(s)\n  ${mudancas.join('\n  ')}` : 'A loja já batia com o catálogo do 14.');
+  console.log(`Modificações de arma à venda: ${mods}.`);
 }
