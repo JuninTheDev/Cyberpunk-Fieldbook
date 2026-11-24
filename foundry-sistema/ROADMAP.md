@@ -586,7 +586,8 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68).
   situacional da arma que aparece só no ataque com ela.
 - [x] **C67. As modificações no Foundry:** feito no ciclo 205 (sessão KouArt, 2026-11-24). A rolagem, a ficha do item e o
   cartão do ataque.
-- [ ] **C68. A página da regra da casa, o catálogo e a loja:** a wiki, o build e os pedidos.
+- [~] **C68. A página da regra da casa, o catálogo e a loja:** em andamento (sessão KouArt, 2026-11-24). A wiki, o build e
+  os pedidos.
 - [ ] **C69. A identidade da arma no Foundry:** o nome próprio, o diário (abates, críticos, primeiro sangue, sessões e os
   marcos), a nota do mestre e a volta para a wiki.
 - [ ] **C70. O cartão da arma e o Arsenal na wiki:** com a ida e a volta para o Foundry.
