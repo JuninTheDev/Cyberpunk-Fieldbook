@@ -633,7 +633,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       const gmCard = item => {
         const characters = allCharacters().filter(doc => campaignOf(doc) === item.id).length;
         const players = readAccounts().filter(account => account.campanhas.includes(item.id)).length;
-        return { ...item, personagens: characters, jogadores: players, documentos: documentsOf(item.id) };
+        return { ...item, personagens: characters, jogadores: players, documentos: documentsOf(item.id), roteiros: campaigns.listScripts(item.id) };
       };
       if (pathname === '/api/campanhas') {
         if (method === 'GET') return json(response, 200, { campanhas: identity.campanhas.map(id => campaigns.get(id)).map(item => gm ? gmCard(item) : campaignCard(item, identity)), ...(gm ? { primeira: campaigns.first, compartilhados: documentsOf('night-city') } : {}) }, corsHeaders);

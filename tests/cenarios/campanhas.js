@@ -188,6 +188,9 @@ module.exports = async ({ edge, r }) => {
     });
 
     // ---------------- Na tela: mestre ----------------
+    // Um roteiro da campanha nova, só na pasta de dados (como o mestre manda pela aba), com um handout.
+    fs.mkdirSync(path.join(dados, 'campanhas', B.id, 'roteiros'), { recursive: true });
+    fs.writeFileSync(path.join(dados, 'campanhas', B.id, 'roteiros', '01-sessao.md'), '# Sessão 01: O teste\n\nSó o mestre lê isto.\n\n### H-01 · O bilhete\n\n> Venha sozinho.\n');
     await edge.send('Network.setBypassServiceWorker', { bypass: true });
     await edge.ir(`${base}/`, 1500);
     await r.passo('mestre: o seletor tem as campanhas; trocar muda o menu, a cor e o topo', async () => {
@@ -203,6 +206,21 @@ module.exports = async ({ edge, r }) => {
       for (let i = 0; i < 20 && !(await edge.evaluate(`!!document.querySelector('#cp-overview .tile')`)); i++) await edge.sleep(200);
       const texto = (await edge.evaluate(`document.getElementById('cp-overview').textContent`)).replace(/\s+/g, ' ');
       return [/3 personagens/.test(texto) && /2 jogadores/.test(texto) && /documentos\/sombras-de-pacifica\//.test(texto), texto.slice(0, 160)];
+    });
+    await r.passo('mestre: os roteiros da campanha nova (só no servidor) entram no menu, com a aba dos handouts', async () => {
+      const id = `roteiro-${B.id}-01-sessao`;
+      const conteudo = async (padrao, pagina) => {
+        await edge.evaluate(`wikiApp.openPage(${JSON.stringify(pagina)})`);
+        let texto = '';
+        for (let i = 0; i < 25 && !padrao.test(texto); i++) { await edge.sleep(200); texto = (await edge.evaluate(`document.getElementById('content').textContent`)).replace(/\s+/g, ' '); }
+        return texto;
+      };
+      const itens = await edge.evaluate(`[...document.querySelectorAll('.nav-item')].map(b => b.dataset.page)`);
+      const roteiro = await conteudo(/Só o mestre lê isto/, id);
+      const handouts = await conteudo(/Venha sozinho/, `${id}-handouts`);
+      await edge.shot('mestre-roteiro-da-campanha-nova');
+      const ok = itens.includes(id) && !itens.includes(`${id}-handouts`) && /Sessão 01: O teste/.test(roteiro) && /Só o mestre lê isto/.test(roteiro) && /O bilhete/.test(handouts) && /Venha sozinho/.test(handouts);
+      return [ok, `no menu: ${itens.includes(id)} · roteiro: ${roteiro.slice(0, 90)} · handouts: ${handouts.slice(0, 90)}`];
     });
     await r.passo('mestre: Personagens e códigos mostra só os da campanha escolhida', async () => {
       await edge.evaluate(`wikiApp.openPage('personagens')`);
