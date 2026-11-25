@@ -451,10 +451,24 @@
       const home = homeOf(item.id);
       pages[home] = overviewPage(item);
       pageSetup[home] = content => setupOverview(item.id, content);
+      // Os roteiros da campanha (os .md que ficam só no servidor, fora do git público): uma entrada cada, com a aba
+      // Handouts quando o roteiro tem "### H-xx · Título" (os botões entregam aos jogadores).
+      const scripts = (item.roteiros || []).map((script, index) => {
+        const base = `roteiro-${item.id}-${slug(script.nome)}`;
+        const defs = [{ kind: 'roteiro', id: base, roteiro: script.nome, title: escapeHtml(script.titulo), eyebrow: `${escapeHtml(item.nome)} / roteiro, só você vê` }];
+        if ((script.handouts || []).length) defs.push({ kind: 'handouts', id: `${base}-handouts`, roteiro: script.nome, title: 'Handouts', eyebrow: `${escapeHtml(item.nome)} / handouts`, handouts: script.handouts });
+        const extra = extraPages(item.id, defs);
+        Object.assign(pages, extra.pages);
+        Object.assign(pageSetup, extra.pageSetup);
+        Object.assign(docs, extra.markdownDocs);
+        const icon = String(index).padStart(2, '0');
+        return { id: base, label: escapeHtml(script.titulo), icon, ...(defs.length > 1 ? { tabs: [{ id: base, label: 'Roteiro' }, { id: `${base}-handouts`, label: 'Handouts' }] } : {}) };
+      });
       // O mesmo desenho do Protocolo Morana: a campanha em cima, a mesa (o que se usa durante e entre as sessões) e os
       // personagens dos jogadores.
       return { id: item.id, name: item.nome, color: item.cor, groups: [
         { group: 'Campanha', pages: [{ id: home, label: 'Resumo', icon: '00' }] },
+        ...(scripts.length ? [{ group: 'Roteiros (só você vê)', pages: scripts }] : []),
         { group: 'Mesa', pages: [{ id: 'notas', label: 'Notas e relógio da cidade', icon: 'N' }, { id: 'caixa', label: 'Caixa do NetWire', icon: 'NW' }, { id: 'playerView', label: 'Visão dos jogadores', icon: 'PV' }, { id: 'agenda', label: 'Agenda das mesas', icon: 'AG' }, { id: 'campanhas', label: 'Campanhas', icon: 'CP' }] },
         { group: 'Personagens dos jogadores', pages: [{ id: 'personagens', label: 'Personagens e códigos', icon: 'PC' }, { id: 'loja', label: 'Loja', icon: 'EB' }] },
         ...(own.length ? [{ group: 'Documentos', pages: own }] : []),

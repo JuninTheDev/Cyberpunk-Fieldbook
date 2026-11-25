@@ -140,6 +140,17 @@ test('o roteiro da sessão fica na pasta de dados e só o mestre lê', async t =
   assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02', { method: 'PUT', cookie: jogador.cookie, body: { texto: 'x' } })).status, 403);
   assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-02')).status, 403);
   assert.equal(fs.readFileSync(path.join(pasta, 'sessao-02.md'), 'utf8'), '# Sessão 2\n\nSó o mestre.\n');
+  // A lista das campanhas, para o menu do mestre, traz os roteiros (o título e os handouts "### H-xx · Título", uma vez
+  // cada); o jogador não vê a lista dos roteiros.
+  fs.writeFileSync(path.join(pasta, '00-a-campanha.md'), '# A campanha\n\n### H-01 · A mensagem\n\n> Tô viva.\n\n### H-02 · A planta\n\n### H-01 · A mensagem\n');
+  const lista = await servidor.pedir('/api/campanhas', { cookie: mestre });
+  assert.deepEqual(lista.json.campanhas.find(item => item.id === 'morana').roteiros, [
+    { nome: '00-a-campanha', titulo: 'A campanha', handouts: ['H-01', 'H-02'] },
+    { nome: 'sessao-02', titulo: 'Sessão 2', handouts: [] },
+    { nome: 'sessao-03', titulo: 'Sessão 3', handouts: [] }
+  ]);
+  const doJogador = await servidor.pedir('/api/campanhas', { cookie: jogador.cookie });
+  assert.ok(doJogador.json.campanhas.length && doJogador.json.campanhas.every(item => item.roteiros === undefined));
 });
 
 test('o resumo do personagem traz a Humanidade (EMP × 10 sem ficha da mesa), para o cartão do Início', async t => {

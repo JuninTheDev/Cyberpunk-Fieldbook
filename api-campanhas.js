@@ -268,6 +268,19 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic, docsDi
     if (!SCRIPT_RE.test(String(name || ''))) return null;
     try { return fs.readFileSync(scriptFile(id, name), 'utf8'); } catch { return null; }
   };
+  // Os roteiros de uma campanha, para o menu do mestre: o nome do arquivo, o título (o primeiro "# ") e os handouts
+  // (os "### H-xx · Título" do texto), na ordem dos nomes. Sem a pasta, nenhum.
+  function listScripts(id) {
+    let files = [];
+    try { files = fs.readdirSync(path.join(folder(id), 'roteiros')).filter(file => file.endsWith('.md') && SCRIPT_RE.test(file.slice(0, -3))).sort(); } catch { return []; }
+    return files.map(file => {
+      const name = file.slice(0, -3);
+      const text = readScript(id, name) || '';
+      const title = ((text.match(/^﻿?#\s+(.+)$/m) || [])[1] || name).trim().slice(0, 120);
+      const handouts = [...new Set([...text.matchAll(/^###\s+(H-\d+)\s+·/gm)].map(match => match[1]))];
+      return { nome: name, titulo: title, handouts };
+    });
+  }
   function writeScript(id, name, text) {
     if (!SCRIPT_RE.test(String(name || ''))) throw Object.assign(new Error('Nome de roteiro inválido.'), { status: 400 });
     const content = String(text ?? '');
@@ -339,7 +352,7 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic, docsDi
   const agendaUpdated = id => readAgenda().porCampanha[id] || null;
   const upcoming = id => readAgenda().sessoes.filter(item => item.campanha === id && endOf(item) > Date.now()).slice(0, 5).map(({ id: sid, inicio, duracao, titulo, nota }) => ({ id: sid, inicio, duracao, titulo, nota }));
 
-  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, readDefects, writeDefect, publicClocks, readScript, writeScript, readAgenda, agendaView, addSession, updateSession, removeSession, upcoming, agendaUpdated, validId: id => ID_RE.test(String(id || '')) };
+  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, readDefects, writeDefect, publicClocks, readScript, writeScript, listScripts, readAgenda, agendaView, addSession, updateSession, removeSession, upcoming, agendaUpdated, validId: id => ID_RE.test(String(id || '')) };
 }
 
 module.exports = { createCampaigns, publishedOf };
