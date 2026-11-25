@@ -595,7 +595,8 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
   jeito da aba Cyberware (o esboço "Bancada da arma" de 2026-11-24, aprovado pelo usuário: "Gostei de como está, só
   adapte o visual para o visual da wiki"): a arma em holograma, os slots de acessório e de modificação, o defeito, o teto
   e o que cabe em cada slot livre, e a identidade; com a ida e a volta para o Foundry.
-- [ ] **C71. A oficina do mestre:** criar uma modificação sem programar e os defeitos escondidos.
+- [~] **C71. A oficina do mestre:** em andamento (sessão KouArt, 2026-11-24). Criar uma modificação sem programar e os
+  defeitos escondidos.
 - [ ] **C72. A economia:** o Tech que instala (o teste pelo C65), o presente do mestre, o Night Market e o teto por campanha.
 - [ ] **C73. O risco:** a arma quebrada, a relíquia e reforjar.
 - [ ] **C74. A bancada da arma no Foundry:** pedido do usuário (2026-11-24): "uma tela onde vc pode ver a arma e as
