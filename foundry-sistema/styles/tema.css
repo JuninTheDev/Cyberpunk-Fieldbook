@@ -765,6 +765,13 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.cartao.pedido-teste .alvo button:hover { background: var(--cp-amarelo); color: var(--cp-fundo); }
 .cpr-fieldbook.cartao.pedido-teste.encerrado .alvos { opacity: 0.85; }
 .cpr-fieldbook.pedido-de-teste fieldset.quem { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+/* A oficina do mestre (o C71): os dois efeitos em caixas, e o defeito escondido na ficha da arma e no chat do mestre. */
+.cpr-fieldbook.oficina-do-mestre fieldset.efeito-da-oficina { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 0; padding: 6px 8px; border: 1px solid rgba(243, 230, 0, 0.35); }
+.cpr-fieldbook.oficina-do-mestre .form-group { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.cpr-fieldbook.oficina-do-mestre .nota { color: var(--cp-fraco); font-size: 12px; }
+.cpr-fieldbook.ficha-item .defeito-escondido-da-arma { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 0; padding: 6px 8px; border: 1px dashed var(--cp-vermelho); }
+.cpr-fieldbook.ficha-item .defeito-escondido-da-arma .nota { flex: 1 1 100%; margin: 0; }
+.cpr-fieldbook.defeito-escondido button, .cpr-fieldbook.defeito-escondido b { color: var(--cp-vermelho); }
 .cpr-fieldbook.cartao .contra { color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.06em; }
 .cpr-fieldbook.cartao .dano { margin: 4px 0 0; padding-left: 16px; color: var(--cp-texto); font-size: 13px; line-height: 1.35; }
 .cpr-fieldbook.cartao .dano .lesao, .cpr-fieldbook.cartao .dano .lesao b { color: var(--cp-vermelho); }

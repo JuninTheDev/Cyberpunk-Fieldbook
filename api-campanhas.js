@@ -9,6 +9,7 @@
 //   campanhas.json                    → a lista (nome, cor e o mundo do Foundry de cada uma);
 //   campanhas/<id>/publicar.json      → o Publicar: o que o mestre guarda e o que os jogadores veem;
 //   campanhas/<id>/regras-loja.json   → o que a loja de criação esconde nesta campanha;
+//   campanhas/<id>/defeitos.json      → os defeitos escondidos das armas (o C71 do sistema do Foundry 14): só o mestre;
 //   noticias-night-city.json          → as notícias que todas as campanhas veem;
 //   agenda.json                       → as sessões marcadas de todas as campanhas.
 // O que existia antes das campanhas (jogadores.json, jogadores-mestre.json, regras-loja.json, e os personagens e
@@ -227,6 +228,31 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic, docsDi
     await writeJsonAtomic(path.join(folder(id), 'mesa.json'), table);
     return table;
   }
+  // ---------------- Os defeitos escondidos das armas ----------------
+  // O C71 do sistema do Foundry 14 (a oficina do mestre): o defeito sorteado para uma arma, que só vale depois de revelado
+  // (na primeira falha crítica com ela). Fica aqui, e não no mesa.json, porque o NetWire manda o mesa.json para a IA; e
+  // não no Foundry, porque o jogador dono da arma lê as flags dela pelo console. A chave é o uuid da arma no Foundry.
+  //   campanhas/<id>/defeitos.json → { defeitos: { chave: { mod, nome, arma, ator, quando } }, atualizado }
+  const DEFECT_KEY_RE = /^[A-Za-z0-9._-]{1,160}$/;
+  const DEFECT_ID_RE = /^[a-z0-9:-]{1,80}$/;
+  const MAX_DEFECTS = 500;
+  const readDefects = id => { const data = readFile(path.join(folder(id), 'defeitos.json')) || {}; return { defeitos: data.defeitos && typeof data.defeitos === 'object' ? data.defeitos : {}, atualizado: data.atualizado || null }; };
+  async function writeDefect(id, input) {
+    const { chave, defeito } = input && typeof input === 'object' ? input : {};
+    if (!DEFECT_KEY_RE.test(String(chave || ''))) throw Object.assign(new Error('A chave do defeito é o uuid da arma.'), { status: 400 });
+    const data = readDefects(id);
+    if (defeito === null || defeito === undefined) delete data.defeitos[chave];
+    else {
+      if (typeof defeito !== 'object' || !DEFECT_ID_RE.test(String(defeito.mod || ''))) throw Object.assign(new Error('Mande { chave, defeito: { mod, nome, arma, ator } } (defeito null apaga).'), { status: 400 });
+      if (!data.defeitos[chave] && Object.keys(data.defeitos).length >= MAX_DEFECTS) throw Object.assign(new Error(`No máximo ${MAX_DEFECTS} defeitos escondidos por campanha.`), { status: 400 });
+      data.defeitos[chave] = { mod: defeito.mod, nome: String(defeito.nome || defeito.mod).slice(0, 60), arma: String(defeito.arma || '').slice(0, 120), ator: String(defeito.ator || '').slice(0, 80), quando: new Date().toISOString() };
+    }
+    data.atualizado = new Date().toISOString();
+    fs.mkdirSync(folder(id), { recursive: true });
+    await writeJsonAtomic(path.join(folder(id), 'defeitos.json'), data);
+    return data;
+  }
+
   // O que os jogadores veem: os relógios marcados, com o valor de agora.
   const publicClocks = id => { const table = readTable(id); return Object.entries(table.publicos).map(([name, clock]) => ({ id: name, nome: clock.nome, passos: clock.passos, valor: table.relogios[name] || 0 })); };
 
@@ -313,7 +339,7 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic, docsDi
   const agendaUpdated = id => readAgenda().porCampanha[id] || null;
   const upcoming = id => readAgenda().sessoes.filter(item => item.campanha === id && endOf(item) > Date.now()).slice(0, 5).map(({ id: sid, inicio, duracao, titulo, nota }) => ({ id: sid, inicio, duracao, titulo, nota }));
 
-  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, publicClocks, readScript, writeScript, readAgenda, agendaView, addSession, updateSession, removeSession, upcoming, agendaUpdated, validId: id => ID_RE.test(String(id || '')) };
+  return { first: FIRST.id, list, get, create, update, remove, byWorld, readPublish, writePublish, readNews, writeNews, readShopRules, writeShopRules, readTable, writeTable, readDefects, writeDefect, publicClocks, readScript, writeScript, readAgenda, agendaView, addSession, updateSession, removeSession, upcoming, agendaUpdated, validId: id => ID_RE.test(String(id || '')) };
 }
 
 module.exports = { createCampaigns, publishedOf };

@@ -503,6 +503,14 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **A loja do CORE e o catálogo do 14 não dizem o mesmo da arma** (ciclo 208): o tipo (a Mono-Star e a Tomahawk são de
   arremesso na loja e brancas no 14) e se é exótica (a Yukimura). A regra que a wiki repete lê o que o 14 diz (o
   `loja-do-14.mjs` grava na loja), e o teste confere a lista da wiki contra a regra do sistema em todas as armas.
+- **O segredo do mestre vai para o servidor, num arquivo próprio** (ciclo 209): no Foundry, o jogador dono lê as
+  flags do item; na wiki, o `mesa.json` da campanha vai para a IA do NetWire. O defeito escondido ficou no
+  `defeitos.json` da campanha, e o teste isolado confere que o `mesa.json` não o tem.
+- **A mensagem sussurrada ao mestre não é segredo** (ciclo 209): o G4 viu o sussurro só para o mestre no
+  `game.messages` do navegador do jogador (o Foundry 14 manda os dados; só não mostra). O segredo fala com o mestre por
+  uma notificação ou uma janela no navegador dele, e o passo confere que o jogador não tem nada dele.
+- **O executor das mutações troca o texto exato do arquivo** (ciclo 209): no arquivo de CRLF, o trecho de várias linhas
+  precisa do CRLF; o gerador da lista confere que cada trecho aparece uma vez, como o arquivo está.
 
 ## Build
 

@@ -48,6 +48,8 @@ import * as perigos from './perigos.mjs';
 import * as pedidoDeTeste from './pedido-teste.mjs';
 import * as modificacoes from './modificacoes.mjs';
 import * as identidade from './identidade.mjs';
+import * as oficina from './oficina.mjs';
+import * as defeitos from './defeito-escondido.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
 import * as reguaDv from './regua-dv.mjs';
@@ -158,6 +160,11 @@ Hooks.once('init', () => {
   modificacoes.registrarModificacoes();
   game.system.api.modificacoes = modificacoes.API;
   game.system.api.identidade = identidade.API;
+  // A oficina do mestre e o defeito escondido (o C71): o botão na aba de Itens, o aviso da falha crítica e a API.
+  oficina.registrarOficina();
+  defeitos.registrarDefeitos();
+  game.system.api.oficina = oficina.API;
+  game.system.api.defeitosEscondidos = defeitos.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);

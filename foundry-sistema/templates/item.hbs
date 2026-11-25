@@ -38,6 +38,14 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
       {{#if modsDaArma}}<p class="nota modificacoes-da-arma">Modificações: {{modsDaArma.usados}} de {{modsDaArma.total}} slots{{#if modsDaArma.nomes}}: {{modsDaArma.nomes}}{{/if}}.</p>{{/if}}
+      {{#if defeitoEscondido}}
+      {{!-- O defeito escondido (o C71): só o mestre vê; guardado no servidor da wiki, só vale depois de revelado. --}}
+      <div class="defeito-escondido-da-arma">
+        {{#if defeitoEscondido.nome}}<p class="nota">Defeito escondido: <b>{{defeitoEscondido.nome}}</b>. Só vale depois de revelado (a primeira falha crítica com a arma).</p>
+        <button type="button" class="acao" data-action="revelarDefeito">REVELAR AGORA</button><button type="button" class="acao" data-action="tirarDefeito">TIRAR</button>
+        {{else}}<button type="button" class="acao" data-action="esconderDefeito" data-tooltip="Sorteia um defeito (1d6) e guarda no servidor da wiki: o jogador não vê">ESCONDER UM DEFEITO (1D6)</button>{{/if}}
+      </div>
+      {{/if}}
       <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
       {{#if armaDe}}<div class="celula arma-do-cyberware"><span>{{armaDe.rotulo}}</span><b>{{armaDe.nome}}</b></div><p class="nota">Os dados desta arma vêm de {{armaDe.nome}}: mude-os na ficha dele.</p>
       {{else if armaDeAtor}}<label class="celula"><span>Montada no veículo</span><select name="system.instaladoEm">{{selectOptions veiculosDaArma selected=fonte.instaladoEm}}</select></label>{{/if}}
@@ -138,8 +146,9 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{!-- A modificação de arma (o C67): o que ela faz vem da regra dela, não dos campos do acessório. --}}
       <div class="modificacao">
         {{#if modificacao.invalida}}<p class="nota">Esta modificação não vale: {{modificacao.invalida}}.</p>
-        {{else}}<p class="nota"><b>Modificação {{modificacao.tipo}}</b> · {{#if (eq modificacao.tipo "Defeito")}}não ocupa slot: dá mais um à arma.{{else}}ocupa {{modificacao.tamanho}} {{#if (eq modificacao.tamanho 1)}}slot{{else}}slots{{/if}} de modificação.{{/if}} Permanente: não sai da arma; para tirar, apague (ela se destrói).</p>
+        {{else}}<p class="nota"><b>Modificação {{modificacao.tipo}}</b>{{#if raridade}} · {{raridade}}{{/if}} · {{#if (eq modificacao.tipo "Defeito")}}não ocupa slot: dá mais um à arma.{{else}}ocupa {{modificacao.tamanho}} {{#if (eq modificacao.tamanho 1)}}slot{{else}}slots{{/if}} de modificação.{{/if}} Permanente: não sai da arma; para tirar, apague (ela se destrói).</p>
         <ul class="efeitos-da-modificacao">{{#each modificacao.efeitos}}<li>{{this}}</li>{{else}}<li>Sem efeito na regra: é a história da arma.</li>{{/each}}</ul>{{/if}}
+        {{#if daOficina}}<div class="acoes-do-item"><button type="button" class="acao" data-action="editarNaOficina">EDITAR NA OFICINA</button></div>{{/if}}
       </div>
       {{else}}
       <label class="celula"><span>Para</span><select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>

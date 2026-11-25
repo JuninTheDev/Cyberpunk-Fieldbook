@@ -668,6 +668,18 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
         if (method !== 'PUT') return json(response, 405, { erro: 'Use GET ou PUT.' });
         return json(response, 200, await campaigns.writeTable(id, await readJson(request, 128 * 1024)));
       }
+      // Os defeitos escondidos das armas (o C71 do sistema do Foundry 14): o Foundry do mestre lê e grava; PUT { chave,
+      // defeito } (defeito null apaga). Só o mestre (a checagem acima): o jogador não descobre o defeito pela wiki.
+      // O Foundry fala de outra origem: as respostas levam o CORS (a lista de campanhas também), e o erro também.
+      if (part === 'defeitos') {
+        if (method === 'GET') return json(response, 200, campaigns.readDefects(id), corsHeaders);
+        if (method !== 'PUT') return json(response, 405, { erro: 'Use GET ou PUT.' }, corsHeaders);
+        try {
+          return json(response, 200, await campaigns.writeDefect(id, await readJson(request, 16 * 1024)), corsHeaders);
+        } catch (erro) {
+          return json(response, erro.status || 500, { erro: erro.message }, corsHeaders);
+        }
+      }
       if (part === 'publicar') {
         if (method === 'GET') { const { mestre, atualizado } = campaigns.readPublish(id); return json(response, 200, { ...mestre, atualizado }); }
         if (method !== 'POST') return json(response, 405, { erro: 'Use POST.' });

@@ -174,7 +174,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   const ferrolho = Boolean(perfil?.ferrolho && arma.system.aDistancia);
   if (!montada && (carga || ferrolho)) await marcarDisparo(arma, { carga, perfil, ferrolho });
   const { total, mensagem } = await testar(atacante, {
-    rotulo: `${arma.nomeDeExibicao}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: resolverAtaques && config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true }, categoria: 'ataque',
+    rotulo: `${arma.nomeDeExibicao}: ${descricao}`, sabor: contra, partes: [...partes, ...extras], sorte: escolha?.sorte, modo: resolverAtaques && config('escondeAtaque') ? 'gm' : 'public', dados: { ataque: true, arma: arma.uuid }, categoria: 'ataque',
     semFalhaCritica: atacante.system.consciencia.semFalhaCritica
   });
   if (!conferirArmaVeicular(arma, modo, { atacante, tokenAtq }) || !conferirDestinos(lista, destinos, { modo, local })) return null;

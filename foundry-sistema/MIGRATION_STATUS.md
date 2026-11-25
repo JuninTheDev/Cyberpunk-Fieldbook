@@ -164,6 +164,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C71, a oficina do mestre e o defeito escondido (2026-11-24, sessão KouArt):** ficam para o usuário:
+  - **o defeito escondido é da arma deste mundo:** a chave é o uuid dela. O crossover leva o ator com os mesmos ids (o C27);
+    importar o personagem de novo (um ator novo) deixa o defeito para trás, no servidor;
+  - **a modificação da oficina no mundo** fica sem permissão para os jogadores, mas o Foundry pode mandar os dados dos itens
+    do mundo ao navegador de todos (não conferido). Uma lendária que precisa ser segredo até a entrega pode ser criada direto
+    na ficha do ator, na hora (`game.system.api.oficina.criar(dados, { ator })`);
+  - **a oficina edita só as modificações dela** (as do catálogo vêm da wiki, no build) e guarda até dois efeitos;
+  - **o defeito só se revela pela falha crítica de um ataque** (a janela do mestre) ou à mão, na ficha: o
+    emperrar no 1 e no 2 de uma arma ruim, sem falha crítica, não revela.
+
 - **C70, a bancada da arma na wiki (2026-11-24, sessão KouArt):** ficam para o usuário:
   - **o nome próprio só se muda no Foundry** (a aba História da ficha da arma): a wiki mostra a identidade, mas não a
     edita. Dar nome pela wiki fica para depois;
@@ -10075,6 +10085,44 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     marco avisado, uma origem só e as peças de novo na arma.
 - **Portões:** G1 264 arquivos; G2 sem erros; G3 796/796; G4 334/334 (708 s); os cenários da wiki arsenal (7/7), conta (19/19), criador (65/65) e cyberware (16/16). Duas rodadas do G4 antes: uma em que o Foundry de teste não abriu o mundo (o servidor.log vazio, como no C69), e uma com o passo do C70 falhando (a arma criada junto com o ator pelo importarPersonagem não passa pelo _preCreate: o dono entrou depois, e o passo ganhou o dono e a origem na identidade inicial).
 - **Mutações:** onze no G3 (N1 a N11; a N11 pediu o teste da loja contra o loja-do-14 em toda arma), seis no cenário da wiki (W1 a W6) e sete no G4 (F1 a F7); todas morreram, md5 igual.
+
+### Ciclo 209 (2026-11-24): C71, a oficina do mestre e o defeito escondido (sessão KouArt)
+
+- **Pedido do usuário (2026-11-24):** "Pode começar" (o C71 do plano das modificações de armas). As decisões do usuário no
+  mesmo dia: o defeito escondido "Só depois de revelado" (escondido, não muda nada; a primeira falha crítica dá o botão ao
+  mestre) e a raridade "Sem limite próprio" (só um rótulo).
+- **A fonte:** o plano do ROADMAP, a proposta da equipe de 2026-11-23 (o editor sem programar, a lendária fora da loja e do
+  git, o defeito escondido no servidor da wiki, só do mestre, e revelado pela falha crítica), a regra da casa (o
+  `validarMod`) e a tabela de defeitos da página da regra (1d6, de novo quando não serve).
+- **Entrega:**
+  - `regras-oficina.mjs` (novo): o formulário vira a modificação (o menu de efeitos e de situações), a descrição, o id, o
+    sorteio do defeito e a chave;
+  - `oficina.mjs` (novo): a janela da oficina (só o mestre), o `criar` (no mundo, na pasta "Arsenal do mestre", ou num
+    ator), o "Editar na oficina" e o botão na aba de Itens;
+  - `defeito-escondido.mjs` (novo): o cache do mestre lido da wiki, o esconder (o 1d6), o tirar, o revelar (o item do
+    catálogo na arma, a wiki esquece, o cartão e o diário) e a janela do mestre na falha crítica (nada no chat antes:
+    o G4 achou o sussurro ao mestre no navegador do jogador);
+  - no `combate.mjs`: o teste do ataque guarda o uuid da arma; na ficha do item: o bloco do defeito escondido (só o mestre)
+    e a raridade; no `wiki.mjs`: o `wikiFetch` exportado; o estilo no `tema.css`;
+  - na wiki: o `defeitos.json` de cada campanha (`api-campanhas.js`) e a rota `/api/campanhas/<id>/defeitos`, só do
+    mestre (`api-personagens.js`);
+  - a versão `0.3.209`.
+- **Fica para depois:** a economia (o Tech que instala, o presente do mestre, o Night Market e o teto por campanha, o C72);
+  a quebra e a relíquia (o C73); a bancada no Foundry (o C74). As dúvidas estão nas Dúvidas.
+- **Testes de referência:**
+  - **G3:** o `oficina.test.mjs` (novo, 4 testes): o plano e o menu, o menu refazendo a regra das modificações da wiki
+    (as situações, o dano contra coisas, o pente, o esconder, o emperrar, o defeito sem slot), as recusas com o motivo, a
+    descrição (o texto do mestre sem HTML) e o sorteio (de novo quando não serve, e nenhum).
+  - **Isolado (a API da wiki):** o `defeitos-api.test.js` (novo): só o mestre lê e grava, fora do `mesa.json`, a chave e o
+    defeito no formato, o jogador e o visitante recusados, apagar ao revelar.
+  - **G4:** um passo do C71: a oficina pelo formulário (os campos de cada situação, a pasta, a raridade, a regra, a recusa),
+    a mod no ataque (o tiro mirado), o defeito escondido no servidor e nada dele no Foundry do jogador dono (as flags, a API,
+    as mensagens deste passo), sem mudar os slots, a recusa de esconder de novo (com o aviso), a ficha do mestre, o tirar,
+    e o ataque com o d10 natural 1: a janela do mestre com o defeito, nada no chat antes, o "Revelar o defeito", o defeito
+    na arma (3 slots), o cartão para a mesa, o marco no diário e a wiki sem o segredo; o botão da oficina só para o
+    mestre.
+- **Portões:** G1 sem erros; G2 sem erros; G3 800/800; G4 335/335 (714 s); isolados 29/29. Rodadas antes: o CORS da rota, o rolar 6, as mensagens antigas, os avisos esperados e o sussurro ao mestre que chega ao jogador (trocado pela janela).
+- **Mutações:** oito no G3 (O1 a O8), quatro na API (A1 a A4) e dez no G4 (F1 a F10); todas morreram, md5 igual.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

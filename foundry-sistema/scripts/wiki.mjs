@@ -35,7 +35,7 @@ const nomeDaRole = nome => roleDaWiki(nome)?.nome ?? String(nome ?? '');
 // O Lifepath que o criador da wiki manda pronto, em texto (resultado.lifepath, com os nomes do CORE).
 const lifepathDaWiki = lifepath => Object.fromEntries(LIFEPATH.map(({ chave, wiki }) => [chave, String(lifepath?.[wiki] ?? '')]));
 
-export { carregarCatalogo, enderecoPadraoDaWiki };
+export { carregarCatalogo, enderecoPadraoDaWiki, wikiFetch };
 
 export function registrarWiki() {
   game.settings.register(SISTEMA, 'wikiUrl', {

@@ -7,6 +7,9 @@ import { PERICIAS } from './gerado.mjs';
 import { descreverEfeito, TIPOS as TIPOS_DE_MOD, validarMod } from './regras-modificacoes.mjs';
 import { contadores, descreverEvento, diario, LIMITES as LIMITES_DA_IDENTIDADE } from './regras-identidade.mjs';
 import { anotarMarco, temIdentidade, tornarDono } from './identidade.mjs';
+import { defeitoEscondido, esconder, revelar, tirar } from './defeito-escondido.mjs';
+import { abrir as abrirOficina } from './oficina.mjs';
+import { RARIDADES } from './regras-oficina.mjs';
 import { bonusDoCritico, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
@@ -93,7 +96,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       adicionarJanela: FichaItem.#adicionarJanela, removerJanela: FichaItem.#removerJanela, ajustarVidros: FichaItem.#ajustarVidros, prepararArmaVeicular: FichaItem.#prepararArmaVeicular,
       porVeiculoNaCena: FichaItem.#porVeiculoNaCena, perceberArmadura: FichaItem.#perceberArmadura,
       corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga,
-      anotarMarco: FichaItem.#anotarMarco, tornarDono: FichaItem.#tornarDono
+      anotarMarco: FichaItem.#anotarMarco, tornarDono: FichaItem.#tornarDono,
+      esconderDefeito: FichaItem.#esconderDefeito, revelarDefeito: FichaItem.#revelarDefeito, tirarDefeito: FichaItem.#tirarDefeito, editarNaOficina: FichaItem.#editarNaOficina
     }
   };
 
@@ -195,6 +199,11 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       slotsUsados: item.slotsUsados,
       modsDaArma: tipo === 'arma' && item.actor ? { ...item.slotsDeModificacao, nomes: item.modificacoes.map(i => i.name).join(', ') } : null,
       modificacao: tipo === 'upgrade' && item.getFlag(SISTEMA, 'mod') ? modificacaoDaFicha(item.getFlag(SISTEMA, 'mod')) : null,
+      // A oficina do mestre (o C71): a raridade da modificação da oficina e, só para o mestre, o "Editar na oficina"; na arma,
+      // o defeito escondido (o nome só no navegador do mestre).
+      raridade: tipo === 'upgrade' && item.getFlag(SISTEMA, 'oficina') ? RARIDADES[item.getFlag(SISTEMA, 'raridade')] ?? '' : '',
+      daOficina: tipo === 'upgrade' && game.user.isGM && Boolean(item.getFlag(SISTEMA, 'oficina')),
+      defeitoEscondido: tipo === 'arma' && game.user.isGM && temIdentidade(item) ? { nome: defeitoEscondido(item)?.nome ?? '' } : null,
       // A identidade da arma (o C69): o nome próprio no alto e a aba História.
       apelidoDaArma: tipo === 'arma' ? item.identidade.apelido : '',
       historia: temIdentidade(item) ? historiaDaFicha(item) : null,
@@ -264,6 +273,11 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     return null;
   }
   static #tornarDono() { return tornarDono(this.item); }
+  // O defeito escondido (o C71, só o mestre): sortear, revelar agora ou tirar; e o "Editar na oficina".
+  static #esconderDefeito() { return esconder(this.item).catch(erro => ui.notifications.error(erro.message)); }
+  static #revelarDefeito() { return revelar(this.item).catch(erro => ui.notifications.error(erro.message)); }
+  static #tirarDefeito() { return tirar(this.item).catch(erro => ui.notifications.error(erro.message)); }
+  static #editarNaOficina() { return abrirOficina({ item: this.item }); }
   // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
   static #rolarHumanidade() {
     return this.item.rolarHumanidade();

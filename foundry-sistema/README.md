@@ -665,6 +665,24 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     novo (pela ficha da mesa, ou pela criação depois que a ficha da mesa chegou à wiki) traz a identidade de volta: o
     nome, a frase, a aparência, quem fez, o diário que a wiki guardou e os contadores (o que a wiki contava a mais que os
     30 eventos fica no `antes` da flag), com os marcos de abates até ali já avisados; o dono é quem recebe a arma.
+  - **A oficina do mestre** (o C71): o botão "Oficina do mestre" na aba de Itens (só o mestre) abre o formulário que cria
+    uma modificação sem programar: o nome, a raridade (do catálogo, rara ou lendária: só um rótulo), o tipo, os slots,
+    onde serve, a classe, o texto e até dois efeitos de um menu (o ataque numa situação: até X m, de X a Y m, a X m ou
+    mais, no autofogo, no tiro mirado, contra um tipo de alvo, na mão de quem não é o dono, ou a situação escrita; o ataque
+    sempre, só negativo; o dano a mais contra coisas; o pente; se a arma se esconde; até que número ela emperra). O
+    `validarMod` recusa o que a regra da casa não deixa e diz o motivo. A modificação vira um item do mundo na pasta
+    "Arsenal do mestre" (sem permissão para os jogadores), no formato das do catálogo; a ficha dela tem o "Editar na
+    oficina". A API: `game.system.api.oficina` (`abrir`, `criar` e as contas do `regras-oficina.mjs`).
+  - **O defeito escondido** (o C71): na ficha da arma de um personagem, o mestre vê "Esconder um defeito (1d6)": o sorteio da
+    tabela da página da regra (de novo quando o defeito não serve na arma) fica no servidor da wiki
+    (`campanhas/<id>/defeitos.json`, só o mestre lê; fora do `mesa.json`, que o NetWire manda para a IA), com a chave do
+    uuid da arma. Escondido, o defeito não muda nada nem dá o slot a mais (decisão do usuário: "Só depois de revelado"). Na
+    falha crítica de um ataque com a arma, o mestre ativo recebe, numa janela dele, o "Revelar o defeito" (nada do defeito
+    passa pelo chat antes de revelado: a mensagem sussurrada chega ao navegador do jogador): o defeito do catálogo entra na
+    arma (com o efeito e o slot), a wiki esquece o segredo, a mesa vê o cartão e o diário da arma anota. O sorteio avisa o
+    mestre só na tela dele. A ficha do mestre também tem o "Revelar agora" e o "Tirar". O teste do ataque guarda o uuid da
+    arma (`teste.arma`). A API:
+    `game.system.api.defeitosEscondidos`.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

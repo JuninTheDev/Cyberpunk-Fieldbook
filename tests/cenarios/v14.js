@@ -21179,6 +21179,135 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('C71: a oficina do mestre cria a modificação pelo formulário (e recusa a que a regra não deixa), ela entra na arma e no ataque; o defeito escondido fica no servidor da wiki, fora do Foundry do jogador, e a falha crítica dá ao mestre o "Revelar o defeito", que o põe na arma', async () => {
+      await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)})`);
+      // O d10 natural 1 no ataque: a falha crítica.
+      await fixar(edge, [[1, 10]]);
+      const inicio = Date.now();
+      const info = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const api = game.system.api;
+        const cat = await api.wiki.carregarCatalogo();
+        const campanha = await api.wiki.campanhaDoMundo();
+        const resultado = { campanha: campanha?.id ?? null };
+        // A oficina pelo formulário: um efeito na situação "contra um tipo de alvo" (veículo).
+        const janela = api.oficina.abrir();
+        await esperar(() => document.querySelector('.oficina-do-mestre form'));
+        const form = document.querySelector('.oficina-do-mestre form');
+        form.elements.nome.value = 'C71 Mira Kiroshi';
+        form.elements.raridade.value = 'lendaria';
+        form.elements.tamanho.value = '1';
+        form.elements.serve.value = 'distancia';
+        form.elements.texto.value = 'Feita sob medida por um ripperdoc de Kabuki.';
+        form.elements.e0tipo.value = 'situacao';
+        form.elements.e0tipo.dispatchEvent(new Event('change', { bubbles: true }));
+        form.elements.e0valor.value = '1';
+        form.elements.e0situacao.value = 'mirado';
+        form.elements.e0situacao.dispatchEvent(new Event('change', { bubbles: true }));
+        resultado.campos = [...form.querySelectorAll('[data-efeito="0"] [data-campo]')].filter(c => c.style.display !== 'none').map(c => c.dataset.campo).join();
+        form.closest('.application').querySelector('button[data-action="salvar"]').click();
+        const mod = await janela;
+        resultado.mod = { nome: mod?.name, pasta: mod?.folder?.name, dono: mod?.ownership?.default, raridade: mod?.getFlag('${S}', 'raridade'), regra: mod?.getFlag('${S}', 'mod'), descricao: mod?.system.descricao ?? '' };
+        // A que a regra não deixa: +1 sempre.
+        resultado.recusa = await api.oficina.criar({ nome: 'C71 Proibida', tamanho: 1, efeitos: [{ tipo: 'sempre', valor: 1 }] }).then(() => '', erro => erro.message);
+        // O personagem do jogador, com a pistola: a mod da oficina entra na arma e no ataque (o tiro mirado).
+        const ator = await Actor.implementation.create({ name: 'C71 Vex', type: 'personagem', ownership: { [game.users.getName('Jogador').id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, system: { atributos: { ref: { valor: 8 } } } });
+        const [arma, outra] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:very-heavy-pistol']), foundry.utils.deepClone(cat['core_weapons:very-heavy-pistol'])]);
+        const [instalada] = await ator.createEmbeddedDocuments('Item', [mod.toObject()]);
+        await instalada.update({ 'system.instaladoEm': arma.id });
+        resultado.noAtaque = ator.situacionaisDoAtaque(arma, { pericia: arma.periciaDaArma, modo: 'tiro', local: 'cabeca' }).filter(s => /C71 Mira Kiroshi/.test(s.rotulo)).map(s => s.valor + ':' + s.ligado);
+        resultado.slotsAntes = arma.slotsDeModificacao;
+        // O defeito escondido: o 1d6 deu 1 (o gatilho sensível).
+        const escondido = await api.defeitosEscondidos.esconder(arma, { rolar: () => 1 });
+        resultado.escondido = escondido?.defeito?.mod ?? null;
+        // Esconder de novo recusa, com o aviso (guardado aqui: o passo final confere que o sistema não avisou nada).
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try { resultado.deNovo = await api.defeitosEscondidos.esconder(arma, { rolar: () => 1 }); } finally { ui.notifications.warn = avisar; }
+        resultado.avisoDeNovo = avisos.join(' | ');
+        resultado.semMudar = { slots: arma.slotsDeModificacao.total, defeitos: arma.modificacoes.filter(i => i.modificacao.tipo === 'defeito').length, flags: /gatilho/i.test(JSON.stringify(arma.toObject())) };
+        await arma.sheet.render({ force: true });
+        await esperar(() => arma.sheet.element?.querySelector('.defeito-escondido-da-arma'));
+        resultado.naFicha = textoDe(arma.sheet.element.querySelector('.defeito-escondido-da-arma'));
+        await arma.sheet.close({ animate: false });
+        // A outra pistola: esconder (o 4, o superaquece) e tirar.
+        await api.defeitosEscondidos.esconder(outra, { rolar: () => 4 });
+        resultado.tirado = await api.defeitosEscondidos.tirar(outra);
+        resultado.uuid = arma.uuid;
+        resultado.ator = ator.id;
+        resultado.armaId = arma.id;
+        return resultado;
+      })()`);
+      const lerDefeitos = async () => (await api(`/api/campanhas/${info.campanha}/defeitos`)).defeitos || {};
+      const noServidor = await lerDefeitos();
+      // O jogador dono da arma: nada do defeito no Foundry dele (as flags, a API, as mensagens).
+      const doJogador = jogador ? await jogador.evaluate(`(async () => {
+        await new Promise(r => setTimeout(r, 500));
+        const ator = game.actors.get(${JSON.stringify(info.ator)});
+        // As mensagens deste passo (as de antes falam do gatilho sensível do C67).
+        const nosItens = /gatilho/i.test(JSON.stringify(ator?.items.contents.map(i => i.toObject()) ?? []));
+        const mensagens = game.messages.contents.filter(m => m.timestamp >= ${inicio} && /gatilho/i.test(m.content)).map(m => ({ whisper: m.whisper, autor: m.author?.name, trecho: m.content.replace(/<[^>]+>/g, ' ').slice(0, 120) }));
+        return { ve: Boolean(ator?.isOwner), vazou: nosItens || mensagens.length > 0, nosItens, mensagens,
+          api: game.system.api.defeitosEscondidos.defeitoEscondido(ator?.items.get(${JSON.stringify(info.armaId)})) };
+      })()`) : null;
+      // O ataque com o d10 natural 1 (sem o fluxo: o teste no chat): o mestre recebe o "Revelar o defeito" e clica.
+      const revelado = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const fluxo = { ativo: false, rolagemManual: false };
+        const antes = Object.fromEntries(Object.keys(fluxo).map(chave => [chave, game.settings.get('${S}', chave)]));
+        for (const [chave, valor] of Object.entries(fluxo)) await game.settings.set('${S}', chave, valor);
+        try {
+          const arma = fromUuidSync(${JSON.stringify(info.uuid)});
+          await arma.update({ 'system.pente.value': arma.system.pente.max });
+          const mensagensAntes = game.messages.size;
+          await arma.atacar({});
+          const novas = () => game.messages.contents.slice(mensagensAntes);
+          // A janela do mestre (nada no chat antes de revelar: o sussurro chega ao navegador do jogador).
+          const janela = () => document.querySelector('.application.defeito-escondido');
+          await esperar(janela);
+          const teste = novas().find(m => m.getFlag('${S}', 'teste')?.ataque)?.getFlag('${S}', 'teste');
+          const botao = janela()?.querySelector('button[data-action="revelar"]');
+          const resultado = { critico: teste?.critico, armaNoTeste: teste?.arma === arma.uuid, janela: /Gatilho sensível/.test(janela()?.textContent ?? ''), botao: Boolean(botao),
+            chatAntes: novas().some(m => /gatilho/i.test(m.content)) };
+          botao?.click();
+          await esperar(() => arma.modificacoes.some(i => i.modificacao.tipo === 'defeito'));
+          await esperar(() => novas().some(m => /o defeito se revelou/.test(m.content)));
+          Object.assign(resultado, {
+            defeito: arma.modificacoes.filter(i => i.modificacao.tipo === 'defeito').map(i => i.name), slots: arma.slotsDeModificacao.total,
+            publico: novas().some(m => !m.whisper.length && /o defeito se revelou/.test(m.content)), marco: arma.identidade.eventos.some(e => e.tipo === 'marco' && /O defeito se revelou: Gatilho sensível/.test(e.texto))
+          });
+          return resultado;
+        } finally {
+          for (const [chave, valor] of Object.entries(antes)) await game.settings.set('${S}', chave, valor);
+        }
+      })()`);
+      const depois = await lerDefeitos();
+      // O botão da oficina na aba de Itens: só o mestre.
+      const botoes = await edge.evaluate(`(async () => { await ui.items.render({ force: true }); await new Promise(r => setTimeout(r, 300)); return Boolean(ui.items.element?.querySelector('[data-oficina-do-mestre]')); })()`);
+      const botaoDoJogador = jogador ? await jogador.evaluate(`(async () => { await ui.items.render({ force: true }); await new Promise(r => setTimeout(r, 300)); return Boolean(ui.items.element?.querySelector('[data-oficina-do-mestre]')); })()`) : false;
+      try {
+        const m = info.mod;
+        const oficinaOk = info.campos === 'valor,situacao,rotulo' && m.nome === 'C71 Mira Kiroshi' && m.pasta === 'Arsenal do mestre' && m.dono === 0 && m.raridade === 'lendaria'
+          && m.regra?.efeitos?.[0]?.entao?.[0]?.valor === 1 && JSON.stringify(m.regra.efeitos[0].quando) === '{"mirado":true}' && JSON.stringify(m.regra.encaixe) === '{"aDistancia":true}'
+          && /Lendária/.test(m.descricao) && /Kabuki/.test(m.descricao) && /ataque sempre é só negativo/.test(info.recusa) && info.noAtaque.join() === '1:true';
+        const escondidoOk = info.escondido === 'gatilho-sensivel' && info.deNovo === null && info.avisoDeNovo === 'Very Heavy Pistol já tem um defeito escondido.' && info.semMudar.slots === 2 && info.semMudar.defeitos === 0 && !info.semMudar.flags
+          && /Gatilho sensível/.test(info.naFicha) && info.tirado === true && Object.keys(noServidor).join() === info.uuid && noServidor[info.uuid]?.mod === 'gatilho-sensivel'
+          && (!jogador || (doJogador.ve && !doJogador.vazou && doJogador.api === null));
+        const reveladoOk = revelado.critico === 'falha' && revelado.armaNoTeste && revelado.janela && revelado.botao && !revelado.chatAntes && revelado.defeito.join() === 'Gatilho sensível' && revelado.slots === 3
+          && revelado.publico && revelado.marco && Object.keys(depois).length === 0;
+        return [oficinaOk && escondidoOk && reveladoOk && botoes && !botaoDoJogador, JSON.stringify({ info, noServidor: Object.keys(noServidor), doJogador, revelado, depois: Object.keys(depois), botoes, botaoDoJogador })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          for (const ator of game.actors.filter(a => a.name === 'C71 Vex')) await ator.delete();
+          for (const item of game.items.filter(i => /^C71 /.test(i.name))) await item.delete();
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];
