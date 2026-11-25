@@ -10187,8 +10187,9 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     que apaga a modificação instalada (recusado, com o aviso; a ficha dele sem o "Tirar"), o "Tirar" do mestre (a
     confirmação, o slot de volta, o marco) e a arma apagada pelo jogador, que leva a dela sem aviso.
   - **Wiki:** o cenário `arsenal`: a bancada diz que só o mestre tira o defeito.
-- **Portões:** G1 sem erros; G2 sem erros; G3 804/804; G4 336/336 (710 s); o cenário arsenal 7/7. Rodadas antes: a ordem dos itens criados (o teste achava a mira pelo índice), a janela do pedido anterior ainda fechando e uma opção sem efeito no gancho da arma apagada (tirada).
-- **Mutações:** sete no G3 (R1 a R7), catorze no G4 (F1 a F14) e uma na wiki (W1, o cenário arsenal); todas morreram, md5 igual. A F7 caiu uma vez na instável do mundo que não abre (antes do passo do C72) e morreu na segunda rodada.
+- **Portões:** G1 sem erros; G2 sem erros; G3 804/804; G4 336/336 (710 s); o cenário arsenal 7/7. Depois do merge com o
+  C74: G3 805/805, G4 337/337 (724 s), o cenário arsenal 7/7. Rodadas antes: a ordem dos itens criados (o teste achava a mira pelo índice), a janela do pedido anterior ainda fechando e uma opção sem efeito no gancho da arma apagada (tirada).
+- **Mutações:** sete no G3 (R1 a R7), catorze no G4 (F1 a F14) e uma na wiki (W1, o cenário arsenal); todas morreram, md5 igual. A F7 caiu uma vez na instável do mundo que não abre (antes do passo do C72) e morreu na segunda rodada. Depois do merge com o C74, mais duas no G4: a F1b (o jogador do Tech instala sozinho) morreu no passo do C72, e a M1 (a bancada instala sem o teste) no passo do C74, o que cobre a bancada; md5 igual.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
