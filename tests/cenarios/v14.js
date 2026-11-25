@@ -10123,6 +10123,27 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify({ ...info, wiki: [status(juntos.id), status(atrasado.id)] })];
     });
 
+    await r.passo('C72: o presente do mestre pela loja da wiki: o Foundry entrega sem cobrar, com a "Recompensa do mestre" no extrato', async () => {
+      const { pedido: criado } = await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'core_ammo:rifle-basic', qtd: 10 }], presente: true });
+      await api(`/api/personagens/${solo.id}/pedidos/${criado.id}/aprovar`, 'POST', {});
+      const pedido = (await api(`/api/personagens/${solo.id}`)).personagem.pedidos.find(p => p.id === criado.id);
+      const info = await edge.evaluate(`(async () => {
+        const id = ${JSON.stringify(solo.id)};
+        const a = game.actors.find(x => x.getFlag('${S}', 'wiki')?.id === id);
+        const antes = { dinheiro: a.system.dinheiro, itens: a.items.size };
+        // Mesmo com o total do catálogo no pedido, o presente não cobra.
+        const resultado = await game.system.api.wiki.entregarPedido(a, id, ${JSON.stringify({ ...pedido, total: 10 })}).then(r => r, e => ({ excecao: e.message }));
+        const linha = a.system.extratos.dinheiro.at(-1);
+        return { antes, resultado, depois: { dinheiro: a.system.dinheiro, itens: a.items.size }, linha: { delta: linha?.delta, motivo: linha?.motivo },
+          balas: a.items.filter(i => String(i.getFlag('${S}', 'wikiUid') || '').startsWith('pedido:${criado.id}:')).map(i => i.name) };
+      })()`);
+      const depois = (await api(`/api/personagens/${solo.id}`)).personagem.pedidos.find(p => p.id === criado.id);
+      const ok = pedido.presente === true && pedido.total === 0 && pedido.valor === 10 && info.resultado.ok === true
+        && info.depois.dinheiro === info.antes.dinheiro && info.depois.itens === info.antes.itens + 1 && info.balas.length === 1
+        && info.linha.delta === 0 && info.linha.motivo === `Recompensa do mestre: ${pedido.itens[0].nome}` && depois.status === 'entregue';
+      return [ok, JSON.stringify({ pedido: { total: pedido.total, presente: pedido.presente, valor: pedido.valor }, info, status: depois.status })];
+    });
+
     await r.passo('migração: "Importar da mesa" monta o ator pela ficha que o Foundry 12 mandou (HP, dinheiro, lesão, itens pelo uid e pelo nome, o pente, o SP que sobrou, os programas no deck)', async () => {
       // Um personagem da wiki de teste com a criação mínima e a ficha da mesa no formato do cpr-2077 (Foundry 12).
       const { personagem } = await api('/api/personagens', 'POST', {
@@ -21218,6 +21239,8 @@ module.exports = async ({ edge, servidores, r }) => {
         await instalada.update({ 'system.instaladoEm': arma.id });
         resultado.noAtaque = ator.situacionaisDoAtaque(arma, { pericia: arma.periciaDaArma, modo: 'tiro', local: 'cabeca' }).filter(s => /C71 Mira Kiroshi/.test(s.rotulo)).map(s => s.valor + ':' + s.ligado);
         resultado.slotsAntes = arma.slotsDeModificacao;
+        // A raridade vai na bancada que volta para a wiki (o C72: o teto da campanha conta as lendárias).
+        resultado.raridadeNaWiki = api.wiki.fichaParaAWiki(ator).itens.find(l => l.id === arma.id)?.bancada?.pecas.find(p => p.mod)?.raridade ?? null;
         // O defeito escondido: o 1d6 deu 1 (o gatilho sensível).
         const escondido = await api.defeitosEscondidos.esconder(arma, { rolar: () => 1 });
         resultado.escondido = escondido?.defeito?.mod ?? null;
@@ -21292,7 +21315,8 @@ module.exports = async ({ edge, servidores, r }) => {
         const m = info.mod;
         const oficinaOk = info.campos === 'valor,situacao,rotulo' && m.nome === 'C71 Mira Kiroshi' && m.pasta === 'Arsenal do mestre' && m.dono === 0 && m.raridade === 'lendaria'
           && m.regra?.efeitos?.[0]?.entao?.[0]?.valor === 1 && JSON.stringify(m.regra.efeitos[0].quando) === '{"mirado":true}' && JSON.stringify(m.regra.encaixe) === '{"aDistancia":true}'
-          && /Lendária/.test(m.descricao) && /Kabuki/.test(m.descricao) && /ataque sempre é só negativo/.test(info.recusa) && info.noAtaque.join() === '1:true';
+          && /Lendária/.test(m.descricao) && /Kabuki/.test(m.descricao) && /ataque sempre é só negativo/.test(info.recusa) && info.noAtaque.join() === '1:true'
+          && info.raridadeNaWiki === 'lendaria';
         const escondidoOk = info.escondido === 'gatilho-sensivel' && info.deNovo === null && info.avisoDeNovo === 'Very Heavy Pistol já tem um defeito escondido.' && info.semMudar.slots === 2 && info.semMudar.defeitos === 0 && !info.semMudar.flags
           && /Gatilho sensível/.test(info.naFicha) && info.tirado === true && Object.keys(noServidor).join() === info.uuid && noServidor[info.uuid]?.mod === 'gatilho-sensivel'
           && (!jogador || (doJogador.ve && !doJogador.vazou && doJogador.api === null));

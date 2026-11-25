@@ -164,6 +164,15 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C72, parte 2, a economia na wiki (2026-11-25, sessão KouArt):** ficam para o usuário:
+  - **a loja de criação** continua vendendo as modificações Caras (o teto de preço dela é 1.000eb): a vitrine vale só na
+    loja da campanha (a decisão falava dela);
+  - **o dia da vitrine** é o do relógio de quem confere (o navegador e o servidor): na virada da meia-noite, um pode
+    estar no dia seguinte;
+  - **o aviso do teto no pedido** aparece na loja do personagem (onde o mestre aprova); a lista "Pedidos da campanha" do
+    mestre não tem a bancada das armas e não avisa;
+  - **o presente** entra como pedido pendente: o mestre ainda aprova (um clique a mais), como os outros pedidos.
+
 - **C72, a instalação pelo Tech (2026-11-25, sessão KouArt):** resolvidas no mesmo dia pelo usuário: a tabela de DV fica a
   da proposta (13, 17 e 21 pela categoria de preço: "use a sua proposta"), e tirar é só do mestre ("apenas o mestre pode
   tirar tbm"). Ficam para o usuário:
@@ -10190,6 +10199,41 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 sem erros; G2 sem erros; G3 804/804; G4 336/336 (710 s); o cenário arsenal 7/7. Depois do merge com o
   C74: G3 805/805, G4 337/337 (724 s), o cenário arsenal 7/7. Rodadas antes: a ordem dos itens criados (o teste achava a mira pelo índice), a janela do pedido anterior ainda fechando e uma opção sem efeito no gancho da arma apagada (tirada).
 - **Mutações:** sete no G3 (R1 a R7), catorze no G4 (F1 a F14) e uma na wiki (W1, o cenário arsenal); todas morreram, md5 igual. A F7 caiu uma vez na instável do mundo que não abre (antes do passo do C72) e morreu na segunda rodada. Depois do merge com o C74, mais duas no G4: a F1b (o jogador do Tech instala sozinho) morreu no passo do C72, e a M1 (a bancada instala sem o teste) no passo do C74, o que cobre a bancada; md5 igual.
+
+### Ciclo 212 (2026-11-25): C72, parte 2, o presente do mestre, o Night Market e o teto da campanha (sessão KouArt)
+
+- **Pedido do usuário (2026-11-25):** "Sim" (a parte 2 do C72). As decisões do mesmo dia: o Night Market é uma vitrine com
+  prazo (as modificações Caras fora da loja da campanha; o mestre libera algumas, escolhidas ou sorteadas, até uma data;
+  o preço do catálogo) e o teto por campanha só avisa (o bônus da arma e as lendárias por arma).
+- **A fonte:** a proposta da equipe de 2026-11-23 (o presente que entrega sem cobrar, o Night Market como vitrine, o teto
+  por arma que avisa) e a página da regra (`system-modificacoes.js`, "O preço": a Cara só com um Fixer ou num Night
+  Market).
+- **Entrega:**
+  - `loja-vitrine.js` (novo, UMD): a Cara, a vitrine aberta, o que o mestre grava, o fora da vitrine, o sorteio, o teto da
+    campanha e os avisos (da bancada e do pedido);
+  - `api-personagens.js`: as regras da loja guardam a vitrine e o teto; o pedido recusa a Cara fora da vitrine (do
+    jogador) e aceita o presente do mestre (o total 0 e o valor);
+  - `personagem-jogo.js` e o `wiki.mjs` do sistema: a entrega do presente sem cobrar, com a "Recompensa do mestre" no
+    extrato; a bancada leva a raridade;
+  - `criador.js`: a loja da campanha (a vitrine e os selos, a caixa do presente, o aviso do teto no pedido), as regras do
+    mestre (o teto e o Night Market: escolher, sortear dois, a data, fechar), a bancada (o aviso do teto) e a ficha, que
+    carrega as regras da campanha; `personagem-bancada.js`: a raridade e o `ehDeAtaque`; `index.html`, `jogadores.html`
+    e `arquivos-publicos.js`: o `loja-vitrine.js`;
+  - `system-modificacoes.js`: o texto do preço com o Night Market da campanha;
+  - a versão `0.3.212`.
+- **Fica para depois:** o C73 (a quebra e a relíquia). As dúvidas estão nas Dúvidas.
+- **Testes de referência:**
+  - **Isolado:** o `loja-vitrine.test.js` (novo, 5 testes): as contas da vitrine, do sorteio e do teto; a entrega do
+    presente pela wiki; as regras (só as Caras do catálogo, o teto no intervalo, as regras antigas); a Cara só com a
+    vitrine aberta (a vencida, a liberada, o mestre); o presente só do mestre.
+  - **Wiki:** no cenário `arsenal`, o teto que avisa na bancada e no pedido, as Caras com o selo para o mestre, o presente
+    pela loja (sem cobrar), o sorteio da vitrine, a data e o salvar; no `conta`, o jogador que não vê a Cara fora do Night
+    Market (nem a caixa do presente) e a vê com a vitrine aberta.
+  - **G4:** um passo do C72: o presente do mestre que o Foundry entrega sem cobrar (mesmo com o total do catálogo no
+    pedido), com a "Recompensa do mestre" no extrato; no passo do C71, a raridade da lendária na bancada que volta para a
+    wiki.
+- **Portões:** G1 sem erros; G2 sem erros; G3 805/805; isolados 218/218; G4 338/338 (764 s); os cenários da wiki arsenal 8/8, conta 20/20, criador 65/65, cyberware 16/16, economia 11/11, campanhas 23/23 e jogadores 25/25. Rodadas antes: a ficha sem as regras da campanha (a bancada não avisava: corrigido), o nome do item na entrega (o da wiki) e, no conta, o personagem sem o método de criação (a loja da campanha pede o método).
+- **Mutações:** treze nas contas e no servidor (V1 a V13, o teste isolado), nove na wiki (W2 a W10, nos cenários arsenal e conta), três no G4 (P1 a P3) e uma na página (T1, o G3); todas morreram, md5 igual.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

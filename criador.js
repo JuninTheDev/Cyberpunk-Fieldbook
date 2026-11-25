@@ -1546,6 +1546,9 @@
   // a história da arma (o diário do C69). Uma peça ou um + mostra, ao lado, o que ela faz ou o que cabe no slot. O modelo
   // vem do personagem-bancada.js: pela ficha da mesa (o Foundry 14 manda a bancada pronta) ou pela criação (a montagem).
   const BENCH = window.characterBench;
+  // A vitrine do Night Market e o teto da campanha (o C72): loja-vitrine.js.
+  const SV = window.shopShowcase;
+  const diaBr = dia => (/^\d{4}-\d{2}-\d{2}$/.test(String(dia || '')) ? `${dia.slice(8, 10)}/${dia.slice(5, 7)}` : '');
   const benchState = { arma: null, sel: null };
   const SEM_ARSENAL = /^(martialArts|unarmed)$/;
   const benchMods = () => (window.systemModificacoes && window.systemModificacoes.data.mods) || [];
@@ -1692,7 +1695,9 @@
         ${BENCH.diario(id, 5).length ? `<ul class="ar-diario">${BENCH.diario(id, 5).map(linha => `<li>${esc(linha)}</li>`).join('')}</ul>` : ''}</div>`
       : model.fonte === 'mesa' ? '' : '<p class="note-status ar-historia">O nome próprio e o diário da arma nascem na mesa (a aba História da ficha da arma, no Foundry).</p>';
     const escolhas = models.length > 1 ? `<div class="ar-armas" role="group" aria-label="Armas">${models.map(item => `<button type="button" class="map-filter${item.id === model.id ? ' active' : ''}" data-ar-arma="${esc(item.id)}" aria-pressed="${item.id === model.id}">${esc(item.apelido ? `${item.apelido} · ${item.modelo}` : item.modelo)}</button>`).join('')}</div>` : '';
-    return `<div class="section cc-box ar-screen" data-toc="Arsenal">${escolhas}${top}${fonte}
+    // O teto da campanha (o C72): só avisa.
+    const tetoAvisos = SV ? SV.avisosDoTeto(model, shopRules).map(texto => `<p class="ar-fonte ar-teto-aviso cc-bad" data-ar-teto>${esc(texto)}</p>`).join('') : '';
+    return `<div class="section cc-box ar-screen" data-toc="Arsenal">${escolhas}${top}${fonte}${tetoAvisos}
       <div class="ar-corpo"><div class="ar-bancada">${stage}${grupos}</div>
         <div class="ar-lado"><div class="ar-ficha">${benchDetail(model, escolha)}</div>${historia}</div></div>
       <p class="ar-dica">Clique numa peça ou num + para ver o que ela faz ou o que cabe no slot. Os acessórios são do livro e trocáveis; as modificações são a regra da casa (Catálogos, Modificações de armas).</p></div>`;
@@ -1880,6 +1885,9 @@
     const papel = me.data.papel;
     if (!doc) { root.innerHTML = `<div class="callout">${esc(answer.data.erro || 'Personagem não encontrado.')}</div>`; return; }
     if (doc.publico) { root.innerHTML = `<div class="callout cc-identity">${portraitImg(doc.retrato, 'cc-portrait', doc.nome)}Esta é a ficha de outro jogador: você só vê o nome (<b>${esc(doc.nome)}</b>), as Roles (${esc(rolesLabel(doc))}) e o retrato.</div>`; return; }
+    // O teto da campanha avisa na bancada (o C72): as regras da loja da campanha do personagem.
+    if (SV) await loadShopRules(doc.campanha);
+    if (token !== renderToken) return;
     // Como no exemplo da Ficha: o título da página vira o nome (o apelido em ciano), a linha de cima diz a campanha, e a
     // ficha tem duas colunas: o retrato, os STATs e os vitais do lado; o resto em abas.
     const parts = sheetHtml(doc);
@@ -2423,8 +2431,12 @@
     // O mestre que abre a loja com pedido esperando já cai na lista de pedidos.
     if (gm && !shopState.painel && (doc.pedidos || []).some(pedido => pedido.status === 'pendente')) shopState.painel = 'pedidos';
     const paint = () => {
-      const { visible, shown, filters } = shopFilter(shop.itens);
+      // O Night Market (o C72): a modificação Cara fora da vitrine aberta não aparece para o jogador; o mestre vê tudo.
+      const { visible, shown, filters } = shopFilter(gm || !SV ? shop.itens : shop.itens.filter(item => !SV.foraDaVitrine(item, shopRules)));
       const total = cart.reduce((sum, line) => sum + cartCost(line), 0);
+      const nightBadge = item => (!SV || !SV.ehModCara(item) ? ''
+        : SV.vitrineAberta(shopRules).includes(item.id) ? badge(`Night Market até ${diaBr(shopRules.nightMarket.ate)}`, 'ok')
+          : gm && SV.foraDaVitrine(item, shopRules) ? badge('fora do Night Market', 'wait') : '');
       const money = doc.mesa ? Number(doc.mesa.dinheiro) || 0 : naWiki && window.characterGame ? window.characterGame.valores(doc).dinheiro : null;
       const left = money === null ? null : money - total;
       const inCart = new Map();
@@ -2457,18 +2469,28 @@
       }).join('')}</ul>
         <div class="shop-total"><span>Total</span><b>${eb(total)}</b></div>
         ${left !== null ? `<div class="shop-total shop-after"><span>Saldo após o pedido</span><span class="${left < 0 ? 'cc-bad' : ''}">${eb(left)}</span></div>` : ''}
-        <div class="cc-cart-send"><label>Recado para o mestre (opcional)<textarea data-pedido-nota rows="3" maxlength="300">${esc(target.dataset.nota || '')}</textarea></label><button type="button" class="action shop-send" data-pedido-enviar>Enviar pedido · ${eb(total)}</button></div>`
+        <div class="cc-cart-send"><label>Recado para o mestre (opcional)<textarea data-pedido-nota rows="3" maxlength="300">${esc(target.dataset.nota || '')}</textarea></label>${gm ? `<label class="cc-presente"><input type="checkbox" data-pedido-presente${target.dataset.presente ? ' checked' : ''}> Presente do mestre: entra sem cobrar (a recompensa)</label>` : ''}<button type="button" class="action shop-send" data-pedido-enviar>Enviar pedido · ${eb(total)}</button></div>`
         : '<p class="note-status">Nada no pedido ainda: use Adicionar nos cartões.</p>';
       const orders = (doc.pedidos || []).slice().reverse();
       const waiting = orders.filter(pedido => pedido.status === 'pendente').length;
       const going = orders.filter(pedido => pedido.status === 'aprovado').length;
-      const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div class="shop-line"><span><b>${pedido.itens.map(item => `${esc(item.nome)}${item.local ? ` · ${esc(CW.nome(item.local))}` : ''}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span></small></span>${statusChip(pedido.status)}</div>
+      // O teto da campanha no pedido (o C72, só avisa): a modificação de ataque e as armas da ficha onde ela passaria dele.
+      const tetoNoPedido = pedido => {
+        if (!SV || !BENCH) return '';
+        const mods = benchMods();
+        const armas = benchModels(doc).map(model => ({ nome: model.apelido || model.modelo, melhor: model.teto ? model.teto.melhor : 0 }));
+        const avisos = pedido.itens.map(linha => mods.find(mod => `mods-armas:${mod.id}` === linha.id)).filter(Boolean)
+          .map(mod => SV.avisoNoPedido(BENCH.ehDeAtaque(mod), armas, shopRules)).filter(Boolean);
+        return avisos.length ? `<small class="cc-bad" data-pedido-teto>${esc([...new Set(avisos)].join(' '))}</small>` : '';
+      };
+      const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div class="shop-line"><span><b>${pedido.itens.map(item => `${esc(item.nome)}${item.local ? ` · ${esc(CW.nome(item.local))}` : ''}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${pedido.presente ? `presente do mestre (${eb(pedido.valor || 0)}, sem cobrar)` : eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span></small></span>${statusChip(pedido.status)}</div>
         ${pedido.motivo || pedido.nota || pedido.erro || (pedido.avisos || []).length ? `<small>${pedido.nota ? `“${esc(pedido.nota)}”` : ''}${pedido.motivo ? ` Motivo: ${esc(pedido.motivo)}.` : ''}${(pedido.avisos || []).length ? ` ${esc(pedido.avisos.join(' '))}` : ''}${pedido.erro ? ` <span class="cc-bad">${esc(pedido.erro)}</span>` : ''}</small>` : ''}
+        ${gm && pedido.status === 'pendente' ? tetoNoPedido(pedido) : ''}
         ${pedido.status === 'pendente' || (gm && pedido.status === 'aprovado') ? `<div class="cc-mount-controls">${pedido.status === 'pendente' ? `${gm ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Aprovar</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-${gm ? 'recusar' : 'cancelar'}="${pedido.id}">${gm ? 'Recusar' : 'Cancelar'}</button>` : ''}${gm && pedido.status === 'aprovado' ? `${pedido.erro ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Tentar de novo</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-recusar="${pedido.id}">Recusar</button>` : ''}</div>` : ''}</li>`;
       const alert = waiting ? `<span class="cc-tab-alert">${waiting} ${gm ? 'para aprovar' : 'com o mestre'}</span>` : going ? `<span class="cc-tab-alert cc-tab-alert-go">${going} a caminho</span>` : '';
       const foot = item => {
         const qty = inCart.get(item.id) || 0;
-        const tooMuch = left !== null && !qty && item.preco > left;
+        const tooMuch = !gm && left !== null && !qty && item.preco > left;
         if (qty) return `${priceOf(item)}<span class="shop-stepper"><button type="button" data-pedido-card-menos="${item.id}" aria-label="Menos ${esc(item.nome || item.id)}">−</button><b>${qty}</b><button type="button" data-pedido-por="${item.id}" aria-label="Mais ${esc(item.nome || item.id)}">+</button></span>`;
         return `${priceOf(item, tooMuch)}${tooMuch ? '<button class="action" type="button" disabled>Sem saldo</button>' : `<button class="action" type="button" data-pedido-por="${item.id}">Adicionar</button>`}`;
       };
@@ -2478,7 +2500,7 @@
           <div class="cc-shop-list shop-grid">${shown.map(item => shopCard(item, {
             open: openRows.has(item.id),
             extraClass: inCart.get(item.id) ? ' shop-in' : '',
-            badges: (onSheet.get(item.id) ? badge(`na ficha ${onSheet.get(item.id)}`, 'ok') : '') + (inCart.get(item.id) ? badge(`no pedido ${inCart.get(item.id)}`, 'wait') : ''),
+            badges: (onSheet.get(item.id) ? badge(`na ficha ${onSheet.get(item.id)}`, 'ok') : '') + (inCart.get(item.id) ? badge(`no pedido ${inCart.get(item.id)}`, 'wait') : '') + nightBadge(item),
             foot: foot(item)
           })).join('') || '<p class="shop-empty">Nada encontrado.</p>'}</div>
           ${moreButton(visible, shown)}
@@ -2541,6 +2563,8 @@
         return draw();
       }
       if (event.target.closest('[data-pedido-tirar]')) { removeLine(index('tirar')); return draw(); }
+      const presente = event.target.closest('[data-pedido-presente]');
+      if (presente) { target.dataset.presente = presente.checked ? '1' : ''; return; }
       if (event.target.closest('[data-pedido-enviar]')) {
         const parents = [...tableRows, ...cart.map((line, index) => ({ uid: `@${index}`, item: catalog.get(line.id), local: line.local || '' }))];
         for (let index = 0; index < cart.length; index++) {
@@ -2549,10 +2573,12 @@
           if (problem) return message(problem, true);
         }
         const nota = (target.querySelector('[data-pedido-nota]') || {}).value || '';
-        const answer = await api(`api/personagens/${doc.id}/pedidos`, { method: 'POST', body: { itens: cart.map(line => ({ ...line, em: line.em === '-' ? '' : line.em })), nota } });
+        const presenteDoMestre = gm && Boolean(target.dataset.presente);
+        const answer = await api(`api/personagens/${doc.id}/pedidos`, { method: 'POST', body: { itens: cart.map(line => ({ ...line, em: line.em === '-' ? '' : line.em })), nota, ...(presenteDoMestre ? { presente: true } : {}) } });
         if (answer.status !== 201) return message(answer.data.erro || 'Não consegui enviar o pedido.', true);
         cart.length = 0;
         target.dataset.nota = '';
+        target.dataset.presente = '';
         doc.pedidos = [...(doc.pedidos || []), answer.data.pedido];
         shopState.painel = 'pedidos';
         draw();
@@ -3441,6 +3467,25 @@
 
   // A visão do mestre: os pedidos da campanha, as regras da loja inicial (fora do redesenho do catálogo, para o que ele
   // digita não se perder) e o catálogo com os botões Esconder e Liberar.
+  // O teto da campanha e a vitrine do Night Market (o C72), na caixa de regras do mestre: valem na loja da campanha.
+  const nightMarketState = rules => {
+    const aberta = SV.vitrineAberta(rules);
+    return aberta.length ? `Aberto até ${diaBr(rules.nightMarket.ate)}: ${aberta.length} ${aberta.length === 1 ? 'modificação Cara à venda' : 'modificações Caras à venda'}.`
+      : 'Fechado: as modificações Caras (500eb) ficam fora da loja da campanha.';
+  };
+  function nightMarketFields() {
+    const teto = SV.tetoDaCampanha(shopRules);
+    const vitrine = shopRules.nightMarket || { itens: [], ate: '' };
+    const caras = shop.itens.filter(SV.ehModCara);
+    return `<span class="shop-label">Na loja da campanha (só avisa)</span>
+          <label class="shop-field">Teto da arma na rolagem<select data-rule-teto-arma>${[0, 1, 2, 3].map(n => `<option value="${n}"${teto.arma === n ? ' selected' : ''}>+${n}</option>`).join('')}</select></label>
+          <label class="shop-field">Lendárias por arma<input type="number" min="0" max="3" step="1" data-rule-lendarias value="${teto.lendarias}"></label>
+          <span class="shop-label">Night Market: as modificações Caras que ele vende</span>
+          <div class="map-filter-list shop-toggles" data-nm-itens>${caras.map(item => `<button type="button" class="map-filter shop-chip" data-nm-item="${esc(item.id)}" aria-pressed="${vitrine.itens.includes(item.id)}">${esc(item.nome)}</button>`).join('')}</div>
+          <div class="cc-toolbar"><label class="shop-field">Aberto até<input type="date" data-nm-ate value="${esc(vitrine.ate || '')}"></label><button type="button" class="action cc-ghost" data-nm-sortear>Sortear 2</button><button type="button" class="action cc-ghost" data-nm-fechar>Fechar</button></div>
+          <p class="note-status" data-nm-estado>${esc(nightMarketState(shopRules))}</p>`;
+  }
+
   async function setupGmShop(target, list, helpers, token) {
     target.innerHTML = `<div class="shop-gm">
       <div class="shop-g2">
@@ -3452,6 +3497,7 @@
           <div class="map-filter-list shop-toggles">${Object.entries(SHOP_TAG_NAMES).map(([tag, name]) => `<button type="button" class="map-filter shop-chip" data-rule-tag="${tag}" aria-pressed="${shopRules.esconder.includes(tag)}">${esc(name)}</button>`).join('')}</div>
           <div class="cc-toolbar"><button class="action" type="button" data-rule-save>Salvar regras</button><span class="cc-save" id="cc-rules-msg" role="status"></span></div>
           <p class="note-status" data-rule-count>${ruleCount()}</p>
+          ${SV ? nightMarketFields() : ''}
         </section>
       </div>
       <section class="shop-panel shop-catalog-panel"><h4 class="shop-panel-title">Catálogo com controles do mestre<span>${shop.itens.length} itens</span></h4><div data-gm-catalog></div></section>
@@ -3463,14 +3509,34 @@
     rulesBox.onclick = async event => {
       const tag = event.target.closest('[data-rule-tag]');
       if (tag) { tag.setAttribute('aria-pressed', String(tag.getAttribute('aria-pressed') !== 'true')); return; }
+      // O Night Market (o C72): escolher, sortear dois (com uma semana, sem data) ou fechar; vale ao salvar.
+      const nmItem = event.target.closest('[data-nm-item]');
+      if (nmItem) { nmItem.setAttribute('aria-pressed', String(nmItem.getAttribute('aria-pressed') !== 'true')); return; }
+      if (event.target.closest('[data-nm-sortear]') || event.target.closest('[data-nm-fechar]')) {
+        const chips = [...rulesBox.querySelectorAll('[data-nm-item]')];
+        const sorteadas = event.target.closest('[data-nm-sortear]') ? SV.sortear(chips.map(chip => chip.dataset.nmItem), 2) : [];
+        for (const chip of chips) chip.setAttribute('aria-pressed', String(sorteadas.includes(chip.dataset.nmItem)));
+        const ate = rulesBox.querySelector('[data-nm-ate]');
+        if (!sorteadas.length) ate.value = '';
+        else if (!ate.value) ate.value = SV.hoje(new Date(Date.now() + 7 * 86400000));
+        return;
+      }
       if (!event.target.closest('[data-rule-save]')) return;
       const rules = { ...shopRules, teto: Number(rulesBox.querySelector('[data-rule-teto]').value) || 0, esconder: [...rulesBox.querySelectorAll('[data-rule-tag][aria-pressed="true"]')].map(button => button.dataset.ruleTag) };
+      if (SV && rulesBox.querySelector('[data-rule-teto-arma]')) {
+        Object.assign(rules, {
+          tetoDaArma: Number(rulesBox.querySelector('[data-rule-teto-arma]').value), lendariasPorArma: Number(rulesBox.querySelector('[data-rule-lendarias]').value),
+          nightMarket: { itens: [...rulesBox.querySelectorAll('[data-nm-item][aria-pressed="true"]')].map(chip => chip.dataset.nmItem), ate: rulesBox.querySelector('[data-nm-ate]').value }
+        });
+      }
       const answer = await saveShopRules(rules);
       const status = rulesBox.querySelector('#cc-rules-msg');
       if (answer.status !== 200) { status.textContent = answer.data.erro || 'Não consegui salvar.'; status.className = 'cc-save bad'; return; }
       shopRules = answer.data.regras;
       status.textContent = 'Regras salvas.';
       status.className = 'cc-save ok';
+      const estado = rulesBox.querySelector('[data-nm-estado]');
+      if (estado) estado.textContent = nightMarketState(shopRules);
       onRules();
       catalogView.redraw();
     };

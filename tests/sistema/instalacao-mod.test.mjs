@@ -81,4 +81,7 @@ test('C72: a página da regra diz o teste, a tabela de DV, o tempo, a falha, o T
   // Tirar (o pedido do usuário de 2026-11-25: "apenas o mestre pode tirar"): só o mestre, e ela se destrói.
   assert.match(pagina, /Só o mestre tira \(na história, o Tech\), e tirar destrói a modificação\. Ela também sai com a arma, quando a arma se vai\./);
   assert.doesNotMatch(pagina, /Só o Tech tira/);
+  // A economia da campanha (o C72, parte 2): o Night Market, o presente e o teto.
+  assert.match(pagina, /Na loja da campanha, as Caras só aparecem quando o mestre abre um Night Market: ele escolhe \(ou sorteia\) quais estão à venda e até que dia, pelo preço do catálogo\./);
+  assert.match(pagina, /O mestre também dá uma modificação de presente, sem cobrar, e a campanha pode ter um teto próprio \(o bônus da arma e as lendárias por arma\), que só avisa\./);
 });

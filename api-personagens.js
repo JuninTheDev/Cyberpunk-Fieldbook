@@ -18,6 +18,7 @@ const { createNetwire } = require('./api-netwire');
 const characterRoles = require('./personagem-roles');
 const characterCyberware = require('./personagem-cyberware');
 const characterGame = require('./personagem-jogo');
+const shopShowcase = require('./loja-vitrine');
 const creationRules = require('./system-criacao');
 
 const MAX_BODY = 300 * 1024;
@@ -450,14 +451,21 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // Campanha sem regras gravadas usa as do Protocolo Morana (a campanha nova começa com uma cópia delas).
   // blackchrome: os itens do Black Chrome, que ficam à venda por padrão (o mestre esconde pela engrenagem da Loja).
   const SHOP_TAGS = ['exotica', 'excelente', 'borgware', 'municao-rara', 'raro', 'blackchrome'];
-  const DEFAULT_SHOP_RULES = { teto: 1000, esconder: SHOP_TAGS.filter(tag => tag !== 'blackchrome'), liberados: [], bloqueados: [] };
+  // A vitrine do Night Market e o teto da campanha (o C72, loja-vitrine.js): fechada, e o teto da regra da casa.
+  const DEFAULT_SHOP_RULES = {
+    teto: 1000, esconder: SHOP_TAGS.filter(tag => tag !== 'blackchrome'), liberados: [], bloqueados: [],
+    nightMarket: { itens: [], ate: '' }, tetoDaArma: shopShowcase.TETO_DA_ARMA, lendariasPorArma: shopShowcase.LENDARIAS_POR_ARMA
+  };
   const readShopRules = id => ({ ...DEFAULT_SHOP_RULES, ...(id ? campaigns.readShopRules(id) || campaigns.readShopRules(campaigns.first) || {} : {}) });
   const itemIds = list => (Array.isArray(list) ? list : []).map(String).filter(id => /^[a-z0-9_-]+:[a-z0-9-]+$/.test(id)).slice(0, 2000);
   const cleanShopRules = input => ({
     teto: Math.max(0, Math.min(1000000, Math.round(Number(input.teto)) || 0)),
     esconder: (Array.isArray(input.esconder) ? input.esconder : []).filter(tag => SHOP_TAGS.includes(tag)),
     liberados: itemIds(input.liberados),
-    bloqueados: itemIds(input.bloqueados)
+    bloqueados: itemIds(input.bloqueados),
+    nightMarket: shopShowcase.limparVitrine(input.nightMarket, id => catalog().get(id)),
+    tetoDaArma: shopShowcase.tetoDaCampanha(input).arma,
+    lendariasPorArma: shopShowcase.tetoDaCampanha(input).lendarias
   });
 
   // ---------------- Retrato ----------------
@@ -920,8 +928,20 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
             if (local) line.local = local;
           }
           characterCyberware.duplicados(itens.map(entry => ({ ...entry, cyber: items.get(entry.id)?.cyber })));
+          // O Night Market (o C72, loja-vitrine.js): a modificação Cara só se compra com a vitrine da campanha aberta (ou
+          // liberada pelo mestre, uma a uma). O mestre pede o que quiser.
+          if (identity.papel !== 'mestre') {
+            const rules = readShopRules(campaignOf(stored));
+            const outside = itens.find(line => shopShowcase.foraDaVitrine(items.get(line.id), rules));
+            if (outside) return reply(400, { erro: `${outside.nome} só se compra num Night Market aberto pelo mestre.` });
+          }
           const total = itens.reduce((sum, line) => sum + line.preco * (line.lote > 1 ? line.qtd / line.lote : line.qtd), 0);
-          const pedido = { id: pedidoId, criado: new Date().toISOString(), status: 'pendente', itens, total: Math.round(total), nota: String(input.nota || '').trim().slice(0, 300), por: identity.papel };
+          // O presente do mestre (o C72): o pedido que o mestre faz como recompensa entra sem cobrar (o valor fica anotado).
+          const presente = identity.papel === 'mestre' && input.presente === true;
+          const pedido = {
+            id: pedidoId, criado: new Date().toISOString(), status: 'pendente', itens, total: presente ? 0 : Math.round(total), ...(presente ? { presente: true, valor: Math.round(total) } : {}),
+            nota: String(input.nota || '').trim().slice(0, 300), por: identity.papel
+          };
           const done = await update(doc => {
             const late = orderBlock(doc);
             if (late) return late;

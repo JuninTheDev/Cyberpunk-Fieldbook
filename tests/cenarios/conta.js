@@ -228,6 +228,40 @@ module.exports = async ({ edge, r }) => {
       await edge.celular(false);
       return [fora && conteudoNoTopo && aberta && fechou && lateral, `fechada no começo ${fora} · conteúdo logo abaixo da barra ${conteudoNoTopo} · abriu ${aberta} · fechou ao escolher ${fechou} · sem rolagem lateral ${lateral}`];
     });
+    await r.passo('C72: na loja da campanha, o jogador não vê a modificação Cara fora do Night Market (nem a caixa do presente); com a vitrine aberta pelo mestre, ela aparece com o selo', async () => {
+      const regras = async mudar => {
+        const atual = (await (await fetch(`${base}/api/loja/regras`)).json()).regras;
+        return fetch(`${base}/api/loja/regras`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...atual, ...mudar }) });
+      };
+      const naLoja = async () => {
+        await edge.evaluate(`wikiApp.openPage('loja', { section: ${JSON.stringify(vex.id)} })`);
+        await esperar(`!!document.querySelector('[data-shop-cat="modificacoes"]')`);
+        await edge.evaluate(`document.querySelector('[data-shop-cat="modificacoes"]').click()`);
+        await edge.sleep(400);
+        return edge.evaluate(`({ supressor: (document.querySelector('[data-shop-row="mods-armas:supressor"] .cc-shop-info')?.textContent || '').replace(/\\s+/g, ' ').trim(),
+          bipe: !!document.querySelector('[data-shop-row="mods-armas:bipe"]'), caras: document.querySelectorAll('[data-shop-row="mods-armas:compensador"], [data-shop-row="mods-armas:cano-de-troca"]').length,
+          presente: !!document.querySelector('[data-pedido-presente]') })`);
+      };
+      // Um personagem do jogador feito pelo criador (com o método) e já na mesa do Foundry: a loja dele é a da campanha.
+      const stats = { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 5 };
+      const vex = (await (await post('/api/personagens', { nome: 'Vex', role: 'solo', metodo: 'pacote', lingua: 'Japanese', casa: 'Watson', stats }, { ...TUNEL, Cookie: cookie })).json()).personagem;
+      await fetch(`${base}/api/personagens/${vex.id}/foundry`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ator: 'atorVex', nomeAtor: 'Vex' }) });
+      const hoje = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+      try {
+        // A ficha da mesa do Vex (o Foundry já o tem).
+        await fetch(`${base}/api/personagens/${vex.id}/mesa`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ator: 'atorVex', nomeAtor: 'Vex', itens: [], dinheiro: 1000 }) });
+        await regras({ nightMarket: { itens: [], ate: '' } });
+        const fechado = await naLoja();
+        await regras({ nightMarket: { itens: ['mods-armas:supressor'], ate: hoje } });
+        await edge.evaluate(`wikiApp.openPage('combat')`);
+        const aberto = await naLoja();
+        const dd = `${hoje.slice(8, 10)}/${hoje.slice(5, 7)}`;
+        return [fechado.supressor === '' && fechado.bipe && fechado.caras === 0 && !fechado.presente
+          && aberto.supressor === `SupressorNight Market até ${dd}` && aberto.caras === 0 && aberto.bipe, JSON.stringify({ fechado, aberto })];
+      } finally {
+        await regras({ nightMarket: { itens: [], ate: '' } });
+      }
+    });
     await r.passo('Sair (no menu da conta) volta a visitante', async () => {
       await abrirMenu();
       await edge.evaluate(`document.querySelector('[data-account-logout]').click()`);

@@ -597,9 +597,9 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
   e o que cabe em cada slot livre, e a identidade; com a ida e a volta para o Foundry.
 - [x] **C71. A oficina do mestre:** feito no ciclo 209 (sessão KouArt, 2026-11-24). Criar uma modificação sem programar e
   os defeitos escondidos.
-- [~] **C72. A economia:** em andamento (sessão KouArt, 2026-11-25). O Tech que instala (o teste pelo C65), o presente do
-  mestre, o Night Market e o teto por campanha. A parte 1, o Tech que instala, foi feita no ciclo 211; a parte 2 (na
-  wiki: o presente do mestre, a vitrine do Night Market e o teto por campanha) falta.
+- [x] **C72. A economia:** feito nos ciclos 211 e 212 (sessão KouArt, 2026-11-25). O Tech que instala (o teste pelo C65),
+  o presente do mestre, o Night Market e o teto por campanha: a parte 1 (o Tech que instala) no ciclo 211, e a parte 2 (na
+  wiki: o presente do mestre, a vitrine do Night Market e o teto por campanha) no ciclo 212.
 - [ ] **C73. O risco:** a arma quebrada, a relíquia e reforjar.
 - [x] **C74. A bancada da arma no Foundry:** feita no ciclo 210 (sessão Codex, 2026-11-25); pedido do usuário (2026-11-24): "uma tela onde vc pode ver a arma e as
   modificações e itens equipadas nela... através de uma tela de modificação da arma". A aba Bancada da ficha da arma, com

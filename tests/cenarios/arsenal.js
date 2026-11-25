@@ -147,4 +147,52 @@ module.exports = async ({ edge, servidores, r }) => {
     await edge.celular(false);
     return [cabe && info.chamada === 'static' && info.lado === 'static' && info.abaixo, JSON.stringify({ cabe, ...info })];
   });
+  await r.passo('C72: o teto da campanha avisa na bancada e no pedido; a loja da campanha mostra as Caras fora do Night Market; o presente do mestre sai sem cobrar; o mestre sorteia a vitrine, com a data, e ela abre', async () => {
+    const antes = (await api('/api/loja/regras')).regras;
+    try {
+      // O teto +1 (a pistola soma +2: o Smartgun Link e a mira holográfica) e o Night Market fechado.
+      await api('/api/loja/regras', 'PUT', { ...antes, tetoDaArma: 1, lendariasPorArma: 1, nightMarket: { itens: [], ate: '' } });
+      await abrirArsenal(personagem.id);
+      const naBancada = await texto('[data-ar-teto]');
+      // A loja da campanha, pelo mestre: as Caras com o selo; o presente da mira holográfica (uma de ataque).
+      await edge.evaluate(`wikiApp.openPage('loja', { section: ${js(personagem.id)} })`);
+      await espere(`!!document.querySelector('[data-shop-cat="modificacoes"]')`);
+      await clicar('[data-shop-cat="modificacoes"]', 500);
+      const selo = id => texto(`[data-shop-row="${id}"] .cc-shop-info`);
+      const fechado = { supressor: await selo('mods-armas:supressor'), bipe: await selo('mods-armas:bipe') };
+      await clicar('[data-pedido-por="mods-armas:mira-holografica"]', 400);
+      const caixa = await edge.evaluate(`!!document.querySelector('[data-pedido-presente]')`);
+      await clicar('[data-pedido-presente]', 200);
+      await clicar('[data-pedido-enviar]', 1200);
+      const pedidos = (await api(`/api/personagens/${personagem.id}/pedidos`)).pedidos;
+      const presente = pedidos.at(-1);
+      const naLista = await texto('.cc-orders .cc-order:first-child');
+      const tetoNoPedido = await texto('[data-pedido-teto]');
+      // As regras do mestre: sortear duas Caras (com a data de uma semana) e salvar.
+      await edge.evaluate(`wikiApp.openPage('loja')`);
+      await espere(`document.querySelectorAll('[data-nm-item]').length > 0`);
+      const caras = await edge.evaluate(`document.querySelectorAll('[data-nm-item]').length`);
+      await clicar('[data-nm-sortear]', 200);
+      const sorteio = await edge.evaluate(`({ ids: [...document.querySelectorAll('[data-nm-item][aria-pressed="true"]')].map(b => b.dataset.nmItem), ate: document.querySelector('[data-nm-ate]').value })`);
+      await clicar('[data-rule-save]', 1000);
+      const estado = await texto('[data-nm-estado]');
+      const gravada = (await api('/api/loja/regras')).regras.nightMarket;
+      // A loja da campanha de novo: as sorteadas com o selo do Night Market.
+      await edge.evaluate(`wikiApp.openPage('loja', { section: ${js(personagem.id)} })`);
+      await espere(`!!document.querySelector('[data-shop-cat="modificacoes"]')`);
+      await clicar('[data-shop-cat="modificacoes"]', 500);
+      const abertas = await Promise.all(sorteio.ids.map(id => selo(id)));
+      const dd = sorteio.ate ? `${sorteio.ate.slice(8, 10)}/${sorteio.ate.slice(5, 7)}` : '?';
+      const ok = naBancada === 'Passa do teto da campanha: +2 na rolagem, e a campanha vai até +1.'
+        && /fora do Night Market/.test(fechado.supressor) && !/Night Market/.test(fechado.bipe) && caixa
+        && presente?.presente === true && presente.total === 0 && presente.valor === 100 && presente.por === 'mestre' && presente.itens[0].id === 'mods-armas:mira-holografica'
+        && /presente do mestre \(100eb, sem cobrar\)/.test(naLista) && tetoNoPedido === 'Teto da campanha (+1): em Velha Senhora, ela passaria do teto.'
+        && caras === 6 && sorteio.ids.length === 2 && /^\d{4}-\d{2}-\d{2}$/.test(sorteio.ate)
+        && estado === `Aberto até ${dd}: 2 modificações Caras à venda.` && JSON.stringify(gravada) === JSON.stringify({ itens: sorteio.ids, ate: sorteio.ate })
+        && abertas.every(t => t.includes(`Night Market até ${dd}`));
+      return [ok, JSON.stringify({ naBancada, fechado, caixa, presente, naLista, tetoNoPedido, caras, sorteio, estado, gravada, abertas })];
+    } finally {
+      await api('/api/loja/regras', 'PUT', antes);
+    }
+  });
 };

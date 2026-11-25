@@ -353,9 +353,12 @@
   function entrega(doc, pedido, quando = new Date().toISOString()) {
     const itens = Array.isArray(pedido && pedido.itens) ? pedido.itens : [];
     if (!itens.length) return { erro: 'O pedido está vazio.' };
-    const total = Math.max(0, Math.round(Number(pedido.total) || 0));
-    const dinheiro = valores(doc).dinheiro;
-    if (dinheiro === null) return { erro: 'A ficha não diz quanto dinheiro o personagem tem.' };
+    // O presente do mestre (o C72): entra sem cobrar, com a linha "Recompensa do mestre" no extrato.
+    const presente = Boolean(pedido.presente);
+    const total = presente ? 0 : Math.max(0, Math.round(Number(pedido.total) || 0));
+    const naFicha = valores(doc).dinheiro;
+    if (naFicha === null && !presente) return { erro: 'A ficha não diz quanto dinheiro o personagem tem.' };
+    const dinheiro = naFicha === null ? 0 : naFicha;
     if (total > dinheiro) return { erro: `Dinheiro insuficiente: tem ${dinheiro}eb, e o pedido custa ${total}eb.` };
     const jogo = jogoValido(doc) || {};
     const novas = itens.map(linha => ({
@@ -363,9 +366,11 @@
       ...(linha.municao ? { municao: String(linha.municao) } : {}), ...(linha.em ? { em: String(linha.em) } : {}), ...(linha.local ? { local: String(linha.local) } : {}),
       ...(linha.cyber ? { cyber: true } : {}), pedido: String(pedido.id || '')
     }));
-    const motivo = `Compra na loja: ${itens.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}`.slice(0, 200);
+    const motivo = `${presente ? 'Recompensa do mestre' : 'Compra na loja'}: ${itens.map(item => `${item.nome}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}`.slice(0, 200);
     const linha = { quando, campo: 'dinheiro', antes: dinheiro, depois: dinheiro - total, motivo };
     const avisos = itens.some(item => item.cyber) ? ['Cyberware: o mestre instala pela mesa (a instalação cobra a Humanidade).'] : [];
+    // O presente para a ficha que não diz o dinheiro: os itens entram, e o dinheiro e o extrato não mudam.
+    if (naFicha === null) return { mudancas: { compras: [...comprasDe(jogo), ...novas] }, avisos };
     return { mudancas: { compras: [...comprasDe(jogo), ...novas], dinheiro: dinheiro - total, extrato: [...(jogo.extrato || []), linha].slice(-30) }, avisos };
   }
 

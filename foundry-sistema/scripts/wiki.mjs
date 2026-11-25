@@ -519,7 +519,9 @@ const nomeDaPericia = (id, propria) => PERICIAS.find(p => p.id === id)?.en ?? (F
 function bancadaParaAWiki(arma) {
   const pecas = arma.instalados.filter(item => item.type === 'upgrade').map(item => {
     const mod = item.modificacao;
-    return mod ? { id: item.id, nome: item.name, mod: mod.id, tipo: mod.tipo, tamanho: mod.tamanho }
+    // A raridade da oficina do mestre (o C71) vai junto: o teto da campanha conta as lendárias (o C72).
+    const raridade = item.getFlag(SISTEMA, 'raridade');
+    return mod ? { id: item.id, nome: item.name, mod: mod.id, tipo: mod.tipo, tamanho: mod.tamanho, ...(raridade ? { raridade } : {}) }
       : { id: item.id, nome: item.name, catalogo: item.getFlag(SISTEMA, 'catalogo') || '', tipo: 'acessorio', tamanho: arma.tamanhoNaArma(item) };
   });
   const daArma = partes => partes.filter(parte => parte.daArma).map(({ rotulo, valor }) => ({ rotulo, valor }));
@@ -697,7 +699,8 @@ async function entregarUmPedido(ator, wikiId, pedido) {
     if (dados.length) await ator.createEmbeddedDocuments('Item', dados);
     await instalarNoLugar(ator, linhas);
     await carregarArmas(ator, linhas);
-    await ator.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: pedido.total, motivo: `Compra na wiki: ${(pedido.itens || []).map(linha => linha.nome).join(', ')}` });
+    // O presente do mestre (o C72): sem cobrar, com a linha "Recompensa do mestre" no extrato.
+    await ator.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: pedido.presente ? 0 : pedido.total, motivo: `${pedido.presente ? 'Recompensa do mestre' : 'Compra na wiki'}: ${(pedido.itens || []).map(linha => linha.nome).join(', ')}` });
     if (linhas.some(linha => linha.cyber)) notas.push('Cyberware: instale pela ficha (a instalação rola a Humanidade).');
   }
   await wikiFetch(`/api/personagens/${wikiId}/pedidos/${pedido.id}/entregue`, { method: 'POST', body: { avisos: notas, ator: ator.id } });

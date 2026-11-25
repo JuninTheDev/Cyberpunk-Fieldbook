@@ -695,6 +695,18 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     pedido do usuário de 2026-11-25; na história, o Tech): o jogador que apaga a modificação instalada é recusado, e o
     "Tirar (ela se destrói)" da ficha do mestre a apaga e anota no diário da arma; a arma apagada leva as dela. A API:
     `game.system.api.instalacaoDeMod`.
+  - **A economia na wiki** (o C72, parte 2; decisões do usuário de 2026-11-25), no `loja-vitrine.js` (as contas, no
+    servidor e na wiki):
+    - **o presente do mestre:** na loja da campanha, o carrinho do mestre tem "Presente do mestre: entra sem cobrar". O
+      pedido sai com o total 0 e o valor anotado (o servidor só aceita o presente do mestre); a entrega (pela wiki ou pelo
+      Foundry) não cobra e escreve "Recompensa do mestre: …" no extrato;
+    - **o Night Market:** as modificações Caras (500eb) ficam fora da loja da campanha do jogador. Nas regras da loja, o
+      mestre escolhe ou sorteia (dois) quais o Night Market vende e até que dia; aberto, elas aparecem com o selo "Night
+      Market até DD/MM", pelo preço do catálogo. O servidor recusa o pedido da Cara fora da vitrine (a liberada pelo mestre,
+      uma a uma, passa);
+    - **o teto da campanha** (só avisa): o teto da arma na rolagem (de +0 a +3) e as lendárias por arma. A bancada da wiki
+      avisa a arma que passa, e o pedido avisa o mestre quando a modificação de ataque passaria do teto numa arma da ficha.
+      A bancada que o Foundry manda leva a raridade de cada modificação.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

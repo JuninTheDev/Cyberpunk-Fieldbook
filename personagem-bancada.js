@@ -49,7 +49,7 @@
     const pecas = b ? (b.pecas || []).map(peca => {
       const mod = peca.mod ? porId.get(peca.mod) : null;
       return peca.mod
-        ? { id: peca.id, nome: peca.nome, sigla: sigla(peca.nome), tipo: peca.tipo === 'defeito' ? 'defeito' : 'modificacao', mod: peca.mod, grupo: mod ? mod.grupo : '', tamanho: Number(peca.tamanho) || 0, texto: mod ? mod.texto : '' }
+        ? { id: peca.id, nome: peca.nome, sigla: sigla(peca.nome), tipo: peca.tipo === 'defeito' ? 'defeito' : 'modificacao', mod: peca.mod, grupo: mod ? mod.grupo : '', tamanho: Number(peca.tamanho) || 0, texto: mod ? mod.texto : '', raridade: peca.raridade || '' }
         : { id: peca.id, nome: peca.nome, sigla: sigla(peca.nome), tipo: 'acessorio', catalogo: peca.catalogo || '', tamanho: Number(peca.tamanho) || 0, posicao: posicaoDe(peca.catalogo), texto: (catalogo(peca.catalogo) || {}).resumo || '' };
     }) : [];
     return montar({
@@ -209,5 +209,5 @@
   }
   const diario = (identidade, limite = Infinity) => ((identidade && identidade.diario) || []).slice().reverse().map(descrever).filter(Boolean).slice(0, limite);
 
-  return { daMesa, daCriacao, cabeNoSlot, modCabe, acessorioCabe, sigla, silhueta, posicaoDe, diario, TETO, NOMES_DAS_POSICOES };
+  return { daMesa, daCriacao, cabeNoSlot, modCabe, acessorioCabe, ehDeAtaque, sigla, silhueta, posicaoDe, diario, TETO, NOMES_DAS_POSICOES };
 });
