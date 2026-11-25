@@ -4,13 +4,13 @@ import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA,
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { PERICIAS } from './gerado.mjs';
-import { descreverEfeito, TIPOS as TIPOS_DE_MOD, validarMod } from './regras-modificacoes.mjs';
+import { descreverEfeito, modCabe, podeInstalarModificacao, TIPOS as TIPOS_DE_MOD, validarMod } from './regras-modificacoes.mjs';
 import { contadores, descreverEvento, diario, LIMITES as LIMITES_DA_IDENTIDADE } from './regras-identidade.mjs';
 import { anotarMarco, temIdentidade, tornarDono } from './identidade.mjs';
 import { defeitoEscondido, esconder, revelar, tirar } from './defeito-escondido.mjs';
 import { abrir as abrirOficina } from './oficina.mjs';
 import { RARIDADES } from './regras-oficina.mjs';
-import { bonusDoCritico, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
+import { acessorioCabe, bonusDoCritico, classeDoRebuild, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque, rebuildCabe } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
@@ -97,7 +97,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       porVeiculoNaCena: FichaItem.#porVeiculoNaCena, perceberArmadura: FichaItem.#perceberArmadura,
       corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga,
       anotarMarco: FichaItem.#anotarMarco, tornarDono: FichaItem.#tornarDono,
-      esconderDefeito: FichaItem.#esconderDefeito, revelarDefeito: FichaItem.#revelarDefeito, tirarDefeito: FichaItem.#tirarDefeito, editarNaOficina: FichaItem.#editarNaOficina
+      esconderDefeito: FichaItem.#esconderDefeito, revelarDefeito: FichaItem.#revelarDefeito, tirarDefeito: FichaItem.#tirarDefeito, editarNaOficina: FichaItem.#editarNaOficina,
+      instalarAcessorio: FichaItem.#instalarAcessorio, removerAcessorio: FichaItem.#removerAcessorio,
+      instalarModificacao: FichaItem.#instalarModificacao, abrirItemBancada: FichaItem.#abrirItemBancada
     }
   };
 
@@ -113,8 +115,11 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   // A aba História (o C69) só na arma de um personagem que tem diário (regras de identidade.temIdentidade).
   _getTabsConfig(grupo) {
     const config = super._getTabsConfig(grupo);
-    if (grupo !== 'item' || !config || !temIdentidade(this.item)) return config;
-    return { ...config, tabs: [...config.tabs, { id: 'historia', label: 'História' }] };
+    if (grupo !== 'item' || !config) return config;
+    const tabs = [...config.tabs];
+    if (this.item.type === 'arma') tabs.push({ id: 'bancada', label: 'Bancada' });
+    if (temIdentidade(this.item)) tabs.push({ id: 'historia', label: 'História' });
+    return { ...config, tabs };
   }
 
   async _onRender(contexto, opcoes) {
@@ -128,6 +133,13 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
     for (const controle of this.element.querySelectorAll('.abas-do-item [role="tab"]')) {
       controle.setAttribute('aria-selected', String(controle.classList.contains('active')));
     }
+  }
+
+  // No destino Bancada, acessórios do inventário ocupam os slots da arma; modificações ficam no painel próprio.
+  async _onDropDocument(evento, documento) {
+    const destino = evento.target?.closest?.('[data-bancada-drop]')?.dataset.bancadaDrop;
+    if (this.item.type !== 'arma' || !destino || documento.documentName !== 'Item') return super._onDropDocument(evento, documento);
+    return FichaItem.#instalarNaBancada.call(this, documento, destino);
   }
 
   async _prepareContext(options) {
@@ -198,6 +210,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       instalados: item.instalados.filter(i => !(tipo === 'arma' && i.getFlag(SISTEMA, 'mod'))).map(i => i.name).join(', '),
       slotsUsados: item.slotsUsados,
       modsDaArma: tipo === 'arma' && item.actor ? { ...item.slotsDeModificacao, nomes: item.modificacoes.map(i => i.name).join(', ') } : null,
+      bancada: tipo === 'arma' ? bancadaDaArma(item, this.isEditable) : null,
       modificacao: tipo === 'upgrade' && item.getFlag(SISTEMA, 'mod') ? modificacaoDaFicha(item.getFlag(SISTEMA, 'mod')) : null,
       // A oficina do mestre (o C71): a raridade da modificação da oficina e, só para o mestre, o "Editar na oficina"; na arma,
       // o defeito escondido (o nome só no navegador do mestre).
@@ -217,6 +230,82 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       })),
       descricaoRica: await foundry.applications.ux.TextEditor.implementation.enrichHTML(item.system.descricao, { relativeTo: item })
     });
+  }
+
+  static #itemDaBancada(alvo) {
+    return this.item.actor?.items.get(alvo.dataset.itemId);
+  }
+  static #instalarAcessorio(evento, alvo) {
+    return FichaItem.#instalarNaBancada.call(this, FichaItem.#itemDaBancada.call(this, alvo), 'acessorio');
+  }
+  static #instalarModificacao(evento, alvo) {
+    return FichaItem.#instalarNaBancada.call(this, FichaItem.#itemDaBancada.call(this, alvo), 'modificacao');
+  }
+  static #abrirItemBancada(evento, alvo) {
+    return FichaItem.#itemDaBancada.call(this, alvo)?.sheet.render(true);
+  }
+  static async #removerAcessorio(evento, alvo) {
+    const item = FichaItem.#itemDaBancada.call(this, alvo);
+    if (!this.isEditable || !item || item.getFlag(SISTEMA, 'mod') || item.system.instaladoEm !== this.item.id) return null;
+    const resultado = await item.update({ 'system.instaladoEm': '' });
+    if (this.item.actor.items.get(item.id)?.system.instaladoEm !== this.item.id) await this.render({ force: true });
+    return resultado;
+  }
+  static async #instalarNaBancada(item, destino) {
+    const arma = this.item;
+    const ator = arma.actor;
+    if (arma.type !== 'arma' || !ator || !ator.isOwner || !this.isEditable) {
+      ui.notifications.warn('A bancada só pode mudar itens de uma arma que você pode editar.');
+      return null;
+    }
+    if (!item || item.type !== 'upgrade' || item.parent?.uuid !== ator.uuid) {
+      ui.notifications.warn('Use um acessório ou uma modificação do inventário deste personagem.');
+      return null;
+    }
+    const flagMod = item.getFlag(SISTEMA, 'mod');
+    const ehModificacao = Boolean(flagMod);
+    if (destino === 'acessorio') {
+      if (ehModificacao || item.system.alvo !== 'arma') {
+        ui.notifications.warn(item.name + ': esta área recebe acessórios de arma, não modificações.');
+        return null;
+      }
+      const compatibilidade = compatibilidadeDoAcessorio(arma, item);
+      if (!compatibilidade.cabe) {
+        ui.notifications.warn(item.name + ' não cabe em ' + arma.name + ': ' + compatibilidade.motivo + '.');
+        return null;
+      }
+    } else if (destino === 'modificacao') {
+      if (!ehModificacao) {
+        ui.notifications.warn(item.name + ': esta área recebe uma modificação de arma.');
+        return null;
+      }
+      const invalida = validarMod(flagMod);
+      if (invalida) {
+        ui.notifications.warn(item.name + ': a modificação não vale: ' + invalida + '.');
+        return null;
+      }
+      const podeInstalar = podeInstalarModificacao({ mestre: game.user.isGM, roles: [ator.system.role?.nome, ator.system.roleSecundaria?.nome] });
+      if (!podeInstalar) {
+        ui.notifications.warn('Só um Tech ou o mestre pode instalar uma modificação de arma.');
+        return null;
+      }
+      if (item.system.instaladoEm && item.system.instaladoEm !== arma.id) {
+        ui.notifications.warn(item.name + ' é permanente em outra arma e não pode passar para ' + arma.name + '.');
+        return null;
+      }
+      const compatibilidade = modCabe(arma.paraModificacoes, arma.modificacoes.filter(outro => outro.id !== item.id).map(outro => outro.modificacao), flagMod);
+      if (!compatibilidade.cabe) {
+        ui.notifications.warn(item.name + ' não cabe em ' + arma.name + ': ' + compatibilidade.motivo + '.');
+        return null;
+      }
+    } else return null;
+    if (item.system.instaladoEm === arma.id) return item;
+    const resultado = await item.update({ 'system.instaladoEm': arma.id });
+    if (ator.items.get(item.id)?.system.instaladoEm === arma.id) {
+      await this.render({ force: true });
+      return resultado ?? item;
+    }
+    return null;
   }
 
   // "Atacar" e "Recarregar" na arma de um personagem (as maquetes do usuário): o fluxo da ficha dele (a janela de
@@ -309,6 +398,78 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
 function modificacaoDaFicha(mod) {
   const invalida = validarMod(mod);
   return invalida ? { invalida } : { tipo: TIPOS_DE_MOD[mod.tipo], tamanho: mod.tamanho, efeitos: mod.efeitos.map(descreverEfeito) };
+}
+
+// A Bancada (C74) apresenta só os dados da arma e reaproveita os validadores de slots do C11/C67.
+function bancadaDaArma(arma, editavel) {
+  const ator = arma.actor;
+  const podeVerMontagem = Boolean(ator?.isOwner);
+  const instalados = podeVerMontagem ? arma.instalados : [];
+  const acessoriosInstalados = instalados.filter(item => !item.getFlag(SISTEMA, 'mod'));
+  const modsInstaladas = instalados.filter(item => item.getFlag(SISTEMA, 'mod'));
+  const podeEditar = Boolean(editavel && podeVerMontagem);
+  const podeInstalarMods = Boolean(podeEditar && podeInstalarModificacao({ mestre: game.user.isGM, roles: [ator?.system.role?.nome, ator?.system.roleSecundaria?.nome] }));
+  const acessoriosTotal = Math.max(0, Math.trunc(Number(arma.system.slots) || 0));
+  const acessoriosUsados = arma.slotsUsados;
+  const modsDaArma = arma.slotsDeModificacao;
+  const quantidadeDeSlots = total => Math.min(12, Math.max(0, Math.trunc(Number(total) || 0)));
+  const slotsVisuais = (usados, total) => Array.from({ length: quantidadeDeSlots(total) }, (_, indice) => ({ numero: indice + 1, ocupado: indice < usados }));
+  const mods = modsInstaladas.map(item => {
+    const flag = item.getFlag(SISTEMA, 'mod');
+    const ficha = modificacaoDaFicha(flag);
+    return { id: item.id, nome: item.name, imagem: item.img, tipo: TIPOS_DE_MOD[flag?.tipo] ?? 'Inválida',
+      tipoId: flag?.tipo, tamanho: Number(flag?.tamanho) || 0, defeito: flag?.tipo === 'defeito', efeitos: ficha.efeitos ?? [], invalida: ficha.invalida ?? '' };
+  });
+  const inventario = podeVerMontagem ? [...ator.items] : [];
+  const acessorios = inventario.filter(item => item.type === 'upgrade' && item.system.alvo === 'arma'
+    && !item.getFlag(SISTEMA, 'mod') && !item.system.instaladoEm).map(item => {
+      const compatibilidade = compatibilidadeDoAcessorio(arma, item);
+      return { id: item.id, nome: item.name, imagem: item.img, tamanho: Number(item.system.tamanho) || 0,
+        cabe: compatibilidade.cabe, motivo: compatibilidade.motivo };
+    }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const modificacoes = inventario.filter(item => item.type === 'upgrade' && item.getFlag(SISTEMA, 'mod') && !item.system.instaladoEm).map(item => {
+    const flag = item.getFlag(SISTEMA, 'mod');
+    const ficha = modificacaoDaFicha(flag);
+    const compatibilidade = item.modificacao
+      ? modCabe(arma.paraModificacoes, arma.modificacoes.map(outro => outro.modificacao), item.modificacao)
+      : { cabe: false, motivo: ficha.invalida };
+    return { id: item.id, nome: item.name, imagem: item.img, tipo: ficha.tipo ?? 'Inválida',
+      tamanho: Number(flag?.tamanho) || 0, defeito: flag?.tipo === 'defeito', efeitos: ficha.efeitos ?? [], invalida: ficha.invalida ?? '',
+      cabe: compatibilidade.cabe, motivo: compatibilidade.motivo, instalavel: podeInstalarMods && compatibilidade.cabe };
+  }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const periciaId = arma.periciaDaArma;
+  const pericia = arma.actor?.system.pericia?.(periciaId)?.nome ?? PERICIAS.find(item => item.id === periciaId)?.nome ?? periciaId ?? '';
+  const atributos = [
+    { rotulo: 'Perícia', valor: pericia }, { rotulo: 'Dano', valor: arma.system.dano },
+    { rotulo: 'CDT', valor: arma.system.cdt },
+    { rotulo: 'Pente', valor: arma.system.pente?.max ? arma.system.pente.value + '/' + arma.system.pente.max : '' },
+    { rotulo: 'Alcance', valor: arma.system.aDistancia ? 'À distância' : 'Corpo a corpo' },
+    { rotulo: 'Qualidade', valor: QUALIDADES[arma.system.qualidade] ?? arma.system.qualidade }
+  ].filter(dado => dado.valor !== '' && dado.valor !== undefined && dado.valor !== null);
+  return {
+    nome: arma.name, apelido: arma.identidade?.apelido ?? '', imagem: arma.img, atributos,
+    acessorios: { usados: acessoriosUsados, total: acessoriosTotal, restantes: Math.max(0, acessoriosTotal - acessoriosUsados), slots: slotsVisuais(acessoriosUsados, acessoriosTotal) },
+    modificacoes: { usados: modsDaArma.usados, total: modsDaArma.total, defeitos: mods.filter(item => item.defeito).length,
+      teto: 3, slots: slotsVisuais(modsDaArma.usados, modsDaArma.total), itens: mods, disponiveis: modificacoes, podeInstalar: podeInstalarMods },
+    acessoriosInstalados: acessoriosInstalados.map(item => ({ id: item.id, nome: item.name, imagem: item.img, tamanho: arma.tamanhoNaArma(item) })),
+    acessoriosDisponiveis: acessorios, podeEditar, podeVerMontagem, semAtor: !ator
+  };
+}
+
+function compatibilidadeDoAcessorio(arma, acessorio) {
+  const outros = arma.instalados.filter(item => item.id !== acessorio.id);
+  const usados = outros.reduce((soma, item) => soma + arma.tamanhoNaArma(item), 0);
+  const rebuild = classeDoRebuild(acessorio.getFlag(SISTEMA, 'arma2077'));
+  if (rebuild) {
+    const classe2077 = arma.getFlag(SISTEMA, 'arma2077')?.classe ?? null;
+    return rebuildCabe({ rebuild, arma: arma.system, usados,
+      outroRebuild: outros.some(item => classeDoRebuild(item.getFlag(SISTEMA, 'arma2077'))), classe2077 });
+  }
+  return acessorioCabe({
+    slots: arma.system.slots, usados, tamanho: Number(acessorio.system.tamanho) || 0,
+    carregador: Boolean(acessorio.system.modificadores?.pente),
+    temCarregador: outros.some(item => item.type === 'upgrade' && item.system.modificadores?.pente)
+  });
 }
 
 // A aba História da arma (o C69): a identidade, os contadores, o diário (os mais novos primeiro) e, só para o mestre, o

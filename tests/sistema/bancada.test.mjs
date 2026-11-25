@@ -29,7 +29,7 @@ const linhaDaLoja = id => ({ uid: `loja:${id}`, nome: daLoja.get(id).nome, item:
 
 test('C70: o plano do ROADMAP e os slots de modificação da loja pela regra do sistema', () => {
   assert.match(roadmap, /C70\. O Arsenal e a bancada da arma na wiki:\*\* .*a arma em holograma, os slots de acessório e de modificação, o defeito, o teto e o que cabe em cada slot livre, e a identidade; com a ida e a volta para o Foundry/);
-  assert.match(roadmap, /C74\. A bancada da arma no Foundry:\*\* pedido do usuário \(2026-11-24\)/);
+  assert.match(roadmap, /C74\. A bancada da arma no Foundry:\*\* .*pedido do usuário \(2026-11-24\): \"uma tela onde vc pode ver a arma e as modificações e itens equipadas nela\.\.\. através de uma tela de modificação da arma\"\. A aba Bancada da ficha da arma, com os dados da bancada da wiki \(o C70\): o acessório entra arrastando do inventário; a modificação, só pelo Tech ou pelo mestre/);
   assert.ok(armas.length > 150);
   // Cada arma da loja guarda o que a regra do sistema diz (a loja-catalogo.js é gerada: node loja-do-14.mjs).
   const diferentes = armas.filter(item => JSON.stringify(daLoja.get(idDe(item)).arma.mods) !== JSON.stringify({ slots: M.slotsDeModificacao(paraModificacoes(item)), classe: paraModificacoes(item).classe, tipo: item.system.tipo }));

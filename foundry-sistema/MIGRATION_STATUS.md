@@ -10124,6 +10124,22 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 sem erros; G2 sem erros; G3 800/800; G4 335/335 (714 s); isolados 29/29. Rodadas antes: o CORS da rota, o rolar 6, as mensagens antigas, os avisos esperados e o sussurro ao mestre que chega ao jogador (trocado pela janela).
 - **Mutações:** oito no G3 (O1 a O8), quatro na API (A1 a A4) e dez no G4 (F1 a F10); todas morreram, md5 igual.
 
+### Ciclo 210 (2026-11-25): C74, a bancada da arma no Foundry (sessão Codex)
+
+- **Pedido do usuário (2026-11-24):** uma tela para ver a arma, as modificações e os itens equipados; a imagem anexada orientou a apresentação visual.
+- **A fonte:** o item C74 do ROADMAP, a bancada da wiki (C70), as regras existentes `acessorioCabe`, `rebuildCabe` e `modCabe`, e o pedido de instalação de modificações só por Tech ou mestre. Não entrou regra nova de arma.
+- **Entrega:**
+  - na ficha da arma, a aba Bancada com imagem, perícia, dano, CDT, pente, alcance, qualidade, slots de acessórios e modificações, peças instaladas e itens compatíveis disponíveis;
+  - acessórios compatíveis são instalados por drop do inventário; modificações só são instaladas por Tech ou mestre. A permissão também é conferida em atualização direta do item;
+  - o template e o CSS da ficha apresentam a bancada no tema escuro do sistema, com adaptação para telas menores;
+  - a versão `0.3.210`.
+- **Fica para depois:** a economia das modificações (C72) e a arma quebrada, a relíquia e reforjar (C73).
+- **Testes de referência:**
+  - **G3:** em `modificacoes.test.mjs`, Solo é recusado e Tech, Técnico e mestre são aceitos; o teste de bancada confere o C74 no plano;
+  - **G4:** novo cenário C74: atributos e slots, drop de acessório compatível, recusa do que não cabe, instalação de modificação por Tech e mestre, e bloqueio para Solo na interface e na atualização direta.
+- **Portões:** G1 268 arquivos; G2 sem erros; G3 801/801; G4 336/336 (729 s).
+- **Mutações:** uma no G3 (permitir todos os papéis) e duas no G4 (desviar o drop para o handler padrão; permitir instalação para todos); as três fizeram o teste falhar, e os arquivos de código voltaram ao MD5 original.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

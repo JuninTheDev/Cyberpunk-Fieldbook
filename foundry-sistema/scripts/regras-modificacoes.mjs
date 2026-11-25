@@ -257,3 +257,9 @@ export function parteDoTeto(valores) {
   const excesso = positivos - TETO_DA_ARMA;
   return excesso > 0 ? { rotulo: `Teto da arma (+${TETO_DA_ARMA})`, valor: -excesso } : null;
 }
+
+/* Quem pode instalar uma modificação: o Tech do personagem ou o mestre (C74). */
+export function podeInstalarModificacao({ mestre = false, roles = [] } = {}) {
+  const nome = valor => String(valor ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  return Boolean(mestre) || (Array.isArray(roles) && roles.some(role => ['tech', 'tecnico'].includes(nome(role))));
+}

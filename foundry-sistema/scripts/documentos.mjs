@@ -14,7 +14,7 @@ import {
   classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild, BALAS_RAJADA
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
-import { efeitosDoAtaque, modCabe, slotsDeModificacao, validarMod } from './regras-modificacoes.mjs';
+import { efeitosDoAtaque, modCabe, podeInstalarModificacao, slotsDeModificacao, validarMod } from './regras-modificacoes.mjs';
 import { nomeDeExibicao, normalizar as normalizarIdentidade } from './regras-identidade.mjs';
 import { identidadeAoCriar } from './identidade.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -819,6 +819,10 @@ export class ItemCPR extends Item {
     if (mod && destino !== undefined && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
       const atual = this.actor.items.get(this.system.instaladoEm);
       if (atual?.type === 'arma') { ui.notifications.warn(`${this.name} é permanente em ${atual.name}: não sai nem passa para outra arma. Para tirar, apague a modificação (ela se destrói).`); return false; }
+      if (destino && !podeInstalarModificacao({ mestre: game.user.isGM, roles: [this.actor.system.role?.nome, this.actor.system.roleSecundaria?.nome] })) {
+        ui.notifications.warn(this.name + ': só um Tech ou o mestre pode instalar uma modificação de arma.');
+        return false;
+      }
       const arma = destino ? this.actor.items.get(destino) : null;
       if (destino && arma?.type !== 'arma') { ui.notifications.warn(`${this.name} é uma modificação de arma: só entra numa arma.`); return false; }
       const { cabe, motivo } = arma ? modCabe(arma.paraModificacoes, arma.modificacoes.filter(item => item.id !== this.id).map(item => item.modificacao), mod) : { cabe: true };

@@ -546,3 +546,5 @@ Foundry é a mesma em todo sistema operacional), todo dentro da pasta descartáv
     no ROADMAP; decisão do usuário, 2026-10-12; três desde 2026-10-17, com a sessão Codex);
   - os agentes de IA seguem o `AGENTS.md` da raiz (o `CLAUDE.md` só importa ele);
   - o master é da wiki e do servidor.
+
+**A lição do ciclo 210:** o Foundry 14 encaminha drops de itens em `ItemSheetV2` por `_onDropDocument`; `_onDropItem` pertence ao fluxo de `ActorSheet`. O teste G4 deve simular o `DataTransfer` na área específica e conferir a aba e a compatibilidade.

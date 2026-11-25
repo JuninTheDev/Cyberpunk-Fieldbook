@@ -1,5 +1,5 @@
 {{!-- A ficha do item, no jeito da maquete "Item Sheets" do usuário: o tipo na cor dele, o nome, o resumo e as etiquetas
-no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
+no alto; as abas Detalhes (os campos em células), Descrição e Efeitos, e Bancada na arma. --}}
 <div class="item-ficha ficha-de-item tipo-{{item.type}}">
   <header class="cabecalho">
     <p class="linha-tipo"><span class="tipo">{{tipoRotulo}}</span><span>FICHA DO ITEM</span></p>
@@ -194,6 +194,62 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
     {{/if}}
   </section>
 
+  {{#if bancada}}
+  <section class="tab bancada-da-arma {{tabs.bancada.cssClass}}" data-group="item" data-tab="bancada" aria-label="Bancada da arma">
+    {{#with bancada}}
+    <div class="bancada-grade">
+      <div class="bancada-visual">
+        <figure class="arma-holograma">
+          <img src="{{imagem}}" alt="Vista de {{nome}}">
+          <figcaption><span>{{#if apelido}}ARMA PERSONALIZADA{{else}}MODELO{{/if}}</span><strong>{{#if apelido}}{{apelido}}{{else}}{{nome}}{{/if}}</strong><small>{{nome}}</small></figcaption>
+        </figure>
+        <dl class="atributos-da-arma">
+          {{#each atributos}}<div><dt>{{rotulo}}</dt><dd>{{valor}}</dd></div>{{/each}}
+        </dl>
+      </div>
+      <div class="bancada-montagem">
+        <section class="bancada-modulo acessorios-da-arma" aria-labelledby="bancada-acessorios">
+          <header class="bancada-titulo"><div><span>01 / MONTAGEM</span><h2 id="bancada-acessorios">Acessórios</h2></div><b>{{acessorios.usados}} / {{acessorios.total}}</b></header>
+          <div class="slots-da-arma" role="img" aria-label="{{acessorios.usados}} de {{acessorios.total}} slots de acessório ocupados">
+            {{#each acessorios.slots}}<span class="slot {{#if ocupado}}ocupado{{else}}livre{{/if}}" aria-label="Slot {{numero}} {{#if ocupado}}ocupado{{else}}livre{{/if}}"></span>{{/each}}
+          </div>
+          <div class="pecas-instaladas">
+            {{#each acessoriosInstalados}}
+            <article class="peca-da-arma"><img src="{{imagem}}" alt=""><div><strong>{{nome}}</strong><small>{{tamanho}} {{#if (eq tamanho 1)}}slot{{else}}slots{{/if}}</small></div><button type="button" class="apagar" data-action="abrirItemBancada" data-item-id="{{id}}" aria-label="Abrir {{nome}}" title="Abrir item">↗</button>{{#if ../podeEditar}}<button type="button" class="apagar" data-action="removerAcessorio" data-item-id="{{id}}" aria-label="Retirar {{nome}}" title="Retirar acessório">✕</button>{{/if}}</article>
+            {{else}}<p class="vazio">Nenhum acessório instalado.</p>{{/each}}
+          </div>
+          {{#if podeEditar}}<div class="bancada-drop" data-bancada-drop="acessorio" role="region" tabindex="0" aria-label="Área para instalar acessório"><b>＋</b><span>Arraste um acessório do inventário para cá</span><small>A instalação respeita os slots e as regras do acessório.</small></div>{{/if}}
+          {{#if acessoriosDisponiveis.length}}<h3 class="subtitulo-da-bancada">No inventário</h3><div class="pecas-disponiveis">
+            {{#each acessoriosDisponiveis}}
+            <article class="opcao-da-arma"><div><strong>{{nome}}</strong><small>{{tamanho}} {{#if (eq tamanho 1)}}slot{{else}}slots{{/if}}</small>{{#if cabe}}<small class="compativel">Compatível</small>{{else}}<small class="incompativel">{{motivo}}</small>{{/if}}</div>{{#if ../podeEditar}}{{#if cabe}}<button type="button" class="acao" data-action="instalarAcessorio" data-item-id="{{id}}">Instalar</button>{{/if}}{{/if}}</article>
+            {{/each}}
+          </div>{{/if}}
+        </section>
+        <section class="bancada-modulo modificacoes-da-arma" aria-labelledby="bancada-modificacoes">
+          <header class="bancada-titulo"><div><span>02 / AJUSTE</span><h2 id="bancada-modificacoes">Modificações</h2></div><b>{{modificacoes.usados}} / {{modificacoes.total}}</b></header>
+          <div class="slots-da-arma modificacoes-slots" role="img" aria-label="{{modificacoes.usados}} de {{modificacoes.total}} slots de modificação ocupados">
+            {{#each modificacoes.slots}}<span class="slot {{#if ocupado}}ocupado{{else}}livre{{/if}}" aria-label="Slot {{numero}} {{#if ocupado}}ocupado{{else}}livre{{/if}}"></span>{{/each}}
+          </div>
+          <p class="nota da-bancada">{{modificacoes.defeitos}} defeito(s) · teto de {{modificacoes.teto}} slots. Modificações são permanentes; tirar destrói a peça.</p>
+          <div class="mods-instaladas">
+            {{#each modificacoes.itens}}
+            <article class="mod-da-arma"><div class="mod-linha"><img src="{{imagem}}" alt=""><div><strong>{{nome}}</strong><small>{{tipo}}{{#if defeito}} · não ocupa slot{{else}} · {{tamanho}} {{#if (eq tamanho 1)}}slot{{else}}slots{{/if}}{{/if}}</small></div><button type="button" class="apagar" data-action="abrirItemBancada" data-item-id="{{id}}" aria-label="Abrir {{nome}}" title="Abrir item">↗</button></div>{{#if invalida}}<small class="incompativel">{{invalida}}</small>{{else}}<ul>{{#each efeitos}}<li>{{this}}</li>{{else}}<li>Sem efeito numérico: identidade da arma.</li>{{/each}}</ul>{{/if}}</article>
+            {{else}}<p class="vazio">Nenhuma modificação instalada.</p>{{/each}}
+          </div>
+          {{#if modificacoes.podeInstalar}}<div class="bancada-drop modificacoes-drop" data-bancada-drop="modificacao" role="region" tabindex="0" aria-label="Área para instalar modificação"><b>＋</b><span>Arraste uma modificação do inventário para cá</span><small>Instalação pelo Tech ou pelo mestre.</small></div>{{else}}<p class="nota aviso-de-tech">Só o Tech ou o mestre pode instalar modificações.</p>{{/if}}
+          {{#if modificacoes.disponiveis.length}}<h3 class="subtitulo-da-bancada">Modificações no inventário</h3><div class="mods-disponiveis">
+            {{#each modificacoes.disponiveis}}
+            <article class="opcao-da-arma {{#unless cabe}}sem-encaixe{{/unless}}"><div><strong>{{nome}}</strong><small>{{tipo}}{{#if defeito}} · defeito{{else}} · {{tamanho}} {{#if (eq tamanho 1)}}slot{{else}}slots{{/if}}{{/if}}</small>{{#if cabe}}{{else}}<small class="incompativel">{{motivo}}</small>{{/if}}{{#if invalida}}<small class="incompativel">{{invalida}}</small>{{/if}}{{#if efeitos.length}}<ul>{{#each efeitos}}<li>{{this}}</li>{{/each}}</ul>{{/if}}</div>{{#if instalavel}}<button type="button" class="acao" data-action="instalarModificacao" data-item-id="{{id}}">Instalar</button>{{else}}{{#if cabe}}<small class="restricao">Só Tech ou mestre</small>{{/if}}{{/if}}</article>
+            {{/each}}
+          </div>{{/if}}
+        </section>
+      </div>
+    </div>
+    {{#unless podeVerMontagem}}<p class="nota">Os itens instalados e disponíveis aparecem para quem pode ver o inventário do personagem.</p>{{/unless}}
+    {{#if semAtor}}<p class="nota">Esta arma ainda não pertence ao inventário de um personagem.</p>{{/if}}
+    {{/with}}
+  </section>
+  {{/if}}
   <section class="tab descricao {{tabs.descricao.cssClass}}" data-group="item" data-tab="descricao">
     {{#if editavel}}
     <prose-mirror aria-label="Descrição" name="system.descricao" value="{{fonte.descricao}}" toggled="true">{{{descricaoRica}}}</prose-mirror>
