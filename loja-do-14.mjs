@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { slotsDeModificacao } from './foundry-sistema/scripts/regras-modificacoes.mjs';
 
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 const arquivoLoja = path.join(raiz, 'loja-catalogo.js');
@@ -18,6 +19,16 @@ const CABECALHO = '// Gerado por foundry-2077/build/loja.mjs a partir dos compê
 
 // O que a loja guarda de cada arma, lido do item do catálogo do 14.
 export const armaDo14 = s => ({ dano: s.dano, cdt: s.cdt, pente: s.pente?.max ?? 0, maos: s.maos, distancia: Boolean(s.aDistancia), oculta: Boolean(s.ocultavel) });
+
+// A bancada da arma na wiki (o C70): os slots de modificação (2; 1 na exótica e na ruim; o defeito dá mais um na mesa) e a
+// classe de 2077 (Power, Smart, Tech), que diz onde a modificação de uma classe serve, e o tipo do 14 (a loja do CORE
+// chama a Mono-Star e a Tomahawk de arremesso; no 14, são brancas). Pela regra do sistema
+// (regras-modificacoes.slotsDeModificacao), lida do item do catálogo do 14: a loja não repete a regra.
+export function modsDaArma14(item) {
+  const s = item.system;
+  const de2077 = item.flags?.['cpr-fieldbook']?.arma2077;
+  return { slots: slotsDeModificacao({ aDistancia: s.aDistancia, slots: s.slots, qualidade: s.qualidade, exotica: de2077?.exotica ?? null }), classe: de2077?.classe ?? null, tipo: s.tipo || '' };
+}
 
 // O resumo da arma ("2d6 · CDT 1 · pente 30 · 1 mão · oculta · Armas de uma Mão"): troca o dano, a CDT, o pente e as mãos.
 function resumoDaArma(resumo, arma) {
@@ -68,6 +79,8 @@ export function lojaComO14(loja, catalogo) {
       for (const [campo, valor] of Object.entries(novo)) {
         if (item.arma[campo] !== valor) { mudancas.push(`${item.id}: ${campo} ${item.arma[campo]} → ${valor}`); item.arma[campo] = valor; }
       }
+      const mods = modsDaArma14(doCatalogo);
+      if (JSON.stringify(item.arma.mods) !== JSON.stringify(mods)) { mudancas.push(`${item.id}: mods ${JSON.stringify(item.arma.mods)} → ${JSON.stringify(mods)}`); item.arma.mods = mods; }
       item.resumo = resumoDaArma(item.resumo, item.arma);
     }
   }

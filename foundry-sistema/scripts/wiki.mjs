@@ -12,7 +12,9 @@ import { aplicarRetrato, retratoMudou } from './wiki-retrato.mjs';
 export { avisosDaWiki } from './wiki-avisos.mjs';
 import { carregarCatalogo } from './catalogo.mjs';
 import { ATRIBUTOS, enderecoPadraoDaWiki, LIFEPATH, SISTEMA, USOS } from './config.mjs';
-import { paraAWiki as identidadeParaAWiki } from './regras-identidade.mjs';
+import { identidadeAoCriar, temIdentidade } from './identidade.mjs';
+import { daWiki as identidadeDaWiki, paraAWiki as identidadeParaAWiki } from './regras-identidade.mjs';
+import { TETO_DA_ARMA } from './regras-modificacoes.mjs';
 import { roleDaWiki } from './dados.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { ehBaseNatural, ladoValido, linhaDoExtrato, moradiaDaMesa, moradiaDaWiki, moradiaParaAWiki, periciaPropria } from './regras.mjs';
@@ -187,7 +189,14 @@ const EM_PILHA = ['municao', 'equipamento', 'roupa', 'droga'];
 // Os dados de cada item da wiki prontos para entrar no ator, com o uid da wiki na flag (para a munição achar a arma).
 // instalarCyberware: na importação, sim (o criador já descontou a Humanidade); num pedido da loja, não (a instalação na
 // ficha rola a Humanidade).
-function itensDaWiki(catalogo, entradas, notas, { instalarCyberware = true } = {}) {
+// A identidade de cada arma na última ficha da mesa que chegou à wiki (o C70), pelo uid da criação: o mestre que importa o
+// personagem de novo (outro mundo, a ficha da criação) não perde o nome nem o diário da arma.
+function identidadesDaMesa(doc) {
+  const linhas = (doc?.mesa?.itens ?? []).filter(linha => linha?.tipo === 'weapon' && linha.uid && linha.identidade);
+  return new Map(linhas.map(linha => [linha.uid, identidadeDaWiki(linha.identidade)]).filter(([, identidade]) => identidade));
+}
+
+function itensDaWiki(catalogo, entradas, notas, { instalarCyberware = true, identidades = null } = {}) {
   const itens = [];
   for (const entrada of entradas) {
     const base = catalogo[entrada.id];
@@ -197,6 +206,9 @@ function itensDaWiki(catalogo, entradas, notas, { instalarCyberware = true } = {
       const data = foundry.utils.deepClone(base);
       if (entrada.renomear) data.name = entrada.renomear;
       foundry.utils.setProperty(data, `flags.${SISTEMA}.wikiUid`, entrada.uid);
+      // A identidade que a arma tinha na mesa (o C70), na primeira cópia: o dono é quem a recebe agora.
+      const identidade = i === 0 && data.type === 'arma' ? identidades?.get(entrada.uid) : null;
+      if (identidade) foundry.utils.setProperty(data, `flags.${SISTEMA}.arma`, identidade);
       if (data.type === 'municao') data.system.quantidade = Number(entrada.qtd) || 0;
       else if (EM_PILHA.includes(data.type)) data.system.quantidade = Math.max(1, Number(entrada.qtd) || 1);
       // Uso escolhido na montagem da wiki; sem ele (personagem antigo), armas e armaduras equipadas.
@@ -315,12 +327,17 @@ export async function importarPersonagem(id, donoId = '') {
       ...moradiaDaWiki(r.moradia),
       notas: notasHtml
     },
-    items: [...itensDaWiki(catalogo, r.itens || [], notas), ...veiculos.itens],
+    items: [...itensDaWiki(catalogo, r.itens || [], notas, { identidades: identidadesDaMesa(doc) }), ...veiculos.itens],
     flags: { [SISTEMA]: { wiki: { id: doc.id, versao: doc.versao, importado: new Date().toISOString(), roles: [principal, segunda].filter(Boolean).map(role => role.nome) } } }
   });
   // Primeiro os acessórios (um carregador muda o tamanho do pente), depois a munição.
   await instalarNoLugar(ator, [...(r.itens || []), ...veiculos.lugares]);
   await carregarArmas(ator, r.itens || []);
+  // A identidade que voltou da mesa (o C70): o dono é o ator novo. As armas criadas junto com o ator não passam pelo
+  // _preCreate (o identidadeAoCriar), então o dono e a origem entram aqui.
+  const semDono = ator.items.filter(item => item.type === 'arma' && item.getFlag(SISTEMA, 'arma') && !item.getFlag(SISTEMA, 'arma').dono);
+  const donos = semDono.map(item => ({ _id: item.id, [`flags.${SISTEMA}.arma`]: identidadeAoCriar(item) })).filter(mudanca => mudanca[`flags.${SISTEMA}.arma`]);
+  if (donos.length) await ator.updateEmbeddedDocuments('Item', donos);
   // O veículo entra inteiro: o SDP de agora é o máximo, já com os upgrades.
   const deVeiculo = ator.items.filter(item => item.type === 'veiculo');
   if (deVeiculo.length) await ator.updateEmbeddedDocuments('Item', deVeiculo.map(item => ({ _id: item.id, 'system.sdp.value': item.system.sdp.max })));
@@ -496,6 +513,30 @@ const TIPO_NA_WIKI = {
 const USO_NA_WIKI = { equipado: 'equipped', carregando: 'carried', guardado: 'owned' };
 const nomeDaPericia = (id, propria) => PERICIAS.find(p => p.id === id)?.en ?? (FAMILIAS[propria.familia] ? `${FAMILIAS[propria.familia].en} (${propria.nome})` : propria.atributo ? propria.nome : id);
 
+// A bancada da arma (o C70): os slots de acessório e de modificação, as peças instaladas (o acessório e a modificação) e
+// os bônus de ataque que vêm da arma (os fixos e os de uma situação, que somam até o teto), para a aba Arsenal da wiki
+// desenhar sem repetir as regras. Um erro na conta não derruba a ficha: a bancada fica sem os bônus.
+function bancadaParaAWiki(arma) {
+  const pecas = arma.instalados.filter(item => item.type === 'upgrade').map(item => {
+    const mod = item.modificacao;
+    return mod ? { id: item.id, nome: item.name, mod: mod.id, tipo: mod.tipo, tamanho: mod.tamanho }
+      : { id: item.id, nome: item.name, catalogo: item.getFlag(SISTEMA, 'catalogo') || '', tipo: 'acessorio', tamanho: arma.tamanhoNaArma(item) };
+  });
+  const daArma = partes => partes.filter(parte => parte.daArma).map(({ rotulo, valor }) => ({ rotulo, valor }));
+  let ataque = null;
+  try {
+    const situacionais = arma.actor.situacionaisDoAtaque(arma, { pericia: arma.periciaDaArma, modo: 'tiro', local: 'corpo', metros: null, alvo: null, dono: true });
+    ataque = { fixos: daArma(arma.partesDoAtaque(null).partes), situacionais: daArma(situacionais), teto: TETO_DA_ARMA };
+  } catch (erro) {
+    console.warn(`${SISTEMA} | a bancada de ${arma.name}:`, erro);
+  }
+  return {
+    acessorios: { usados: pecas.filter(peca => peca.tipo === 'acessorio').reduce((soma, peca) => soma + peca.tamanho, 0), total: Number(arma.system.slots) || 0 },
+    modificacoes: arma.slotsDeModificacao, pecas, ataque,
+    aDistancia: Boolean(arma.system.aDistancia), tipo: arma.system.tipo || '', qualidade: arma.system.qualidade || 'standard', classe: arma.perfil2077?.classe ?? null
+  };
+}
+
 export function fichaParaAWiki(ator) {
   if (ator?.type !== 'personagem') return null;
   const s = ator.system;
@@ -521,6 +562,7 @@ export function fichaParaAWiki(ator) {
       // C70). A nota do mestre é outra flag e não vai.
       const identidade = item.getFlag(SISTEMA, 'arma');
       if (identidade) linha.identidade = identidadeParaAWiki(identidade);
+      if (temIdentidade(item)) linha.bancada = bancadaParaAWiki(item);
     }
     if (item.type === 'armadura') Object.assign(linha, { cabeca: x.sp.cabeca.max ? x.sp.cabeca.value : 0, corpo: x.sp.corpo.max ? x.sp.corpo.value : 0 });
     // O lado (o C30): "local" no instalado, "localPlanejado" no que espera instalar, como o cpr-2077; e o tipo, o tamanho e
@@ -756,6 +798,9 @@ export async function importarDaMesa(id, donoId = '') {
     const s = data.system;
     data.name = item.nome || data.name;
     if (item.uid) foundry.utils.setProperty(data, `flags.${SISTEMA}.wikiUid`, item.uid);
+    // A identidade da arma (o C70): a que a ficha da mesa trouxe volta com ela (sem o dono: é quem a recebe agora).
+    const identidade = data.type === 'arma' ? identidadeDaWiki(item.identidade) : null;
+    if (identidade) foundry.utils.setProperty(data, `flags.${SISTEMA}.arma`, identidade);
     if (data.type === 'municao') s.quantidade = Math.max(0, Number(item.qtd) || 0);
     else if (EM_PILHA.includes(data.type)) s.quantidade = Math.max(1, Number(item.qtd) || 1);
     if (data.type === 'arma' || data.type === 'armadura') s.equipada = item.uso === 'equipped';

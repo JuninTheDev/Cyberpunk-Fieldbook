@@ -164,6 +164,16 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C70, a bancada da arma na wiki (2026-11-24, sessão KouArt):** ficam para o usuário:
+  - **o nome próprio só se muda no Foundry** (a aba História da ficha da arma): a wiki mostra a identidade, mas não a
+    edita. Dar nome pela wiki fica para depois;
+  - **as posições do desenho** (no trilho, no pente, no cano) são só para ver melhor: no RED, os slots são da arma;
+  - **a lista do slot livre de acessório segue a Montagem da wiki** (o acessório com classe no nome só nela; o de baixo do
+    cano só em arma de duas mãos; a arma exótica não leva), que é mais estrita que o Foundry (os slots e um carregador
+    por vez). No Foundry, o acessório ainda entra onde a wiki diria que não cabe;
+  - **o Compensador** (+1 no Autofogo) cabe em toda arma de longo alcance, mesmo sem autofogo: é como o C68 o definiu
+    (o encaixe só pede longo alcance).
+
 - **C69, a identidade da arma (2026-11-24, sessão KouArt):** ficam para o usuário:
   - **a nota do mestre não é segredo de verdade:** ela não aparece na ficha do jogador nem vai para a wiki, mas o jogador
     é dono do item e lê qualquer flag dele pelo console. O segredo de verdade (como o defeito escondido do C71) tem de
@@ -10026,6 +10036,45 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     capanga não tem diário, e o "vira o dono" passa a cópia.
 - **Portões:** G1 263 arquivos; G2 sem erros; G3 791/791; G4 333/333 (718 s). Uma rodada antes deu 331/333: o passo do C69 (o HP lido do ator de base, e não do token, corrigido) e, uma vez, o passo da NET 'o encontro e o ataque dos inimigos', que passou na rodada seguinte sem mudança no sistema.
 - **Mutações:** seis no G3 (N1 a N6) e seis no G4 (F1 a F6); todas morreram, md5 igual.
+
+### Ciclo 208 (2026-11-24): C70, o Arsenal e a bancada da arma na wiki (sessão KouArt)
+
+- **Pedido do usuário (2026-11-24):** "Dentro do planejamento está uma tela onde vc pode ver a arma e as modificações e
+  itens equipadas nela?"; depois do esboço "Bancada da arma": "Gostei de como está, só adapte o visual para o visual da
+  wiki tbm e pode colocar no roadmap e continuar". O C70 virou a bancada na wiki, e a do Foundry entrou como o C74.
+- **A fonte:** o plano do ROADMAP (o cartão da arma na wiki, com a ida e a volta para o Foundry), o esboço aprovado e as
+  regras do sistema (o `regras-modificacoes.modCabe` e o `slotsDeModificacao`, o `regras.rebuildCabe`, a Montagem da
+  wiki para os acessórios). Não há regra nova: a bancada mostra as que já valem.
+- **Entrega:**
+  - `personagem-bancada.js` (novo, na wiki): o modelo da bancada pela ficha da mesa e pela criação, as posições do
+    desenho, o teto, o que cabe num slot livre (a mesma regra do sistema para as modificações; a da Montagem para os
+    acessórios), a sigla das peças e o diário;
+  - no `criador.js`: a aba Arsenal da ficha (entre Equipamento e Cyberware), no jeito da aba Cyberware: a arma em
+    holograma (pistola, arma longa ou branca), os acessórios nas posições, as modificações e o defeito nas molduras de
+    HUD, a ficha da peça ou a lista do slot livre, o teto, a história e o "Abrir na loja" na categoria; o estilo no
+    `wiki.css` (no celular, o holograma em cima e as peças numa lista);
+  - no `loja-do-14.mjs` e na `loja-catalogo.js`: os slots de modificação, a classe de 2077 e o tipo do 14 de cada arma
+    (`arma.mods`), pela regra do sistema;
+  - no `wiki.mjs` do sistema: a `bancada` na linha da arma que volta para a wiki, e a identidade nas duas importações;
+    no `regras-identidade.mjs`: o `daWiki` e o `antes` dos contadores; no `identidade.mjs`: a arma que volta não ganha
+    outra origem; no `importarPersonagem`, a arma que volta com a identidade ganha o dono depois de criado o ator (as
+    armas criadas junto com o ator não passam pelo `_preCreate`: o G4 achou);
+  - a versão `0.3.208`.
+- **Fica para depois:** a bancada no Foundry (o C74); dar nome à arma pela wiki; o sorteio do defeito e a oficina do mestre
+  (o C71). As dúvidas estão nas Dúvidas.
+- **Testes de referência:**
+  - **G3:** o `bancada.test.mjs` (novo, 4 testes): o plano do ROADMAP, os slots de modificação da loja pela regra do
+    sistema em toda arma, o que cabe num slot de modificação igual ao `modCabe` do sistema em toda arma do catálogo com
+    seis montagens (mais de 25 mil conferências), a lista do slot livre (sem os defeitos; os acessórios pela Montagem, o
+    carregador, o Rebuild) e o modelo pela mesa e pela criação; no `identidade.test.mjs`, um teste novo: a identidade que
+    volta da wiki com os contadores, os marcos avisados, o primeiro sangue e a sessão do mesmo dia.
+  - **Wiki:** o cenário `arsenal` (novo, 7 passos): a aba, os números, as posições, as modificações e o defeito, a
+    história, a ficha da peça, o slot livre, outra arma, a criação, a loja na categoria e o celular.
+  - **G4:** um passo do C70: a bancada na ficha que volta para a wiki (os slots, as peças, o bônus de uma situação) e a
+    identidade de volta pela ficha da mesa e pela criação, com 7 abates e 27 sessões (5 abates fora dos 30 eventos), o
+    marco avisado, uma origem só e as peças de novo na arma.
+- **Portões:** G1 264 arquivos; G2 sem erros; G3 796/796; G4 334/334 (708 s); os cenários da wiki arsenal (7/7), conta (19/19), criador (65/65) e cyberware (16/16). Duas rodadas do G4 antes: uma em que o Foundry de teste não abriu o mundo (o servidor.log vazio, como no C69), e uma com o passo do C70 falhando (a arma criada junto com o ator pelo importarPersonagem não passa pelo _preCreate: o dono entrou depois, e o passo ganhou o dono e a origem na identidade inicial).
+- **Mutações:** onze no G3 (N1 a N11; a N11 pediu o teste da loja contra o loja-do-14 em toda arma), seis no cenário da wiki (W1 a W6) e sete no G4 (F1 a F7); todas morreram, md5 igual.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

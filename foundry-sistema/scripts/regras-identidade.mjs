@@ -4,8 +4,9 @@
 // em que ela lutou, e guarda os marcos que a mesa anota. Aqui ficam as contas, sem o Foundry; o item e os ganchos, no
 // identidade.mjs.
 //
-// Os contadores saem dos eventos (não há número guardado à parte): o "Desfazer" do ataque tira os eventos do golpe pela
-// chave dele, e a conta volta sozinha. A nota do mestre não fica aqui: é outra flag, que não vai para a wiki.
+// Os contadores saem dos eventos: o "Desfazer" do ataque tira os eventos do golpe pela chave dele, e a conta volta
+// sozinha. O único número guardado à parte é o "antes" da arma que voltou da wiki (o C70): a wiki guarda só os eventos mais
+// novos, e o que ela contava a mais fica ali. A nota do mestre não fica aqui: é outra flag, que não vai para a wiki.
 
 export const VERSAO = 1;
 export const TIPOS_DE_EVENTO = { origem: 'Origem', sessao: 'Sessão', primeiroSangue: 'Primeiro sangue', abate: 'Abate', critico: 'Crítico', marco: 'Marco' };
@@ -16,6 +17,17 @@ export const LIMITES = { apelido: 40, frase: 140, aparencia: 280, feitaPor: 60, 
 export const NA_WIKI = 30;
 
 const texto = (valor, limite) => String(valor ?? '').replace(/\s+/g, ' ').trim().slice(0, limite);
+const inteiro = valor => Math.max(0, Math.floor(Number(valor) || 0));
+
+// O que a arma já contava antes dos eventos guardados (o C70): os abates, os críticos, as sessões e o primeiro sangue.
+// Sem nada, null.
+function normalizarAntes(antes) {
+  if (!antes || typeof antes !== 'object') return null;
+  const sangue = antes.primeiroSangue && typeof antes.primeiroSangue === 'object' && typeof antes.primeiroSangue.data === 'string'
+    ? { data: antes.primeiroSangue.data, alvo: texto(antes.primeiroSangue.alvo, 80) } : null;
+  const atual = { abates: inteiro(antes.abates), criticos: inteiro(antes.criticos), sessoes: inteiro(antes.sessoes), primeiroSangue: sangue };
+  return atual.abates || atual.criticos || atual.sessoes || sangue ? atual : null;
+}
 
 // A identidade como fica na flag "arma" do item, com o que falta preenchido. Um valor estranho (de outra versão, de um
 // script) vira o padrão, e nunca quebra a ficha.
@@ -24,11 +36,13 @@ export function normalizar(identidade) {
   const dono = fonte.dono && typeof fonte.dono === 'object' && typeof fonte.dono.id === 'string' && fonte.dono.id
     ? { id: fonte.dono.id, nome: texto(fonte.dono.nome, 80) } : null;
   const eventos = (Array.isArray(fonte.eventos) ? fonte.eventos : []).filter(evento => evento && TIPOS_DE_EVENTO[evento.tipo] && typeof evento.data === 'string');
+  const antes = normalizarAntes(fonte.antes);
   return {
     versao: VERSAO,
     apelido: texto(fonte.apelido, LIMITES.apelido), frase: texto(fonte.frase, LIMITES.frase), aparencia: texto(fonte.aparencia, LIMITES.aparencia),
     feitaPor: texto(fonte.feitaPor, LIMITES.feitaPor), dono, eventos,
-    avisados: (Array.isArray(fonte.avisados) ? fonte.avisados : []).filter(numero => MARCOS_DE_ABATES.includes(numero))
+    avisados: (Array.isArray(fonte.avisados) ? fonte.avisados : []).filter(numero => MARCOS_DE_ABATES.includes(numero)),
+    ...(antes ? { antes } : {})
   };
 }
 
@@ -42,17 +56,20 @@ export const ehDono = (identidade, idDoAtor) => {
 };
 
 export function contadores(identidade) {
-  const { eventos } = normalizar(identidade);
+  const { eventos, antes } = normalizar(identidade);
   const conta = tipo => eventos.filter(evento => evento.tipo === tipo).length;
   const sangue = eventos.find(evento => evento.tipo === 'primeiroSangue') ?? null;
-  return { abates: conta('abate'), criticos: conta('critico'), sessoes: conta('sessao'), primeiroSangue: sangue ? { data: sangue.data, alvo: sangue.alvo ?? '' } : null };
+  return {
+    abates: conta('abate') + (antes?.abates ?? 0), criticos: conta('critico') + (antes?.criticos ?? 0), sessoes: conta('sessao') + (antes?.sessoes ?? 0),
+    primeiroSangue: sangue ? { data: sangue.data, alvo: sangue.alvo ?? '' } : antes?.primeiroSangue ?? null
+  };
 }
 
 // Os eventos de um golpe que acertou: o primeiro sangue (o primeiro HP que a arma tira de alguém), o abate (o alvo passa
 // de 1 HP ou mais para menos de 1: mortalmente ferido ou morto) e o crítico (o dano com a lesão crítica). chave: a do
 // golpe (o ataque e o alvo), para o "Desfazer" e para não contar duas vezes.
 export function eventosDoGolpe(identidade, { chave, alvo, hpAntes, hpDepois, critico = false, data }) {
-  const jaSangrou = normalizar(identidade).eventos.some(evento => evento.tipo === 'primeiroSangue');
+  const jaSangrou = Boolean(contadores(identidade).primeiroSangue);
   const base = { chave, data, alvo: texto(alvo, 80) };
   const eventos = [];
   if (!jaSangrou && Number(hpDepois) < Number(hpAntes)) eventos.push({ ...base, tipo: 'primeiroSangue' });
@@ -86,7 +103,7 @@ export function juntarEventos(identidade, novos) {
     vistos.add(marca);
     eventos.push(evento);
   }
-  const abates = eventos.filter(evento => evento.tipo === 'abate').length;
+  const abates = eventos.filter(evento => evento.tipo === 'abate').length + (atual.antes?.abates ?? 0);
   const marco = [...MARCOS_DE_ABATES].reverse().find(numero => abates >= numero && !atual.avisados.includes(numero)) ?? null;
   const avisados = marco ? [...new Set([...atual.avisados, ...MARCOS_DE_ABATES.filter(numero => numero <= marco)])] : atual.avisados;
   return { identidade: { ...atual, eventos, avisados }, marco };
@@ -130,6 +147,29 @@ export function paraAWiki(identidade) {
     abates, criticos, sessoes, primeiroSangue,
     diario: atual.eventos.slice(-NA_WIKI).map(({ tipo, data, alvo, texto: linha, por }) => ({ tipo, data, ...(alvo ? { alvo } : {}), ...(linha ? { texto: linha } : {}), ...(por ? { por } : {}) }))
   };
+}
+
+// A identidade que volta da wiki (o C70): o que o paraAWiki mandou, quando o mestre importa o personagem de novo (pela
+// ficha da mesa ou pela criação, depois que a ficha da mesa chegou). Sem dono: quem recebe a arma agora vira o dono (o
+// identidade.identidadeAoCriar). A wiki guarda só os eventos mais novos: o que ela contava a mais (os abates, os
+// críticos, as sessões e o primeiro sangue mais velhos) fica no "antes", e os marcos de abates até ali contam como
+// avisados. Os eventos ganham a chave de novo (a sessão pelo dia, para o mesmo dia não contar duas vezes).
+export function daWiki(fonte) {
+  if (!fonte || typeof fonte !== 'object') return null;
+  const chaveDe = (evento, indice) => ({ sessao: () => eventoDeSessao(evento.data).chave, origem: () => 'origem', marco: () => `marco:${evento.data}` }[evento.tipo]?.() ?? `wiki:${indice}`);
+  const lidos = (Array.isArray(fonte.diario) ? fonte.diario : []).filter(evento => evento && TIPOS_DE_EVENTO[evento.tipo] && typeof evento.data === 'string' && !Number.isNaN(new Date(evento.data).getTime()));
+  const eventos = lidos.map((evento, indice) => ({ ...evento, chave: chaveDe(evento, indice) }));
+  const guardados = contadores({ eventos });
+  const sangue = fonte.primeiroSangue && typeof fonte.primeiroSangue === 'object' ? fonte.primeiroSangue : null;
+  const antes = {
+    abates: inteiro(fonte.abates) - guardados.abates, criticos: inteiro(fonte.criticos) - guardados.criticos, sessoes: inteiro(fonte.sessoes) - guardados.sessoes,
+    primeiroSangue: guardados.primeiroSangue ? null : sangue
+  };
+  const abates = inteiro(fonte.abates);
+  return normalizar({
+    apelido: fonte.apelido, frase: fonte.frase, aparencia: fonte.aparencia, feitaPor: fonte.feitaPor, eventos, antes,
+    avisados: MARCOS_DE_ABATES.filter(numero => numero <= abates)
+  });
 }
 
 // A origem, quando a arma entra na ficha de um personagem pela primeira vez: de onde ela veio.

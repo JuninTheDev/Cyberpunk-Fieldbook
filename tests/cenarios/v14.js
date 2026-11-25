@@ -21117,6 +21117,68 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(info)];
     });
 
+    await r.passo('C70: a bancada da arma na ficha que volta para a wiki (os slots, as peças e os bônus de ataque), e a identidade que volta da wiki ao importar de novo, pela ficha da mesa e pela criação, sem perder os contadores', async () => {
+      await edge.evaluate(`game.settings.set('${S}', 'wikiUrl', ${JSON.stringify(wiki)})`);
+      const { personagem } = await api('/api/personagens', 'POST', {
+        nome: 'C70 Vex', apelido: 'Bancada', resultado: {
+          stats: { INT: 6, REF: 8, DEX: 7, TECH: 5, COOL: 6, WILL: 6, LUCK: 5, MOVE: 6, BODY: 6, EMP: 5 }, derivados: { hp: 40 }, humanidade: { atual: 48 }, dinheiro: { saldo: 500 },
+          pericias: [], veiculos: [], itens: [{ uid: 'loja:velha', id: 'core_weapons:very-heavy-pistol', nome: 'Pistola muito pesada', qtd: 1 }]
+        }
+      });
+      try {
+        const info = await edge.evaluate(`(async () => {
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const pegar = chave => foundry.utils.deepClone(cat[chave]);
+          const { ator } = await game.system.api.wiki.importarPersonagem(${JSON.stringify(personagem.id)}, '');
+          const arma = ator.items.find(i => i.getFlag('${S}', 'wikiUid') === 'loja:velha');
+          // Na arma: o pente estendido (acessório), a mira holográfica (a mod de ataque) e o gatilho sensível (o defeito).
+          const pecas = await ator.createEmbeddedDocuments('Item', [pegar('core_upgrades:extended-magazine-very-heavy-pistol'), pegar('mods-armas:mira-holografica'), pegar('mods-armas:gatilho-sensivel')]);
+          for (const peca of pecas) await peca.update({ 'system.instaladoEm': arma.id });
+          // O nome, o dono e 35 eventos (7 abates velhos, 27 sessões e a origem): a wiki guarda os 30 mais novos, e 5 abates
+          // ficam no "antes". A arma criada com o ator ainda não tem a identidade (o C69 a cria no primeiro evento).
+          const atual = arma.getFlag('${S}', 'arma') ?? { eventos: [] };
+          const dia = i => new Date(Date.UTC(2026, 0, 2 + i, 22)).toISOString();
+          const eventos = Array.from({ length: 34 }, (_, i) => i < 7 ? { chave: 'g' + i, tipo: 'abate', data: dia(i), alvo: 'Alvo ' + i } : { chave: 'sessao:' + i, tipo: 'sessao', data: dia(i) });
+          eventos.push({ chave: 'origem', tipo: 'origem', data: dia(34), texto: 'Veio da wiki com C70 Vex' });
+          await arma.setFlag('${S}', 'arma', { ...atual, dono: { id: ator.id, nome: ator.name }, apelido: 'Velha Senhora', frase: 'Nunca falhou.', eventos: [...atual.eventos, ...eventos], avisados: [5] });
+          const linha = game.system.api.wiki.fichaParaAWiki(ator).itens.find(i => i.id === arma.id);
+          await game.system.api.wiki.mandarFicha(ator);
+          return { bancada: linha.bancada, identidade: linha.identidade, origens: arma.getFlag('${S}', 'arma').eventos.filter(e => e.tipo === 'origem').length };
+        })()`);
+        const doc = (await api(`/api/personagens/${personagem.id}`)).personagem;
+        const naWiki = (doc.mesa?.itens || []).find(i => i.uid === 'loja:velha') || {};
+        // Importar de novo: pela ficha da mesa (o mundo novo) e pela criação (com a ficha da mesa já na wiki).
+        const volta = await edge.evaluate(`(async () => {
+          const ver = ator => {
+            const arma = ator.items.find(i => i.getFlag('${S}', 'wikiUid') === 'loja:velha');
+            const id = arma?.getFlag('${S}', 'arma');
+            return { ator: ator.id, apelido: id?.apelido, frase: id?.frase, dono: id?.dono?.id,
+              abates: id ? (id.eventos.filter(e => e.tipo === 'abate').length + (id.antes?.abates ?? 0)) : null,
+              sessoes: id ? (id.eventos.filter(e => e.tipo === 'sessao').length + (id.antes?.sessoes ?? 0)) : null,
+              origens: id?.eventos.filter(e => e.tipo === 'origem').length, avisados: id?.avisados, nome: arma?.nomeDeExibicao,
+              pecas: arma ? arma.instalados.map(p => p.getFlag('${S}', 'mod')?.id ?? p.getFlag('${S}', 'catalogo')).sort() : [] };
+          };
+          const daMesa = (await game.system.api.wiki.importarDaMesa(${JSON.stringify(personagem.id)}, '')).ator;
+          const daCriacao = (await game.system.api.wiki.importarPersonagem(${JSON.stringify(personagem.id)}, '')).ator;
+          return { mesa: ver(daMesa), criacao: ver(daCriacao) };
+        })()`);
+        const b = info.bancada || {};
+        const tipos = (b.pecas || []).map(p => p.tipo).sort().join();
+        const situacional = (b.ataque?.situacionais || []).find(p => /Mira holográfica/.test(p.rotulo));
+        const bancadaOk = b.acessorios?.usados === 1 && b.acessorios?.total === 3 && b.modificacoes?.usados === 1 && b.modificacoes?.total === 3
+          && tipos === 'acessorio,defeito,tatica' && (b.pecas || []).find(p => p.tipo === 'tatica')?.mod === 'mira-holografica' && (b.pecas || []).find(p => p.tipo === 'acessorio')?.catalogo === 'core_upgrades:extended-magazine-very-heavy-pistol'
+          && situacional?.valor === 1 && b.ataque.teto === 3 && b.tipo === 'vHeavyPistol' && b.aDistancia === true && b.classe === null
+          && naWiki.bancada?.modificacoes?.total === 3 && naWiki.identidade?.apelido === 'Velha Senhora';
+        const identidadeOk = info.identidade?.abates === 7 && info.identidade?.sessoes === 27 && info.identidade?.diario?.length === 30 && info.origens === 1;
+        const voltou = v => v.apelido === 'Velha Senhora' && v.frase === 'Nunca falhou.' && v.dono === v.ator && v.abates === 7 && v.sessoes === 27 && v.origens === 1
+          && JSON.stringify(v.avisados) === '[5]' && v.nome === 'Velha Senhora · Very Heavy Pistol';
+        const pecasOk = volta.mesa.pecas.join() === 'core_upgrades:extended-magazine-very-heavy-pistol,gatilho-sensivel,mira-holografica';
+        return [bancadaOk && identidadeOk && voltou(volta.mesa) && voltou(volta.criacao) && pecasOk, JSON.stringify({ ...info, naWiki: { bancada: naWiki.bancada, apelido: naWiki.identidade?.apelido }, volta })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => a.name === 'C70 Vex')) await ator.delete(); return true; })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

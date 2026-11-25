@@ -497,6 +497,12 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **A flag do item não guarda segredo do dono dele** (ciclo 207): o jogador dono do ator lê qualquer flag dos itens
   dele (pelo console, ou pela API). O que é só do mestre e precisa ser segredo de verdade vai para o servidor da wiki; no
   Foundry, a ficha só deixa de mostrar.
+- **O `aside` da wiki é a barra lateral** (ciclo 208): o `wiki.css` dá a todo `aside` a posição, a altura e o fundo
+  da barra lateral (no celular, presa na tela). Um painel dentro da página usa `div`; o cenário confere a posição no
+  celular.
+- **A loja do CORE e o catálogo do 14 não dizem o mesmo da arma** (ciclo 208): o tipo (a Mono-Star e a Tomahawk são de
+  arremesso na loja e brancas no 14) e se é exótica (a Yukimura). A regra que a wiki repete lê o que o 14 diz (o
+  `loja-do-14.mjs` grava na loja), e o teste confere a lista da wiki contra a regra do sistema em todas as armas.
 
 ## Build
 

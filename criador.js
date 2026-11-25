@@ -1540,6 +1540,178 @@
     return true;
   }
 
+  // ---------------- Arsenal: a bancada de cada arma ----------------
+  // No jeito da aba Cyberware (o C70; o esboço "Bancada da arma" de 2026-11-24, aprovado pelo usuário): a arma em holograma
+  // no meio, os acessórios em volta (no trilho, no pente, no cano), as modificações e o defeito embaixo, o teto do ataque e
+  // a história da arma (o diário do C69). Uma peça ou um + mostra, ao lado, o que ela faz ou o que cabe no slot. O modelo
+  // vem do personagem-bancada.js: pela ficha da mesa (o Foundry 14 manda a bancada pronta) ou pela criação (a montagem).
+  const BENCH = window.characterBench;
+  const benchState = { arma: null, sel: null };
+  const SEM_ARSENAL = /^(martialArts|unarmed)$/;
+  const benchMods = () => (window.systemModificacoes && window.systemModificacoes.data.mods) || [];
+  function benchModels(doc) {
+    if (!BENCH) return [];
+    if (doc.mesa && doc.foundry) {
+      // O Foundry 14 manda a bancada de toda arma que tem uma (não a Briga nem as Artes Marciais); a ficha do 12 não manda.
+      const v14 = Number(doc.mesa.geracao) === 14;
+      const lines = (doc.mesa.itens || []).filter(item => item && item.tipo === 'weapon' && (!v14 || item.bancada));
+      return lines.map(line => BENCH.daMesa({ ...line, catalogo: line.catalogo || (catalogEntryOf(line.nome) || {}).id || '' }, { mods: benchMods(), catalogo: id => catalog.get(id) || null }))
+        .filter(model => !SEM_ARSENAL.test(model.tipo));
+    }
+    const rows = assembly(doc).rows;
+    return rows.filter(row => row.tipo === 'arma' && !SEM_ARSENAL.test((row.item.arma || {}).tipo || '')).map(row => BENCH.daCriacao({ uid: row.uid, nome: row.nome || row.item.nome, item: row.item },
+      rows.filter(item => item.em === row.uid && item.tipo === 'acessorio').map(acc => ({ uid: acc.uid, nome: acc.nome || acc.item.nome, item: acc.item }))));
+  }
+
+  // O holograma de cada silhueta (no quadro de 800 × 360 da bancada; a arma no grupo deslocado em 140, 50): o corpo, as
+  // partes que acendem com a peça instalada e a linha de cada posição até a peça.
+  const HOLO = {
+    pistola: {
+      corpo: '<path d="M70 62 H462 L470 70 V108 H70 Z"/><rect x="470" y="78" width="36" height="20"/><path d="M70 66 L54 58 L50 72 L70 80"/><path d="M100 108 H436 V126 H100 Z"/><path d="M120 126 H218 L200 244 H96 Z"/>',
+      detalhe: '<rect x="438" y="54" width="10" height="8"/><rect x="84" y="54" width="12" height="8"/><rect x="240" y="72" width="70" height="18"/><path d="M104 70 V100 M112 70 V100 M120 70 V100 M128 70 V100 M136 70 V100"/><path d="M126 150 H206 M122 170 H203 M118 190 H200 M114 210 H197"/>',
+      contorno: '<path d="M224 126 V160 Q224 176 240 176 H290 Q304 176 304 160 V126"/><path d="M262 128 Q272 146 258 162"/>',
+      partes: { trilho: '<path d="M250 62 V52 H330 V62"/>', pente: '<path d="M96 244 H200 V266 H94 Z"/>', cano: '<rect x="506" y="80" width="10" height="16"/>' },
+      linhas: { trilho: 'M430 64 V100', cano: 'M651 208 V140', pente: 'M372 306 H342' }
+    },
+    longa: {
+      corpo: '<path d="M10 120 L110 100 V150 L30 170 Z"/><path d="M110 90 H340 V150 H110 Z"/><path d="M340 100 H440 V140 H340 Z"/><path d="M440 108 H505 V122 H440 Z"/><path d="M170 150 L200 150 L190 215 L160 215 Z"/>',
+      detalhe: '<path d="M130 100 H320 M130 140 H320"/><path d="M350 110 H430 M350 130 H430"/><rect x="250" y="104" width="50" height="14"/>',
+      contorno: '<path d="M200 150 V180 Q200 192 212 192 H236"/>',
+      partes: { trilho: '<path d="M180 90 V80 H300 V90"/>', pente: '<path d="M240 150 H285 L290 225 H250 Z"/>', cano: '<rect x="505" y="104" width="14" height="22"/>' },
+      linhas: { trilho: 'M430 64 V100 L380 130', cano: 'M660 208 V185 L652 165', pente: 'M372 306 H420 L410 275' }
+    },
+    branca: {
+      corpo: '<path d="M120 120 L480 100 L510 115 L480 130 L120 135 Z"/><path d="M110 85 H125 V165 H110 Z"/><path d="M20 112 H110 V140 H20 Z"/><path d="M8 108 H20 V144 H8 Z"/>',
+      detalhe: '<path d="M140 126 L470 112"/><path d="M30 118 V134 M45 118 V134 M60 118 V134 M75 118 V134 M90 118 V134"/>',
+      contorno: '',
+      partes: { trilho: '', pente: '', cano: '' },
+      linhas: { trilho: 'M430 64 V100 L440 160', cano: 'M651 208 V170 L645 165', pente: 'M372 306 H210 L200 190' }
+    }
+  };
+  const ar = (cls, html) => `<div class="${cls}">${html}</div>`;
+  const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+  function benchSelected(model) {
+    const sel = benchState.sel;
+    if (sel && sel.startsWith('livre:')) {
+      const livre = sel.slice(6);
+      if ([...model.lugares.map(l => l.livre), ...model.livresDeModificacao].includes(livre)) return { livre };
+    }
+    const peca = sel && sel.startsWith('peca:') ? model.pecas.find(item => item.id === sel.slice(5)) : null;
+    if (peca) return { peca };
+    const primeira = model.deModificacao[0] || (model.lugares.find(l => l.peca) || {}).peca || model.defeito;
+    if (primeira) return { peca: primeira };
+    const livre = model.lugares.find(l => l.livre) || null;
+    return livre ? { livre: livre.livre } : model.livresDeModificacao.length ? { livre: model.livresDeModificacao[0] } : {};
+  }
+  const benchKey = escolha => (escolha.peca ? `peca:${escolha.peca.id}` : escolha.livre ? `livre:${escolha.livre}` : '');
+
+  function benchChip(peca, foco, extra = '') {
+    const defeito = peca.tipo === 'defeito';
+    return `<button type="button" class="ar-chip${defeito ? ' ar-defeito' : ''}${foco ? ' ar-foco' : ''}" data-ar-sel="peca:${esc(peca.id)}" aria-pressed="${foco}"><span class="ar-sigla">${esc(peca.sigla)}</span><span class="ar-nome">${extra ? `<small>${esc(extra)}</small>` : ''}<span>${esc(peca.nome)}</span></span></button>`;
+  }
+  const benchFree = (key, foco, rotulo, nota) => `<button type="button" class="ar-livre-slot${foco ? ' ar-foco' : ''}" data-ar-sel="livre:${esc(key)}" aria-pressed="${foco}"><span class="ar-mais" aria-hidden="true">+</span><span class="ar-nome"><small>${esc(nota)}</small><span>${esc(rotulo)}</span></span></button>`;
+
+  // A ficha ao lado: a peça escolhida, ou o que cabe no slot livre (com o botão da loja).
+  function benchDetail(model, escolha) {
+    const mesa = model.fonte === 'mesa';
+    const mods = benchMods();
+    const porId = new Map(mods.map(mod => [mod.id, mod]));
+    const grupos = (window.systemModificacoes && window.systemModificacoes.grupos) || {};
+    const nums = pares => `<div class="ar-nums">${pares.map(([rotulo, valor]) => `<div><small>${rotulo}</small><b>${esc(valor)}</b></div>`).join('')}</div>`;
+    if (escolha.peca) {
+      const peca = escolha.peca;
+      const mod = peca.mod ? porId.get(peca.mod) : null;
+      const onde = peca.tipo === 'acessorio' ? `Acessório · ${(model.lugares.find(l => l.peca === peca) || {}).nomeDaPosicao || 'na arma'}`
+        : peca.tipo === 'defeito' ? 'Defeito · sorteado' : `Modificação · ${grupos[peca.grupo] || 'regra da casa'}`;
+      const slot = peca.tipo === 'acessorio' ? plural(peca.tamanho, 'slot de acessório', 'slots de acessório') : peca.tipo === 'defeito' ? 'nenhum: dá +1' : plural(peca.tamanho, 'slot de modificação', 'slots de modificação');
+      const tirar = peca.tipo === 'acessorio' ? (mesa ? 'pela ficha da arma no Foundry' : 'pela Montagem (Editar)') : peca.tipo === 'defeito' ? 'só o Tech' : 'só o Tech; ela se destrói';
+      const cat = peca.catalogo ? catalog.get(peca.catalogo) : null;
+      const texto = mod ? mod.texto : (cat && (strip(cat.desc) || cat.resumo)) || peca.texto || '';
+      const regra = peca.tipo === 'acessorio' ? 'Acessório do livro: sai sem perder nada.' : peca.tipo === 'defeito' ? 'Um defeito por arma: é o preço do slot de modificação a mais.' : 'Permanente: não sai da arma nem passa para outra.';
+      return `<p class="ar-ficha-nome">${esc(peca.nome)}</p><p class="ar-ficha-onde">${esc(onde)}</p>${nums([['Slot', slot], ['Para tirar', tirar]])}
+        ${texto ? `<p class="ar-ficha-desc">${esc(texto)}</p>` : ''}<p class="ar-ficha-regra">${regra}</p>`;
+    }
+    if (escolha.livre) {
+      const tipo = escolha.livre.startsWith('modificacao') ? 'modificacao' : 'acessorio';
+      const { cabem, naoCabem } = BENCH.cabeNoSlot(model, tipo, { mods, loja: shop.itens });
+      const linha = (item, ok) => `<li class="${ok ? 'ar-cabe' : 'ar-nao-cabe'}"><span><b>${esc(item.nome)}</b><small>${esc(item.nota)}</small></span><em>${ok ? 'cabe' : 'não cabe'}</em></li>`;
+      const onde = tipo === 'modificacao' ? `Modificação · ${plural(model.modificacoes.total - model.modificacoes.usados, 'slot livre', 'slots livres')}` : `Acessório · ${(model.lugares.find(l => l.livre === escolha.livre) || {}).nomeDaPosicao || 'na arma'}`;
+      const como = tipo === 'modificacao'
+        ? (mesa ? 'Quem instala é o Tech (ou o mestre), na mesa. Comprada na loja, ela chega solta no Foundry.' : 'As modificações entram na mesa, pelo Tech: compre na loja, e ela chega solta no Foundry.')
+        : (mesa ? 'Comprado na loja, o acessório chega solto no Foundry e entra na arma pela ficha dela.' : 'Compre na loja; a Montagem (Editar) põe o acessório na arma.');
+      return `<p class="ar-ficha-nome">${tipo === 'modificacao' ? 'Slot livre de modificação' : 'Slot livre de acessório'}</p><p class="ar-ficha-onde">${esc(onde)}</p>
+        <p class="ar-ficha-desc">${como}</p>
+        ${cabem.length ? `<ul class="ar-lista">${cabem.map(item => linha(item, true)).join('')}</ul>` : '<p class="note-status">Nada da loja cabe neste slot.</p>'}
+        ${naoCabem.length ? `<details class="ar-mais-lista"><summary>${plural(naoCabem.length, 'que não cabe', 'que não cabem')}</summary><ul class="ar-lista">${naoCabem.map(item => linha(item, false)).join('')}</ul></details>` : ''}
+        <p><button type="button" class="action ghost" data-ar-loja="${tipo === 'modificacao' ? 'modificacoes' : 'acessorios'}">Abrir na loja</button></p>`;
+    }
+    return '<p class="note-status">Esta arma não tem slots de acessório nem de modificação.</p>';
+  }
+
+  function arsenalScreen(doc) {
+    const models = benchModels(doc);
+    if (!models.length) return '<div class="section cc-box" data-toc="Arsenal"><h3>Arsenal</h3><p class="note-status">Nenhuma arma.</p></div>';
+    const model = models.find(item => item.id === benchState.arma) || models[0];
+    benchState.arma = model.id;
+    const escolha = benchSelected(model);
+    const chave = benchKey(escolha);
+    const foco = key => key === chave;
+    const id = model.identidade || null;
+    const titulo = model.apelido ? `${esc(model.apelido)} <span>· ${esc(model.modelo)}</span>` : esc(model.modelo);
+    const barra = (usados, total, cls = '') => `<div class="ar-bar${cls}" aria-hidden="true"><span style="width:${total ? Math.round(Math.min(1, usados / total) * 100) : 0}%"></span></div>`;
+    const caixa = (rotulo, valor, extra = '', cls = '') => `<div class="ar-num${cls}"><small>${rotulo}</small><b>${valor}</b>${extra}</div>`;
+    const teto = model.teto;
+    const top = `<div class="ar-top"><h3>${titulo}</h3>
+      ${caixa('Arma', esc(`${model.dano} · CDT ${model.cdt}`), `<small class="ar-sub">${{ pistola: 'Pistola', longa: 'Arma longa', branca: 'Arma branca' }[model.silhueta]}</small>`)}
+      ${caixa('Acessórios', `${model.acessorios.usados} <span>/ ${model.acessorios.total}</span>`, barra(model.acessorios.usados, model.acessorios.total))}
+      ${caixa('Modificações', `${model.modificacoes.usados} <span>/ ${model.modificacoes.total}</span>`, barra(model.modificacoes.usados, model.modificacoes.total))}
+      ${caixa('Defeito', `${model.defeito ? 1 : 0} <span>/ 1</span>`, `<small class="ar-sub">${model.defeito ? '+1 slot de modificação' : 'nenhum'}</small>`, model.defeito ? ' ar-num-defeito' : '')}
+      ${teto ? caixa('Teto na rolagem', `+${teto.melhor} <span>/ +${teto.maximo}</span>`, barra(teto.melhor, teto.maximo, ' ar-bar-teto'), ' ar-num-teto') : caixa('Teto na rolagem', '—', `<small class="ar-sub">${model.fonte === 'mesa' ? 'sem a conta da mesa' : 'a conta vem da mesa'}</small>`, ' ar-num-teto')}</div>`;
+    const fonte = model.fonte === 'mesa'
+      ? model.semBancada ? '<p class="ar-fonte">A ficha do Foundry 12 não traz a bancada: ela aparece quando o Foundry 14 mandar a ficha.</p>'
+        : `<p class="ar-fonte ar-sync">Da ficha do Foundry${id && id.dono ? ` · dono: ${esc(id.dono)}` : ''}${teto && (teto.fixos.length || teto.situacionais.length) ? ` · ${esc([...teto.fixos.map(p => `${p.rotulo} +${p.valor}`), ...teto.situacionais.map(p => `${p.rotulo} +${p.valor}`)].join(' · '))}` : ''}</p>`
+      : '<p class="ar-fonte">Da criação: os acessórios da Montagem. As modificações entram na mesa, pelo Tech.</p>';
+    const holo = HOLO[model.silhueta] || HOLO.longa;
+    const ocupada = posicao => model.lugares.some(l => l.posicao === posicao && l.peca);
+    const partes = Object.entries(holo.partes).filter(([, svg]) => svg).map(([posicao, svg]) => `<g class="ar-parte${ocupada(posicao) ? ' ar-on' : ''}${model.lugares.some(l => l.posicao === posicao && foco(l.peca ? `peca:${l.peca.id}` : `livre:${l.livre}`)) ? ' ar-foco' : ''}">${svg}</g>`).join('');
+    const linhas = model.lugares.map(l => `<path class="ar-linha${foco(l.peca ? `peca:${l.peca.id}` : `livre:${l.livre}`) ? ' ar-foco' : ''}" d="${holo.linhas[l.posicao]}"/>`).join('');
+    const chamadas = model.lugares.map(l => `<div class="ar-chamada ar-pos-${l.posicao}">${l.peca ? benchChip(l.peca, foco(`peca:${l.peca.id}`), l.nomeDaPosicao) : benchFree(l.livre, foco(`livre:${l.livre}`), 'Slot livre', l.nomeDaPosicao)}</div>`).join('');
+    const stage = `<div class="ar-stage">
+      <p class="ar-hud ar-hud-topo"><span>${esc(model.modelo)}</span><span>${model.acessorios.total ? `acessórios ${model.acessorios.usados}/${model.acessorios.total}` : 'sem slots de acessório'}</span></p>
+      <svg class="ar-holo" viewBox="0 0 800 360" aria-hidden="true" focusable="false"><g transform="translate(140 50)"><g class="ar-silhueta">${holo.corpo}</g><g class="ar-detalhe">${holo.detalhe}</g><g class="ar-contorno">${holo.contorno}</g>${partes}<path class="ar-chao" d="M-110 252 H630"/></g>${linhas}</svg>
+      ${chamadas}
+      <p class="ar-hud ar-hud-base"><span>${esc(`${model.dano} · CDT ${model.cdt}`)}</span><span>${id && id.dono ? esc(id.dono) : model.fonte === 'mesa' ? 'na mesa' : 'na criação'}</span></p></div>`;
+    const grupo = (titulo2, conta, corpo) => `<div class="ar-group"><div class="ar-group-head"><span>${titulo2}</span><small>${conta}</small></div>${corpo}</div>`;
+    const modsHtml = model.deModificacao.map(peca => benchChip(peca, foco(`peca:${peca.id}`), (window.systemModificacoes && window.systemModificacoes.grupos[peca.grupo]) || '')).join('')
+      + model.livresDeModificacao.map((key, i) => benchFree(key, foco(`livre:${key}`), 'Slot livre', model.defeito && i === model.livresDeModificacao.length - 1 ? 'veio do defeito' : 'modificação')).join('');
+    const grupos = `<div class="ar-grupos">
+      ${grupo('Modificações · permanentes, só o Tech tira', `${model.modificacoes.usados}/${model.modificacoes.total}`, modsHtml || '<p class="note-status">Sem slots de modificação.</p>')}
+      ${grupo('Defeito · sorteado', `${model.defeito ? 1 : 0}/1`, model.defeito ? benchChip(model.defeito, foco(`peca:${model.defeito.id}`)) : '<p class="note-status">Nenhum. O defeito é sorteado pelo mestre e dá um slot de modificação a mais.</p>')}</div>`;
+    const historia = id ? `<div class="ar-historia"><div class="ar-contas">${[['abates', id.abates], ['críticos', id.criticos], ['sessões', id.sessoes]].map(([rotulo, valor]) => `<div><b>${Number(valor) || 0}</b>${rotulo}</div>`).join('')}</div>
+        ${id.frase ? `<p class="ar-frase">"${esc(id.frase)}"</p>` : ''}
+        ${BENCH.diario(id, 5).length ? `<ul class="ar-diario">${BENCH.diario(id, 5).map(linha => `<li>${esc(linha)}</li>`).join('')}</ul>` : ''}</div>`
+      : model.fonte === 'mesa' ? '' : '<p class="note-status ar-historia">O nome próprio e o diário da arma nascem na mesa (a aba História da ficha da arma, no Foundry).</p>';
+    const escolhas = models.length > 1 ? `<div class="ar-armas" role="group" aria-label="Armas">${models.map(item => `<button type="button" class="map-filter${item.id === model.id ? ' active' : ''}" data-ar-arma="${esc(item.id)}" aria-pressed="${item.id === model.id}">${esc(item.apelido ? `${item.apelido} · ${item.modelo}` : item.modelo)}</button>`).join('')}</div>` : '';
+    return `<div class="section cc-box ar-screen" data-toc="Arsenal">${escolhas}${top}${fonte}
+      <div class="ar-corpo"><div class="ar-bancada">${stage}${grupos}</div>
+        <div class="ar-lado"><div class="ar-ficha">${benchDetail(model, escolha)}</div>${historia}</div></div>
+      <p class="ar-dica">Clique numa peça ou num + para ver o que ela faz ou o que cabe no slot. Os acessórios são do livro e trocáveis; as modificações são a regra da casa (Catálogos, Modificações de armas).</p></div>`;
+  }
+
+  // Os cliques da bancada: a arma, a peça ou o slot, e a loja. Devolve true quando o clique era dela.
+  function benchClick(event, root, doc, openShop) {
+    const arma = event.target.closest('[data-ar-arma]');
+    const sel = event.target.closest('[data-ar-sel]');
+    const loja = event.target.closest('[data-ar-loja]');
+    if (loja) { openShop(loja.dataset.arLoja); return true; }
+    if (!arma && !sel) return false;
+    if (arma) { benchState.arma = arma.dataset.arArma; benchState.sel = null; }
+    if (sel) benchState.sel = sel.dataset.arSel;
+    const part = root.querySelector('[data-cc-part="arsenal"]');
+    if (part) part.innerHTML = arsenalScreen(doc);
+    return true;
+  }
+
   function sheetHtml(doc) {
     const model = sheetModel(doc);
     const mesa = model.fonte === 'mesa';
@@ -1636,7 +1808,8 @@
     }
 
     // As partes da ficha, que o setupSheet monta em duas colunas, com abas: o lado (o retrato com os STATs, e os vitais)
-    // e o que vai nas abas Resumo, Perícias, Equipamento e Cyberware. A ficha da mesa, quando muda, redesenha só estas partes.
+    // e o que vai nas abas Resumo, Perícias, Equipamento, Arsenal e Cyberware. A ficha da mesa, quando muda, redesenha só
+    // estas partes.
     const identity = `<div class="section cc-box cc-identity" data-toc="Identidade">${portraitImg(portraitUrl(doc), 'cc-portrait', doc.nome) || '<div class="cc-portrait-slot" aria-hidden="true">Retrato</div>'}
         <div class="cc-stats">${statKeys.map(statCell).join('')}</div>
         ${model.penalidade ? `<p class="cc-warn">Com a armadura vestida: −${model.penalidade} em REF, DEX e MOVE (já descontado no ataque e nas perícias).</p>` : ''}</div>`;
@@ -1652,7 +1825,8 @@
         ${doc.notas ? `<div class="section cc-box" data-toc="Notas"><h3>Notas</h3><p>${esc(doc.notas)}</p></div>` : ''}`,
       pericias: skills,
       equipamento: `${decks}${equipment}`,
-      cyberware: cyberScreen(doc, model)
+      cyberware: cyberScreen(doc, model),
+      arsenal: arsenalScreen(doc)
     };
   }
 
@@ -1671,7 +1845,7 @@
   }
 
   // As abas da coluna principal da ficha (a última escolhida fica lembrada neste aparelho).
-  const SHEET_TABS = [['resumo', 'Resumo'], ['pericias', 'Perícias'], ['equipamento', 'Equipamento'], ['cyberware', 'Cyberware'], ['compras', 'Compras'], ['anotacoes', 'Anotações']];
+  const SHEET_TABS = [['resumo', 'Resumo'], ['pericias', 'Perícias'], ['equipamento', 'Equipamento'], ['arsenal', 'Arsenal'], ['cyberware', 'Cyberware'], ['compras', 'Compras'], ['anotacoes', 'Anotações']];
 
   // O quadro de anotações da ficha: só o dono e o mestre leem (pistas, contatos, dívidas, o que o NPC prometeu).
   const notesBox = (doc, papel) => box('Anotações', `<p class="note-status">Pistas, contatos, dívidas, o que o NPC prometeu. ${papel === 'mestre' ? 'O jogador escreve aqui; você também pode.' : 'Só você e o mestre leem.'} Fica salvo sozinho, em qualquer aparelho.</p><textarea class="note-area cc-notes" data-cc-notes rows="8" placeholder="Ex.: Brakk quer 500eb até sexta. A senha do depósito é 4471.">${esc((doc.anotacoes || {}).texto || '')}</textarea><p class="note-status" data-cc-notes-status>${doc.anotacoes && doc.anotacoes.atualizado ? `Salvo em ${when(doc.anotacoes.atualizado)}${doc.anotacoes.por ? ` (${esc(doc.anotacoes.por)})` : ''}.` : ''}</p>`, ' data-cc-notes-box data-toc="Anotações"');
@@ -1726,6 +1900,7 @@
           ${panel('resumo', `${foundryBox(doc, papel)}<div data-cc-part="resumo">${parts.resumo}</div>`)}
           ${panel('pericias', `<div data-cc-part="pericias">${parts.pericias}</div>`)}
           ${panel('equipamento', `<div data-cc-part="equipamento">${parts.equipamento}</div>`)}
+          ${panel('arsenal', `<div data-cc-part="arsenal">${parts.arsenal}</div>`)}
           ${panel('cyberware', `<div data-cc-part="cyberware">${parts.cyberware}</div>`)}
           ${panel('compras', purchasesBox(doc))}
           ${panel('anotacoes', `${notesBox(doc, papel)}${papel === 'mestre' ? historyBox() : ''}`)}
@@ -1762,7 +1937,7 @@
         Object.assign(doc, next);
         // Só as partes que a mesa muda: as anotações (que alguém pode estar escrevendo) e a aba aberta ficam.
         const redrawn = sheetHtml(doc);
-        for (const key of ['lado', 'resumo', 'pericias', 'equipamento', 'cyberware']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
+        for (const key of ['lado', 'resumo', 'pericias', 'equipamento', 'arsenal', 'cyberware']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
         wireCyber(root);
         const buying = root.querySelector('[data-cc-panel="compras"]');
         if (buying) buying.innerHTML = purchasesBox(doc);
@@ -1782,6 +1957,7 @@
         return;
       }
       if (cyberClick(event, slot => helpers.openPage('loja', { section: id, cyber: slot }))) return;
+      if (benchClick(event, root, doc, cat => helpers.openPage('loja', { section: id, cat }))) return;
       if (event.target.closest('[data-cc-print]')) return window.print();
       if (event.target.closest('[data-cc-send]')) return sendToGm(doc, papel, root);
       const restore = event.target.closest('[data-cc-restore]');
@@ -3211,6 +3387,9 @@
     // O + de um slot da aba Cyberware: abre no cyberware, só com o que serve ali.
     shopState.cyber = (helpers.target && helpers.target.section && helpers.target.cyber) || null;
     if (shopState.cyber) { shopState.cat = 'cyberware'; shopState.sub = ''; }
+    // O "Abrir na loja" da bancada do Arsenal (o C70): abre na categoria (os acessórios ou as modificações).
+    const pedida = helpers.target && helpers.target.section && helpers.target.cat;
+    if (pedida && shop.categorias.some(categoria => categoria.id === pedida)) { shopState.cat = pedida; shopState.sub = ''; shopState.cyber = null; }
     const root = content.querySelector('#cc-root');
     const [me, list] = await Promise.all([identity(), api(`api/personagens${campaignQuery()}`), loadShopRules()]);
     if (token !== renderToken) return;

@@ -1761,6 +1761,142 @@ h2, h2.cyber-h { margin: 0; color: var(--tx); font: 700 clamp(30px, 3.4vw, 44px)
   .cy-screen .cy-contorno, .cy-screen .cy-ancora, .cy-screen .cy-parte.cy-on, .cy-screen .cy-parte-linha.cy-on { stroke: #555 !important; filter: none; }
 }
 
+/* ---------- Ficha: a aba Arsenal (a bancada de cada arma) ----------
+   No jeito da aba Cyberware (o C70; o esboço "Bancada da arma" de 2026-11-24): a arma em holograma vermelho no meio, os
+   acessórios em volta (ciano = instalado, + tracejado = livre), as modificações e o defeito nas molduras de HUD embaixo,
+   e a ficha da peça ao lado. Abaixo de 760 px de largura o holograma fica em cima e as peças viram uma lista. */
+.section.ar-screen { container-type: inline-size; position: relative; min-width: 0; padding: 0; overflow: clip; border: 1px solid #303a40; border-top: 2px solid var(--r);
+  background: radial-gradient(ellipse 48% 48% at 38% 46%, rgb(255 49 88 / 6%), transparent 75%), #0b1013; }
+.ar-screen .ar-armas { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 18px 0; }
+.ar-screen .ar-top { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr)); gap: 12px; padding: 18px; border-bottom: 1px solid #2c363c; background: rgb(255 255 255 / 2%); }
+.ar-screen .ar-top h3 { grid-column: 1 / -1; margin: 0 0 2px; color: var(--tx); font: 700 20px/1.2 var(--ui); letter-spacing: .03em; text-transform: none; }
+.ar-screen .ar-top h3 span { color: #a8b7be; font-size: 14px; font-weight: 500; }
+.ar-screen .ar-num { min-width: 0; padding: 10px 12px; border: 1px solid #303c42; background: #10181c; }
+.ar-screen .ar-num small { display: block; margin-bottom: 5px; color: #a8b7be; font: 400 10px/1.3 var(--lbl); letter-spacing: .1em; text-transform: uppercase; }
+.ar-screen .ar-num b { color: var(--tx); font: 700 clamp(16px, 2.2cqi, 22px)/1.15 var(--ui); overflow-wrap: anywhere; }
+.ar-screen .ar-num b span { color: #a8b7be; font-size: 14px; font-weight: 500; }
+.ar-screen .ar-num .ar-sub { margin: 6px 0 0; letter-spacing: .02em; text-transform: none; font-size: 11px; }
+.ar-screen .ar-num-defeito b { color: #ff2a55; }
+.ar-screen .ar-num-teto { border-color: rgb(252 238 10 / 28%); border-left: 3px solid #d9b310; background: rgb(252 238 10 / .04); }
+.ar-screen .ar-num-teto small { color: #d8cc72; }
+.ar-screen .ar-num-teto b { color: #fcee0a; }
+.ar-screen .ar-bar { height: 6px; margin-top: 9px; background: rgb(0 240 255 / 10%); }
+.ar-screen .ar-bar span { display: block; height: 100%; background: linear-gradient(90deg, #0099ff, #00f0ff); }
+.ar-screen .ar-bar-teto { background: rgb(252 238 10 / 10%); }
+.ar-screen .ar-bar-teto span { background: #fcee0a; }
+.ar-screen .ar-fonte { display: flex; align-items: flex-start; gap: 9px; margin: 14px 18px 0; padding: 9px 12px; border-left: 3px solid #00f0ff; background: rgb(0 240 255 / 5%); color: #a9c9cf; font: 400 11.5px/1.55 var(--mono); }
+.ar-screen .ar-fonte::before { content: ""; flex: 0 0 7px; height: 7px; margin-top: .45em; border-radius: 50%; background: #56666d; }
+.ar-screen .ar-fonte.ar-sync::before { background: #00ff88; box-shadow: 0 0 2px #00ff88, 0 0 7px rgb(0 255 136 / 70%); }
+.ar-screen .ar-corpo { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(260px, 1fr); gap: 18px; padding: 14px 18px 18px; }
+.ar-screen .ar-bancada { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+/* O quadro do holograma: 800 × 360, as peças por cima nas posições (no trilho, no cano, no pente). */
+.ar-screen .ar-stage { position: relative; aspect-ratio: 800 / 360; min-width: 0; border: 1px solid rgb(255 99 123 / 16%); background: radial-gradient(ellipse at center, rgb(255 49 88 / 6%), transparent 72%); }
+.ar-screen .ar-stage::before { --k: rgb(255 99 123 / 75%); content: ""; position: absolute; inset: 5px; pointer-events: none; background: linear-gradient(var(--k) 0 0) left top / 16px 1px, linear-gradient(var(--k) 0 0) left top / 1px 16px,
+  linear-gradient(var(--k) 0 0) right top / 16px 1px, linear-gradient(var(--k) 0 0) right top / 1px 16px, linear-gradient(var(--k) 0 0) left bottom / 16px 1px, linear-gradient(var(--k) 0 0) left bottom / 1px 16px,
+  linear-gradient(var(--k) 0 0) right bottom / 16px 1px, linear-gradient(var(--k) 0 0) right bottom / 1px 16px; background-repeat: no-repeat; }
+.ar-screen .ar-holo { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.ar-screen .ar-silhueta { fill: rgb(255 99 123 / 14%); stroke: #ff637b; stroke-width: 1.4; stroke-linejoin: round; }
+.ar-screen .ar-detalhe { fill: none; stroke: rgb(255 99 123 / 40%); stroke-width: .8; }
+.ar-screen .ar-contorno { fill: none; stroke: #ff637b; stroke-width: 1.4; }
+.ar-screen .ar-chao { fill: none; stroke: rgb(255 99 123 / 35%); stroke-dasharray: 3 4; }
+.ar-screen .ar-parte { fill: none; stroke: rgb(255 99 123 / 60%); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.ar-screen .ar-parte.ar-on { fill: rgb(0 255 210 / 10%); stroke: var(--c); stroke-width: 1.6; stroke-dasharray: none; }
+.ar-screen .ar-parte.ar-foco { stroke: var(--y); }
+.ar-screen .ar-linha { fill: none; stroke: rgb(255 99 123 / 34%); stroke-width: 1; }
+.ar-screen .ar-linha.ar-foco { stroke: var(--y); stroke-width: 1.6; }
+.ar-screen .ar-hud { position: absolute; right: 28px; left: 28px; display: flex; justify-content: space-between; gap: 8px; margin: 0; color: rgb(255 150 168 / 80%); font: 400 10px/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
+.ar-screen .ar-hud-topo { top: 12px; }
+.ar-screen .ar-hud-base { bottom: 12px; }
+.ar-screen .ar-hud span:last-child { color: #00f0ff; }
+.ar-screen .ar-chamada { position: absolute; width: 30%; }
+.ar-screen .ar-pos-trilho { left: 38.75%; top: 6.1%; }
+.ar-screen .ar-pos-cano { left: 70%; top: 57.8%; width: 25%; }
+.ar-screen .ar-pos-pente { left: 46.5%; top: 78.3%; }
+/* As peças: o chip ciano com a sigla (como o da aba Cyberware), o + tracejado do slot livre e o defeito em amarelo. */
+.ar-screen :is(.ar-chip, .ar-livre-slot) { display: flex; align-items: stretch; width: 100%; min-width: 0; margin: 0; padding: 0; border: 1px solid transparent; background: rgb(5 8 10 / 70%); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ar-screen .ar-sigla { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-width: 40px; padding: 4px 7px; border: 1px solid #00f0ff; background: #00f0ff; color: #050505; font: 800 11px/1 var(--mono); letter-spacing: .04em; }
+.ar-screen .ar-nome { display: flex; flex: 1 1 auto; flex-direction: column; justify-content: center; min-width: 0; min-height: 32px; padding: 5px 9px; border: 1px solid #00f0ff; border-left: 0; background: rgb(0 240 255 / 12%); color: #d8fbff; font: 500 13px/1.35 var(--ui); overflow-wrap: anywhere; }
+.ar-screen .ar-nome small { color: #b2e6e0; font: 400 10px/1.4 var(--lbl); letter-spacing: .04em; text-transform: uppercase; }
+.ar-screen .ar-chip:hover .ar-nome, .ar-screen .ar-chip.ar-foco .ar-nome { background: rgb(0 240 255 / 24%); color: #fff; }
+.ar-screen .ar-defeito .ar-sigla { border-color: #fcee0a; background: #fcee0a; }
+.ar-screen .ar-defeito .ar-nome { border-color: #fcee0a; background: rgb(252 238 10 / 10%); color: #fff5b0; }
+.ar-screen .ar-livre-slot { align-items: center; gap: 9px; padding: 4px 6px; border: 1px solid rgb(255 255 255 / 8%); }
+.ar-screen .ar-livre-slot .ar-nome { min-height: 0; padding: 0; border: 0; background: none; color: #a7b8c0; }
+.ar-screen .ar-mais { display: inline-flex; flex: 0 0 32px; align-items: center; justify-content: center; height: 32px; border: 1px dashed rgb(255 42 85 / 50%); background: rgb(255 42 85 / 4%); color: #ff8ea3; font: 400 18px/1 var(--ui); }
+.ar-screen .ar-livre-slot:hover .ar-mais { border-color: #ff2a55; background: rgb(255 42 85 / 14%); color: #fff; }
+.ar-screen :is(.ar-chip, .ar-livre-slot).ar-foco { border-color: var(--y); }
+.ar-screen :is(.ar-chip, .ar-livre-slot):focus-visible { outline: 2px solid var(--y); outline-offset: 3px; }
+/* As modificações e o defeito, nas molduras de HUD da aba Cyberware (o canto de baixo à direita chanfrado). */
+.ar-screen .ar-grupos { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; }
+.ar-screen .ar-group { position: relative; min-width: 0; padding: 12px 12px 14px; border: 1px solid rgb(255 42 85 / 28%); border-left: 3px solid #ff2a55; background: rgb(255 42 85 / 3%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+.ar-screen .ar-group > :is(.ar-chip, .ar-livre-slot) + :is(.ar-chip, .ar-livre-slot) { margin-top: 5px; }
+.ar-screen .ar-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 0 10px; padding-bottom: 9px; border-bottom: 1px solid rgb(255 42 85 / 22%); color: #f0e4e7; font: 700 12px/1.35 var(--ui); letter-spacing: .08em; text-transform: uppercase; }
+.ar-screen .ar-group-head small { flex: 0 0 auto; padding: 3px 6px; border: 1px solid rgb(0 240 255 / 35%); background: rgb(0 240 255 / 6%); color: #00f0ff; font: 600 11px/1.2 var(--mono); }
+.ar-screen .ar-group .note-status { margin: 0; font-size: 12px; }
+/* A ficha da peça ao lado (como a do implante na aba Cyberware) e a história da arma. */
+.ar-screen .ar-lado { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ar-screen .ar-ficha { min-width: 0; padding: 12px; border: 1px solid #37776f; border-left: 3px solid var(--c); background: #102426; overflow-wrap: anywhere; }
+.ar-screen .ar-ficha p { margin: 0 0 10px; }
+.ar-screen .ar-ficha-nome { color: #ecf8f5; font: 700 16px/1.3 var(--ui); }
+.ar-screen .ar-ficha-onde { color: #a4e6da; font: 400 10px/1.5 var(--lbl); letter-spacing: .06em; text-transform: uppercase; }
+.ar-screen .ar-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.ar-screen .ar-nums div { min-width: 0; padding: 7px 8px; background: rgb(255 255 255 / 4%); }
+.ar-screen .ar-nums small { display: block; margin-bottom: 4px; color: #adbec6; font: 400 10px/1.4 var(--lbl); letter-spacing: .04em; text-transform: uppercase; }
+.ar-screen .ar-nums b { color: #ffef98; font: 400 12px/1.4 var(--lbl); }
+.ar-screen .ar-ficha-desc { color: #d5e3e2; font: 500 13px/1.55 var(--ui); }
+.ar-screen .ar-ficha-regra { color: #adbec6; font-size: 12px; line-height: 1.5; }
+.ar-screen .ar-lista { display: grid; gap: 5px; margin: 0 0 10px; padding: 0; list-style: none; }
+.ar-screen .ar-lista li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 9px; border: 1px solid rgb(255 255 255 / 8%); background: rgb(5 8 10 / 55%); }
+.ar-screen .ar-lista span { display: flex; flex-direction: column; min-width: 0; }
+.ar-screen .ar-lista b { color: #ecf8f5; font: 500 13px/1.4 var(--ui); }
+.ar-screen .ar-lista small { color: #adbec6; font: 400 11px/1.4 var(--lbl); }
+.ar-screen .ar-lista em { flex: 0 0 auto; color: var(--g); font: 600 11px/1 var(--mono); font-style: normal; text-transform: uppercase; }
+.ar-screen .ar-nao-cabe b { color: #a7b8c0; }
+.ar-screen .ar-nao-cabe em { color: #ff2a55; }
+.ar-screen .ar-mais-lista { margin: 0 0 10px; color: #adbec6; font-size: 12px; }
+.ar-screen .ar-mais-lista summary { cursor: pointer; margin-bottom: 6px; }
+.ar-screen .ar-contas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ar-screen .ar-contas div { padding: 9px 12px; border-left: 2px solid #536670; background: #121d22; color: #bbc8cd; font: 500 12px/1.4 var(--ui); }
+.ar-screen .ar-contas b { display: block; color: var(--tx); font: 700 18px/1.2 var(--ui); }
+.ar-screen .ar-frase { margin: 10px 0 0; color: #d5e3e2; font: italic 500 13px/1.5 var(--ui); }
+.ar-screen .ar-diario { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; color: #bbc8cd; font: 400 11.5px/1.5 var(--mono); list-style: none; }
+.ar-screen .ar-dica { margin: 0; padding: 12px 18px 16px; border-top: 1px solid #28363d; color: #a8b7be; font-size: 12px; line-height: 1.5; }
+@media (min-width: 1001px) { .cc-sheet[data-cc-aba="arsenal"] { grid-template-columns: minmax(0, 1fr); } .cc-sheet[data-cc-aba="arsenal"] > .cc-sheet-side { display: none; } }
+@container (max-width: 760px) {
+  .ar-screen .ar-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ar-screen .ar-corpo, .ar-screen .ar-grupos { grid-template-columns: minmax(0, 1fr); }
+  /* O holograma em cima, menor, sem as linhas; as peças embaixo, numa lista. */
+  .ar-screen .ar-stage { display: flex; flex-direction: column; gap: 6px; aspect-ratio: auto; padding: 34px 10px 34px; }
+  .ar-screen .ar-holo { position: relative; inset: auto; height: auto; aspect-ratio: 800 / 360; }
+  .ar-screen .ar-linha { display: none; }
+  .ar-screen .ar-chamada { position: static; width: auto; }
+}
+@container (max-width: 470px) {
+  .ar-screen .ar-top { gap: 8px; padding: 14px 12px; }
+  .ar-screen .ar-corpo { padding: 12px; }
+  .ar-screen .ar-fonte { margin: 12px 12px 0; }
+  .ar-screen .ar-dica { padding-right: 12px; padding-left: 12px; }
+  .ar-screen .ar-hud span:last-child { display: none; }
+}
+@media (pointer: coarse) {
+  .ar-screen .ar-nome, .ar-screen .ar-mais { min-height: 40px; }
+  .ar-screen .ar-mais { flex-basis: 40px; }
+}
+@media (forced-colors: active) {
+  .ar-screen :is(.ar-group, .ar-ficha, .ar-num, .ar-chip, .ar-livre-slot) { border-color: CanvasText; background: Canvas; color: CanvasText; }
+  .ar-screen .ar-sigla { background: Highlight; color: HighlightText; }
+  .ar-screen .ar-mais { border-style: dashed; }
+}
+@media print {
+  .section.ar-screen { overflow: visible; border-color: #888 !important; background: #fff !important; }
+  .ar-screen .ar-dica, .ar-screen .ar-ficha, .ar-screen .ar-armas { display: none !important; }
+  .ar-screen :is(.ar-top, .ar-num, .ar-group, .ar-contas div) { border-color: #aaa !important; background: none !important; clip-path: none; }
+  .ar-screen :is(.ar-top h3, .ar-num b, .ar-group-head, .ar-nome, .ar-contas b) { color: #000 !important; }
+  .ar-screen .ar-sigla { border-color: #777 !important; background: #e2e2e2 !important; color: #000 !important; }
+  .ar-screen .ar-silhueta, .ar-screen .ar-contorno { stroke: #555 !important; fill: none !important; }
+}
+
 /* ---------- Mapa imersivo: cartografia em toda a janela nas duas wikis ---------- */
 body.map-immersive { overflow: hidden; }
 body.map-immersive .shell { display: block; min-height: 0; }

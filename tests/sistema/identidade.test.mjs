@@ -109,3 +109,40 @@ test('C69: o diário (os mais novos primeiro), o marco à mão e o que volta par
   assert.deepEqual(R.paraAWiki(muitos).diario.map(e => e.texto).slice(0, 2), ['m10', 'm11']);
   assert.equal(R.paraAWiki(muitos).diario.length, R.NA_WIKI);
 });
+
+test('C70: a identidade que volta da wiki (importar de novo) não perde o nome, o diário nem os contadores', () => {
+  // 40 sessões, 12 abates (o primeiro sangue no primeiro), 2 críticos e um marco: a wiki guarda os 30 eventos mais novos.
+  const dia = i => new Date(Date.UTC(2026, 0, 1 + i, 22)).toISOString();
+  const eventos = [R.eventoDeOrigem({ nome: 'V', data: dia(0) })];
+  // Os golpes primeiro: os abates ficam entre os eventos velhos, que a wiki não guarda.
+  for (let i = 0; i < 12; i++) eventos.push(...R.eventosDoGolpe({ eventos }, { chave: `g${i}`, alvo: `Alvo ${i}`, hpAntes: 5, hpDepois: 0, critico: i >= 10, data: dia(i) }));
+  for (let i = 0; i < 40; i++) eventos.push(R.eventoDeSessao(dia(i)));
+  eventos.push(R.eventoDeMarco('A noite no Afterlife', { data: dia(39), por: 'mestre' }));
+  const original = R.juntarEventos({ apelido: 'Velha Senhora', frase: 'Nunca falhou.', aparencia: 'Cromada', feitaPor: 'Ripperdoc', dono: { id: 'a', nome: 'V' } }, eventos).identidade;
+  const naWiki = R.paraAWiki(original);
+  assert.equal(naWiki.diario.length, R.NA_WIKI);
+  const volta = R.daWiki(naWiki);
+  // Sem dono (quem recebe a arma agora vira o dono), com os textos e os contadores de antes.
+  assert.equal(volta.dono, null);
+  assert.deepEqual([volta.apelido, volta.frase, volta.aparencia, volta.feitaPor], ['Velha Senhora', 'Nunca falhou.', 'Cromada', 'Ripperdoc']);
+  assert.deepEqual(R.contadores(volta), R.contadores(original));
+  assert.deepEqual(R.contadores(volta), { abates: 12, criticos: 2, sessoes: 40, primeiroSangue: { data: dia(0), alvo: 'Alvo 0' } });
+  assert.equal(volta.eventos.length, R.NA_WIKI);
+  assert.ok(volta.antes.abates > 0 && volta.antes.sessoes > 0 && volta.antes.primeiroSangue);
+  // Os marcos de abates até ali contam como avisados (não avisa de novo); o 25.º, ainda não.
+  assert.deepEqual(volta.avisados, [5, 10]);
+  // O primeiro sangue já foi: o golpe novo não conta outro.
+  assert.deepEqual(R.eventosDoGolpe(volta, { chave: 'n1', alvo: 'Novo', hpAntes: 5, hpDepois: 3, data: dia(41) }), []);
+  // A sessão do mesmo dia não conta de novo (a chave pelo dia); a de outro dia, sim.
+  assert.equal(R.contadores(R.juntarEventos(volta, [R.eventoDeSessao(dia(39))]).identidade).sessoes, 40);
+  assert.equal(R.contadores(R.juntarEventos(volta, [R.eventoDeSessao(dia(41))]).identidade).sessoes, 41);
+  // O 25.º abate (12 + 13) ainda avisa.
+  const golpes = Array.from({ length: 13 }, (_, i) => ({ chave: `n${i}`, tipo: 'abate', data: dia(41), alvo: 'X' }));
+  assert.equal(R.juntarEventos(volta, golpes).marco, 25);
+  // O que volta e vai de novo para a wiki conta o mesmo, e o valor estranho não quebra.
+  assert.deepEqual(R.contadores(R.daWiki(R.paraAWiki(volta))), R.contadores(original));
+  assert.equal(R.daWiki(null), null);
+  assert.deepEqual(R.contadores(R.daWiki({ abates: -3, diario: [{ tipo: 'inventado', data: dia(1) }, { tipo: 'abate', data: 'ontem' }] })), { abates: 0, criticos: 0, sessoes: 0, primeiroSangue: null });
+  // Sem nada de antes, a identidade fica como a do C69 (sem a chave "antes").
+  assert.ok(!('antes' in R.normalizar({ antes: { abates: 0 } })));
+});
