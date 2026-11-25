@@ -1624,7 +1624,7 @@
       const onde = peca.tipo === 'acessorio' ? `Acessório · ${(model.lugares.find(l => l.peca === peca) || {}).nomeDaPosicao || 'na arma'}`
         : peca.tipo === 'defeito' ? 'Defeito · sorteado' : `Modificação · ${grupos[peca.grupo] || 'regra da casa'}`;
       const slot = peca.tipo === 'acessorio' ? plural(peca.tamanho, 'slot de acessório', 'slots de acessório') : peca.tipo === 'defeito' ? 'nenhum: dá +1' : plural(peca.tamanho, 'slot de modificação', 'slots de modificação');
-      const tirar = peca.tipo === 'acessorio' ? (mesa ? 'pela ficha da arma no Foundry' : 'pela Montagem (Editar)') : peca.tipo === 'defeito' ? 'só o Tech' : 'só o Tech; ela se destrói';
+      const tirar = peca.tipo === 'acessorio' ? (mesa ? 'pela ficha da arma no Foundry' : 'pela Montagem (Editar)') : peca.tipo === 'defeito' ? 'só o mestre' : 'só o mestre; ela se destrói';
       const cat = peca.catalogo ? catalog.get(peca.catalogo) : null;
       const texto = mod ? mod.texto : (cat && (strip(cat.desc) || cat.resumo)) || peca.texto || '';
       const regra = peca.tipo === 'acessorio' ? 'Acessório do livro: sai sem perder nada.' : peca.tipo === 'defeito' ? 'Um defeito por arma: é o preço do slot de modificação a mais.' : 'Permanente: não sai da arma nem passa para outra.';
@@ -1685,7 +1685,7 @@
     const modsHtml = model.deModificacao.map(peca => benchChip(peca, foco(`peca:${peca.id}`), (window.systemModificacoes && window.systemModificacoes.grupos[peca.grupo]) || '')).join('')
       + model.livresDeModificacao.map((key, i) => benchFree(key, foco(`livre:${key}`), 'Slot livre', model.defeito && i === model.livresDeModificacao.length - 1 ? 'veio do defeito' : 'modificação')).join('');
     const grupos = `<div class="ar-grupos">
-      ${grupo('Modificações · permanentes, só o Tech tira', `${model.modificacoes.usados}/${model.modificacoes.total}`, modsHtml || '<p class="note-status">Sem slots de modificação.</p>')}
+      ${grupo('Modificações · permanentes, só o mestre tira', `${model.modificacoes.usados}/${model.modificacoes.total}`, modsHtml || '<p class="note-status">Sem slots de modificação.</p>')}
       ${grupo('Defeito · sorteado', `${model.defeito ? 1 : 0}/1`, model.defeito ? benchChip(model.defeito, foco(`peca:${model.defeito.id}`)) : '<p class="note-status">Nenhum. O defeito é sorteado pelo mestre e dá um slot de modificação a mais.</p>')}</div>`;
     const historia = id ? `<div class="ar-historia"><div class="ar-contas">${[['abates', id.abates], ['críticos', id.criticos], ['sessões', id.sessoes]].map(([rotulo, valor]) => `<div><b>${Number(valor) || 0}</b>${rotulo}</div>`).join('')}</div>
         ${id.frase ? `<p class="ar-frase">"${esc(id.frase)}"</p>` : ''}

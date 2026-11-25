@@ -49,6 +49,7 @@ import * as pedidoDeTeste from './pedido-teste.mjs';
 import * as modificacoes from './modificacoes.mjs';
 import * as identidade from './identidade.mjs';
 import * as oficina from './oficina.mjs';
+import * as instalacaoMod from './instalacao-mod.mjs';
 import * as defeitos from './defeito-escondido.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
@@ -165,6 +166,9 @@ Hooks.once('init', () => {
   defeitos.registrarDefeitos();
   game.system.api.oficina = oficina.API;
   game.system.api.defeitosEscondidos = defeitos.API;
+  // A instalação da modificação pelo Tech (o C72): o resultado do teste instala; o pedido do jogador chega pelo socket.
+  instalacaoMod.registrarInstalacao();
+  game.system.api.instalacaoDeMod = instalacaoMod.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);
@@ -172,6 +176,7 @@ Hooks.once('ready', () => {
   aplicarIconesDosEstados();
   combate.registrarCombate();
   pedidoDeTeste.registrarSocketDoPedido();
+  instalacaoMod.registrarSocketDaInstalacao();
   agarrao.registrarAgarrao();
   artesMarciais.registrarArtesMarciais();
   neuroport.registrarNeuroport();

@@ -683,6 +683,17 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     mestre só na tela dele. A ficha do mestre também tem o "Revelar agora" e o "Tirar". O teste do ataque guarda o uuid da
     arma (`teste.arma`). A API:
     `game.system.api.defeitosEscondidos`.
+  - **Quem instala a modificação é o Tech** (o C72, parte 1; decisões do usuário de 2026-11-25): o teste é TECH +
+    Tecnologia de Armas + a Especialização de Upgrade + 1d10, contra a DV da categoria de preço (13 no Oneroso, 17 no
+    Premium, 21 no Caro e na sem preço), em 1 hora; na falha, a modificação não entra e não se perde. O jogador não
+    instala sozinho (o Foundry recusa e diz como; a ficha dele não tem o "Instalado em" da modificação): o "Pedir a
+    instalação" da ficha da modificação abre a janela do mestre, que escolhe a arma e o Tech da mesa (o teste vai pelo
+    pedido de teste do C65, que agora também rola uma habilidade de Role) ou instala direto, quando o Tech é um NPC.
+    Passou, ela entra na arma, a mesa vê o cartão e o diário da arma anota quem instalou; falhou, o cartão diz que ela
+    continua inteira. O defeito não se instala pelo Tech: quem o põe na arma é o mestre. Tirar também é só do mestre (o
+    pedido do usuário de 2026-11-25; na história, o Tech): o jogador que apaga a modificação instalada é recusado, e o
+    "Tirar (ela se destrói)" da ficha do mestre a apaga e anota no diário da arma; a arma apagada leva as dela. A API:
+    `game.system.api.instalacaoDeMod`.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

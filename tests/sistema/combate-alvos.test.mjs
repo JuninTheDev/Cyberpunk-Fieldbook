@@ -39,7 +39,7 @@ test('C55: a área do explosivo, o supressivo sem alvo e os alvos marcados passa
 });
 
 test('C56: nenhum ouvinte do socket tira quem pediu da mensagem; todos usam o remetente do Foundry', () => {
-  const arquivos = ['combate/socket.mjs', 'netrun/socket.mjs', 'agarrao.mjs', 'artes-marciais.mjs', 'neuroport.mjs', 'tripulacao.mjs', 'vinculo-veiculo.mjs', 'pedido-teste.mjs'];
+  const arquivos = ['combate/socket.mjs', 'netrun/socket.mjs', 'agarrao.mjs', 'artes-marciais.mjs', 'neuroport.mjs', 'tripulacao.mjs', 'vinculo-veiculo.mjs', 'pedido-teste.mjs', 'instalacao-mod.mjs'];
   for (const arquivo of arquivos) {
     const fonte = ler(`foundry-sistema/scripts/${arquivo}`);
     assert.match(fonte, /game\.socket\.on\(CANAL, (async )?\(mensagem, remetente\) =>/, `${arquivo}: o ouvinte recebe o remetente`);

@@ -757,6 +757,17 @@ export class ItemCPR extends Item {
   }
   dividirPilha(quantidade) { return dividirPilha(this, quantidade); }
 
+  // A modificação instalada numa arma (o C67) é permanente, e só o mestre a tira (o C72, decisão do usuário de 2026-11-25;
+  // na história, o Tech): tirar destrói. Ela sai com a arma: o gancho do modificacoes.mjs a apaga depois que a arma saiu
+  // do ator, e aí ela não está mais instalada numa arma.
+  async _preDelete(opcoes, usuario) {
+    if ((await super._preDelete(opcoes, usuario)) === false) return false;
+    const arma = this.type === 'upgrade' && this.getFlag(SISTEMA, 'mod') ? this.actor?.items.get(this.system.instaladoEm) : null;
+    if (arma?.type !== 'arma' || game.user.isGM) return;
+    ui.notifications.warn(`Só o mestre tira ${this.name} de ${arma.name} (na história, o Tech): ela se destrói.`);
+    return false;
+  }
+
   async _preCreate(dados, opcoes, usuario) {
     if ((await super._preCreate(dados, opcoes, usuario)) === false) return false;
     limparVinculosCopiados(this, opcoes);
@@ -818,9 +829,14 @@ export class ItemCPR extends Item {
     const mod = this.type === 'upgrade' ? this.getFlag(SISTEMA, 'mod') : null;
     if (mod && destino !== undefined && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
       const atual = this.actor.items.get(this.system.instaladoEm);
-      if (atual?.type === 'arma') { ui.notifications.warn(`${this.name} é permanente em ${atual.name}: não sai nem passa para outra arma. Para tirar, apague a modificação (ela se destrói).`); return false; }
+      if (atual?.type === 'arma') { ui.notifications.warn(`${this.name} é permanente em ${atual.name}: não sai nem passa para outra arma. Só o mestre tira, e ela se destrói.`); return false; }
       const arma = destino ? this.actor.items.get(destino) : null;
       if (destino && arma?.type !== 'arma') { ui.notifications.warn(`${this.name} é uma modificação de arma: só entra numa arma.`); return false; }
+      // Quem instala é o Tech (o C72): o teste dele pelo mestre, ou o mestre direto (o Tech NPC). O defeito vem do mestre.
+      if (destino && !game.user.isGM) {
+        ui.notifications.warn(mod.tipo === 'defeito' ? `${this.name} é um defeito: quem o põe na arma é o mestre.` : `Quem instala ${this.name} é o Tech: na ficha da modificação, "Pedir a instalação" chama o mestre (o teste do Tech).`);
+        return false;
+      }
       const { cabe, motivo } = arma ? modCabe(arma.paraModificacoes, arma.modificacoes.filter(item => item.id !== this.id).map(item => item.modificacao), mod) : { cabe: true };
       if (!cabe) { ui.notifications.warn(`${this.name} não cabe em ${arma.name}: ${motivo}.`); return false; }
     }

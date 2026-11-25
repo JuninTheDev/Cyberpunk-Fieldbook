@@ -257,3 +257,18 @@ export function parteDoTeto(valores) {
   const excesso = positivos - TETO_DA_ARMA;
   return excesso > 0 ? { rotulo: `Teto da arma (+${TETO_DA_ARMA})`, valor: -excesso } : null;
 }
+
+// A instalação (o C72, decisão do usuário de 2026-11-25): quem instala é o Tech, com TECH + Tecnologia de Armas + a
+// Especialização de Upgrade + 1d10 (a rolagem da Role, regras.ROLAGENS_DE_ROLE), contra a DV da categoria de preço da
+// modificação (RED p. 385): 13 no Oneroso (até 50eb), 17 no Premium (100eb) e 21 no Caro (500eb ou mais). Leva 1 hora. Na
+// falha, a modificação não entra e não se perde: o Tech tenta de novo outro dia. A sem preço (a da oficina, a lendária)
+// tem a DV do Caro. O defeito não se instala: ele vem do mestre (sorteado).
+export const DVS_DA_INSTALACAO = [{ ate: 50, dv: 13, categoria: 'Oneroso' }, { ate: 100, dv: 17, categoria: 'Premium' }, { ate: Infinity, dv: 21, categoria: 'Caro' }];
+export const TESTE_DA_INSTALACAO = { tipo: 'role', id: 'upgrade', pericia: 'weaponstech' };
+export const TEMPO_DA_INSTALACAO = '1 hora';
+export function instalacaoDaMod(mod, preco = 0) {
+  if (!mod || mod.tipo === 'defeito') return null;
+  const eb = Math.max(0, Number(preco) || 0);
+  const faixa = eb ? DVS_DA_INSTALACAO.find(entrada => eb <= entrada.ate) : DVS_DA_INSTALACAO.at(-1);
+  return { dv: faixa.dv, categoria: eb ? faixa.categoria : 'sem preço, a do Caro', tempo: TEMPO_DA_INSTALACAO, teste: { ...TESTE_DA_INSTALACAO } };
+}

@@ -164,6 +164,13 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C72, a instalação pelo Tech (2026-11-25, sessão KouArt):** resolvidas no mesmo dia pelo usuário: a tabela de DV fica a
+  da proposta (13, 17 e 21 pela categoria de preço: "use a sua proposta"), e tirar é só do mestre ("apenas o mestre pode
+  tirar tbm"). Ficam para o usuário:
+  - **a sem preço** (a modificação da oficina do mestre, a lendária) tem a DV do Caro (21);
+  - **o jogador que abre o console** consegue instalar ou tirar sozinho (como em toda regra que o navegador dele confere):
+    a recusa é a da ficha e da API de sempre.
+
 - **C71, a oficina do mestre e o defeito escondido (2026-11-24, sessão KouArt):** ficam para o usuário:
   - **o defeito escondido é da arma deste mundo:** a chave é o uuid dela. O crossover leva o ator com os mesmos ids (o C27);
     importar o personagem de novo (um ator novo) deixa o defeito para trás, no servidor;
@@ -10123,6 +10130,44 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     mestre.
 - **Portões:** G1 sem erros; G2 sem erros; G3 800/800; G4 335/335 (714 s); isolados 29/29. Rodadas antes: o CORS da rota, o rolar 6, as mensagens antigas, os avisos esperados e o sussurro ao mestre que chega ao jogador (trocado pela janela).
 - **Mutações:** oito no G3 (O1 a O8), quatro na API (A1 a A4) e dez no G4 (F1 a F10); todas morreram, md5 igual.
+
+### Ciclo 211 (2026-11-25): C72, parte 1, o Tech que instala a modificação (sessão KouArt)
+
+- **Pedido do usuário (2026-11-25):** "Sim, o C72". As decisões do usuário no mesmo dia (as quatro recomendadas): o teste é
+  TECH + Tecnologia de Armas + Especialização de Upgrade contra a DV do preço (13, 17, 21), em 1 hora, e na falha a
+  modificação não entra nem se perde; quem instala é o Tech da mesa ou o mestre (o Tech NPC), e o jogador sem Tech não
+  instala; o Night Market é uma vitrine com prazo; o teto por campanha só avisa. O C72 ficou em duas partes: esta, no
+  Foundry; a parte 2, na wiki (o presente do mestre, o Night Market e o teto). Depois, ainda no mesmo dia: "Tirar uma
+  modificação: apenas o mestre pode tirar tbm" e, sobre a tabela de DV, "use a sua proposta".
+- **A fonte:** a página da regra (`system-modificacoes.js`, que ganhou a seção "A instalação" no lugar do "por enquanto, o
+  mestre decide na hora"), a rolagem da Expertise do Tech como a ficha faz (`regras.ROLAGENS_DE_ROLE`, o "varying" do item
+  de Role do CORE: TECH + uma perícia de TECH + os pontos) e as categorias de preço (RED p. 385).
+- **Entrega:**
+  - `regras-modificacoes.mjs`: `instalacaoDaMod` (a DV, a categoria, o tempo e o teste; o defeito não tem);
+  - `regras-pedido-teste.mjs` e `pedido-teste.mjs`: o teste de uma habilidade de Role (`{ tipo: 'role', id, pericia }`), a
+    `acao` do pedido e o `aoResultado` (quem quer saber do resultado, no mestre);
+  - `instalacao-mod.mjs` (novo): o pedido do jogador (pelo socket, só do dono), a janela do mestre (a arma, o Tech, o
+    teste ou direto), o teste do Tech, o resultado (instala, ou avisa que não entrou), o "Tirar" do mestre e o diário;
+  - `documentos.mjs`: a recusa da instalação pelo jogador (e a do defeito) e a de tirar (o `_preDelete`; a arma apagada
+    leva as dela); a ficha da modificação: a regra, os botões e, para o jogador, sem o "Instalado em";
+  - na wiki: a página da regra ("A instalação" e "só o mestre tira") e a bancada do Arsenal ("só o mestre tira");
+  - a versão `0.3.211`.
+- **Fica para depois:** a parte 2 (o presente do mestre, a vitrine do Night Market e o teto por campanha, na wiki). As
+  dúvidas estão nas Dúvidas.
+- **Testes de referência:**
+  - **G3:** o `instalacao-mod.test.mjs` (novo, 4 testes): a DV pela categoria, a sem preço, o tempo e o teste; as
+    modificações do catálogo do 14 de 50, 100 e 500eb e os defeitos; o teste da Role no pedido (a perícia de TECH, as
+    rolagens sem perícia, o Backup fora) e a página da regra. As listas dos ouvintes do socket (C56) e das rolagens com o
+    modo ganharam o arquivo novo e a rolagem nova.
+  - **G4:** um passo do C72: o jogador recusado (a modificação e o defeito, com os avisos), a ficha dele (a regra, o botão,
+    sem o "Instalado em"), o "Pedir a instalação" que abre a janela do mestre, o teste pedido ao Tech (a DV à vista), o
+    Tech que rola no computador do jogador e passa (a modificação na arma, o cartão, o marco no diário, o pedido
+    encerrado), a falha (não entra, continua no inventário, o cartão), o mestre que instala direto (o Tech NPC), o jogador
+    que apaga a modificação instalada (recusado, com o aviso; a ficha dele sem o "Tirar"), o "Tirar" do mestre (a
+    confirmação, o slot de volta, o marco) e a arma apagada pelo jogador, que leva a dela sem aviso.
+  - **Wiki:** o cenário `arsenal`: a bancada diz que só o mestre tira o defeito.
+- **Portões:** G1 sem erros; G2 sem erros; G3 804/804; G4 336/336 (710 s); o cenário arsenal 7/7. Rodadas antes: a ordem dos itens criados (o teste achava a mira pelo índice), a janela do pedido anterior ainda fechando e uma opção sem efeito no gancho da arma apagada (tirada).
+- **Mutações:** sete no G3 (R1 a R7), catorze no G4 (F1 a F14) e uma na wiki (W1, o cenário arsenal); todas morreram, md5 igual. A F7 caiu uma vez na instável do mundo que não abre (antes do passo do C72) e morreu na segunda rodada.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

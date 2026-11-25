@@ -9,6 +9,7 @@ import { contadores, descreverEvento, diario, LIMITES as LIMITES_DA_IDENTIDADE }
 import { anotarMarco, temIdentidade, tornarDono } from './identidade.mjs';
 import { defeitoEscondido, esconder, revelar, tirar } from './defeito-escondido.mjs';
 import { abrir as abrirOficina } from './oficina.mjs';
+import { instalacaoDe, pedirInstalacao, textoDaRegra, tirar as tirarModificacao } from './instalacao-mod.mjs';
 import { RARIDADES } from './regras-oficina.mjs';
 import { bonusDoCritico, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
@@ -97,7 +98,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       porVeiculoNaCena: FichaItem.#porVeiculoNaCena, perceberArmadura: FichaItem.#perceberArmadura,
       corrigir: FichaItem.#corrigir, tratar: FichaItem.#tratar, voltou: FichaItem.#voltou, usarDroga: FichaItem.#usarDroga, acabouDroga: FichaItem.#acabouDroga,
       anotarMarco: FichaItem.#anotarMarco, tornarDono: FichaItem.#tornarDono,
-      esconderDefeito: FichaItem.#esconderDefeito, revelarDefeito: FichaItem.#revelarDefeito, tirarDefeito: FichaItem.#tirarDefeito, editarNaOficina: FichaItem.#editarNaOficina
+      esconderDefeito: FichaItem.#esconderDefeito, revelarDefeito: FichaItem.#revelarDefeito, tirarDefeito: FichaItem.#tirarDefeito, editarNaOficina: FichaItem.#editarNaOficina,
+      pedirInstalacao: FichaItem.#pedirInstalacao, tirarModificacao: FichaItem.#tirarModificacao
     }
   };
 
@@ -203,6 +205,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       // o defeito escondido (o nome só no navegador do mestre).
       raridade: tipo === 'upgrade' && item.getFlag(SISTEMA, 'oficina') ? RARIDADES[item.getFlag(SISTEMA, 'raridade')] ?? '' : '',
       daOficina: tipo === 'upgrade' && game.user.isGM && Boolean(item.getFlag(SISTEMA, 'oficina')),
+      // A instalação pelo Tech (o C72): a regra, onde está e o botão; o jogador não escolhe o "Instalado em" da modificação.
+      instalacaoMod: instalacaoDaFicha(item),
+      semLugarDaMod: tipo === 'upgrade' && Boolean(item.modificacao) && !game.user.isGM,
       defeitoEscondido: tipo === 'arma' && game.user.isGM && temIdentidade(item) ? { nome: defeitoEscondido(item)?.nome ?? '' } : null,
       // A identidade da arma (o C69): o nome próprio no alto e a aba História.
       apelidoDaArma: tipo === 'arma' ? item.identidade.apelido : '',
@@ -278,6 +283,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static #revelarDefeito() { return revelar(this.item).catch(erro => ui.notifications.error(erro.message)); }
   static #tirarDefeito() { return tirar(this.item).catch(erro => ui.notifications.error(erro.message)); }
   static #editarNaOficina() { return abrirOficina({ item: this.item }); }
+  // A instalação pelo Tech (o C72): o jogador pede ao mestre; o mestre abre a janela dele.
+  static #pedirInstalacao() { return pedirInstalacao(this.item).catch(erro => ui.notifications.error(erro.message)); }
+  static #tirarModificacao() { return tirarModificacao(this.item).catch(erro => ui.notifications.error(erro.message)); }
   // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
   static #rolarHumanidade() {
     return this.item.rolarHumanidade();
@@ -306,6 +314,17 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
 }
 
 // A modificação de arma (o C67) na ficha do upgrade: o tipo, os slots e cada efeito numa linha; a que não vale diz o motivo.
+// A instalação pelo Tech na ficha da modificação (o C72): a regra; instalada, onde (e, para o mestre, o "Tirar"); solta
+// num ator, o botão (o mestre: "Instalar com o Tech"; o dono: "Pedir a instalação"). O defeito e a modificação inválida
+// não têm.
+function instalacaoDaFicha(item) {
+  const inst = item.type === 'upgrade' ? instalacaoDe(item) : null;
+  if (!inst) return null;
+  const arma = item.actor?.items.get(item.system.instaladoEm);
+  const botao = !item.actor || arma ? '' : game.user.isGM ? 'INSTALAR COM O TECH' : item.isOwner ? 'PEDIR A INSTALAÇÃO' : '';
+  const instalada = arma?.type === 'arma' ? arma.nomeDeExibicao : '';
+  return { regra: textoDaRegra(inst), instalada, botao, tirar: Boolean(instalada) && game.user.isGM };
+}
 function modificacaoDaFicha(mod) {
   const invalida = validarMod(mod);
   return invalida ? { invalida } : { tipo: TIPOS_DE_MOD[mod.tipo], tamanho: mod.tamanho, efeitos: mod.efeitos.map(descreverEfeito) };

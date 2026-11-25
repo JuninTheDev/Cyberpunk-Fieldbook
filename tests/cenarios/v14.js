@@ -21308,6 +21308,209 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('C72: o jogador não instala a modificação sozinho; o "Pedir a instalação" abre a janela do mestre, o Tech rola a Especialização de Upgrade no computador dele contra a DV do preço, e passou, ela entra na arma (o diário anota); falhou, não entra nem se perde; o mestre instala direto (o Tech NPC); só o mestre tira, e a arma apagada leva as dela', async () => {
+      const c72 = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const dono = game.users.getName('Jogador');
+        const dele = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE, [dono.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER };
+        const ator = await Actor.implementation.create({ name: 'C72 Vex', type: 'personagem', ownership: dele, system: { role: { nome: 'Solo', rank: 4 } } });
+        // O Tech do grupo: TECH 6 + Tecnologia de Armas 4 + Especialização de Upgrade 2 = 12 + 1d10.
+        const tech = await Actor.implementation.create({ name: 'C72 Tech', type: 'personagem', ownership: dele, system: {
+          atributos: { tech: { valor: 6 } }, pericias: { weaponstech: { nivel: 4 } }, role: { nome: 'Tech', rank: 4, habilidades: { 'Upgrade Expertise': 2 } }
+        } });
+        const [arma] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:very-heavy-pistol'])]);
+        const nomes = ['Mira holográfica', 'Supressor', 'Lanterna tática', 'Gatilho sensível'];
+        const criadas = await ator.createEmbeddedDocuments('Item', ['mira-holografica', 'supressor', 'lanterna-tatica', 'gatilho-sensivel'].map(id => foundry.utils.deepClone(cat['mods-armas:' + id])));
+        // A ordem da volta não é a do pedido: cada uma pelo nome.
+        const mods = nomes.map(nome => criadas.find(m => m.name === nome));
+        return { ator: ator.id, tech: tech.id, techUuid: tech.uuid, arma: arma.id, mods: mods.map(m => m?.id ?? null), techs: game.system.api.instalacaoDeMod.techsDaMesa().map(a => a.name) };
+      })()`);
+      const [mira, supressor, lanterna, gatilho] = c72.mods;
+      const noJogador = codigo => jogador.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        await esperar(() => game.actors.get('${c72.ator}')?.isOwner);
+        const ator = game.actors.get('${c72.ator}');
+        const item = id => ator.items.get(id);
+        ${codigo}
+      })()`);
+      // O jogador: instalar direto recusa (o aviso, guardado aqui), o do defeito também; a ficha da modificação tem a regra e o "Pedir a instalação".
+      await jogador.evaluate(`game.settings.set('${S}', 'rolarDireto', true)`);
+      const doJogador = await noJogador(`
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try {
+          await item('${mira}').update({ 'system.instaladoEm': '${c72.arma}' });
+          await item('${gatilho}').update({ 'system.instaladoEm': '${c72.arma}' });
+        } finally { ui.notifications.warn = avisar; }
+        const ficha = item('${mira}').sheet;
+        await ficha.render({ force: true });
+        await esperar(() => ficha.element?.querySelector('.instalacao-da-mod'));
+        const resultado = { avisos, instalada: item('${mira}').system.instaladoEm, gatilho: item('${gatilho}').system.instaladoEm,
+          regra: textoDe(ficha.element.querySelector('.instalacao-da-mod')), seletor: Boolean(ficha.element.querySelector('select[name="system.instaladoEm"]')),
+          botao: textoDe(ficha.element.querySelector('[data-action="pedirInstalacao"]')) };
+        ficha.element.querySelector('[data-action="pedirInstalacao"]').click();
+        await new Promise(r => setTimeout(r, 300));
+        await ficha.close({ animate: false });
+        return resultado;
+      `);
+      // O mestre: a janela com o pedido, o Tech escolhido e o "Pedir o teste ao Tech".
+      const janelaDoMestre = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const janela = () => document.querySelector('.application.instalacao-da-mod');
+        await esperar(janela);
+        const texto = janela()?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const form = janela()?.querySelector('form') ?? janela();
+        const armas = [...(form?.querySelectorAll('select[name="arma"] option') ?? [])].map(o => o.value);
+        if (form?.elements?.tech) form.elements.tech.value = '${c72.tech}';
+        const mensagensAntes = game.messages.size;
+        janela()?.querySelector('button[data-action="tech"]')?.click();
+        await esperar(() => game.messages.contents.slice(mensagensAntes).some(m => m.getFlag('${S}', 'pedidoDeTeste')));
+        const cartao = game.messages.contents.slice(mensagensAntes).find(m => m.getFlag('${S}', 'pedidoDeTeste'));
+        return { texto, armas, cartao: cartao?.id ?? null, pedido: cartao?.getFlag('${S}', 'pedidoDeTeste') ?? null };
+      })()`);
+      // O Tech rola no computador do jogador: 6 + 12 = 18, passa da DV 17 (a mira holográfica, Premium).
+      await fixar(jogador, [[6, 10]]);
+      const janelaDoTech = await c65Janela();
+      const passou = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const ator = game.actors.get('${c72.ator}');
+        const arma = ator.items.get('${c72.arma}');
+        await esperar(() => ator.items.get('${mira}')?.system.instaladoEm === arma.id);
+        await esperar(() => game.messages.get('${janelaDoMestre.cartao}')?.getFlag('${S}', 'pedidoDeTeste')?.aberto === false);
+        await esperar(() => game.messages.contents.some(m => /Mira holográfica<\\/b> entrou em/.test(m.content)));
+        const pedido = game.messages.get('${janelaDoMestre.cartao}')?.getFlag('${S}', 'pedidoDeTeste');
+        const rolagem = game.messages.contents.filter(m => m.getFlag('${S}', 'teste')?.pedido === '${janelaDoMestre.cartao}').at(-1);
+        return { instalada: ator.items.get('${mira}')?.system.instaladoEm === arma.id, linha: pedido?.linhas?.[0], aberto: pedido?.aberto, autor: rolagem?.author?.name, rotulo: rolagem?.getFlag('${S}', 'teste')?.rotulo,
+          cartao: game.messages.contents.filter(m => /Mira holográfica<\\/b> entrou em/.test(m.content)).map(m => m.content.replace(/<[^>]+>/g, '')).at(-1),
+          marco: arma.identidade.eventos.filter(e => e.tipo === 'marco').map(e => e.texto) };
+      })()`);
+      // A falha: o supressor (Caro, DV 21) pela API; 5 + 12 = 17 não passa. A modificação não entra e continua no inventário.
+      const falhaCartao = await edge.evaluate(`(async () => {
+        const ator = game.actors.get('${c72.ator}');
+        const m = await game.system.api.instalacaoDeMod.pedirTesteDoTech({ mod: ator.items.get('${supressor}'), arma: ator.items.get('${c72.arma}'), tech: game.actors.get('${c72.tech}') });
+        return m?.id ?? null;
+      })()`);
+      await fixar(jogador, [[5, 10]]);
+      // A janela deste pedido (a do anterior pode ainda estar fechando).
+      const janelaDaFalha = await jogador.evaluate(`(async () => {
+        const daFalha = () => [...document.querySelectorAll('.pedido-de-teste-jogador')].find(j => /Supressor/.test(j.textContent));
+        for (let i = 0; i < 80 && !daFalha()?.querySelector('button[data-action^="rolar-"]'); i++) await new Promise(r => setTimeout(r, 100));
+        const texto = daFalha()?.textContent.replace(/\\s+/g, ' ').trim();
+        const alvo = daFalha()?.querySelector('button[data-action^="rolar-"]');
+        alvo?.click();
+        return { texto, clicou: Boolean(alvo) };
+      })()`);
+      const falhou = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const ator = game.actors.get('${c72.ator}');
+        await esperar(() => game.messages.contents.some(m => /não conseguiu instalar <b>Supressor/.test(m.content)));
+        const pedido = game.messages.get('${falhaCartao}')?.getFlag('${S}', 'pedidoDeTeste');
+        return { dv: pedido?.dv, total: pedido?.linhas?.[0]?.total, aberto: pedido?.aberto, existe: Boolean(ator.items.get('${supressor}')), instaladoEm: ator.items.get('${supressor}')?.system.instaladoEm,
+          aviso: game.messages.contents.some(m => /não conseguiu instalar <b>Supressor<\\/b>.*continua inteira/.test(m.content)) };
+      })()`);
+      // O mestre, com o Tech NPC: a ficha da modificação solta tem o "Instalar com o Tech" e o seletor; a janela instala direto a lanterna (Oneroso, DV 13).
+      const direto = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const ator = game.actors.get('${c72.ator}');
+        const lanterna = ator.items.get('${lanterna}');
+        const ficha = lanterna.sheet;
+        await ficha.render({ force: true });
+        await esperar(() => ficha.element?.querySelector('.instalacao-da-mod'));
+        const resultado = { botao: textoDe(ficha.element.querySelector('[data-action="pedirInstalacao"]')), seletor: Boolean(ficha.element.querySelector('select[name="system.instaladoEm"]')),
+          defeito: Boolean(ator.items.get('${gatilho}').sheet && game.system.api.instalacaoDeMod.instalacaoDe(ator.items.get('${gatilho}'))) };
+        ficha.element.querySelector('[data-action="pedirInstalacao"]').click();
+        const janela = () => document.querySelector('.application.instalacao-da-mod');
+        await esperar(janela);
+        resultado.texto = textoDe(janela());
+        janela().querySelector('button[data-action="direto"]').click();
+        await esperar(() => lanterna.system.instaladoEm === '${c72.arma}');
+        await ficha.close({ animate: false });
+        const arma = ator.items.get('${c72.arma}');
+        resultado.instalada = lanterna.system.instaladoEm === arma.id;
+        resultado.slots = arma.slotsDeModificacao;
+        resultado.marcos = arma.identidade.eventos.filter(e => e.tipo === 'marco').map(e => e.texto);
+        return resultado;
+      })()`);
+      // Tirar é só do mestre (o pedido do usuário de 2026-11-25): o jogador que apaga a modificação instalada é recusado, e a
+      // ficha dele não tem o "Tirar".
+      const jogadorTira = await noJogador(`
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try { await item('${mira}').delete(); } finally { ui.notifications.warn = avisar; }
+        await new Promise(r => setTimeout(r, 300));
+        const ficha = item('${mira}')?.sheet;
+        await ficha?.render({ force: true });
+        await esperar(() => ficha?.element?.querySelector('.instalacao-da-mod'));
+        const resultado = { avisos, existe: Boolean(item('${mira}')), instalada: item('${mira}')?.system.instaladoEm, texto: textoDe(ficha?.element?.querySelector('.instalacao-da-mod')),
+          tirar: Boolean(ficha?.element?.querySelector('[data-action="tirarModificacao"]')) };
+        await ficha?.close({ animate: false });
+        return resultado;
+      `);
+      // O mestre tira pela ficha (a confirmação): ela se destrói, e o diário anota.
+      const mestreTira = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const ator = game.actors.get('${c72.ator}');
+        const arma = ator.items.get('${c72.arma}');
+        const ficha = ator.items.get('${mira}').sheet;
+        await ficha.render({ force: true });
+        await esperar(() => ficha.element?.querySelector('[data-action="tirarModificacao"]'));
+        const botao = textoDe(ficha.element.querySelector('[data-action="tirarModificacao"]'));
+        ficha.element.querySelector('[data-action="tirarModificacao"]').click();
+        const confirmar = () => document.querySelector('.application.tirar-modificacao');
+        await esperar(confirmar);
+        const pergunta = textoDe(confirmar());
+        confirmar().querySelector('button[data-action="yes"]').click();
+        await esperar(() => !ator.items.get('${mira}'));
+        await esperar(() => arma.identidade.eventos.some(e => e.tipo === 'marco' && e.texto === 'Modificação tirada: Mira holográfica'));
+        return { botao, pergunta, saiu: !ator.items.get('${mira}'), slots: arma.slotsDeModificacao, marco: arma.identidade.eventos.some(e => e.tipo === 'marco' && e.texto === 'Modificação tirada: Mira holográfica') };
+      })()`);
+      // A arma que o jogador apaga leva a modificação dela (a lanterna), sem aviso; as soltas ficam.
+      const comAArma = await noJogador(`
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        try {
+          await item('${c72.arma}').delete();
+          await esperar(() => !item('${lanterna}'));
+        } finally { ui.notifications.warn = avisar; }
+        return { avisos, arma: Boolean(item('${c72.arma}')), lanterna: Boolean(item('${lanterna}')), soltas: [item('${supressor}'), item('${gatilho}')].map(i => Boolean(i)) };
+      `);
+      try {
+        const tirarOk = jogadorTira.existe && jogadorTira.instalada === c72.arma && !jogadorTira.tirar && /Instalada em Very Heavy Pistol/.test(jogadorTira.texto)
+          && jogadorTira.avisos.join(' | ') === 'Só o mestre tira Mira holográfica de Very Heavy Pistol (na história, o Tech): ela se destrói.'
+          && mestreTira.botao === 'TIRAR (ELA SE DESTRÓI)' && /Tirar Mira holográfica de Very Heavy Pistol\? Ela se destrói\./.test(mestreTira.pergunta) && mestreTira.saiu && mestreTira.marco
+          && mestreTira.slots.usados === 1 && mestreTira.slots.total === 2
+          && !comAArma.arma && !comAArma.lanterna && comAArma.avisos.length === 0 && comAArma.soltas.join() === 'true,true';
+        const regraOk = /TECH \+ Tecnologia de Armas \+ Especialização de Upgrade \+ 1d10 contra a DV 17 \(Premium\); leva 1 hora/.test(doJogador.regra) && /não entra e não se perde/.test(doJogador.regra);
+        const jogadorOk = doJogador.instalada === '' && doJogador.gatilho === '' && doJogador.avisos.length === 2
+          && doJogador.avisos[0] === 'Quem instala Mira holográfica é o Tech: na ficha da modificação, "Pedir a instalação" chama o mestre (o teste do Tech).'
+          && doJogador.avisos[1] === 'Gatilho sensível é um defeito: quem o põe na arma é o mestre.'
+          && regraOk && !doJogador.seletor && doJogador.botao === 'PEDIR A INSTALAÇÃO';
+        const mestreOk = /Jogador pede a instalação/.test(janelaDoMestre.texto) && /Mira holográfica/.test(janelaDoMestre.texto) && /DV 17 \(Premium\)/.test(janelaDoMestre.texto)
+          && janelaDoMestre.armas.join() === c72.arma && c72.techs.includes('C72 Tech') && !c72.techs.includes('C72 Vex')
+          && janelaDoMestre.pedido?.dv === 17 && janelaDoMestre.pedido?.mostrarDv === true && JSON.stringify(janelaDoMestre.pedido?.teste) === JSON.stringify({ tipo: 'role', id: 'upgrade', pericia: 'weaponstech' })
+          && janelaDoMestre.pedido?.rotulo === 'Especialização de Upgrade (Tecnologia de Armas)' && janelaDoMestre.pedido?.linhas?.map(l => l.nome).join() === 'C72 Tech'
+          && /Instalar Mira holográfica em/.test(janelaDoMestre.pedido?.motivo ?? '');
+        const passouOk = janelaDoTech.clicou && /Especialização de Upgrade \(Tecnologia de Armas\)/.test(janelaDoTech.texto) && passou.instalada && passou.linha?.total === 18 && passou.aberto === false
+          && passou.autor === 'Jogador' && passou.rotulo === 'Especialização de Upgrade (Tecnologia de Armas)' && /entrou em .*instalada por C72 Tech/.test(passou.cartao ?? '')
+          && passou.marco.includes('Modificação instalada: Mira holográfica (por C72 Tech)');
+        const falhaOk = janelaDaFalha.clicou && /contra a DV 21/.test(janelaDaFalha.texto ?? '') && falhou.dv === 21 && falhou.total === 17 && falhou.aberto === false && falhou.existe && falhou.instaladoEm === '' && falhou.aviso;
+        const diretoOk = direto.botao === 'INSTALAR COM O TECH' && direto.seletor && !direto.defeito && /DV 13 \(Oneroso\)/.test(direto.texto) && direto.instalada
+          && direto.slots.usados === 2 && direto.slots.total === 2 && direto.marcos.includes('Modificação instalada: Lanterna tática');
+        return [jogadorOk && mestreOk && passouOk && falhaOk && diretoOk && tirarOk, JSON.stringify({ c72, doJogador, janelaDoMestre, janelaDoTech, passou, falhaCartao, janelaDaFalha, falhou, direto, jogadorTira, mestreTira, comAArma })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          for (const ator of game.actors.filter(a => /^C72 /.test(a.name))) await ator.delete();
+          return true;
+        })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

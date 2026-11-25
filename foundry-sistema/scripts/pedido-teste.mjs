@@ -108,8 +108,9 @@ export async function abrir({ teste = null, dv = null, tokens = null } = {}) {
 }
 
 // O pedido sem a janela (a API e os testes do G4): { teste, dv, mostrarDv, modo, motivo, atores: [{ ator (uuid), token,
-// nome, img }] }. Devolve a mensagem do cartão.
-export async function pedir({ teste, dv = null, mostrarDv = false, modo = 'publico', motivo = '', atores = [] }) {
+// nome, img }] }. acao: o que o resultado faz (o C72: { tipo: 'instalarMod', mod, arma }), lido por quem se registrou no
+// aoResultado. Devolve a mensagem do cartão.
+export async function pedir({ teste, dv = null, mostrarDv = false, modo = 'publico', motivo = '', atores = [], acao = null }) {
   if (!game.user.isGM) throw new Error('Só o mestre pede um teste aos jogadores.');
   if (!R.testeValido(teste)) throw new Error('Pedir teste: o teste não existe.');
   const linhas = [];
@@ -119,7 +120,7 @@ export async function pedir({ teste, dv = null, mostrarDv = false, modo = 'publi
     linhas.push({ ator: ator.uuid, token: entrada.token ?? null, nome: entrada.nome || ator.name, img: entrada.img || ator.img, estado: 'esperando', total: null, critico: null, mensagem: null, porMestre: false });
   }
   if (!linhas.length) throw new Error('Pedir teste: nenhum personagem para rolar.');
-  const dados = { teste, rotulo: R.rotuloDoTeste(teste), dv: R.dvValida(dv), mostrarDv: Boolean(mostrarDv), modo: R.MODOS[modo] ? modo : 'publico', motivo: String(motivo ?? '').slice(0, 200), linhas, aberto: true };
+  const dados = { teste, rotulo: R.rotuloDoTeste(teste), dv: R.dvValida(dv), mostrarDv: Boolean(mostrarDv), modo: R.MODOS[modo] ? modo : 'publico', motivo: String(motivo ?? '').slice(0, 200), linhas, aberto: true, ...(acao ? { acao } : {}) };
   return ChatMessage.implementation.create({
     speaker: { alias: 'Mestre' }, content: conteudo(dados, {}), flags: { [SISTEMA]: { [FLAG]: dados } }
   });
@@ -178,6 +179,11 @@ export async function rolarOTeste(ator, dados, { perguntar = false, aoAbrir = nu
   const sabor = [dados.motivo, dvVisivel ? `Pedido do mestre: supere a DV${dados.dv}` : 'Pedido do mestre'].filter(Boolean).join(' · ');
   const opcoes = { perguntar, aoAbrir, sabor, dados: { pedido, linha } };
   const { teste } = dados;
+  // A habilidade de Role (o C72): a ficha rola a Expertise com a perícia do pedido; quem não tem a Role não rola.
+  if (teste.tipo === 'role') {
+    if (ator.type !== 'personagem' || !ator.rolagemDeRole(teste.id)) { ui.notifications.warn(`${ator.name} não tem ${dados.rotulo}.`); return null; }
+    return ator.rolarRole(teste.id, { ...opcoes, pericia: teste.pericia ?? null, modo: modoDaRolagem });
+  }
   if (teste.tipo === 'atributo') return ator.rolarAtributo(teste.chave, { ...opcoes, modo: modoDaRolagem });
   if (teste.tipo === 'familia') {
     const pericias = Object.entries(ator.system.pericias ?? {}).map(([id, p]) => ({ id, ...p }));
@@ -227,12 +233,18 @@ function atualizar(mensagemId, mudar) {
     return novo;
   });
 }
+// Quem quer saber do resultado de um pedido com ação (o C72, a instalação): fn(mensagem, dados, indice), no mestre, uma
+// vez por linha que rolou.
+const ouvintes = [];
+export const aoResultado = fn => { ouvintes.push(fn); };
 // Registra um resultado na linha (só se ela ainda espera).
-export function registrar(mensagemId, indice, resultado) {
-  return atualizar(mensagemId, dados => {
+export async function registrar(mensagemId, indice, resultado) {
+  const novo = await atualizar(mensagemId, dados => {
     const linhas = R.registrarResultado(dados.linhas, indice, resultado);
     return linhas ? { ...dados, linhas } : null;
   });
+  if (novo?.acao) for (const fn of ouvintes) await Promise.resolve(fn(game.messages.get(mensagemId), novo, indice)).catch(erro => console.error(`${SISTEMA} | pedido de teste`, erro));
+  return novo;
 }
 export function encerrarPedido(mensagemId) {
   return atualizar(mensagemId, dados => (dados.aberto ? { ...dados, aberto: false, linhas: R.encerrar(dados.linhas) } : null));

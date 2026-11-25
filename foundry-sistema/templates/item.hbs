@@ -146,9 +146,16 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       {{!-- A modificação de arma (o C67): o que ela faz vem da regra dela, não dos campos do acessório. --}}
       <div class="modificacao">
         {{#if modificacao.invalida}}<p class="nota">Esta modificação não vale: {{modificacao.invalida}}.</p>
-        {{else}}<p class="nota"><b>Modificação {{modificacao.tipo}}</b>{{#if raridade}} · {{raridade}}{{/if}} · {{#if (eq modificacao.tipo "Defeito")}}não ocupa slot: dá mais um à arma.{{else}}ocupa {{modificacao.tamanho}} {{#if (eq modificacao.tamanho 1)}}slot{{else}}slots{{/if}} de modificação.{{/if}} Permanente: não sai da arma; para tirar, apague (ela se destrói).</p>
+        {{else}}<p class="nota"><b>Modificação {{modificacao.tipo}}</b>{{#if raridade}} · {{raridade}}{{/if}} · {{#if (eq modificacao.tipo "Defeito")}}não ocupa slot: dá mais um à arma.{{else}}ocupa {{modificacao.tamanho}} {{#if (eq modificacao.tamanho 1)}}slot{{else}}slots{{/if}} de modificação.{{/if}} Permanente: não sai da arma; só o mestre tira, e ela se destrói.</p>
         <ul class="efeitos-da-modificacao">{{#each modificacao.efeitos}}<li>{{this}}</li>{{else}}<li>Sem efeito na regra: é a história da arma.</li>{{/each}}</ul>{{/if}}
         {{#if daOficina}}<div class="acoes-do-item"><button type="button" class="acao" data-action="editarNaOficina">EDITAR NA OFICINA</button></div>{{/if}}
+        {{!-- A instalação pelo Tech (o C72): a regra do teste e o botão (o jogador pede ao mestre; o mestre escolhe o Tech). --}}
+        {{#if instalacaoMod}}<div class="instalacao-da-mod">
+          <p class="nota"><b>Quem instala é o Tech:</b> {{instalacaoMod.regra}}</p>
+          {{#if instalacaoMod.instalada}}<p class="nota">Instalada em <b>{{instalacaoMod.instalada}}</b>.</p>
+          {{#if instalacaoMod.tirar}}<div class="acoes-do-item"><button type="button" class="acao" data-action="tirarModificacao">TIRAR (ELA SE DESTRÓI)</button></div>{{/if}}
+          {{else if instalacaoMod.botao}}<div class="acoes-do-item"><button type="button" class="acao" data-action="pedirInstalacao">{{instalacaoMod.botao}}</button></div>{{/if}}
+        </div>{{/if}}
       </div>
       {{else}}
       <label class="celula"><span>Para</span><select name="system.alvo">{{selectOptions alvosUpgrade selected=fonte.alvo}}</select></label>
@@ -158,7 +165,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos. --}}
       <label class="celula"><span>SDP do veículo (+ ou −)</span><input type="number" name="system.modificadores.sdp" value="{{fonte.modificadores.sdp}}"></label>
       <label class="celula"><span>Assentos do veículo (+ ou −)</span><input type="number" name="system.modificadores.assentos" value="{{fonte.modificadores.assentos}}"></label>
       {{/if}}
-      <label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>
+      {{#unless semLugarDaMod}}<label class="celula"><span>Instalado em</span><select name="system.instaladoEm">{{selectOptions lugares selected=lugarAtual}}</select></label>{{/unless}}
       {{#if prepararArma}}{{#if editavel}}<div class="acoes-do-item"><button type="button" class="acao" data-action="prepararArmaVeicular">PREPARAR ARMA</button></div>{{/if}}{{/if}}
       {{/if}}
       {{!-- O cyberware e o acessório de arma que são arma (o C11): instalados, atacam pela aba Combate, com a arma ligada a eles. --}}

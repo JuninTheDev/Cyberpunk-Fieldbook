@@ -3,6 +3,7 @@
 // passa, p. 128–130), e a escala de DV é a da página (9 Simples a 29 Lendário, p. 129).
 import { ATRIBUTOS, SIGLA } from './config.mjs';
 import { FAMILIAS, PERICIAS } from './gerado.mjs';
+import { ROLAGENS_DE_ROLE } from './regras.mjs';
 
 // A escala de DV da wiki (system-rules.js, "Escala de DV").
 export const DIFICULDADES = [
@@ -37,7 +38,15 @@ const normalizar = texto => String(texto ?? '').normalize('NFD').replace(/[̀-ͯ
 // O que se testa: { tipo: 'pericia', id } (do livro), { tipo: 'familia', familia, tipoDaFamilia } (Linguagem, Especialista
 // Local, Ciências, Artes Marciais, Tocar Instrumento: a do ator com esse nome, ou a melhor dele) ou { tipo: 'atributo',
 // chave }. O rótulo, para o cartão.
+// A habilidade de Role (o C72, a instalação da modificação de arma): { tipo: 'role', id, pericia } (a Expertise do Tech com
+// a perícia de TECH dela, como a ficha rola: regras.ROLAGENS_DE_ROLE).
+const rolagemDaRole = id => Object.values(ROLAGENS_DE_ROLE).flat().find(rolagem => rolagem.id === id && !rolagem.backup) ?? null;
 export function rotuloDoTeste(teste) {
+  if (teste?.tipo === 'role') {
+    const rolagem = rolagemDaRole(teste.id);
+    const pericia = PERICIAS.find(p => p.id === teste.pericia);
+    return rolagem ? `${rolagem.rotulo}${rolagem.escolherPericia && pericia ? ` (${pericia.nome})` : ''}` : '';
+  }
   if (teste?.tipo === 'atributo') return SIGLA[teste.chave] ?? '';
   if (teste?.tipo === 'familia') {
     const familia = FAMILIAS[teste.familia];
@@ -46,6 +55,11 @@ export function rotuloDoTeste(teste) {
   return PERICIAS.find(p => p.id === teste?.id)?.nome ?? '';
 }
 export function testeValido(teste) {
+  if (teste?.tipo === 'role') {
+    const rolagem = rolagemDaRole(teste.id);
+    if (!rolagem) return false;
+    return !rolagem.escolherPericia || PERICIAS.some(p => p.id === teste.pericia && p.atributo === rolagem.atributo);
+  }
   if (teste?.tipo === 'atributo') return ATRIBUTOS_DO_TESTE.includes(teste.chave);
   if (teste?.tipo === 'familia') return Boolean(FAMILIAS[teste.familia]);
   return teste?.tipo === 'pericia' && PERICIAS.some(p => p.id === teste.id);

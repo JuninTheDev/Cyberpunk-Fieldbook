@@ -94,7 +94,7 @@ module.exports = async ({ edge, servidores, r }) => {
     return [ok, JSON.stringify(b)];
   });
 
-  await r.passo('a ficha da peça: o acessório (trocável) e o defeito (só o Tech tira); o slot livre de modificação lista o que cabe pela regra da casa (a segunda de ataque não cabe)', async () => {
+  await r.passo('a ficha da peça: o acessório (trocável) e o defeito (só o mestre tira, o C72); o slot livre de modificação lista o que cabe pela regra da casa (a segunda de ataque não cabe)', async () => {
     await clicar('[data-ar-sel="peca:p2"]');
     const acessorio = [await texto('.ar-ficha-nome'), await texto('.ar-ficha-onde'), await texto('.ar-nums')];
     await clicar('[data-ar-sel="peca:d1"]');
@@ -102,7 +102,7 @@ module.exports = async ({ edge, servidores, r }) => {
     await clicar('[data-ar-sel="livre:modificacao:0"]');
     const lista = await edge.evaluate(`({ cabem: [...document.querySelectorAll('.ar-ficha .ar-cabe b')].map(b => b.textContent), naoCabem: [...document.querySelectorAll('.ar-ficha .ar-nao-cabe')].map(li => li.querySelector('b').textContent + ': ' + li.querySelector('small').textContent), foco: document.querySelector('.ar-livre-slot.ar-foco')?.dataset.arSel })`);
     const ok = acessorio[0] === 'Smartgun Link' && /Acessório · No trilho/i.test(acessorio[1]) && /2 slots de acessório/.test(acessorio[2])
-      && defeito[0] === 'Gatilho sensível' && /nenhum: dá \+1/.test(defeito[1]) && /só o Tech/.test(defeito[1])
+      && defeito[0] === 'Gatilho sensível' && /nenhum: dá \+1/.test(defeito[1]) && /Para tirar\s*só o mestre/.test(defeito[1]) && !/só o Tech/.test(defeito[1])
       && lista.cabem.includes('Supressor') && !lista.cabem.includes('Mira de médio alcance') && lista.naoCabem.includes('Mira de médio alcance: só cabe uma modificação de ataque por arma')
       && !lista.cabem.some(nome => /Gatilho|Coice/.test(nome)) && lista.foco === 'livre:modificacao:0';
     return [ok, JSON.stringify({ acessorio, defeito, lista })];

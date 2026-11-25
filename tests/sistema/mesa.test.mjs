@@ -112,9 +112,10 @@ test('Os fluxos que chamam as rolagens da ficha pedem o modo deles: o combate, a
   // a droga, a terapia, o tratamento (dois), o Death Save do turno (o do mestre e o do jogador), a manobra do veículo (o
   // C40), estabilizar (o C36), a cirurgia do cyberware (a instalação e a retirada; o C41), o Cryotank (o C41) e o teste
   // para perceber a armadura com aparência de moda (o C48, parte 3); e o pedido de teste do mestre (o C65: a perícia, a da
-  // família, o STAT e o STAT da família, no modo que o mestre escolheu).
+  // família, o STAT e o STAT da família, no modo que o mestre escolheu; e a habilidade de Role, o teste do Tech que instala
+  // a modificação de arma, o C72).
   assert.deepEqual(vistas, {
-    'agarrao.mjs': 1, 'artes-marciais.mjs': 1, 'black-chrome.mjs': 1, 'cirurgia.mjs': 2, 'combate/socket.mjs': 1, 'cryo.mjs': 1, 'direcao.mjs': 1, 'drogas.mjs': 1, 'estabilizar.mjs': 1, 'municoes.mjs': 1, 'neuroport.mjs': 1, 'pedido-teste.mjs': 4,
+    'agarrao.mjs': 1, 'artes-marciais.mjs': 1, 'black-chrome.mjs': 1, 'cirurgia.mjs': 2, 'combate/socket.mjs': 1, 'cryo.mjs': 1, 'direcao.mjs': 1, 'drogas.mjs': 1, 'estabilizar.mjs': 1, 'municoes.mjs': 1, 'neuroport.mjs': 1, 'pedido-teste.mjs': 5,
     'terapia.mjs': 1, 'tratamento.mjs': 2, 'turnos.mjs': 1
   });
   // O combate e a NET não usam o modo do chat.
