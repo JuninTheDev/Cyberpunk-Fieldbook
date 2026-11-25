@@ -1493,7 +1493,7 @@ module.exports = async ({ edge, servidores, r }) => {
         JSON.stringify(info)];
     });
 
-    await r.passo('ficha do item no jeito da maquete "Item Sheets" do usuário: o tipo na cor dele, o resumo e as etiquetas no alto; as abas Detalhes, Descrição e Efeitos, trocadas pelo clique; os campos em células; o uso em três botões, que gravam', async () => {
+    await r.passo('ficha do item no jeito da maquete "Item Sheets" do usuário: o tipo na cor dele, o resumo e as etiquetas no alto; a aba Bancada da arma e as abas Detalhes, Descrição e Efeitos, trocadas pelo clique; os campos em células; o uso em três botões, que gravam', async () => {
       const arma = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
         const esperar = async (condicao, vezes = 50) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
@@ -1536,8 +1536,8 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.shot('ficha-item-cyberdeck');
       await edge.evaluate(`(async () => { const { arma, deck } = window.__itensDaFicha; await deck.sheet.close(); await Item.deleteDocuments([arma.id, deck.id]); delete window.__itensDaFicha; return true; })()`);
       const ok = arma.tipo === arma.rotulo && arma.tipo !== '' && arma.resumo === 'Armas de uma Mão // à distância' && arma.etiquetas.join() === 'Padrão'
-        && arma.abas === 'detalhes*,descricao,efeitos' && arma.celulas >= 8 && /ff2a4a/i.test(arma.cor)
-        && arma.depois === 'detalhes,descricao*,efeitos' && arma.detalhesSomem === 'none'
+        && arma.abas === 'detalhes*,descricao,efeitos,bancada' && arma.celulas >= 8 && /ff2a4a/i.test(arma.cor)
+        && arma.depois === 'detalhes,bancada,descricao*,efeitos' && arma.detalhesSomem === 'none'
         && deck.segmentos === 3 && deck.escolhido !== deck.antes && deck.depois === deck.escolhido && deck.ativo === deck.escolhido && /02d7f2/i.test(deck.cor);
       return [ok, JSON.stringify({ arma, deck })];
     });
@@ -21323,7 +21323,10 @@ module.exports = async ({ edge, servidores, r }) => {
         const criadas = await ator.createEmbeddedDocuments('Item', ['mira-holografica', 'supressor', 'lanterna-tatica', 'gatilho-sensivel'].map(id => foundry.utils.deepClone(cat['mods-armas:' + id])));
         // A ordem da volta não é a do pedido: cada uma pelo nome.
         const mods = nomes.map(nome => criadas.find(m => m.name === nome));
-        return { ator: ator.id, tech: tech.id, techUuid: tech.uuid, arma: arma.id, mods: mods.map(m => m?.id ?? null), techs: game.system.api.instalacaoDeMod.techsDaMesa().map(a => a.name) };
+        // A arma e a modificação do próprio Tech: nem ele instala sem o teste.
+        const [armaDoTech] = await tech.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:very-heavy-pistol'])]);
+        const [modDoTech] = await tech.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['mods-armas:nome-gravado'])]);
+        return { ator: ator.id, tech: tech.id, techUuid: tech.uuid, arma: arma.id, armaDoTech: armaDoTech.id, modDoTech: modDoTech.id, mods: mods.map(m => m?.id ?? null), techs: game.system.api.instalacaoDeMod.techsDaMesa().map(a => a.name) };
       })()`);
       const [mira, supressor, lanterna, gatilho] = c72.mods;
       const noJogador = codigo => jogador.evaluate(`(async () => {
@@ -21343,11 +21346,14 @@ module.exports = async ({ edge, servidores, r }) => {
         try {
           await item('${mira}').update({ 'system.instaladoEm': '${c72.arma}' });
           await item('${gatilho}').update({ 'system.instaladoEm': '${c72.arma}' });
+          await esperar(() => game.actors.get('${c72.tech}')?.isOwner);
+          await game.actors.get('${c72.tech}').items.get('${c72.modDoTech}').update({ 'system.instaladoEm': '${c72.armaDoTech}' });
         } finally { ui.notifications.warn = avisar; }
+        const doTech = game.actors.get('${c72.tech}').items.get('${c72.modDoTech}')?.system.instaladoEm;
         const ficha = item('${mira}').sheet;
         await ficha.render({ force: true });
         await esperar(() => ficha.element?.querySelector('.instalacao-da-mod'));
-        const resultado = { avisos, instalada: item('${mira}').system.instaladoEm, gatilho: item('${gatilho}').system.instaladoEm,
+        const resultado = { avisos, instalada: item('${mira}').system.instaladoEm, gatilho: item('${gatilho}').system.instaladoEm, doTech,
           regra: textoDe(ficha.element.querySelector('.instalacao-da-mod')), seletor: Boolean(ficha.element.querySelector('select[name="system.instaladoEm"]')),
           botao: textoDe(ficha.element.querySelector('[data-action="pedirInstalacao"]')) };
         ficha.element.querySelector('[data-action="pedirInstalacao"]').click();
@@ -21487,9 +21493,11 @@ module.exports = async ({ edge, servidores, r }) => {
           && mestreTira.slots.usados === 1 && mestreTira.slots.total === 2
           && !comAArma.arma && !comAArma.lanterna && comAArma.avisos.length === 0 && comAArma.soltas.join() === 'true,true';
         const regraOk = /TECH \+ Tecnologia de Armas \+ Especialização de Upgrade \+ 1d10 contra a DV 17 \(Premium\); leva 1 hora/.test(doJogador.regra) && /não entra e não se perde/.test(doJogador.regra);
-        const jogadorOk = doJogador.instalada === '' && doJogador.gatilho === '' && doJogador.avisos.length === 2
-          && doJogador.avisos[0] === 'Quem instala Mira holográfica é o Tech: na ficha da modificação, "Pedir a instalação" chama o mestre (o teste do Tech).'
+        // O Solo: o filtro do C74 (só o Tech ou o mestre); o defeito: só o mestre; o Tech: o teste do C72.
+        const jogadorOk = doJogador.instalada === '' && doJogador.gatilho === '' && doJogador.doTech === '' && doJogador.avisos.length === 3
+          && doJogador.avisos[0] === 'Mira holográfica: só um Tech ou o mestre pode instalar uma modificação de arma.'
           && doJogador.avisos[1] === 'Gatilho sensível é um defeito: quem o põe na arma é o mestre.'
+          && doJogador.avisos[2] === 'Quem instala Nome gravado é o Tech, com o teste: na ficha da modificação ou na bancada da arma, o pedido chama o mestre.'
           && regraOk && !doJogador.seletor && doJogador.botao === 'PEDIR A INSTALAÇÃO';
         const mestreOk = /Jogador pede a instalação/.test(janelaDoMestre.texto) && /Mira holográfica/.test(janelaDoMestre.texto) && /DV 17 \(Premium\)/.test(janelaDoMestre.texto)
           && janelaDoMestre.armas.join() === c72.arma && c72.techs.includes('C72 Tech') && !c72.techs.includes('C72 Vex')
@@ -21508,6 +21516,148 @@ module.exports = async ({ edge, servidores, r }) => {
           for (const ator of game.actors.filter(a => /^C72 /.test(a.name))) await ator.delete();
           return true;
         })()`);
+      }
+    });
+
+    await r.passo('C74: a Bancada mostra slots e atributos, instala acessório compatível por drop, recusa o que não cabe e limita modificações a Tech ou mestre', async () => {
+      let preparo = null;
+      try {
+        preparo = await edge.evaluate(`(async () => {
+          const usuario = game.users.getName('Jogador');
+          const ator = await Actor.implementation.create({ name: 'C74 Bancada', type: 'personagem', system: { role: { nome: 'Solo' } }, ownership: { [usuario.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          try {
+            const cat = await game.system.api.wiki.carregarCatalogo();
+            const rifleDados = foundry.utils.deepClone(cat['core_weapons:assault-rifle']);
+            rifleDados.name = 'C74 Rifle';
+            const [arma] = await ator.createEmbeddedDocuments('Item', [rifleDados]);
+            const criarUpgrade = (name, tamanho, mod = null) => ({
+              name, type: 'upgrade', system: { alvo: 'arma', tamanho, instaladoEm: '' },
+              ...(mod ? { flags: { ['${S}']: { mod } } } : {})
+            });
+            const [acessorio] = await ator.createEmbeddedDocuments('Item', [criarUpgrade('C74 Mira de teste', 1)]);
+            const [grande] = await ator.createEmbeddedDocuments('Item', [criarUpgrade('C74 Acessório grande', 3)]);
+            const [modTech] = await ator.createEmbeddedDocuments('Item', [criarUpgrade('C74 Acabamento Tech', 1, {
+              versao: 1, id: 'c74-acabamento-tech', nome: 'Acabamento Tech', tipo: 'sabor', tamanho: 1, efeitos: []
+            })]);
+            const [modMestre] = await ator.createEmbeddedDocuments('Item', [criarUpgrade('C74 Acabamento mestre', 1, {
+              versao: 1, id: 'c74-acabamento-mestre', nome: 'Acabamento mestre', tipo: 'sabor', tamanho: 1, efeitos: []
+            })]);
+            return { ator: ator.id, arma: arma.id, acessorio: acessorio.id, grande: grande.id, modTech: modTech.id, modMestre: modMestre.id };
+          } catch (erro) {
+            await ator.delete();
+            throw erro;
+          }
+        })()`);
+        const solo = await jogador.evaluate(`(async () => {
+          const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(teste()); };
+          const ator = game.actors.get('ACTOR_ID');
+          const arma = ator.items.get('WEAPON_ID');
+          const acessorio = ator.items.get('ACCESSORY_ID');
+          const grande = ator.items.get('OVERSIZED_ID');
+          const mod = ator.items.get('TECH_MOD_ID');
+          const avisos = [];
+          const original = ui.notifications.warn;
+          ui.notifications.warn = texto => avisos.push(String(texto));
+          try {
+            await arma.sheet.render({ force: true });
+            await esperar(() => arma.sheet.element?.querySelector('.bancada-da-arma'));
+            arma.sheet.changeTab('bancada', 'item');
+            const soltar = (item, tipo) => {
+              const zona = arma.sheet.element?.querySelector('.bancada-da-arma [data-bancada-drop="' + tipo + '"]');
+              if (!zona) return false;
+              const dados = new DataTransfer();
+              dados.setData('text/plain', JSON.stringify({ type: 'Item', uuid: item.uuid }));
+              zona.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+              return true;
+            };
+            const dropAcessorio = soltar(acessorio, 'acessorio');
+            const instalouAcessorio = await esperar(() => ator.items.get(acessorio.id)?.system.instaladoEm === arma.id);
+            await esperar(() => arma.sheet.element?.querySelector('.acessorios-da-arma .peca-da-arma'));
+            const slotsAcessorio = arma.sheet.element?.querySelector('.acessorios-da-arma .bancada-titulo b')?.textContent.trim() ?? '';
+            soltar(grande, 'acessorio');
+            await new Promise(r => setTimeout(r, 300));
+            const recusouAcessorio = grande.system.instaladoEm === '' && avisos.some(texto => texto.includes('não cabe em C74 Rifle'));
+            const modSemBotao = !arma.sheet.element?.querySelector('button[data-action="instalarModificacao"][data-item-id="' + mod.id + '"]');
+            try { await mod.update({ 'system.instaladoEm': arma.id }); } catch {}
+            await new Promise(r => setTimeout(r, 200));
+            return {
+              nome: arma.sheet.element?.querySelector('.arma-holograma figcaption strong')?.textContent.trim() ?? '',
+              atributos: arma.sheet.element?.querySelectorAll('.atributos-da-arma div').length ?? 0,
+              slotsAcessorio, dropAcessorio, instalouAcessorio, recusouAcessorio,
+              modSemBotao, bloqueouMod: mod.system.instaladoEm === '' && avisos.some(texto => texto.includes('só um Tech')),
+              avisos
+            };
+          } finally { ui.notifications.warn = original; await arma.sheet.close(); }
+        })()`.replaceAll('ACTOR_ID', preparo.ator).replaceAll('WEAPON_ID', preparo.arma).replaceAll('ACCESSORY_ID', preparo.acessorio).replaceAll('OVERSIZED_ID', preparo.grande).replaceAll('TECH_MOD_ID', preparo.modTech));
+        await edge.evaluate(`(async () => { const ator = game.actors.get('ACTOR_ID'); await ator.update({ 'system.role.nome': 'Tech' }); return true; })()`.replaceAll('ACTOR_ID', preparo.ator));
+        const tech = await jogador.evaluate(`(async () => {
+          const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(teste()); };
+          const ator = game.actors.get('ACTOR_ID');
+          const arma = ator.items.get('WEAPON_ID');
+          await esperar(() => ator.system.role.nome === 'Tech');
+          await arma.sheet.render({ force: true });
+          await esperar(() => arma.sheet.element?.querySelector('.bancada-da-arma'));
+          arma.sheet.changeTab('bancada', 'item');
+          const mod = ator.items.get('TECH_MOD_ID');
+          const botao = arma.sheet.element?.querySelector('button[data-action="instalarModificacao"][data-item-id="' + mod.id + '"]');
+          botao?.click();
+          // Desde o C72, o Tech não instala sozinho: o clique pede ao mestre (o teste); nada entra antes da resposta dele.
+          await new Promise(r => setTimeout(r, 800));
+          return { botao: Boolean(botao), antesDoMestre: ator.items.get(mod.id)?.system.instaladoEm ?? null };
+        })()`.replaceAll('ACTOR_ID', preparo.ator).replaceAll('WEAPON_ID', preparo.arma).replaceAll('TECH_MOD_ID', preparo.modTech));
+        // O mestre recebe o pedido na janela dele e aceita (aqui, direto: o teste do Tech é o passo do C72).
+        const pedidoDoTech = await edge.evaluate(`(async () => {
+          const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(teste()); };
+          const janela = () => [...document.querySelectorAll('.application.instalacao-da-mod')].find(j => /pede a instalação/.test(j.textContent));
+          await esperar(janela);
+          const texto = janela()?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+          janela()?.querySelector('button[data-action="direto"]')?.click();
+          return { texto };
+        })()`);
+        Object.assign(tech, await jogador.evaluate(`(async () => {
+          const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(teste()); };
+          const ator = game.actors.get('ACTOR_ID');
+          const arma = ator.items.get('WEAPON_ID');
+          const mod = ator.items.get('TECH_MOD_ID');
+          const instalou = await esperar(() => ator.items.get(mod.id)?.system.instaladoEm === arma.id);
+          await arma.sheet.render({ force: true });
+          arma.sheet.changeTab('bancada', 'item');
+          await esperar(() => arma.sheet.element?.querySelector('.mod-da-arma'));
+          const ficha = arma.sheet.element?.querySelector('.mod-da-arma')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+          await arma.sheet.close();
+          return { instalou, ficha };
+        })()`.replaceAll('ACTOR_ID', preparo.ator).replaceAll('WEAPON_ID', preparo.arma).replaceAll('TECH_MOD_ID', preparo.modTech)), { pedido: pedidoDoTech.texto });
+        const mestre = await edge.evaluate(`(async () => {
+          const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return Boolean(teste()); };
+          const ator = game.actors.get('ACTOR_ID');
+          const arma = ator.items.get('WEAPON_ID');
+          await ator.update({ 'system.role.nome': 'Solo' });
+          const mod = ator.items.get('MASTER_MOD_ID');
+          await arma.sheet.render({ force: true });
+          await esperar(() => arma.sheet.element?.querySelector('.bancada-da-arma'));
+          arma.sheet.changeTab('bancada', 'item');
+          const botao = arma.sheet.element?.querySelector('button[data-action="instalarModificacao"][data-item-id="' + mod.id + '"]');
+          botao?.click();
+          // Desde o C72, o clique do mestre abre a janela dele: o teste do Tech da mesa ou direto (o Tech NPC).
+          const janela = () => document.querySelector('.application.instalacao-da-mod');
+          const abriuAJanela = await esperar(janela);
+          janela()?.querySelector('button[data-action="direto"]')?.click();
+          const instalou = await esperar(() => ator.items.get(mod.id)?.system.instaladoEm === arma.id);
+          await esperar(() => (arma.sheet.element?.querySelector('.modificacoes-da-arma .bancada-titulo b')?.textContent.trim() ?? '') === '2 / 2');
+          const slots = arma.sheet.element?.querySelector('.modificacoes-da-arma .bancada-titulo b')?.textContent.trim() ?? '';
+          await arma.sheet.close();
+          return { mestre: game.user.isGM, botao: Boolean(botao), abriuAJanela, instalou, slots, mods: arma.slotsDeModificacao.usados };
+        })()`.replaceAll('ACTOR_ID', preparo.ator).replaceAll('WEAPON_ID', preparo.arma).replaceAll('MASTER_MOD_ID', preparo.modMestre));
+        const ok = solo.nome === 'C74 Rifle' && solo.atributos >= 4 && solo.dropAcessorio && solo.instalouAcessorio && solo.slotsAcessorio === '1 / 3'
+          && solo.recusouAcessorio && solo.modSemBotao && solo.bloqueouMod && tech.botao && tech.antesDoMestre === '' && /pede a instalação/.test(tech.pedido) && /C74 Acabamento Tech/.test(tech.pedido)
+          && tech.instalou && /Acabamento Tech/.test(tech.ficha)
+          && mestre.mestre && mestre.botao && mestre.abriuAJanela && mestre.instalou && mestre.slots === '2 / 2' && mestre.mods === 2;
+        return [ok, JSON.stringify({ solo, tech, mestre })];
+      } finally {
+        if (preparo) {
+          await jogador.evaluate(`(async () => { const ator = game.actors.get('ACTOR_ID'); for (const item of ator?.items ?? []) await item.sheet?.close(); await ator?.sheet?.close(); return true; })()`.replaceAll('ACTOR_ID', preparo.ator)).catch(() => {});
+          await edge.evaluate(`(async () => { const ator = game.actors.get('ACTOR_ID'); for (const item of ator?.items ?? []) await item.sheet?.close(); await ator?.sheet?.close(); await ator?.delete(); return true; })()`.replaceAll('ACTOR_ID', preparo.ator)).catch(() => {});
+        }
       }
     });
 

@@ -124,15 +124,16 @@ export async function abrirInstalacao({ mod, arma = null, de = null } = {}) {
   return pedirTesteDoTech({ mod, arma: alvo, tech });
 }
 
-// O jogador pede a instalação: escolhe a arma (quando há mais de uma onde cabe) e avisa o mestre ativo.
-export async function pedirInstalacao(mod) {
-  if (game.user.isGM) return abrirInstalacao({ mod });
+// O jogador pede a instalação: escolhe a arma (quando há mais de uma onde cabe; a bancada da arma já diz qual) e avisa o
+// mestre ativo.
+export async function pedirInstalacao(mod, { arma: daBancada = null } = {}) {
+  if (game.user.isGM) return abrirInstalacao({ mod, arma: daBancada });
   if (!mod?.isOwner || !instalacaoDe(mod)) return null;
   const armas = armasOndeCabe(mod);
   if (!armas.length) { ui.notifications.warn(`${mod.name} não cabe em nenhuma arma de ${mod.actor?.name ?? 'ninguém'}.`); return null; }
   if (!game.users.activeGM) { ui.notifications.warn('Nenhum mestre conectado: a instalação espera o mestre (o teste do Tech).'); return null; }
-  let arma = armas[0];
-  if (armas.length > 1) {
+  let arma = armas.find(item => item.id === daBancada?.id) ?? armas[0];
+  if (armas.length > 1 && !daBancada) {
     const id = await DialogV2.prompt({
       window: { title: 'Pedir a instalação' }, classes: [SISTEMA, 'pedir-instalacao'], rejectClose: false,
       content: `<label>Em qual arma <select name="arma">${armas.map(item => `<option value="${item.id}">${esc(item.nomeDeExibicao)}</option>`).join('')}</select></label>`,

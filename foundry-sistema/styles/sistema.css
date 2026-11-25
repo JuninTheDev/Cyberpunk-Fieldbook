@@ -46,3 +46,49 @@
 .cpr-fieldbook.janela-wiki .aviso.erro { border-color: #b33; }
 .cpr-fieldbook.janela-wiki .aviso ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
 .cpr-fieldbook.janela-wiki .itens select { flex: 0 0 auto; width: auto; max-width: 9rem; }
+
+/* Bancada de arma (C74): leitura rápida da montagem no tema escuro do item. */
+.cpr-fieldbook.ficha-item .bancada-da-arma { min-width: 0; }
+.cpr-fieldbook.ficha-item .bancada-grade { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: .65rem; }
+.cpr-fieldbook.ficha-item .bancada-visual, .cpr-fieldbook.ficha-item .bancada-montagem { display: flex; flex-direction: column; gap: .55rem; min-width: 0; }
+.cpr-fieldbook.ficha-item .arma-holograma { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 11rem; margin: 0; padding: .55rem; overflow: hidden; border: 1px solid color-mix(in srgb, var(--cprf-ciano) 65%, transparent); border-radius: 4px; background: radial-gradient(ellipse at 50% 80%, color-mix(in srgb, var(--cprf-ciano) 20%, transparent), transparent 70%), linear-gradient(145deg, #09131b, #111722 65%, #071016); box-shadow: inset 0 0 1.3rem color-mix(in srgb, var(--cprf-ciano) 12%, transparent); }
+.cpr-fieldbook.ficha-item .arma-holograma img { display: block; width: 100%; height: 7.5rem; object-fit: contain; filter: drop-shadow(0 0 .45rem color-mix(in srgb, var(--cprf-ciano) 35%, transparent)); }
+.cpr-fieldbook.ficha-item .arma-holograma figcaption { display: flex; flex-direction: column; width: 100%; gap: .08rem; text-align: left; }
+.cpr-fieldbook.ficha-item .arma-holograma figcaption span, .cpr-fieldbook.ficha-item .bancada-titulo span { color: var(--cprf-ciano); font-size: .62rem; letter-spacing: .12em; }
+.cpr-fieldbook.ficha-item .arma-holograma figcaption strong { overflow: hidden; font-size: 1.05rem; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.ficha-item .arma-holograma figcaption small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-fieldbook.ficha-item .atributos-da-arma { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .3rem; margin: 0; }
+.cpr-fieldbook.ficha-item .atributos-da-arma div { min-width: 0; padding: .3rem .4rem; border-left: 2px solid var(--cprf-vermelho); background: var(--cprf-fundo-suave); }
+.cpr-fieldbook.ficha-item .atributos-da-arma dt { color: var(--cprf-texto-fraco); font-size: .62rem; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .atributos-da-arma dd { margin: 0; overflow-wrap: anywhere; font-family: var(--font-mono, monospace); font-weight: 700; }
+.cpr-fieldbook.ficha-item .bancada-modulo { min-width: 0; padding: .5rem; border: 1px solid var(--cprf-borda); border-radius: 4px; background: color-mix(in srgb, var(--cprf-ciano) 3%, transparent); }
+.cpr-fieldbook.ficha-item .bancada-titulo { display: flex; align-items: end; justify-content: space-between; gap: .4rem; }
+.cpr-fieldbook.ficha-item .bancada-titulo h2 { margin: 0; font-size: 1rem; }
+.cpr-fieldbook.ficha-item .bancada-titulo > b { color: var(--cprf-ciano); font-family: var(--font-mono, monospace); white-space: nowrap; }
+.cpr-fieldbook.ficha-item .slots-da-arma { display: flex; flex-wrap: wrap; gap: .24rem; min-height: .52rem; margin: .4rem 0; }
+.cpr-fieldbook.ficha-item .slots-da-arma .slot { width: 1.1rem; height: .38rem; border: 1px solid var(--cprf-borda); border-radius: 1px; background: transparent; }
+.cpr-fieldbook.ficha-item .slots-da-arma .slot.ocupado { border-color: var(--cprf-ciano); background: var(--cprf-ciano); box-shadow: 0 0 .35rem color-mix(in srgb, var(--cprf-ciano) 55%, transparent); }
+.cpr-fieldbook.ficha-item .modificacoes-slots .slot.ocupado { border-color: var(--cprf-vermelho); background: var(--cprf-vermelho); box-shadow: 0 0 .35rem color-mix(in srgb, var(--cprf-vermelho) 45%, transparent); }
+.cpr-fieldbook.ficha-item .pecas-instaladas, .cpr-fieldbook.ficha-item .mods-instaladas, .cpr-fieldbook.ficha-item .pecas-disponiveis, .cpr-fieldbook.ficha-item .mods-disponiveis { display: flex; flex-direction: column; gap: .3rem; }
+.cpr-fieldbook.ficha-item .peca-da-arma, .cpr-fieldbook.ficha-item .opcao-da-arma, .cpr-fieldbook.ficha-item .mod-da-arma { display: flex; align-items: center; gap: .4rem; min-width: 0; padding: .35rem; border-top: 1px solid color-mix(in srgb, var(--cprf-borda) 70%, transparent); }
+.cpr-fieldbook.ficha-item .peca-da-arma img, .cpr-fieldbook.ficha-item .mod-linha img { flex: 0 0 1.8rem; width: 1.8rem; height: 1.8rem; object-fit: contain; }
+.cpr-fieldbook.ficha-item .peca-da-arma > div, .cpr-fieldbook.ficha-item .opcao-da-arma > div, .cpr-fieldbook.ficha-item .mod-linha > div { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.cpr-fieldbook.ficha-item .peca-da-arma strong, .cpr-fieldbook.ficha-item .opcao-da-arma strong, .cpr-fieldbook.ficha-item .mod-linha strong { overflow-wrap: anywhere; }
+.cpr-fieldbook.ficha-item .peca-da-arma small, .cpr-fieldbook.ficha-item .opcao-da-arma small, .cpr-fieldbook.ficha-item .mod-linha small { color: var(--cprf-texto-fraco); font-size: .72rem; }
+.cpr-fieldbook.ficha-item .opcao-da-arma { align-items: flex-start; justify-content: space-between; }
+.cpr-fieldbook.ficha-item .opcao-da-arma button { flex: 0 0 auto; width: auto; }
+.cpr-fieldbook.ficha-item .compativel { color: var(--cprf-ciano) !important; }
+.cpr-fieldbook.ficha-item .incompativel { color: var(--cprf-vermelho) !important; }
+.cpr-fieldbook.ficha-item .restricao { flex: 0 0 auto; color: var(--cprf-texto-fraco); text-align: right; }
+.cpr-fieldbook.ficha-item .mod-da-arma { display: block; }
+.cpr-fieldbook.ficha-item .mod-linha { display: flex; align-items: center; gap: .4rem; }
+.cpr-fieldbook.ficha-item .mod-da-arma ul, .cpr-fieldbook.ficha-item .opcao-da-arma ul { margin: .2rem 0 0 2.2rem; padding-left: .9rem; font-size: .76rem; }
+.cpr-fieldbook.ficha-item .subtitulo-da-bancada { margin: .45rem 0 .15rem; color: var(--cprf-texto-fraco); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.cpr-fieldbook.ficha-item .da-bancada { margin: .25rem 0 .45rem; font-size: .72rem; }
+.cpr-fieldbook.ficha-item .bancada-drop { display: flex; flex-direction: column; align-items: center; gap: .1rem; min-height: 3.4rem; margin-top: .4rem; padding: .45rem; border: 1px dashed var(--cprf-ciano); border-radius: 4px; color: var(--cprf-ciano); text-align: center; background: color-mix(in srgb, var(--cprf-ciano) 4%, transparent); }
+.cpr-fieldbook.ficha-item .bancada-drop:focus-visible { outline: 2px solid var(--cprf-ciano); outline-offset: 2px; }
+.cpr-fieldbook.ficha-item .bancada-drop > b { font-size: 1.2rem; line-height: 1; }
+.cpr-fieldbook.ficha-item .bancada-drop small { color: var(--cprf-texto-fraco); }
+.cpr-fieldbook.ficha-item .modificacoes-drop { border-color: var(--cprf-vermelho); color: var(--cprf-vermelho); background: var(--cprf-fundo-suave); }
+.cpr-fieldbook.ficha-item .aviso-de-tech { padding: .35rem; border-left: 2px solid var(--cprf-vermelho); }
+@media (max-width: 560px) { .cpr-fieldbook.ficha-item .bancada-grade { grid-template-columns: minmax(0, 1fr); } .cpr-fieldbook.ficha-item .arma-holograma { min-height: 9rem; } .cpr-fieldbook.ficha-item .arma-holograma img { height: 5.5rem; } }

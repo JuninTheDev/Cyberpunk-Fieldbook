@@ -272,3 +272,9 @@ export function instalacaoDaMod(mod, preco = 0) {
   const faixa = eb ? DVS_DA_INSTALACAO.find(entrada => eb <= entrada.ate) : DVS_DA_INSTALACAO.at(-1);
   return { dv: faixa.dv, categoria: eb ? faixa.categoria : 'sem preço, a do Caro', tempo: TEMPO_DA_INSTALACAO, teste: { ...TESTE_DA_INSTALACAO } };
 }
+
+/* Quem pode instalar uma modificação: o Tech do personagem ou o mestre (C74). */
+export function podeInstalarModificacao({ mestre = false, roles = [] } = {}) {
+  const nome = valor => String(valor ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  return Boolean(mestre) || (Array.isArray(roles) && roles.some(role => ['tech', 'tecnico'].includes(nome(role))));
+}

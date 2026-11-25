@@ -10131,6 +10131,22 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 sem erros; G2 sem erros; G3 800/800; G4 335/335 (714 s); isolados 29/29. Rodadas antes: o CORS da rota, o rolar 6, as mensagens antigas, os avisos esperados e o sussurro ao mestre que chega ao jogador (trocado pela janela).
 - **Mutações:** oito no G3 (O1 a O8), quatro na API (A1 a A4) e dez no G4 (F1 a F10); todas morreram, md5 igual.
 
+### Ciclo 210 (2026-11-25): C74, a bancada da arma no Foundry (sessão Codex)
+
+- **Pedido do usuário (2026-11-24):** uma tela para ver a arma, as modificações e os itens equipados; a imagem anexada orientou a apresentação visual.
+- **A fonte:** o item C74 do ROADMAP, a bancada da wiki (C70), as regras existentes `acessorioCabe`, `rebuildCabe` e `modCabe`, e o pedido de instalação de modificações só por Tech ou mestre. Não entrou regra nova de arma.
+- **Entrega:**
+  - na ficha da arma, a aba Bancada com imagem, perícia, dano, CDT, pente, alcance, qualidade, slots de acessórios e modificações, peças instaladas e itens compatíveis disponíveis;
+  - acessórios compatíveis são instalados por drop do inventário; modificações só são instaladas por Tech ou mestre. A permissão também é conferida em atualização direta do item;
+  - o template e o CSS da ficha apresentam a bancada no tema escuro do sistema, com adaptação para telas menores;
+  - a versão `0.3.210`.
+- **Fica para depois:** a economia das modificações (C72) e a arma quebrada, a relíquia e reforjar (C73).
+- **Testes de referência:**
+  - **G3:** em `modificacoes.test.mjs`, Solo é recusado e Tech, Técnico e mestre são aceitos; o teste de bancada confere o C74 no plano;
+  - **G4:** novo cenário C74: atributos e slots, drop de acessório compatível, recusa do que não cabe, instalação de modificação por Tech e mestre, e bloqueio para Solo na interface e na atualização direta.
+- **Portões:** G1 268 arquivos; G2 sem erros; G3 801/801; G4 336/336 (729 s).
+- **Mutações:** uma no G3 (permitir todos os papéis) e duas no G4 (desviar o drop para o handler padrão; permitir instalação para todos); as três fizeram o teste falhar, e os arquivos de código voltaram ao MD5 original.
+
 ### Ciclo 211 (2026-11-25): C72, parte 1, o Tech que instala a modificação (sessão KouArt)
 
 - **Pedido do usuário (2026-11-25):** "Sim, o C72". As decisões do usuário no mesmo dia (as quatro recomendadas): o teste é
@@ -10151,6 +10167,11 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   - `documentos.mjs`: a recusa da instalação pelo jogador (e a do defeito) e a de tirar (o `_preDelete`; a arma apagada
     leva as dela); a ficha da modificação: a regra, os botões e, para o jogador, sem o "Instalado em";
   - na wiki: a página da regra ("A instalação" e "só o mestre tira") e a bancada do Arsenal ("só o mestre tira");
+  - com o C74 (o ciclo 210, da sessão Codex, publicado antes deste): a bancada do Foundry deixava o personagem Tech
+    instalar direto, sem o teste; pela decisão do usuário (o Tech faz o teste; direto, só o mestre, com o Tech NPC), o
+    botão de instalar da bancada agora pede ao mestre (o jogador) ou abre a janela do mestre. O filtro do C74 (só o Tech
+    ou o mestre, com o aviso dele) fica, antes do do C72; o passo do C74 no G4 confere o pedido (nada entra antes do
+    mestre) e a janela do mestre;
   - a versão `0.3.211`.
 - **Fica para depois:** a parte 2 (o presente do mestre, a vitrine do Night Market e o teto por campanha, na wiki). As
   dúvidas estão nas Dúvidas.

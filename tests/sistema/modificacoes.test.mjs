@@ -247,3 +247,10 @@ test('C68: o catálogo do 14 e a loja da wiki com as modificações (os defeitos
   assert.match(app, /\(window\.systemModificacoes \|\| \{\}\)\.pages/);
   assert.match(lerDaRaiz('arquivos-publicos.js'), /'\/system-modificacoes\.js'/);
 });
+
+test('instalar uma modificação exige Role Tech ou mestre', () => {
+  assert.equal(M.podeInstalarModificacao({ roles: ['Solo'] }), false);
+  assert.equal(M.podeInstalarModificacao({ roles: ['TECH'] }), true);
+  assert.equal(M.podeInstalarModificacao({ roles: ['Solo', 'Técnico'] }), true);
+  assert.equal(M.podeInstalarModificacao({ mestre: true, roles: [] }), true);
+});

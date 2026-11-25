@@ -14,7 +14,7 @@ import {
   classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild, BALAS_RAJADA
 } from './regras.mjs';
 import { dadosDoCartao } from './dados-do-cartao.mjs';
-import { efeitosDoAtaque, modCabe, slotsDeModificacao, validarMod } from './regras-modificacoes.mjs';
+import { efeitosDoAtaque, modCabe, podeInstalarModificacao, slotsDeModificacao, validarMod } from './regras-modificacoes.mjs';
 import { nomeDeExibicao, normalizar as normalizarIdentidade } from './regras-identidade.mjs';
 import { identidadeAoCriar } from './identidade.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
@@ -830,11 +830,18 @@ export class ItemCPR extends Item {
     if (mod && destino !== undefined && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
       const atual = this.actor.items.get(this.system.instaladoEm);
       if (atual?.type === 'arma') { ui.notifications.warn(`${this.name} é permanente em ${atual.name}: não sai nem passa para outra arma. Só o mestre tira, e ela se destrói.`); return false; }
+      // O defeito vem do mestre (o C72).
+      if (destino && !game.user.isGM && mod.tipo === 'defeito') { ui.notifications.warn(`${this.name} é um defeito: quem o põe na arma é o mestre.`); return false; }
+      if (destino && !podeInstalarModificacao({ mestre: game.user.isGM, roles: [this.actor.system.role?.nome, this.actor.system.roleSecundaria?.nome] })) {
+        ui.notifications.warn(this.name + ': só um Tech ou o mestre pode instalar uma modificação de arma.');
+        return false;
+      }
       const arma = destino ? this.actor.items.get(destino) : null;
       if (destino && arma?.type !== 'arma') { ui.notifications.warn(`${this.name} é uma modificação de arma: só entra numa arma.`); return false; }
-      // Quem instala é o Tech (o C72): o teste dele pelo mestre, ou o mestre direto (o Tech NPC). O defeito vem do mestre.
+      // Quem instala é o Tech, com o teste dele (o C72): o jogador do Tech pede ao mestre, que chama o teste, ou o mestre
+      // instala direto (o Tech NPC).
       if (destino && !game.user.isGM) {
-        ui.notifications.warn(mod.tipo === 'defeito' ? `${this.name} é um defeito: quem o põe na arma é o mestre.` : `Quem instala ${this.name} é o Tech: na ficha da modificação, "Pedir a instalação" chama o mestre (o teste do Tech).`);
+        ui.notifications.warn(`Quem instala ${this.name} é o Tech, com o teste: na ficha da modificação ou na bancada da arma, o pedido chama o mestre.`);
         return false;
       }
       const { cabe, motivo } = arma ? modCabe(arma.paraModificacoes, arma.modificacoes.filter(item => item.id !== this.id).map(item => item.modificacao), mod) : { cabe: true };
