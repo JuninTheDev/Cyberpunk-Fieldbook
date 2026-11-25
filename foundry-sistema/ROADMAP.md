@@ -600,7 +600,7 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
 - [x] **C72. A economia:** feito nos ciclos 211 e 212 (sessão KouArt, 2026-11-25). O Tech que instala (o teste pelo C65),
   o presente do mestre, o Night Market e o teto por campanha: a parte 1 (o Tech que instala) no ciclo 211, e a parte 2 (na
   wiki: o presente do mestre, a vitrine do Night Market e o teto por campanha) no ciclo 212.
-- [ ] **C73. O risco:** a arma quebrada, a relíquia e reforjar.
+- [~] **C73. O risco:** em andamento (sessão KouArt, 2026-11-25). A arma quebrada, a relíquia e reforjar.
 - [x] **C74. A bancada da arma no Foundry:** feita no ciclo 210 (sessão Codex, 2026-11-25); pedido do usuário (2026-11-24): "uma tela onde vc pode ver a arma e as
   modificações e itens equipadas nela... através de uma tela de modificação da arma". A aba Bancada da ficha da arma, com
   os dados da bancada da wiki (o C70): o acessório entra arrastando do inventário; a modificação, só pelo Tech ou pelo
