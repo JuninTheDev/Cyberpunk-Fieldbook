@@ -11710,7 +11710,10 @@ module.exports = async ({ edge, servidores, r }) => {
           const a = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
             ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
           await a.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
-          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1400, y: 900 })).toObject()]);
+          // A visão de 30 m: a cena não tem luz, e o jogador só vê o marcador do ponto com o Tile na visão (desde 2026-11-26).
+          const dadosDoToken = (await a.getTokenDocument({ x: 1400, y: 900 })).toObject();
+          dadosDoToken.sight = { ...dadosDoToken.sight, enabled: true, range: 30 };
+          const [token] = await canvas.scene.createEmbeddedDocuments('Token', [dadosDoToken]);
           await esperar(() => canvas.tokens.get(token.id));
           return {
             botao: Boolean(botao), grupos, semAviso, imagem: tile.texture.src ?? null, tirar, tile: tile.id, token: token.id, marcadores: api.pontosDesenhados().map(p => p.nome),
@@ -11722,9 +11725,11 @@ module.exports = async ({ edge, servidores, r }) => {
         const longe = await jogador.evaluate(`(async () => {
           window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
           const api = game.system.api.netrun;
-          await window.__esperar(() => canvas.tokens.get('${m.token}') && api.pontosDesenhados().length);
-          const marcadores = api.pontosDesenhados().map(p => p.nome);
+          // O netrunner selecionado antes: a visão é a do token controlado (o de outro passo, no escuro, não vê o Tile).
+          await window.__esperar(() => canvas.tokens.get('${m.token}'));
           canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+          await window.__esperar(() => api.pontosDesenhados().length);
+          const marcadores = api.pontosDesenhados().map(p => p.nome);
           const tile = canvas.scene.tiles.get('${m.tile}');
           const avisos = [];
           ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
@@ -11911,7 +11916,10 @@ module.exports = async ({ edge, servidores, r }) => {
         const a = await Actor.implementation.create({ name: '${nome}', type: 'personagem', system: { role: { nome: 'Netrunner', rank: 4 } }, items: [foundry.utils.deepClone(cat['core_gear:cyberdeck'])],
           ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
         await a.items.find(i => i.type === 'cyberdeck').update({ 'system.uso': 'equipado' });
-        const [token] = await canvas.scene.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x: 1600, y: 900 })).toObject()]);
+        // A visão de 30 m: a cena não tem luz, e o jogador só vê o marcador do ponto com o Tile na visão (desde 2026-11-26).
+        const dadosDoToken = (await a.getTokenDocument({ x: 1600, y: 900 })).toObject();
+        dadosDoToken.sight = { ...dadosDoToken.sight, enabled: true, range: 30 };
+        const [token] = await canvas.scene.createEmbeddedDocuments('Token', [dadosDoToken]);
         await window.__esperar(() => canvas.tokens.get(token.id) && canvas.tiles.get(tile.id));
         return { tile: tile.id, token: token.id };
       })()`);
@@ -12514,6 +12522,97 @@ module.exports = async ({ edge, servidores, r }) => {
         return [ok, JSON.stringify(info)];
       } finally {
         await desmontarNet({ nome: NOME, arquitetura: ARQ });
+      }
+    });
+
+    await r.passo('o marcador do ponto de acesso só na visão do jogador (o pedido do usuário, 2026-11-26; como as portas do Foundry): com a visão dos tokens e uma parede que barra a visão entre o token e o Tile, o jogador não vê o marcador e o clique no lugar dele não faz nada; o mestre vê; sem a parede, o jogador vê e o clique abre o ponto (o aviso de sem arquitetura); a cena sem a visão dos tokens mostra para todos, mesmo com a parede', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const NOME = 'Teste Netrunner na Sombra';
+      const SEM_ARQUITETURA = 'Este ponto de acesso ainda não tem arquitetura.';
+      let m = null;
+      try {
+        // 1. O mestre, numa cena própria (ativa, para o jogador ir junto) com a visão dos tokens: o Tile do ponto (sem
+        // arquitetura), a parede no meio e o token do jogador, com a visão de 30 m, do outro lado dela.
+        m = await edge.evaluate(`(async () => {
+          const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id };
+          const cena = await Scene.implementation.create({ name: 'Visão do ponto (teste)', active: false, width: 2400, height: 1200, tokenVision: true, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate();
+          await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const ponto = { ativo: true, nome: 'Terminal na sombra', arquitetura: null, dv: null, alcance: 6, exigeDeck: false, rankMinimo: 0, oculto: false, dvScanner: 10, reiniciar: true, ligacoes: [], revelados: [] };
+          const [tile] = await cena.createEmbeddedDocuments('Tile', [{ x: 1800, y: 300, width: 200, height: 200, flags: { '${S}': { pontoDeAcesso: ponto } } }]);
+          const [parede] = await cena.createEmbeddedDocuments('Wall', [{ c: [1700, 0, 1700, 1200], move: 20, sight: 20, light: 20, sound: 20 }]);
+          const jogador = game.users.getName('Jogador');
+          const a = await Actor.implementation.create({ name: '${NOME}', type: 'personagem', ownership: { default: 0, [jogador.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          const dados = (await a.getTokenDocument({ x: 1500, y: 350 })).toObject();
+          dados.sight = { ...dados.sight, enabled: true, range: 30 };
+          const [token] = await cena.createEmbeddedDocuments('Token', [dados]);
+          await window.__esperar(() => canvas.tokens.get(token.id) && canvas.tiles.get(tile.id));
+          return { antes, cena: cena.id, tile: tile.id, parede: parede.id, token: token.id };
+        })()`);
+        // O jogador: controla o token (a fonte de visão), lê os marcadores e clica no lugar do marcador.
+        const ver = esconde => jogador.evaluate(`(async () => {
+          window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await window.__esperar(() => canvas.ready && canvas.scene?.id === '${m.cena}' && canvas.tokens.get('${m.token}') && canvas.tiles.get('${m.tile}'));
+          canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+          await window.__esperar(() => canvas.effects.visionSources.some(s => s.active));
+          const vistos = () => game.system.api.netrun.pontosDesenhados().some(p => p.tile === '${m.tile}');
+          // Espera o estado pedido (a visão recalcula depois da mudança no mestre); o "esconde" espera ele parar de aparecer.
+          await window.__esperar(() => vistos() === ${!esconde}, ${esconde ? 30 : 100});
+          const tile = canvas.scene.tiles.get('${m.tile}');
+          const p = canvas.stage.worldTransform.apply(new PIXI.Point(tile.x + tile.width / 2, tile.y + tile.height / 2));
+          const caixa = canvas.app.view.getBoundingClientRect();
+          const toque = { button: 0, clientX: caixa.left + p.x, clientY: caixa.top + p.y, bubbles: true };
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          try {
+            canvas.app.view.dispatchEvent(new PointerEvent('pointerdown', toque));
+            canvas.app.view.dispatchEvent(new PointerEvent('pointerup', toque));
+            await window.__esperar(() => avisos.length, 15);
+          } finally { delete ui.notifications.warn; }
+          canvas.tokens.releaseAll();
+          return { visao: canvas.visibility.tokenVision, marcador: vistos(), avisos };
+        })()`);
+        const comParede = await ver(true);
+        // O mestre vê, mesmo controlando o token atrás da parede (a visão dele passa a ser a do token).
+        const noMestre = await edge.evaluate(`(async () => {
+          const visto = () => game.system.api.netrun.pontosDesenhados().some(p => p.tile === '${m.tile}');
+          canvas.tokens.get('${m.token}').control({ releaseOthers: true });
+          await window.__esperar(() => canvas.effects.visionSources.some(s => s.active));
+          await window.__esperar(() => !visto(), 20);
+          const r = { fonte: canvas.effects.visionSources.some(s => s.active), visto: visto(), naVisao: canvas.visibility.testVisibility({ x: 1900, y: 400 }, { tolerance: 0 }) };
+          canvas.tokens.releaseAll();
+          return r;
+        })()`);
+        // 2. Sem a parede: o jogador vê, e o clique abre o ponto.
+        await edge.evaluate(`game.scenes.get('${m.cena}').deleteEmbeddedDocuments('Wall', ['${m.parede}']).then(() => true)`);
+        const semParede = await ver(false);
+        // 3. A parede de volta, com a visão dos tokens desligada: todos veem.
+        await edge.evaluate(`(async () => {
+          const cena = game.scenes.get('${m.cena}');
+          await cena.createEmbeddedDocuments('Wall', [{ c: [1700, 0, 1700, 1200], move: 20, sight: 20, light: 20, sound: 20 }]);
+          await cena.update({ tokenVision: false });
+          return true;
+        })()`);
+        const semVisao = await ver(false);
+        const info = { comParede, noMestre, semParede, semVisao };
+        const ok = comParede.visao && !comParede.marcador && !comParede.avisos.length && noMestre.fonte && noMestre.visto && !noMestre.naVisao
+          && semParede.visao && semParede.marcador && semParede.avisos.join() === SEM_ARQUITETURA
+          && !semVisao.visao && semVisao.marcador && semVisao.avisos.join() === SEM_ARQUITETURA;
+        return [ok, JSON.stringify(info)];
+      } finally {
+        await jogador.evaluate('(() => { canvas.tokens.releaseAll(); return true; })()').catch(() => null);
+        // A cena anterior de volta (a ativa e a vista), para o mestre e o jogador, e a do teste sai com o ator.
+        if (m) {
+          await edge.evaluate(`(async () => {
+            const esperar = window.__esperar, antes = ${JSON.stringify(m.antes)};
+            if (game.scenes.has(antes.ativa)) { await game.scenes.get(antes.ativa).activate(); await esperar(() => !canvas.loading); }
+            if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
+            await game.scenes.get('${m.cena}')?.delete();
+            for (const a of game.actors.filter(a => a.name === '${NOME}')) await a.delete();
+            return true;
+          })()`);
+          await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);
+        }
       }
     });
 

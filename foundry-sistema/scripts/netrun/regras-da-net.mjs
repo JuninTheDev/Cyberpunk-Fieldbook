@@ -83,6 +83,12 @@ export const paredeNoMeio = (paredes, de, para, tipo = 'move') =>
 export const paredeEntre = (tile, token) =>
   paredeNoMeio(tile.parent.walls, centroDoToken(token, tile.parent), { x: tile.x + tile.width / 2, y: tile.y + tile.height / 2 });
 
+// O marcador do ponto de acesso no mapa do jogador: só com o centro do Tile (onde o marcador fica) na visão dele, como as
+// portas do Foundry (a névoa, a escuridão e as paredes escondem). O mestre sempre vê; a cena sem a visão dos tokens
+// (tokenVision desligado) mostra para todos. testar(ponto, folga): o canvas.visibility.testVisibility do Foundry.
+export const pontoNaVisao = (tile, { gm = false, visaoDosTokens = true, testar = null, folga = 0 } = {}) =>
+  gm || !visaoDosTokens || Boolean(testar?.({ x: tile.x + tile.width / 2, y: tile.y + tile.height / 2 }, folga));
+
 // O Scanner (a wiki: "1 Ação NET, Interface + 1d10: acha no mundo físico os pontos de acesso da área; quanto maior, mais
 // longe"; no RED era Ação Carnal, e o Kit, p. 26–27, o fez Ação NET; o NET Architect da mesa): os pontos até o resultado
 // × 10 (nas unidades da cena); o oculto, só com o

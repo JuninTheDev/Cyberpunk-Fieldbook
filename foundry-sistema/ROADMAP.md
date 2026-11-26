@@ -610,6 +610,11 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
   (2026-11-26): no inventário do personagem "não é possível arrastar" o upgrade até a bancada; "um botão que mostre todos os
   upgrades que o personagem tem no inventário e podem ser colocados naquela arma". O arrasto da lista de upgrades, o
   "Escolher do inventário" da bancada, o "Instalar em…" do inventário e o atalho para a bancada na lista de armas.
+- [x] **C76. O marcador do ponto de acesso só na visão do jogador:** feito no ciclo 214 (sessão KouArt, 2026-11-26).
+  Pedido do usuário (2026-11-26): o marcador da NET aparecia "mesmo que o jogador não tenha visão do tile"; "só possa ver
+  se ele tiver na visão". O marcador fica na camada de interface, por cima da névoa: agora some fora da visão do token,
+  como as portas do Foundry, e o clique no lugar dele não pega. O mestre sempre vê; a cena sem a visão dos tokens mostra
+  para todos.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);

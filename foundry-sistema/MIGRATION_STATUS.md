@@ -10277,6 +10277,40 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 sem erros; G2 sem erros; G3 810/810; G4 339/339 (721 s); os cenários da wiki arsenal 8/8, conta 20/20 e criador 65/65. Rodadas antes: a ordem das modificações na janela do reforjar (o teste esperava uma ordem fixa: agora não).
 - **Mutações:** doze no G3 (Q1 a Q12), doze no G4 (G1 a G12, no passo do C13 e no do C73), duas na wiki (W1 e W2, o cenário arsenal) e uma na página (T1); todas morreram, md5 igual.
 
+### Ciclo 214 (2026-11-26): C76, o marcador do ponto de acesso só na visão do jogador (sessão KouArt)
+
+- **Pedido do usuário (2026-11-26):** o marcador da NET aparecia "mesmo que o jogador não tenha visão do tile"; "arrume
+  para q o jogador só possa ver se ele tiver na visão".
+- **A causa:** o marcador "NET" é desenhado na camada de interface do canvas, que fica por cima da névoa e da visão; só
+  o oculto e o Tile escondido o tiravam do jogador.
+- **A fonte:** o `DoorControl#isVisible` do Foundry 14 (o ícone da porta: sem a visão dos tokens, todos veem; com ela,
+  o `canvas.visibility.testVisibility` nos pontos da porta) e o `sightRefresh`, que o Foundry chama a cada atualização
+  da visão.
+- **Entrega:**
+  - `regras-da-net.mjs`: o `pontoNaVisao` (puro): o mestre sempre vê; a cena sem a visão dos tokens mostra para todos;
+    senão, o centro do Tile (onde fica o marcador) na visão, com a folga de metade do marcador;
+  - `ponto-de-acesso.mjs`: o `atualizarVisaoDosPontos` liga e desliga cada marcador pela visão (depois de desenhar e a
+    cada `sightRefresh`); o clique só pega o marcador visível, e o `pontosDesenhados` (os testes) dá só os visíveis;
+  - `index.mjs`: o gancho do `sightRefresh`;
+  - a versão `0.3.214`.
+- **Fica para depois:** nada. O "Conectar" da ficha segue sem olhar a visão: ele já confere o alcance e a parede no meio.
+- **Testes de referência:**
+  - **G3:** o `ponto-na-visao.test.mjs` (novo, 2 testes): o centro do Tile e a folga que vão ao teste do Foundry, a
+    resposta como booleano, e o mestre e a cena sem a visão dos tokens, que não perguntam.
+  - **G4:** um passo novo, numa cena só dele com a visão dos tokens: com a parede no meio, o jogador não vê o marcador e o
+    clique no lugar dele não faz nada; o mestre, controlando o token atrás da parede (o Tile fora da visão dele), vê; sem
+    a parede, o jogador vê e o clique abre o ponto (o aviso de sem arquitetura); a parede de volta, com a cena sem a
+    visão dos tokens, todos veem. Nos passos do ponto de acesso e do Scanner, o token do netrunner ganhou a visão de 30 m
+    (a cena não tem luz), e no do ponto de acesso o jogador o seleciona antes de ler os marcadores (a lição no
+    QUALITY_GATES).
+- **Portões:** G1 sem erros; G2 sem erros; G3 812/812; G4 340/340 (745 s). Rodadas antes: 338/340, os passos do ponto de
+  acesso e do Scanner, com o jogador no escuro (a visão do token com o alcance 0); depois, 339/340, o do ponto de acesso,
+  com o token de outro passo ainda controlado.
+- **Mutações:** seis no G3 (Q1 a Q6: sem o mestre, sem a cena sem visão, o canto do Tile no lugar do centro, sem a
+  folga, sem o booleano e a visão dos tokens desligada por padrão) e cinco no G4 (G1, o marcador sempre visível; G2, sem
+  o gancho do `sightRefresh`; G3, o clique que ignora a visão; G4, sem o mestre; G5, sem a cena sem visão); todas
+  morreram, md5 igual.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -39,6 +39,11 @@ deixam passar nenhum 403 nem 409 (o padrão da suíte da wiki deixa os dois). Os
 navegador contam (o `edge.avisos`), e não só os da página de agora. A versão do `system.json` é `0.3.<ciclo>`: suba
 junto com o registro do ciclo (o G3 confere).
 
+**A lição do ciclo 214:** o que o jogador vê no mapa depende da visão do token que ele controla. Os tokens dos passos
+nascem com a visão ligada e o alcance 0, e as cenas do G4 não têm luz: o jogador está no escuro. Um passo que confere o
+que o jogador vê (o marcador da NET, desde o ciclo 214) dá alcance à visão do token dele e o seleciona antes de ler,
+porque o token de um passo anterior, ainda controlado, é o que conta.
+
 **A lição do ciclo 201:** a mutação que sobrevive pode mostrar o que nenhum passo cobre. A das munições do token solto
 (o C61) sobreviveu ao G4 inteiro: nada conferia o EMP no item de um capanga fora da cena vista, e o passo novo entrou.
 

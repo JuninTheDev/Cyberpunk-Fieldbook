@@ -8,7 +8,7 @@ import { FLAG_INIMIGO, STATUS_EM_CHAMAS } from './constantes.mjs';
 import { alvosNaVez, conexaoDoToken, estadoDoTile, operacoes, pontoDoTile, removerCorredorApagado, soltarTokens } from './estado.mjs';
 import { andaresConhecidos, JanelaDaNet } from './janela.mjs';
 import { alcanceDo, distancia, netrunnerDo } from './regras-da-net.mjs';
-import { abrirPonto, apagarPontos, arquiteturasDisponiveis, botaoNoHud, botaoScannerNoHud, configurar, conectar, conectarPelaFicha, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
+import { abrirPonto, apagarPontos, arquiteturasDisponiveis, atualizarVisaoDosPontos, botaoNoHud, botaoScannerNoHud, configurar, conectar, conectarPelaFicha, desenharPontos, escutarCliques, pontosDesenhados } from './ponto-de-acesso.mjs';
 import { iniciarSocketDaNet, pedir } from './socket.mjs';
 import { desenharAnel, pararPulso, registrarStatusDaNet } from './token.mjs';
 
@@ -73,6 +73,8 @@ export function registrarNet() {
   });
 
   Hooks.on('canvasReady', aoAbrirCena);
+  // O marcador do ponto de acesso segue a visão do jogador (o token andou, a porta abriu, a luz mudou).
+  Hooks.on('sightRefresh', atualizarVisaoDosPontos);
   Hooks.on('canvasTearDown', () => {
     apagarPontos();
     pararPulso();
