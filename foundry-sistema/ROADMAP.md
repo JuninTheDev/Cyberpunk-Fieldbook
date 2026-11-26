@@ -660,7 +660,13 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   mestre manda à parte; a fila (até 3 esperando, as mais velhas viram só o texto); a falha vira um contador. O texto em
   cima do token saiu do socket do combate. "Efeitos na mesa" ganhou o Reduzido e virou o teto da mesa; "Efeitos neste
   navegador" (novo) é de cada um. Por enquanto só o texto toca: o desenho e o som são o C80 e o C81.
-- [~] **C80. O palco PIXI: o tiro e o impacto:** em andamento (sessão KouArt, 2026-11-26).
+- [x] **C80. O palco PIXI: o tiro e o impacto:** feito no ciclo 219 (sessão KouArt, 2026-11-26). O
+  `tocador-pixi.mjs` desenha o roteiro em cada navegador, sem módulo: o clarão do cano e o chão que acende, o traçante
+  com a largura e a cauda de cada classe (o rastro no fuzil de precisão), a faísca, o sangue estilizado, a poeira, o
+  glitch e o eco da esquiva no token, o retículo com "CRÍTICO", "SP −N" e "FLATLINE", e a marca da bala, que some em 4
+  s; o tiro que erra para na primeira parede. No `canvas.primary`, sob a névoa; um conjunto de contêineres por roteiro,
+  destruído no fim e na troca de cena. O "Rever o efeito" no cartão. Sem a luz de verdade do clarão (a decisão 12 fica
+  para o usuário).
 - [ ] **C81 a C97:** os itens do plano (o motor de
   som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do

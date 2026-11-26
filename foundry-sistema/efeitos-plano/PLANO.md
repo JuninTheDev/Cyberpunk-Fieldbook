@@ -351,7 +351,7 @@ na versão `0.3.<ciclo>`.
   - o tocador só com o passo `texto`: a paridade com hoje, nada novo aparece ainda.
   - Testa: o G4 sem duplicar entre os clientes, quem vê o cartão, desligado, o arquivo que some, o escondido, a outra
     cena.
-- [ ] **C80. O palco PIXI: o tiro e o impacto:** **G**; depende do C79; risco médio (o peso no PC fraco e no celular; o
+- [x] **C80. O palco PIXI: o tiro e o impacto:** feito no ciclo 219; **G**; depende do C79; risco médio (o peso no PC fraco e no celular; o
   Edge sem janela do G4 desenha o PIXI de verdade).
   - as peças P1 a P5, P9, P11, P14 a P16; o tiro único de cada classe; o erro com a parede; a esquiva com o eco; os
     impactos da seção 5.3; o "Rever o efeito" no cartão.

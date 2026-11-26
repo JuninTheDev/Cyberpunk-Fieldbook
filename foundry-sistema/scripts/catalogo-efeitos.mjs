@@ -35,7 +35,7 @@ export const CATALOGO = Object.freeze(Object.fromEntries([
   'projetil.flecha', 'projetil.granada', 'projetil.foguete', 'projetil.lamina', 'projetil.molotov', 'projetil.chama',
   // O que acontece no alvo.
   'impacto.carne', 'impacto.contundente', 'impacto.estrutura', 'impacto.critico', 'sangue.estilizado',
-  'faisca.armadura', 'faisca.escudo', 'faisca.chao', 'faisca.emp',
+  'faisca.armadura', 'faisca.escudo', 'faisca.chao', 'faisca.emp', 'marca.bala',
   // Os explosivos e o que fica.
   'explosao.frag', 'explosao.fogo', 'explosao.leve', 'explosao.emp', 'onda.choque', 'onda.emp',
   'nuvem.fumaca', 'nuvem.gas', 'nuvem.toxina', 'nuvem.sono', 'tela.flash', 'chamas.token', 'anel.teia', 'anel.agarrao',

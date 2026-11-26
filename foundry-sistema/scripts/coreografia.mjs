@@ -6,12 +6,13 @@
 // - o socket, só do mestre ativo (o caminho 2): o disparo antes da defesa (o C82) e o que o mestre manda à parte, com
 //   "recipients" para quem pode ver.
 // A regra pura (regras-coreografia.mjs) monta o roteiro; aqui ficam a cena, a visão, o nível deste navegador, a fila e
-// os tocadores. Por enquanto só o texto em cima do token toca (o mesmo de antes: efeitos.mjs); o desenho e o som entram
-// no C80 e no C81. O efeito nunca segura o jogo: nada espera por ele, e a falha vira um contador, sem erro no console
+// os tocadores: o texto em cima do token (efeitos.mjs) e, desde o C80, o desenho (o palco PIXI, tocador-pixi.mjs); o som
+// entra no C81. O efeito nunca segura o jogo: nada espera por ele, e a falha vira um contador, sem erro no console
 // (só o erro de programação vai ao console, para o G4 pegar).
 import { SISTEMA } from './config.mjs';
 import { textoFlutuante } from './efeitos.mjs';
 import * as C from './regras-coreografia.mjs';
+import { PALCO, desenhar, registrarPalco } from './tocador-pixi.mjs';
 import { destinatariosDoTexto, textoNaVisao } from './regras.mjs';
 
 const CANAL = `system.${SISTEMA}`;
@@ -51,7 +52,16 @@ function falhou(erro) {
   if (erro instanceof TypeError || erro instanceof ReferenceError) console.error(`${SISTEMA} | efeito`, erro);
 }
 
-// Os tocadores de cada passo. Os que ainda não existem (o desenho, o som) não fazem nada.
+// O tiro que errou segue até a parede (regras-coreografia.pararNaParede): a primeira parede que segura o movimento, no
+// caminho do traçante prolongado. Todos os navegadores têm as mesmas paredes: o mesmo ponto em todos.
+const ALCANCE_DO_ERRO = 10;
+function primeiraParede(de, ate) {
+  const batida = CONFIG.Canvas.polygonBackends.sight.testCollision(de, ate, { type: 'move', mode: 'closest' });
+  return batida ? { x: batida.x, y: batida.y } : null;
+}
+
+// Os tocadores de cada passo: o texto aqui; o desenho vai inteiro para o palco (executar). O som (o C81) ainda não faz
+// nada.
 const TOCADORES = {
   texto: (evento, passo) => textoFlutuante({ cena: evento.cena, token: passo.token, texto: passo.texto, estilo: passo.estilo })
 };
@@ -63,11 +73,15 @@ function tocarPasso(evento, passo) {
   } catch (erro) { falhou(erro); }
 }
 
-// Toca os passos de um evento, cada um no tempo dele. Devolve quando o próximo pode começar (ms).
-function executar({ evento, passos, nivel }, degradado = false) {
+// Toca os passos de um evento, cada um no tempo dele: o desenho vai inteiro para o palco, e o texto sobe no tempo dele.
+// Devolve quando o próximo pode começar (ms).
+function executar({ evento, passos, nivel, calmo }, degradado = false) {
   const lista = degradado ? C.soTexto(passos) : passos;
-  estado.registro?.push({ id: evento.id, fase: evento.fase, nivel, soTexto: degradado, em: Date.now(), passos: lista.map(p => ({ passo: p.passo, token: p.token ?? null })) });
-  for (const passo of lista) {
+  estado.registro?.push({ id: evento.id, fase: evento.fase, nivel, soTexto: degradado, em: Date.now(), passos: lista.map(p => ({ passo: p.passo, token: p.token ?? null, ...(p.parede ? { parede: true } : {}) })) });
+  if (!degradado) {
+    try { desenhar(evento, lista, { nivel, calmo }); } catch (erro) { falhou(erro); }
+  }
+  for (const passo of lista.filter(p => TOCADORES[p.passo])) {
     if (passo.t > 0) setTimeout(() => tocarPasso(evento, passo), passo.t);
     else tocarPasso(evento, passo);
   }
@@ -85,20 +99,22 @@ function proximo() {
 }
 
 // Toca um evento neste navegador: confere o evento, a cena vista, o nível e a visão, e põe na fila. Devolve se entrou.
-export function tocar(evento) {
+// rever: o "Rever o efeito" do cartão, que toca de novo o que já tocou (só neste navegador).
+export function tocar(evento, { rever = false } = {}) {
   try {
     if (C.validarEvento(evento)) { estado.recusados++; return false; }
     if (!canvas?.ready || canvas.scene?.id !== evento.cena) return false;
     const marca = `${evento.id}:${evento.fase}`;
-    if (estado.tocados.includes(marca)) return false;
-    estado.tocados.push(marca);
+    if (!rever && estado.tocados.includes(marca)) return false;
+    if (!estado.tocados.includes(marca)) estado.tocados.push(marca);
     if (estado.tocados.length > LEMBRAR) estado.tocados.shift();
     const nivel = nivelDesteNavegador();
     const { fotossensivel } = aparelho();
-    const roteiro = C.roteiro(evento, { nivel, fotossensivel, casa: canvas.grid?.size ?? 100, agora: game.time.worldTime });
+    const casa = canvas.grid?.size ?? 100;
+    const roteiro = C.pararNaParede(C.roteiro(evento, { nivel, fotossensivel, casa, agora: game.time.worldTime }), primeiraParede, { alcance: ALCANCE_DO_ERRO * casa });
     const passos = C.passosVisiveis(roteiro, { visivel: visivelAqui, origem: evento.origem?.token ?? null });
     if (!passos.length) return false;
-    const { fila, sairam } = C.entrarNaFila(estado.fila, { evento, passos, nivel });
+    const { fila, sairam } = C.entrarNaFila(estado.fila, { evento, passos, nivel, calmo: nivel !== 'completo' || fotossensivel });
     estado.fila = fila;
     estado.maiorEspera = Math.max(estado.maiorEspera, fila.length);
     for (const item of sairam) executar(item, true);
@@ -121,7 +137,15 @@ export function emitir(evento, para = null) {
   return true;
 }
 
+// O "Rever o efeito" do cartão: toca de novo, só neste navegador, o efeito de um cartão que ele vê.
+export function rever(mensagem) {
+  const evento = mensagem?.getFlag(SISTEMA, 'efeito');
+  if (!evento || !mensagem.author?.isGM || !mensagem.isContentVisible) return false;
+  return tocar(evento, { rever: true });
+}
+
 export function registrarCoreografia() {
+  registrarPalco();
   // O caminho 1: o cartão do resultado, só o de um mestre, só para quem vê o cartão. O isContentVisible, e não o visible: o
   // cartão sussurrado que tem rolagem (o dano) é visible para todos, que veem a rolagem escondida, mas não o conteúdo.
   Hooks.on('createChatMessage', mensagem => {
@@ -138,7 +162,7 @@ export function registrarCoreografia() {
 // A API (game.system.api.efeitos), para as macros e o G4: tocar e emitir, o nível deste navegador, as falhas, e o
 // registro de cada evento tocado (só com o gravar ligado).
 export const API = {
-  tocar, emitir, nivelDesteNavegador,
+  tocar, emitir, rever, nivelDesteNavegador, palco: PALCO,
   gravar(ligado = true) { estado.registro = ligado ? [] : null; estado.maiorEspera = 0; return true; },
   get registro() { return estado.registro; },
   get falhas() { return estado.falhas; },

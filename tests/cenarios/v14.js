@@ -12990,6 +12990,194 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('o palco PIXI dos efeitos (o C80): o tiro desenha o clarão, o traçante, o impacto e o sangue nos dois navegadores, no canvas.primary, e os contêineres somem no fim; o crítico, o glitch e o HUD; o erro para na parede, com a faísca e a marca da bala; o Reduzido sem partícula nenhuma; o "Rever o efeito" toca de novo só em quem clica, e só quem vê o cartão tem o botão; dez rajadas seguidas no orçamento e sem sobrar nada; a troca de cena limpa o palco', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const ATQ = 'Teste C80 Atiradora';
+      const ALVO = 'Teste C80 Alvo';
+      let m = null;
+      // Antes de cada tiro: o que sobrou dos passos de antes acaba (o diretor livre e o palco vazio), e a amostra conta o
+      // maior número dos nossos contêineres na cena enquanto o efeito toca.
+      const preparar = `(async () => {
+        window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const api = game.system.api.efeitos;
+        await window.__esperar(() => !api.ocupado && !api.palco.vivos, 150);
+        api.gravar(true);
+        api.palco.zerar();
+        window.__falhasC80 ??= [api.falhas, api.palco.falhas];
+        window.__maiorC80 = 0;
+        clearInterval(window.__amostraC80);
+        window.__amostraC80 = setInterval(() => { window.__maiorC80 = Math.max(window.__maiorC80, api.palco.conteineres); }, 20);
+        return true;
+      })()`;
+      // O que o palco deste navegador desenhou, depois de esvaziar: o registro do diretor, as peças, o pico de partículas, os
+      // contêineres durante (o maior visto) e depois.
+      const ler = navegador => navegador.evaluate(`(async () => {
+        const api = game.system.api.efeitos;
+        await window.__esperar(() => !api.ocupado && !api.palco.vivos, 150);
+        const p = api.palco;
+        const lido = { registro: api.registro.splice(0).map(e => ({ id: e.id, nivel: e.nivel, passos: e.passos.map(x => x.passo + (x.parede ? '@parede' : '')).join() })),
+          pecas: p.pecas, maiorParticulas: p.maiorParticulas, particulas: p.particulas, vivos: p.vivos, conteineres: p.conteineres, durante: window.__maiorC80 };
+        p.zerar();
+        window.__maiorC80 = 0;
+        return lido;
+      })()`);
+      const naCena = () => jogador.evaluate(`(async () => {
+        window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        return window.__esperar(() => canvas.ready && canvas.scene?.id === '${m.cena}' && canvas.tokens.get('${m.tAtq}') && canvas.tokens.get('${m.tAlvo}'));
+      })()`);
+      const configurar = (navegador, chave, valor) => navegador.evaluate(`game.settings.set('${S}', '${chave}', ${JSON.stringify(valor)}).then(() => true)`);
+      // Um tiro da Atiradora no Alvo, com os dados dados (o Alvo não esquiva: REF 0).
+      const tiro = async dados => {
+        await edge.evaluate(preparar);
+        await jogador.evaluate(preparar);
+        await fixar(edge, dados);
+        const feito = await edge.evaluate(`(async () => {
+          const ataque = await game.actors.get('${m.atq}').items.getName('C80 Pistola').atacar({ alvo: game.scenes.get('${m.cena}').tokens.get('${m.tAlvo}') });
+          const cartao = game.messages.contents.findLast(x => x.getFlag('${S}', 'ataque')?.id === ataque?.id);
+          window.__fila = [];
+          return { id: ataque?.id ?? null, resultado: ataque?.linhas[0]?.resultado ?? null, mensagem: cartao?.id ?? null, efeito: Boolean(cartao?.getFlag('${S}', 'efeito')) };
+        })()`);
+        return { ...feito, mestre: await ler(edge), jogador: await ler(jogador) };
+      };
+      // O botão "Rever o efeito" do cartão neste navegador (o chat desenhado).
+      const botao = (navegador, mensagem) => navegador.evaluate(`(async () => {
+        await window.__esperar(() => document.querySelector('[data-message-id="${mensagem}"]'), 30);
+        return Boolean(document.querySelector('[data-message-id="${mensagem}"] [data-cprf-rever]'));
+      })()`);
+      try {
+        // 1. O mestre: a cena do passo (sem a visão dos tokens: o jogador vê os dois), a Atiradora e o Alvo, e uma parede
+        // atrás do Alvo, no caminho do tiro que erra.
+        m = await edge.evaluate(`(async () => {
+          const S = '${S}', esperar = window.__esperar;
+          const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, mensagens: game.messages.map(x => x.id), modo: game.settings.get('core', 'messageMode'),
+            config: Object.fromEntries(['ativo', 'dano', 'defesaDosNpcs', 'exigeRef8', 'lesaoCritica', 'animacoes', 'resultado', 'rolarDireto', 'efeitosIntensidade'].map(k => [k, game.settings.get(S, k)])) };
+          await game.settings.set('core', 'messageMode', 'public');
+          for (const [k, v] of Object.entries({ ativo: true, dano: 'automatico', defesaDosNpcs: 'automatica', exigeRef8: true, lesaoCritica: 'ficha', animacoes: 'auto', resultado: 'publico', rolarDireto: true, efeitosIntensidade: 'completo' })) await game.settings.set(S, k, v);
+          const cena = await Scene.implementation.create({ name: 'C80 Palco', active: false, width: 1600, height: 1000, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate();
+          await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const atq = await Actor.implementation.create({ name: '${ATQ}', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, pericias: { handgun: { nivel: 8 } } },
+            items: [{ name: 'C80 Pistola', type: 'arma', system: { tipo: 'heavyPistol', pericia: 'handgun', dano: '3d6', equipada: true, tabelaDV: 'DV Pistol', municoes: ['heavyPistol'], pente: { value: 12, max: 12 } } },
+              { name: 'C80 Balas', type: 'municao', system: { tipo: 'heavyPistol', efeito: 'basic', quantidade: 40 } }] });
+          const alvo = await Actor.implementation.create({ name: '${ALVO}', type: 'personagem', system: { hp: { value: 110 }, atributos: { body: { valor: 20 }, will: { valor: 20 }, ref: { valor: 0 } } },
+            items: [{ name: 'C80 Proteção', type: 'armadura', system: { equipada: true, sp: { corpo: { value: 3, max: 3 }, cabeca: { value: 0, max: 0 } } } }] });
+          await atq.items.getName('C80 Pistola').update({ 'system.carregada': atq.items.getName('C80 Balas').id });
+          await cena.createEmbeddedDocuments('Token', [(await atq.getTokenDocument({ x: 300, y: 400, actorLink: true })).toObject(), (await alvo.getTokenDocument({ x: 500, y: 400, actorLink: true })).toObject()]);
+          await cena.createEmbeddedDocuments('Wall', [{ c: [800, 200, 800, 700] }]);
+          const tAtq = cena.tokens.find(t => t.actorId === atq.id), tAlvo = cena.tokens.find(t => t.actorId === alvo.id);
+          await esperar(() => canvas.tokens.get(tAtq.id) && canvas.tokens.get(tAlvo.id));
+          return { antes, cena: cena.id, atq: atq.id, alvo: alvo.id, tAtq: tAtq.id, tAlvo: tAlvo.id };
+        })()`);
+        await naCena();
+        await configurar(jogador, 'efeitosIntensidade', 'completo');
+
+        // 2. O tiro que acerta e passa do SP (d10 9 + 16 contra a DV 13; 3d6 de 4): os dois navegadores desenham o clarão,
+        // o traçante, o impacto e o sangue, nos nossos contêineres, que somem no fim.
+        const a = await tiro([[9, 10], [4, 6], [4, 6], [4, 6]]);
+        // 3. O crítico (dois 6 no dano): o glitch e o HUD no Alvo.
+        const b = await tiro([[9, 10], [6, 6], [6, 6], [4, 6]]);
+        // 4. O 1 natural (1 + 16 − 9 contra a DV 13): o tiro erra, passa do Alvo e para na parede, com a faísca e a marca.
+        const c = await tiro([[1, 10], [9, 10]]);
+        // 5. A mesa no Reduzido: sem o sangue e sem partícula nenhuma.
+        await configurar(edge, 'animacoes', 'reduzido');
+        const d = await tiro([[9, 10], [4, 6], [4, 6], [4, 6]]);
+        await configurar(edge, 'animacoes', 'auto');
+        // 6. O "Rever o efeito" do cartão do tiro 2: o jogador tem o botão e, clicando, toca de novo só nele.
+        await edge.evaluate(preparar);
+        await jogador.evaluate(preparar);
+        const botaoDoJogador = await botao(jogador, a.mensagem);
+        await jogador.evaluate(`(() => { document.querySelector('[data-message-id="${a.mensagem}"] [data-cprf-rever]')?.click(); return true; })()`);
+        const revisto = { mestre: await ler(edge), jogador: await ler(jogador) };
+        // 7. O cartão só do mestre: o mestre tem o botão; o jogador, nem o cartão.
+        await configurar(edge, 'resultado', 'mestre');
+        const e = await tiro([[9, 10], [4, 6], [4, 6], [4, 6]]);
+        await configurar(edge, 'resultado', 'publico');
+        const botoesDoSegredo = [await botao(edge, e.mensagem), await botao(jogador, e.mensagem)];
+        // 8. Dez rajadas seguidas no jogador: o palco no orçamento e, no fim, nada sobra na cena.
+        await jogador.evaluate(preparar);
+        const rajadas = await jogador.evaluate(`(async () => {
+          const api = game.system.api.efeitos;
+          const evento = i => ({ v: 1, id: 'PalcoC80' + i, tipo: 'ataque', fase: 'desfecho', cena: '${m.cena}', origem: { token: '${m.tAtq}', x: 350, y: 450 }, arma: { perfil: 'fuzil' }, modo: 'autofogo', balas: 10,
+            alvos: [{ token: '${m.tAlvo}', x: 550, y: 450, resultado: 'acertou', multiplicador: 3, dano: { perdeu: 5, passou: true } }], texto: [{ token: '${m.tAlvo}', texto: 'Rajada ' + i, estilo: 'acerto' }] });
+          const criados = api.palco.criados, destruidos = api.palco.destruidos;
+          for (let i = 0; i < 10; i++) api.tocar(evento(i));
+          await window.__esperar(() => api.registro.length >= 10 && !api.ocupado && !api.palco.vivos, 200);
+          return { tocados: api.registro.splice(0).length, criados: api.palco.criados - criados, destruidos: api.palco.destruidos - destruidos, maiorParticulas: api.palco.maiorParticulas,
+            vivos: api.palco.vivos, conteineres: api.palco.conteineres, durante: window.__maiorC80, tracantes: api.palco.pecas.tracante ?? 0 };
+        })()`);
+        // 9. A troca de cena no meio de um efeito: o palco se limpa (o canvasTearDown).
+        let troca = null;
+        if (m.antes.cena && m.antes.cena !== m.cena) {
+          await jogador.evaluate(preparar);
+          troca = await jogador.evaluate(`(async () => {
+            const api = game.system.api.efeitos;
+            api.tocar({ v: 1, id: 'TrocaC80', tipo: 'ataque', fase: 'desfecho', cena: '${m.cena}', origem: { token: '${m.tAtq}', x: 350, y: 450 }, arma: { perfil: 'fuzil-de-precisao' }, modo: 'tiro',
+              alvos: [{ token: '${m.tAlvo}', x: 550, y: 450, resultado: 'errou' }], texto: [] });
+            await window.__esperar(() => api.palco.vivos > 0, 30);
+            const tocando = api.palco.vivos;
+            await game.scenes.get('${m.antes.cena}').view();
+            await window.__esperar(() => canvas.ready && canvas.scene?.id === '${m.antes.cena}');
+            const depois = { tocando, vivos: api.palco.vivos, conteineres: api.palco.conteineres };
+            await game.scenes.get('${m.cena}').view();
+            return depois;
+          })()`);
+          await naCena();
+        }
+        const falhas = [await edge.evaluate('[game.system.api.efeitos.falhas - window.__falhasC80[0], game.system.api.efeitos.palco.falhas - window.__falhasC80[1]]'),
+          await jogador.evaluate('[game.system.api.efeitos.falhas - window.__falhasC80[0], game.system.api.efeitos.palco.falhas - window.__falhasC80[1]]')].flat();
+
+        const so = (lido, id) => lido.registro.filter(x => x.id === id);
+        const vazio = lido => lido.vivos === 0 && lido.conteineres === 0 && lido.particulas === 0;
+        const desenhou = (lido, pecas) => pecas.every(peca => (lido.pecas[peca] ?? 0) >= 1);
+        const info = {
+          a: { feito: [a.resultado, a.efeito], mestre: [so(a.mestre, a.id).map(x => x.passos), a.mestre.pecas, a.mestre.durante, a.mestre.maiorParticulas], jogador: [so(a.jogador, a.id).map(x => x.passos), a.jogador.pecas, a.jogador.durante] },
+          b: { feito: b.resultado, mestre: [so(b.mestre, b.id).map(x => x.passos), b.mestre.pecas], jogador: [so(b.jogador, b.id).map(x => x.passos), b.jogador.pecas] },
+          c: { feito: c.resultado, mestre: [so(c.mestre, c.id).map(x => x.passos), c.mestre.pecas], jogador: [so(c.jogador, c.id).map(x => x.passos), c.jogador.pecas] },
+          d: { mestre: [so(d.mestre, d.id).map(x => x.passos), d.mestre.pecas, d.mestre.maiorParticulas], jogador: [so(d.jogador, d.id).map(x => x.passos), d.jogador.pecas, d.jogador.maiorParticulas] },
+          rever: { botao: botaoDoJogador, mestre: revisto.mestre.registro.length, jogador: revisto.jogador.registro.map(x => x.id), pecas: revisto.jogador.pecas },
+          segredo: botoesDoSegredo, rajadas, troca, falhas,
+          sobrou: [a, b, c, d, e].flatMap(x => [x.mestre, x.jogador]).concat([revisto.mestre, revisto.jogador]).filter(lido => !vazio(lido)).map(lido => [lido.vivos, lido.conteineres, lido.particulas])
+        };
+        const conferir = {
+          aCartao: a.resultado === 'acertou' && a.efeito,
+          aMestre: so(a.mestre, a.id).length === 1 && desenhou(a.mestre, ['clarao', 'tracante', 'impacto', 'sangue']) && a.mestre.durante >= 1 && a.mestre.maiorParticulas > 0,
+          aJogador: so(a.jogador, a.id).length === 1 && desenhou(a.jogador, ['clarao', 'tracante', 'impacto', 'sangue']) && a.jogador.durante >= 1,
+          bCritico: b.resultado === 'acertou' && [b.mestre, b.jogador].every(lido => so(lido, b.id)[0]?.passos.includes('hud') && desenhou(lido, ['glitch', 'hud', 'impacto'])),
+          cParede: c.resultado === 'errou' && [c.mestre, c.jogador].every(lido => ['tracante@parede', 'faisca@parede', 'marca@parede'].every(x => so(lido, c.id)[0]?.passos.split(',').includes(x)) && desenhou(lido, ['tracante', 'faisca', 'marca']) && !lido.pecas.impacto),
+          dReduzido: [d.mestre, d.jogador].every(lido => so(lido, d.id)[0]?.passos === 'clarao,som,tracante,impacto,faisca,texto' && lido.maiorParticulas === 0 && !lido.pecas.sangue && desenhou(lido, ['clarao', 'tracante', 'impacto', 'faisca'])),
+          rever: botaoDoJogador && revisto.mestre.registro.length === 0 && revisto.jogador.registro.length === 1 && revisto.jogador.registro[0].id === a.id && desenhou(revisto.jogador, ['clarao', 'tracante', 'impacto']),
+          segredo: botoesDoSegredo.join() === 'true,false',
+          rajadas: rajadas.tocados === 10 && rajadas.criados >= 1 && rajadas.criados === rajadas.destruidos && rajadas.vivos === 0 && rajadas.conteineres === 0 && rajadas.maiorParticulas > 0 && rajadas.maiorParticulas <= 300 && rajadas.tracantes >= 6,
+          troca: !troca || (troca.tocando >= 1 && troca.vivos === 0 && troca.conteineres === 0),
+          sobrou: info.sobrou.length === 0,
+          falhas: falhas.join() === '0,0,0,0'
+        };
+        const caidas = Object.keys(conferir).filter(chave => !conferir[chave]);
+        const deQuem = chave => info[chave] ?? info[chave[0]];
+        return [!caidas.length, JSON.stringify({ caidas, ...Object.fromEntries(caidas.map(chave => [chave, deQuem(chave)])) })];
+      } finally {
+        for (const navegador of [edge, jogador]) {
+          await navegador.evaluate(`(() => { clearInterval(window.__amostraC80); game.system.api.efeitos.gravar(false); delete window.__falhasC80; return true; })()`).catch(() => null);
+        }
+        await edge.evaluate(`(() => { window.__fila = []; return true; })()`).catch(() => null);
+        await jogador.evaluate(`game.settings.set('${S}', 'efeitosIntensidade', 'auto').then(() => true)`).catch(() => null);
+        if (m) {
+          await edge.evaluate(`(async () => {
+            const S = '${S}', esperar = window.__esperar, antes = ${JSON.stringify(m.antes)};
+            for (const x of game.messages.filter(x => !antes.mensagens.includes(x.id))) await x.delete();
+            for (const [k, v] of Object.entries(antes.config)) await game.settings.set(S, k, v);
+            await game.settings.set('core', 'messageMode', antes.modo);
+            if (game.scenes.has(antes.ativa)) { await game.scenes.get(antes.ativa).activate(); await esperar(() => !canvas.loading); }
+            if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
+            await game.scenes.get('${m.cena}')?.delete();
+            for (const ator of game.actors.filter(a => ['${ATQ}', '${ALVO}'].includes(a.name))) await ator.delete();
+            return true;
+          })()`);
+          await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);
+        }
+      }
+    });
+
     await r.passo('Ações NET em combate e a desconexão insegura (wiki: "Conectar / Desconectar (1 Ação NET...)" e as Ações NET pelo Rank): em combate, a janela conta as que sobram (o texto e os losangos acesos); no andar mais fundo, o Virus que o mestre põe em 2 Ações NET e um Cloak gastam as 3 do Rank 4, e o Cloak seguinte é recusado, como o desconectar seguro; na rodada seguinte, no turno do netrunner, elas voltam; a desconexão insegura sai na hora, sem Ação NET', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Combate NET';

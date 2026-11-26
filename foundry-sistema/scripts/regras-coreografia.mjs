@@ -16,7 +16,11 @@ export const FASES = ['disparo', 'desfecho'];
 export const MODOS_DO_EFEITO = ['tiro', 'autofogo', 'supressivo', 'cartucho', 'explosivo', 'corpo', 'ricochete', 'doisCanos', 'arremesso'];
 export const RESULTADOS_DO_EFEITO = ['acertou', 'errou', 'esquivou', 'fora', 'semDv', 'suprimido', 'firme', 'semDestino', 'semRepeticao'];
 export const PASSOS = ['clarao', 'som', 'tracante', 'projetil', 'arco', 'impacto', 'sangue', 'faisca', 'esquiva', 'golpe', 'avanco', 'explosao',
-  'onda', 'tremor', 'nuvem', 'texto', 'anel', 'tomba', 'glitch', 'feixe', 'tela', 'chamas'];
+  'onda', 'tremor', 'nuvem', 'texto', 'anel', 'tomba', 'glitch', 'feixe', 'tela', 'chamas', 'hud', 'marca'];
+// O desfecho de um alvo atingido (o plano, seção 5.3: o primeiro que vale), que decide o desenho do impacto.
+export const DESFECHOS = ['morte', 'critico', 'veiculo', 'carne', 'escudo', 'estase', 'armadura', 'acerto'];
+// A marca no chão e na parede (o buraco da bala) some em 4 s (a decisão 11 do plano, a recomendação).
+export const MARCA_DURA = 4000;
 export const ESTILOS_DO_TEXTO = ['acerto', 'erro', 'defesa'];
 // Os limites da validação: o supressivo de 25 m numa cena cheia passa de 20 alvos; o texto de hoje tem menos de 30
 // caracteres ("−12 HP · crítico!").
@@ -75,6 +79,15 @@ export const PERFIS = Object.freeze({
   gorilla: golpe('soco', { tremor: true })
 });
 export const PERFIL_PADRAO = 'pistola';
+// O traço do traçante de cada classe (o anexo do fx-visual, seção 4.1): a largura da cabeça e o comprimento da cauda (px,
+// numa casa de 100 px), e o rastro de ar que fica no fuzil de precisão. O tempo do voo é o mesmo para todas: a diferença
+// se lê na largura e na cauda.
+export const TRACOS = Object.freeze({
+  'pistola-leve': { largura: 2, cauda: 40 }, pistola: { largura: 3, cauda: 60 }, 'pistola-pesada': { largura: 3, cauda: 70 },
+  submetralhadora: { largura: 2, cauda: 50 }, 'submetralhadora-pesada': { largura: 2, cauda: 50 }, fuzil: { largura: 3, cauda: 90 },
+  'fuzil-de-precisao': { largura: 4, cauda: 140, rastro: true }, espingarda: { largura: 4, cauda: 60 }
+});
+const TRACO_PADRAO = Object.freeze({ largura: 2, cauda: 50 });
 
 // O padrão pela classe da arma: todo tipo de arma do catálogo tem um (o G3 confere as 198 armas).
 export const PERFIL_DO_TIPO = Object.freeze({
@@ -147,7 +160,8 @@ function modificadores(perfil, { classe2077 = null, municao = null } = {}) {
 function perfilDoEvento(arma, doMestre) {
   const perfis = { ...perfisDoMestre(doMestre), ...PERFIS };
   const perfil = de(perfis, arma?.perfil) ?? PERFIS[PERFIL_PADRAO];
-  return { ...perfil, ...modificadores(perfil, { classe2077: arma?.classe2077, municao: arma?.municao }) };
+  const traco = de(TRACOS, perfil.base) ?? de(TRACOS, arma?.perfil) ?? TRACO_PADRAO;
+  return { ...perfil, traco, ...modificadores(perfil, { classe2077: arma?.classe2077, municao: arma?.municao }) };
 }
 
 // ---------------- O evento ----------------
@@ -276,20 +290,48 @@ function passarDo(de, alvo, lado, casa) {
 const novo = (t, passo, campos = {}) => ({ t: Math.max(0, Math.round(t)), duracao: 0, passo, de: null, para: null, token: null, chave: null, intensidade: 'normal', ...campos });
 const SEM_DISPARO = ['fora', 'semDv', 'semDestino', 'semRepeticao'];
 
-// O que voa no tiro: o traçante (da cor da munição) ou o projetil do perfil (a flecha, a chama).
-const caminhoDo = perfil => (!perfil.projetil || perfil.projetil === 'tracante' ?{ passo: 'tracante', chave: `tracante.${perfil.cor}` } : { passo: 'projetil', chave: `projetil.${perfil.projetil}` });
+// O que voa no tiro: o traçante (da cor da munição, com o traço da classe) ou o projetil do perfil (a flecha, a chama).
+const caminhoDo = perfil => (!perfil.projetil || perfil.projetil === 'tracante'
+  ? { passo: 'tracante', chave: `tracante.${perfil.cor}`, traco: { largura: perfil.traco?.largura ?? TRACO_PADRAO.largura, cauda: perfil.traco?.cauda ?? TRACO_PADRAO.cauda, ...(perfil.traco?.rastro ? { rastro: true } : {}) } }
+  : { passo: 'projetil', chave: `projetil.${perfil.projetil}`, traco: {} });
+
+// O desfecho de um alvo atingido, o primeiro que vale (o plano, seção 5.3): a morte, o crítico, o veículo, a carne (o dano
+// passou), o escudo, a estase, a armadura que segurou, e o acerto sem o dano ainda (o mestre aplica no cartão).
+export function desfechoDoAlvo(alvo) {
+  const dano = alvo?.dano;
+  if (!dano) return 'acerto';
+  if (alvo.estados?.mortal) return 'morte';
+  if (dano.critico) return 'critico';
+  if (dano.veicular) return 'veiculo';
+  if (dano.passou) return 'carne';
+  if (dano.escudo) return 'escudo';
+  if (dano.estase) return 'estase';
+  return 'armadura';
+}
+// O rótulo do HUD no alvo (o P11): "FLATLINE" na morte, "CRÍTICO" no crítico e o "SP −N" da armadura que segurou e
+// ablou (na carne, o "−N HP" do texto já conta o que passou).
+const ROTULO_DO_HUD = { morte: 'FLATLINE', critico: 'CRÍTICO' };
+const rotuloDoHud = (desfecho, dano) => ROTULO_DO_HUD[desfecho] ?? (desfecho === 'armadura' && dano?.ablado > 0 ? `SP −${dano.ablado}` : null);
 
 // O impacto num alvo atingido, no tempo t: o golpe na carne (ou na estrutura do veículo), o sangue se o dano passou da
 // armadura, a faísca se a armadura, o escudo ou a estase seguraram, o som do crítico e o fogo que fica (a incendiária).
-function impactos(passos, t, alvo, perfil, { ultimo = true, golpeDoCorpo = false } = {}) {
+// O desfecho vai no impacto (o desenho dele), e a direção do tiro (de: de onde veio; o centro, na explosão) vai junto
+// para o sangue sair do lado oposto e a faísca voltar. No último impacto de um alvo: o glitch no crítico e na morte e o
+// HUD com o rótulo, depois do texto.
+function impactos(passos, t, alvo, perfil, { ultimo = true, golpeDoCorpo = false, de = null } = {}) {
   const dano = alvo.dano;
   const contundente = golpeDoCorpo && !['corte', 'garra', 'chicote'].includes(perfil.golpe);
   const chave = dano?.veicular ? 'impacto.estrutura' : contundente ? 'impacto.contundente' : 'impacto.carne';
-  passos.push(novo(t, 'impacto', { para: ponto(alvo), token: alvo.token, chave, intensidade: dano?.critico ? 'forte' : 'normal', duracao: 200 }));
-  if (dano?.passou && !dano.veicular && !perfil.semSangue) passos.push(novo(t, 'sangue', { para: ponto(alvo), token: alvo.token, chave: 'sangue.estilizado', duracao: 400 }));
-  else if (dano && (dano.escudo || dano.estase)) passos.push(novo(t, 'faisca', { para: ponto(alvo), token: alvo.token, chave: 'faisca.escudo', duracao: 250 }));
-  else if (dano && (!dano.passou || dano.veicular)) passos.push(novo(t, 'faisca', { para: ponto(alvo), token: alvo.token, chave: 'faisca.armadura', duracao: 250 }));
+  const desfecho = desfechoDoAlvo(alvo);
+  const direcao = noMapa(de) && distancia(de, alvo) > 0 ? Math.round(angulo(de, alvo)) : null;
+  passos.push(novo(t, 'impacto', { para: ponto(alvo), token: alvo.token, chave, intensidade: dano?.critico ? 'forte' : 'normal', duracao: 200, desfecho, direcao }));
+  if (dano?.passou && !dano.veicular && !perfil.semSangue) passos.push(novo(t, 'sangue', { para: ponto(alvo), token: alvo.token, chave: 'sangue.estilizado', duracao: 400, direcao }));
+  else if (dano && (dano.escudo || dano.estase)) passos.push(novo(t, 'faisca', { para: ponto(alvo), token: alvo.token, chave: 'faisca.escudo', duracao: 250, direcao }));
+  else if (dano && (!dano.passou || dano.veicular)) passos.push(novo(t, 'faisca', { para: ponto(alvo), token: alvo.token, chave: 'faisca.armadura', duracao: 250, direcao }));
   if (!ultimo) return;
+  if (desfecho === 'morte' || desfecho === 'critico') passos.push(novo(t + 100, 'glitch', { para: ponto(alvo), token: alvo.token, chave: 'glitch.padrao', duracao: desfecho === 'morte' ? 600 : 300 }));
+  const rotulo = rotuloDoHud(desfecho, dano);
+  if (rotulo) passos.push(novo(t + 50, 'hud', { para: ponto(alvo), token: alvo.token, rotulo, estilo: desfecho === 'morte' || desfecho === 'critico' ? 'acerto' : 'defesa', duracao: 500 }));
   if (dano?.critico) passos.push(novo(t, 'som', { para: ponto(alvo), token: alvo.token, chave: 'impacto.critico' }));
   if (golpeDoCorpo && perfil.tremor) passos.push(novo(t, 'tremor', { para: ponto(alvo), duracao: 200, intensidade: 'leve' }));
   if (alvo.estados?.fogo) passos.push(novo(t, 'chamas', { para: ponto(alvo), token: alvo.token, chave: 'chamas.token', persistente: true }));
@@ -299,7 +341,10 @@ function impactos(passos, t, alvo, perfil, { ultimo = true, golpeDoCorpo = false
 function disparo(passos, evento, perfil, som = perfil.som, forte = false) {
   const { origem } = evento;
   if (!origem) return;
-  if (perfil.clarao) passos.push(novo(0, 'clarao', { para: ponto(origem), token: origem.token, chave: `clarao.${perfil.clarao}`, duracao: 80, intensidade: forte || perfil.clarao === 'grande' ? 'forte' : 'normal' }));
+  // A direção do cano: para o primeiro alvo (ou o centro da área), senão para onde o token olha.
+  const mira = evento.area ?? evento.queda ?? evento.alvos[0] ?? null;
+  const direcao = Math.round(noMapa(mira) && distancia(origem, mira) > 0 ? angulo(origem, mira) : direcaoDoToken(origem.rotacao));
+  if (perfil.clarao) passos.push(novo(0, 'clarao', { para: ponto(origem), token: origem.token, chave: `clarao.${perfil.clarao}`, duracao: 80, intensidade: forte || perfil.clarao === 'grande' ? 'forte' : 'normal', direcao }));
   if (som) passos.push(novo(0, 'som', { para: ponto(origem), token: origem.token, chave: som }));
 }
 
@@ -318,14 +363,17 @@ function roteiroDoTiro(evento, perfil, { casa }, tempos) {
     const voo = vooDoTiro(emMetros(distancia(evento.origem, alvo), casa));
     const acerta = alvo.resultado === 'acertou';
     const fim = acerta ? ponto(alvo) : passarDo(evento.origem, alvo, i % 2 ? -lado : lado, casa);
+    // O crítico: o traçante congela 60 ms antes de bater (o hit-stop do plano, seção 5.3).
+    const parada = acerta && alvo.dano?.critico ? 60 : 0;
     for (let cano = 0; cano < canos; cano++) {
-      passos.push(novo(base + 40 + cano * 30, caminho.passo, { de: ponto(evento.origem), para: fim, chave: caminho.chave, duracao: voo, acerta, curva: perfil.curva || alvo.segunda, atravessa: perfil.atravessa }));
+      passos.push(novo(base + 40 + cano * 30, caminho.passo, { de: ponto(evento.origem), para: fim, chave: caminho.chave, duracao: voo + parada, acerta, curva: perfil.curva || alvo.segunda, atravessa: perfil.atravessa, ...caminho.traco, ...(parada ? { parada } : {}) }));
     }
-    const chegada = base + 40 + voo + (canos - 1) * 30;
-    if (acerta) impactos(passos, chegada, alvo, perfil);
+    const chegada = base + 40 + voo + parada + (canos - 1) * 30;
+    if (acerta) impactos(passos, chegada, alvo, perfil, { de: evento.origem });
     else {
-      if (alvo.resultado === 'esquivou') passos.push(novo(chegada - 60, 'esquiva', { para: ponto(alvo), token: alvo.token, duracao: 160 }));
+      if (alvo.resultado === 'esquivou') passos.push(novo(chegada - 60, 'esquiva', { para: ponto(alvo), token: alvo.token, duracao: 160, direcao: Math.round(angulo(evento.origem, alvo)) }));
       passos.push(novo(chegada, 'faisca', { para: fim, chave: 'faisca.chao', duracao: 200 }));
+      passos.push(novo(chegada, 'marca', { para: fim, chave: 'marca.bala', duracao: MARCA_DURA, persistente: true }));
     }
     tempos.set(alvo.token, chegada + 60);
   });
@@ -352,10 +400,10 @@ function roteiroDoAutofogo(evento, perfil, { casa }, tempos) {
       const leque = n > 1 ? -4 + (8 * k) / (n - 1) : 0;
       const acerta = k < acertos;
       const t = base + 40 + k * 70;
-      passos.push(novo(t, caminho.passo, { de: ponto(evento.origem), para: acerta ? ponto(alvo) : naDirecao(evento.origem, direcao + leque + (leque < 0 ? -3 : 3), alem), chave: caminho.chave, duracao: voo, acerta, curva: perfil.curva, atravessa: perfil.atravessa }));
-      if (acerta) { impactos(passos, t + voo, alvo, perfil, { ultimo: k === acertos - 1 }); ultimo = t + voo; }
+      passos.push(novo(t, caminho.passo, { de: ponto(evento.origem), para: acerta ? ponto(alvo) : naDirecao(evento.origem, direcao + leque + (leque < 0 ? -3 : 3), alem), chave: caminho.chave, duracao: voo, acerta, curva: perfil.curva, atravessa: perfil.atravessa, ...caminho.traco }));
+      if (acerta) { impactos(passos, t + voo, alvo, perfil, { ultimo: k === acertos - 1, de: evento.origem }); ultimo = t + voo; }
     }
-    if (alvo.resultado === 'esquivou') passos.push(novo(base + 40 + voo - 60, 'esquiva', { para: ponto(alvo), token: alvo.token, duracao: 160 }));
+    if (alvo.resultado === 'esquivou') passos.push(novo(base + 40 + voo - 60, 'esquiva', { para: ponto(alvo), token: alvo.token, duracao: 160, direcao: Math.round(direcao) }));
     tempos.set(alvo.token, ultimo + 60);
   });
   return passos;
@@ -379,7 +427,7 @@ function roteiroDoSupressivo(evento, perfil, { casa }, tempos) {
   const longe = evento.alvos.length ? Math.max(...evento.alvos.map(alvo => distancia(origem, alvo))) + casa : emPixels(RAIO_SUPRESSIVO, casa);
   const voo = vooDoTiro(emMetros(longe, casa));
   for (let k = 0; k < 8; k++) {
-    passos.push(novo(40 + k * 150, caminho.passo, { de: ponto(origem), para: naDirecao(origem, menor + ((maior - menor) * k) / 7, longe), chave: caminho.chave, duracao: voo, acerta: false }));
+    passos.push(novo(40 + k * 150, caminho.passo, { de: ponto(origem), para: naDirecao(origem, menor + ((maior - menor) * k) / 7, longe), chave: caminho.chave, duracao: voo, acerta: false, ...caminho.traco }));
   }
   return passos;
 }
@@ -397,11 +445,11 @@ function roteiroDoCartucho(evento, perfil, { casa }, tempos) {
     const direcao = mira ? angulo(origem, mira) : direcaoDoToken(origem.rotacao);
     const comprimento = emPixels(ALCANCE_DO_CARTUCHO, casa);
     [-20, -10, 0, 10, 20].forEach((ajuste, k) => {
-      passos.push(novo(40, caminho.passo, { de: ponto(origem), para: naDirecao(origem, direcao - 15 + 7.5 * k, comprimento), chave: caminho.chave, duracao: 80 + ajuste, acerta: false }));
+      passos.push(novo(40, caminho.passo, { de: ponto(origem), para: naDirecao(origem, direcao - 15 + 7.5 * k, comprimento), chave: caminho.chave, duracao: 80 + ajuste, acerta: false, ...caminho.traco }));
     });
   }
   for (const alvo of evento.alvos) {
-    if (alvo.resultado === 'acertou') impactos(passos, chegada, alvo, perfil);
+    if (alvo.resultado === 'acertou') impactos(passos, chegada, alvo, perfil, { de: origem });
     tempos.set(alvo.token, chegada + 60);
   }
   return passos;
@@ -456,7 +504,7 @@ function roteiroDoExplosivo(evento, perfil, { casa, agora }, tempos) {
     const t = chegada + 20 * emMetros(distancia(centro, alvo), casa);
     if (alvo.resultado === 'acertou') {
       const falhou = alvo.municao?.resistiu === false;
-      if (!semDano) impactos(passos, t, alvo, perfil);
+      if (!semDano) impactos(passos, t, alvo, perfil, { de: centro });
       else if (efeito === 'flashbang' && falhou) passos.push(novo(t, 'tela', { token: alvo.token, chave: 'tela.flash', duracao: 600, intensidade: 'forte' }));
       else if (efeito === 'emp') passos.push(novo(t, 'faisca', { para: ponto(alvo), token: alvo.token, chave: 'faisca.emp', duracao: 300 }));
       else if (efeito === 'arachnid') passos.push(novo(t, 'anel', { para: ponto(alvo), token: alvo.token, chave: 'anel.teia', persistente: true }));
@@ -479,7 +527,7 @@ function roteiroDoCorpo(evento, perfil, _opcoes, tempos) {
       passos.push(novo(base + 80, 'golpe', { de: ponto(origem), para: ponto(alvo), token: origem.token, chave: `golpe.${corpo.golpe}`, duracao: corpo.golpe === 'chicote' ? 150 : 120, brilho: Boolean(corpo.brilho) }));
       passos.push(novo(base + 80, 'som', { para: ponto(origem), token: origem.token, chave: corpo.som }));
     }
-    if (alvo.resultado === 'acertou') impactos(passos, base + 120, alvo, corpo, { golpeDoCorpo: true });
+    if (alvo.resultado === 'acertou') impactos(passos, base + 120, alvo, corpo, { golpeDoCorpo: true, de: origem });
     else if (alvo.resultado === 'esquivou') passos.push(novo(base + 60, 'esquiva', { para: ponto(alvo), token: alvo.token, duracao: 160 }));
     tempos.set(alvo.token, base + 180);
   });
@@ -503,10 +551,11 @@ function roteiroDoArremesso(evento, perfil, { casa }, tempos) {
     const acerta = alvo.resultado === 'acertou';
     const fim = acerta ? ponto(alvo) : passarDo(origem, alvo, lado, casa);
     passos.push(novo(base, 'arco', { de: ponto(origem), para: fim, chave: 'projetil.lamina', duracao: voo, acerta }));
-    if (acerta) impactos(passos, base + voo, alvo, perfil);
+    if (acerta) impactos(passos, base + voo, alvo, perfil, { de: origem });
     else {
-      if (alvo.resultado === 'esquivou') passos.push(novo(base + voo - 60, 'esquiva', { para: ponto(alvo), token: alvo.token, duracao: 160 }));
+      if (alvo.resultado === 'esquivou') passos.push(novo(base + voo - 60, 'esquiva', { para: ponto(alvo), token: alvo.token, duracao: 160, direcao: Math.round(angulo(origem, alvo)) }));
       passos.push(novo(base + voo, 'faisca', { para: fim, chave: 'faisca.chao', duracao: 200 }));
+      passos.push(novo(base + voo, 'marca', { para: fim, chave: 'marca.bala', duracao: MARCA_DURA, persistente: true }));
     }
     tempos.set(alvo.token, base + voo + 60);
   });
@@ -641,7 +690,36 @@ export function passosVisiveis(passos, { visivel = () => true, origem = null } =
     if (!vistos.has(token)) vistos.set(token, Boolean(visivel(token)));
     return vistos.get(token);
   };
-  return passos.filter(passo => (!passo.token || ve(passo.token)) && (veOrigem || (!passo.de && passo.token !== origem)));
+  // Sem ver quem atirou, a direção do tiro também sai (o sangue e a faísca não apontam de onde veio).
+  return passos.filter(passo => (!passo.token || ve(passo.token)) && (veOrigem || (!passo.de && passo.token !== origem)))
+    .map(passo => (veOrigem || passo.direcao == null ? passo : { ...passo, direcao: null }));
+}
+
+// O tiro que errou segue até a parede (o C80; o plano, seção 5.2): o traçante (ou o projetil reto) que não acerta é
+// prolongado até "alcance" px além do fim e, se bate numa parede no caminho, para nela; a faísca e a marca do fim vão
+// junto, para a parede, no tempo da chegada. colidir(de, ate): o ponto da primeira parede, ou null (o Foundry, no
+// cliente: todos têm as mesmas paredes, e o mesmo roteiro dá o mesmo ponto). O voo cresce na mesma proporção, até o
+// dobro.
+export function pararNaParede(passos, colidir, { alcance = 0 } = {}) {
+  const movidos = new Map();
+  const lugar = p => `${p.x},${p.y}`;
+  const saida = passos.map(passo => {
+    if (!['tracante', 'projetil'].includes(passo.passo) || passo.acerta !== false || !noMapa(passo.de) || !noMapa(passo.para)) return passo;
+    const total = distancia(passo.de, passo.para);
+    if (!(total > 0)) return passo;
+    const alem = ponto({ x: passo.para.x + ((passo.para.x - passo.de.x) / total) * alcance, y: passo.para.y + ((passo.para.y - passo.de.y) / total) * alcance });
+    let batida = null;
+    try { batida = colidir(passo.de, alem); } catch { batida = null; }
+    if (!noMapa(batida)) return passo;
+    const para = ponto(batida);
+    const duracao = Math.round(entre(passo.duracao * (distancia(passo.de, para) / total), 20, 2 * passo.duracao));
+    if (!movidos.has(lugar(passo.para))) movidos.set(lugar(passo.para), { para, t: passo.t + duracao });
+    return { ...passo, para, duracao, parede: true };
+  });
+  return saida.map(passo => {
+    const movido = ['faisca', 'marca'].includes(passo.passo) && !passo.token && noMapa(passo.para) ? movidos.get(lugar(passo.para)) : null;
+    return movido ? { ...passo, para: movido.para, t: movido.t, parede: true } : passo;
+  }).sort((a, b) => a.t - b.t);
 }
 
 // Quando o próximo evento pode começar: no fim do último passo; o texto e o que dura contam só pelo começo (o texto sobe
