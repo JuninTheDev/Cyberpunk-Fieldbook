@@ -641,7 +641,8 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   dano, o corpo a corpo, o arremesso, e os do agarrão, do corpo, da NET e da recarga para as fases seguintes), os níveis,
   o teto e a validação. O `catalogo-efeitos.mjs`: cada chave termina no `proprio:`, e o `srcPermitido` só aceita os
   caminhos de dentro do servidor. Nada aparece na mesa ainda: quem toca é o C79 em diante.
-- [ ] **C79 a C97:** os itens do plano (o diretor; o palco PIXI do tiro e do impacto; o motor de
+- [~] **C79. O diretor, o transporte e as configurações:** em andamento (sessão KouArt, 2026-11-26).
+- [ ] **C80 a C97:** os itens do plano ( o palco PIXI do tiro e do impacto; o motor de
   som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
   mestre; o Sequencer como opção; as folhas de sprite; o polimento; o VFX experimental do 14).
