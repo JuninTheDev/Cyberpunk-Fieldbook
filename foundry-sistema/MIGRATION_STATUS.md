@@ -10386,7 +10386,7 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     "Escolher do inventário" (o que cabe primeiro, o motivo do tambor e do Smartgun Link, o "Pedir a instalação" da
     modificação), o "Instalar em…" (o Smartgun Link na pistola; a lanterna pedida ao mestre, com a pistola escolhida na
     janela dele) e o "Bancada" (a ficha da arma na aba Bancada).
-- **Portões:** G1, G2 e G3 (812/812) passam; o G4, 340/340 (a rodada anterior, 338/340, com só as instáveis conhecidas dos tokens dinâmicos, o C45 parte 2 e o C52).
+- **Portões:** G1, G2 e G3 (812/812) passam; o G4, 340/340 (a rodada anterior, 338/340, com só as instáveis conhecidas dos tokens dinâmicos, o C45 parte 2 e o C52); depois do merge com o C76 e o C77, G3 821/821 e G4 341/342 (só a instável conhecida do C45, parte 2).
 - **Mutações:** três no G3 (M1 a M3) e nove no G4 (F1 a F9); todas morreram, md5 igual. O F8 (o "Bancada" sem a troca de aba) e o F9 (o pedido sem a arma escolhida) sobreviveram na primeira rodada: a ficha do fuzil lembrava a aba Bancada, e a pistola às vezes era a primeira arma da ficha. O passo passou a deixar o fuzil nos Detalhes antes do clique e a criar a pistola por último; as duas morreram na segunda.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
