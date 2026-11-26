@@ -20,7 +20,7 @@ const regra = efeitos => efeitos.map(({ quando, entao }) => ({ ...(quando ? { qu
 test('C71: o plano do ROADMAP e o menu da oficina', () => {
   assert.match(roadmap, /C71\. A oficina do mestre:\*\* .*Criar uma modificação sem programar e os defeitos escondidos/);
   assert.deepEqual(Object.keys(O.RARIDADES), ['catalogo', 'rara', 'lendaria']);
-  assert.deepEqual(Object.keys(O.EFEITOS), ['situacao', 'sempre', 'dano', 'pente', 'ocultavel', 'emperra']);
+  assert.deepEqual(Object.keys(O.EFEITOS), ['situacao', 'sempre', 'dano', 'pente', 'ocultavel', 'emperra', 'instavel']);
   assert.equal(O.MAXIMO_DE_EFEITOS, 2);
   assert.equal(O.idDaOficina('Mira "Kiroshi" Ótica!', 'Ab12_x'), 'oficina:mira-kiroshi-otica-ab12x');
   assert.equal(validarMod({ versao: 1, id: O.idDaOficina('Ç', ''), nome: 'X', tipo: 'sabor', tamanho: 1, efeitos: [] }), '');

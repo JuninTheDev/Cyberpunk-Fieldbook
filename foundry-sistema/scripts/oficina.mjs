@@ -33,7 +33,7 @@ function campoDoEfeito(i, efeito = {}) {
 
 // O que cada tipo de efeito pede no formulário.
 const CAMPOS = {
-  situacao: ['valor', 'situacao', 'rotulo'], sempre: ['valor', 'rotulo'], dano: ['alvos', 'dados', 'rotulo'], pente: ['valor', 'rotulo'], ocultavel: ['oculta', 'rotulo'], emperra: ['valor', 'rotulo']
+  situacao: ['valor', 'situacao', 'rotulo'], sempre: ['valor', 'rotulo'], dano: ['alvos', 'dados', 'rotulo'], pente: ['valor', 'rotulo'], ocultavel: ['oculta', 'rotulo'], emperra: ['valor', 'rotulo'], instavel: ['rotulo']
 };
 const PELA_SITUACAO = { perto: ['metros'], faixa: ['metros'], longe: ['metros'], alvo: ['alvos'], manual: ['manual'] };
 

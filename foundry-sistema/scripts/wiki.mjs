@@ -565,6 +565,8 @@ export function fichaParaAWiki(ator) {
       const identidade = item.getFlag(SISTEMA, 'arma');
       if (identidade) linha.identidade = identidadeParaAWiki(identidade);
       if (temIdentidade(item)) linha.bancada = bancadaParaAWiki(item);
+      // O risco da arma (o C73): a quebrada ou a relíquia, para a bancada da wiki.
+      if (item.estadoDaQuebra) linha.quebra = item.estadoDaQuebra;
     }
     if (item.type === 'armadura') Object.assign(linha, { cabeca: x.sp.cabeca.max ? x.sp.cabeca.value : 0, corpo: x.sp.corpo.max ? x.sp.corpo.value : 0 });
     // O lado (o C30): "local" no instalado, "localPlanejado" no que espera instalar, como o cpr-2077; e o tipo, o tamanho e

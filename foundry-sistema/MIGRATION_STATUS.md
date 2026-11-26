@@ -164,6 +164,14 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C73, o risco da arma (2026-11-25, sessão KouArt):** ficam para o usuário:
+  - **a DV e o custo do conserto** são os da proposta (a DV pela categoria de preço da arma; o custo de uma categoria
+    abaixo): a tabela do livro não está na wiki. A arma Barata, sem categoria abaixo, custa os 10eb dela;
+  - **o custo** não sai sozinho: o cartão do pedido diz quanto, e o mestre cobra (pela mesa ou pela wiki);
+  - **a quebra** vem só da falha crítica (a da arma ruim ou da instável); quebrar por outro motivo (o EMP, a história) é o
+    mestre, pela API (`game.system.api.quebra.marcarPelaFalha`);
+  - **o reforjar** é para uma arma do mesmo tipo e do mesmo personagem, e passa uma modificação só (o defeito não passa).
+
 - **C72, parte 2, a economia na wiki (2026-11-25, sessão KouArt):** ficam para o usuário:
   - **a loja de criação** continua vendendo as modificações Caras (o teto de preço dela é 1.000eb): a vitrine vale só na
     loja da campanha (a decisão falava dela);
@@ -10234,6 +10242,40 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     wiki.
 - **Portões:** G1 sem erros; G2 sem erros; G3 805/805; isolados 218/218; G4 338/338 (764 s); os cenários da wiki arsenal 8/8, conta 20/20, criador 65/65, cyberware 16/16, economia 11/11, campanhas 23/23 e jogadores 25/25. Rodadas antes: a ficha sem as regras da campanha (a bancada não avisava: corrigido), o nome do item na entrega (o da wiki) e, no conta, o personagem sem o método de criação (a loja da campanha pede o método).
 - **Mutações:** treze nas contas e no servidor (V1 a V13, o teste isolado), nove na wiki (W2 a W10, nos cenários arsenal e conta), três no G4 (P1 a P3) e uma na página (T1, o G3); todas morreram, md5 igual.
+
+### Ciclo 213 (2026-11-25): C73, o risco da arma: a quebra, o conserto, a relíquia e o reforjar (sessão KouArt)
+
+- **Pedido do usuário (2026-11-25):** "Sim" (o C73). As decisões do mesmo dia (as quatro recomendadas): a quebra é
+  automática pela falha, e o mestre desfaz no cartão; o conserto é o teste do Tech pelo preço da arma, com o custo de uma
+  categoria abaixo; o reforjar passa o nome, a história e uma modificação; a modificação instável entra pela oficina.
+- **A fonte:** as falhas da arma do CORE 0.92.4 (a "Quebra" e a "Quebra sem conserto", `regras.FALHAS_DA_ARMA`), a proposta
+  da equipe de 2026-11-23 (a arma quebrada que desliga as mods, o conserto do Tech, a relíquia, o reforjar e a mod
+  instável), o teste de perícia da wiki (STAT + perícia + 1d10) e as categorias de preço (RED p. 385).
+- **Entrega:**
+  - `regras-quebra.mjs` (novo): os estados, a quebra pela falha, as categorias, a DV e o custo do conserto e o reforjar;
+  - `quebra.mjs` (novo): a marca pela falha, o "Desfazer a quebra", o conserto (a janela, o teste, o resultado) e o
+    reforjar (a janela e a passagem da identidade e da modificação);
+  - `combate/cartao.mjs` e o `ataque.hbs`: a quebra no cartão e o botão do mestre; `combate/modos.mjs`: a instável
+    falha como a ruim;
+  - `documentos.mjs`: o `estadoDaQuebra`, o `motivoInoperante`, o `motivoSemAtaque` da quebrada e da relíquia e a
+    passagem da modificação no reforjar (só o mestre, só da relíquia);
+  - `regras-modificacoes.mjs` e a oficina: o efeito "instável"; a ficha do item: o estado, o "Consertar", o "Reforjar"
+    e o seletor da falha na arma instável; `wiki.mjs`, `personagem-bancada.js` e `criador.js`: o estado na bancada
+    da wiki; `system-modificacoes.js`: a seção "O risco";
+  - a versão `0.3.213`.
+- **Fica para depois:** nada do plano das modificações (o C66 ao C74 estão feitos). As dúvidas estão nas Dúvidas.
+- **Testes de referência:**
+  - **G3:** o `quebra.test.mjs` (novo, 5 testes): a falha que quebra e os estados, o conserto pelo preço, o reforjar (o
+    que passa, os contadores e as recusas), a instável (a regra, a oficina e a falha da ruim) e a página da regra; e os
+    testes das modificações e da oficina com o campo e a opção novos.
+  - **G4:** no passo da falha crítica (o C13), a "Quebra" e a "Quebra sem conserto" marcam a arma, o "Desfazer a quebra"
+    do cartão tira a marca, e a instável quebra uma arma padrão; um passo do C73: a quebrada não ataca e a modificação
+    dela para, o conserto que falha e o que passa (no computador do jogador, pela ficha e pela janela do mestre), a
+    relíquia na ficha do jogador (sem botões), o reforjar pela janela (o nome, a frase, a mira que passa, o nome gravado
+    que fica, os contadores) e o reforjar de novo recusado.
+  - **Wiki:** no cenário `arsenal`, o fuzil quebrado com o selo na bancada.
+- **Portões:** G1 sem erros; G2 sem erros; G3 810/810; G4 339/339 (721 s); os cenários da wiki arsenal 8/8, conta 20/20 e criador 65/65. Rodadas antes: a ordem das modificações na janela do reforjar (o teste esperava uma ordem fixa: agora não).
+- **Mutações:** doze no G3 (Q1 a Q12), doze no G4 (G1 a G12, no passo do C13 e no do C73), duas na wiki (W1 e W2, o cenário arsenal) e uma na página (T1); todas morreram, md5 igual.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

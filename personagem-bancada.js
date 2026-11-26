@@ -41,6 +41,8 @@
 
   // O modelo pela ficha da mesa: a linha da arma que o Foundry 14 mandou (com a bancada e a identidade). mods: os de
   // system-modificacoes.js (o grupo e o texto de cada uma); catalogo(id): o item da loja.
+  // O risco da arma (o C73): a quebrada e a relíquia que o Foundry manda.
+  const QUEBRAS = { quebrada: 'Quebrada: o Tech conserta', reliquia: 'Relíquia: quebrou sem conserto' };
   function daMesa(linha, { mods = [], catalogo = () => null } = {}) {
     const b = linha && linha.bancada;
     const cat = catalogo(linha && linha.catalogo) || {};
@@ -53,7 +55,7 @@
         : { id: peca.id, nome: peca.nome, sigla: sigla(peca.nome), tipo: 'acessorio', catalogo: peca.catalogo || '', tamanho: Number(peca.tamanho) || 0, posicao: posicaoDe(peca.catalogo), texto: (catalogo(peca.catalogo) || {}).resumo || '' };
     }) : [];
     return montar({
-      fonte: 'mesa', id: `foundry:${linha.id}`, modelo: linha.nome, identidade: linha.identidade || null,
+      fonte: 'mesa', id: `foundry:${linha.id}`, modelo: linha.nome, identidade: linha.identidade || null, quebra: QUEBRAS[linha.quebra] || '',
       aDistancia: b ? Boolean(b.aDistancia) : Boolean(linha.distancia), tipo: (b && b.tipo) || arma.tipo || '', classeCore: arma.classe || '', maos: Number(linha.maos) || Number(arma.maos) || 1,
       classe: b ? b.classe || null : (arma.mods && arma.mods.classe) || null, exotica: Boolean(arma.exotica),
       acessorios: b ? b.acessorios : null, modificacoes: b ? b.modificacoes : null, pecas, ataque: b ? b.ataque || null : null, semBancada: !b,

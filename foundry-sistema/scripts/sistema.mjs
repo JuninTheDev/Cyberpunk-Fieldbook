@@ -50,6 +50,7 @@ import * as modificacoes from './modificacoes.mjs';
 import * as identidade from './identidade.mjs';
 import * as oficina from './oficina.mjs';
 import * as instalacaoMod from './instalacao-mod.mjs';
+import * as quebra from './quebra.mjs';
 import * as defeitos from './defeito-escondido.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
@@ -169,6 +170,9 @@ Hooks.once('init', () => {
   // A instalação da modificação pelo Tech (o C72): o resultado do teste instala; o pedido do jogador chega pelo socket.
   instalacaoMod.registrarInstalacao();
   game.system.api.instalacaoDeMod = instalacaoMod.API;
+  // O risco da arma (o C73): a quebra pela falha, o conserto pelo Tech e o reforjar da relíquia.
+  quebra.registrarQuebra();
+  game.system.api.quebra = quebra.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);
