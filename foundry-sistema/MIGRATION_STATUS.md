@@ -164,6 +164,19 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **As dúvidas do C68 ao C75, resolvidas pelo usuário em 2026-11-26** ("Aplique todas as sugestões"): as listas da ficha
+  (a armadura e a NET arrastam; o cyberware e as lesões não), a Montagem da wiki no Foundry, o Compensador com autofogo e
+  o cabo balanceado com +1 no arremesso (o C98); o "Quebrar" do mestre, o conserto pago e a DV na oficina (o C99); a loja
+  de criação sem as Caras, o presente na hora, o aviso do teto nos pedidos e o relógio do servidor (o C100); o teste do
+  vazamento da oficina (o C101). Ficam como estão, aceitas: o jogador que abre o console (instala, tira e lê a nota do
+  mestre), o defeito escondido preso à arma deste mundo, a DV e o custo do conserto da proposta, o reforjar, a oficina com
+  até dois efeitos, o defeito revelado só pela falha crítica, o nome próprio só no Foundry, as contagens da arma, o cano
+  de alta pressão sem veículos, a lanterna no ataque e a afinação pessoal liberada.
+- **C98, a montagem (2026-11-26, sessão KouArt):** fica para o usuário: o **Pulsar** (Darra Polytechnic DS1) é exótico
+  na loja da wiki e não é na página do 2077 (a fonte do Foundry): no Foundry ele leva acessório, e na bancada da wiki não.
+  As modificações que já estão nos mundos (o Compensador numa arma sem autofogo, o cabo balanceado sem o +1) ficam como
+  estavam: a regra nova vale para o item que vem do catálogo de novo.
+
 - **C75, pôr o upgrade na arma (2026-11-26, sessão KouArt):** fica para o usuário: as outras listas da ficha que não
   arrastam (o cyberware, os programas e o hardware da NET, a armadura vestida do bloco geral e as lesões) continuam assim:
   arrastar o cyberware instalado para outra ficha passaria por fora da cirurgia.
@@ -10481,6 +10494,33 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   M6, o socket que aceita o efeito de qualquer um; M7, a outra cena que também toca; M8, o cartão que espera o evento) e
   cinco no G4 (G1, o cartão que o jogador não vê também toca; G2, o diretor sem a visão; G3, o mestre manda o desfecho
   também pelo socket; G4, o nível sem a escolha do navegador; G5, o mesmo evento duas vezes); cada uma derrubando o passo dela (a G1 também o do ciclo 29), e todas morreram, com os arquivos de volta. A primeira rodada da G3 não valeu (o Foundry de teste não abriu o mundo, antes de qualquer ataque); rodada de novo, morreu.
+
+### Ciclo 220 (2026-11-26): C98, a montagem segue a regra da wiki (sessão KouArt)
+
+- **Decisões do usuário (2026-11-26),** sobre as dúvidas do C68 ao C75: "1. B" (a armadura vestida e a NET arrastam),
+  "2. A" (o Foundry segue a Montagem da wiki), "3. A" (o Compensador exige autofogo), "4. A" (o cabo balanceado dá +1 no
+  arremesso); "Aplique todas as sugestões".
+- **Entrega:**
+  - `bloco-armadura.hbs` e `net.hbs`: a armadura, o cyberdeck e o programa com a classe `draggable`;
+  - `regras.encaixeDoAcessorio` (novo): a regra da Montagem da wiki (o `accessoryFits` do `criador.js` e o
+    `acessorioCabe` da `personagem-bancada.js`), antes dos slots, no `_preUpdate` e na bancada; a arma passa o
+    `paraAcessorios` (a exótica pela flag de 2077, pelos slots ou pela descrição; o dano, para a Heavy SMG);
+  - o encaixe `autofogo` e a condição `arremesso` (o `regras-modificacoes.mjs`); o combate passa o arremesso aos
+    situacionais; a oficina ganhou o "Serve em" com autofogo e a situação "Arremessada";
+  - a fonte da regra (`system-modificacoes.js`): o Compensador e o cabo balanceado; o catálogo do 14 e a loja da wiki de
+    novo (`node build/conteudo.mjs` e `node loja-do-14.mjs`: a loja guarda o autofogo da arma); a bancada da wiki confere
+    o autofogo (pela loja ou pela bancada que o Foundry manda);
+  - a versão `0.3.220`.
+- **Testes de referência:**
+  - **G3:** o `montagem-da-wiki.test.mjs` (novo, 5 testes): as listas que arrastam e as que não; o encaixe, caso a caso;
+    o Foundry e a wiki lado a lado em toda arma e todo acessório do catálogo (só o Pulsar difere); o Compensador nas duas
+    pontas; o cabo no arremesso. Os testes do C68, do C70 e do C71 ganharam o autofogo e o cabo (a forma exata e a lista
+    das de ataque).
+  - **G4:** dois passos: o cabo balanceado na faca arremessada (o ataque 20 em vez de 19, e fora do arremesso nada); e o
+    arrasto da armadura, do cyberdeck e do programa, o encaixe de cada caso pela API da bancada e as recusas de verdade, com
+    o aviso de cada uma.
+- **Portões:** G1 a G3 limpos (o G3 com o `montagem-da-wiki.test.mjs` novo); G4 346/346, de novo depois do merge do ciclo 219; os cenários `arsenal` (8/8) e `conta` (20/20) da wiki.
+- **Mutações:** 12 no G3 (N1 a N12: as marcações do arrasto, cada recusa do encaixe, a Heavy SMG, a exótica pela descrição, o Compensador, o arremesso no avaliar e no combate, a bancada e a loja da wiki sem o autofogo) e 8 no G4 (F1 a F8: o `_preUpdate` e a bancada sem o encaixe, o combate e os situacionais sem o arremesso, a armadura e o cyberdeck sem o arrasto, a exótica sem a descrição, a arma sem o autofogo): todas morreram, os arquivos de volta pelo md5.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

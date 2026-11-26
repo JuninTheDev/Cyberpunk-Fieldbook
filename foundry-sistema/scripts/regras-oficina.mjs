@@ -7,7 +7,7 @@
 import { ALVOS_DO_ATAQUE, CLASSES, TIPOS, validarMod } from './regras-modificacoes.mjs';
 
 export const RARIDADES = { catalogo: 'Do catálogo', rara: 'Rara', lendaria: 'Lendária' };
-export const ONDE_SERVE = { qualquer: 'qualquer arma', distancia: 'arma de longo alcance', branca: 'arma branca' };
+export const ONDE_SERVE = { qualquer: 'qualquer arma', distancia: 'arma de longo alcance', autofogo: 'arma de longo alcance com autofogo', branca: 'arma branca' };
 // O que um efeito do menu faz (o alvo do regras-modificacoes.ALVOS e se pede uma situação).
 export const EFEITOS = {
   situacao: 'Ataque numa situação', sempre: 'Ataque sempre (só negativo)', dano: 'Dano a mais contra coisas', pente: 'Pente',
@@ -16,7 +16,8 @@ export const EFEITOS = {
 // As situações do menu (as condições das modificações da wiki).
 export const SITUACOES = {
   perto: 'Tiro único ou mirado até X m', faixa: 'Tiro único ou mirado de X a Y m', longe: 'A X m ou mais', autofogo: 'No autofogo',
-  mirado: 'No tiro mirado', alvo: 'Contra um tipo de alvo', estranho: 'Na mão de quem não é o dono', manual: 'Outra (quem joga liga)'
+  mirado: 'No tiro mirado', alvo: 'Contra um tipo de alvo', estranho: 'Na mão de quem não é o dono', arremesso: 'Arremessada',
+  manual: 'Outra (quem joga liga)'
 };
 const NOMES_DOS_ALVOS = { pessoa: 'gente', veiculo: 'veículos', objeto: 'objetos', cobertura: 'cobertura' };
 export const DADOS_DE_DANO = ['1d6', '2d6', '1d10'];
@@ -46,6 +47,7 @@ function situacaoDe(efeito) {
     case 'longe': return Number.isFinite(min) ? { quando: { metros: { min } }, rotulo: `a ${min} m ou mais` } : { erro: 'diga a partir de quantos metros' };
     case 'autofogo': return { quando: { modo: ['autofogo'] }, rotulo: 'no autofogo' };
     case 'mirado': return { quando: { mirado: true }, rotulo: 'no tiro mirado' };
+    case 'arremesso': return { quando: { arremesso: true }, rotulo: 'arremessada' };
     case 'alvo': return alvos.length ? { quando: { alvo: alvos }, rotulo: `contra ${juntar(alvos.map(alvo => NOMES_DOS_ALVOS[alvo]))}` } : { erro: 'marque o tipo de alvo' };
     case 'estranho': return { quando: { dono: false }, rotulo: 'na mão de quem não é o dono' };
     case 'manual': return texto(efeito.manual, 80) ? { quando: { manual: texto(efeito.manual, 80) }, rotulo: texto(efeito.manual, 80) } : { erro: 'escreva a situação' };
@@ -92,7 +94,7 @@ export function modDoFormulario(dados = {}, id = idDaOficina(dados.nome, '0')) {
   const tipo = TIPOS[dados.tipo] ? dados.tipo : 'tatica';
   const tamanho = tipo === 'defeito' ? 0 : Math.trunc(numero(dados.tamanho));
   const encaixe = {
-    ...(dados.serve === 'distancia' ? { aDistancia: true } : dados.serve === 'branca' ? { aDistancia: false } : {}),
+    ...(dados.serve === 'distancia' ? { aDistancia: true } : dados.serve === 'autofogo' ? { aDistancia: true, autofogo: true } : dados.serve === 'branca' ? { aDistancia: false } : {}),
     ...(CLASSES[dados.classe] ? { classe: dados.classe } : {})
   };
   const efeitos = [];
@@ -111,9 +113,10 @@ export function modDoFormulario(dados = {}, id = idDaOficina(dados.nome, '0')) {
 
 // Onde a modificação serve, em palavras (como o serveEm da wiki).
 export function serveEm(mod) {
-  const { aDistancia, tipos, classe } = mod.encaixe ?? {};
+  const { aDistancia, tipos, classe, autofogo } = mod.encaixe ?? {};
   if (classe) return `arma ${CLASSES[classe]}`;
   if (tipos) return tipos.join(' ou ');
+  if (autofogo) return ONDE_SERVE.autofogo;
   return aDistancia === true ? ONDE_SERVE.distancia : aDistancia === false ? ONDE_SERVE.branca : ONDE_SERVE.qualquer;
 }
 

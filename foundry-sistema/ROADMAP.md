@@ -618,7 +618,7 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
 
 As decisões do usuário de 2026-11-26 sobre as dúvidas do C68 ao C75 ("Aplique todas as sugestões"), em quatro itens:
 
-- [~] **C98. A montagem segue a regra da wiki:** em andamento (sessão KouArt, 2026-11-26). A armadura vestida e a NET
+- [x] **C98. A montagem segue a regra da wiki:** feito no ciclo 220 (sessão KouArt, 2026-11-26). A armadura vestida e a NET
   (os programas e o hardware) arrastam da ficha (o cyberware e as lesões não); o acessório no Foundry cabe só onde a
   Montagem da wiki deixa (a classe no nome, o de baixo do cano só em arma de duas mãos, a exótica sem acessório); o
   Compensador só em arma com autofogo; o cabo balanceado dá +1 no arremesso (situacional, no teto de +3).

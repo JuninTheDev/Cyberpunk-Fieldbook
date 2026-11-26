@@ -150,7 +150,7 @@ export async function atacar(arma, { alvos = null, alvo = null, local = 'corpo',
   // arma montada de outro dono não é o dono dela.
   const tipoDoAlvo = lista[0]?.actor?.type;
   const alvoDaMod = ['personagem', 'capanga'].includes(tipoDoAlvo) ? 'pessoa' : tipoDoAlvo === 'veiculo' ? 'veiculo' : null;
-  const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null, alvo: alvoDaMod, dono: !alheia && ehDono(arma.getFlag(SISTEMA, 'arma'), atacante.id) });
+  const situacionais = atacante.situacionaisDoAtaque(arma, { pericia: pericia.id, modo, local, metros: tokenAtq && lista[0] ? distancia(tokenAtq, lista[0]) : null, alvo: alvoDaMod, dono: !alheia && ehDono(arma.getFlag(SISTEMA, 'arma'), atacante.id), arremesso: Boolean(arremesso) });
   const escolha = perguntar ? await perguntarTeste(atacante, { rotulo: `${arma.name}: ${descricao}`, partes, situacionais }) : null;
   if (perguntar && !escolha) return null;
   if (perguntar && !conferirMira()) return null;

@@ -27,7 +27,7 @@ export const armaDo14 = s => ({ dano: s.dano, cdt: s.cdt, pente: s.pente?.max ??
 export function modsDaArma14(item) {
   const s = item.system;
   const de2077 = item.flags?.['cpr-fieldbook']?.arma2077;
-  return { slots: slotsDeModificacao({ aDistancia: s.aDistancia, slots: s.slots, qualidade: s.qualidade, exotica: de2077?.exotica ?? null }), classe: de2077?.classe ?? null, tipo: s.tipo || '' };
+  return { slots: slotsDeModificacao({ aDistancia: s.aDistancia, slots: s.slots, qualidade: s.qualidade, exotica: de2077?.exotica ?? null }), classe: de2077?.classe ?? null, tipo: s.tipo || '', ...(Number(s.autofogo) > 0 ? { autofogo: true } : {}) };
 }
 
 // O resumo da arma ("2d6 · CDT 1 · pente 30 · 1 mão · oculta · Armas de uma Mão"): troca o dano, a CDT, o pente e as mãos.

@@ -542,6 +542,12 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O arrasto do G4 tem de ser o do navegador** (ciclo 216): o passo do C74 chamava a instalação pela API, e o
   arrasto do inventário (a linha sem a classe `draggable`) nunca funcionou para quem joga. O passo do C75 faz o
   `dragstart` na linha da ficha e o `drop` na área da bancada, com o mesmo `DataTransfer`.
+- **O aviso esperado se guarda no passo** (ciclo 220): o passo "nenhum aviso" do G4 pega todo `ui.notifications.warn`
+  do sistema, e a recusa que o passo provoca de propósito avisa. O passo troca o `warn` na hora da recusa, confere o texto
+  e devolve o original (como o da NET).
+- **A regra das duas pontas, conferida em todo o catálogo** (ciclo 220): o encaixe do acessório no Foundry e o da
+  bancada da wiki rodam lado a lado em toda arma e todo acessório (193 × 31) no G3; a diferença que sobra (o Pulsar) fica
+  escrita no teste e nas Dúvidas.
 
 ## Build
 

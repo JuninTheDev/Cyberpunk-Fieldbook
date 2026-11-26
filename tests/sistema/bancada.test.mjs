@@ -24,7 +24,9 @@ const daLoja = new Map(loja.map(item => [item.id, item]));
 const modDoCatalogo = new Map(catalogo.filter(item => item.flags['cpr-fieldbook'].mod).map(item => [item.flags['cpr-fieldbook'].mod.id, item.flags['cpr-fieldbook'].mod]));
 const armas = catalogo.filter(item => item.type === 'arma' && daLoja.has(idDe(item)));
 const paraModificacoes = item => ({ aDistancia: item.system.aDistancia, slots: item.system.slots, qualidade: item.system.qualidade, tipo: item.system.tipo,
-  exotica: item.flags['cpr-fieldbook'].arma2077?.exotica ?? null, classe: item.flags['cpr-fieldbook'].arma2077?.classe ?? null });
+  exotica: item.flags['cpr-fieldbook'].arma2077?.exotica ?? null, classe: item.flags['cpr-fieldbook'].arma2077?.classe ?? null, autofogo: Number(item.system.autofogo) > 0 });
+// O autofogo da arma (o C98: o Compensador só serve nela) vai na loja só quando a arma tem.
+const comAutofogo = item => (Number(item.system.autofogo) > 0 ? { autofogo: true } : {});
 const linhaDaLoja = id => ({ uid: `loja:${id}`, nome: daLoja.get(id).nome, item: daLoja.get(id) });
 
 test('C70: o plano do ROADMAP e os slots de modificação da loja pela regra do sistema', () => {
@@ -32,12 +34,13 @@ test('C70: o plano do ROADMAP e os slots de modificação da loja pela regra do 
   assert.match(roadmap, /C74\. A bancada da arma no Foundry:\*\* .*pedido do usuário \(2026-11-24\): \"uma tela onde vc pode ver a arma e as modificações e itens equipadas nela\.\.\. através de uma tela de modificação da arma\"\. A aba Bancada da ficha da arma, com os dados da bancada da wiki \(o C70\): o acessório entra arrastando do inventário; a modificação, só pelo Tech ou pelo mestre/);
   assert.ok(armas.length > 150);
   // Cada arma da loja guarda o que a regra do sistema diz (a loja-catalogo.js é gerada: node loja-do-14.mjs).
-  const diferentes = armas.filter(item => JSON.stringify(daLoja.get(idDe(item)).arma.mods) !== JSON.stringify({ slots: M.slotsDeModificacao(paraModificacoes(item)), classe: paraModificacoes(item).classe, tipo: item.system.tipo }));
+  const diferentes = armas.filter(item => JSON.stringify(daLoja.get(idDe(item)).arma.mods) !== JSON.stringify({ slots: M.slotsDeModificacao(paraModificacoes(item)), classe: paraModificacoes(item).classe, tipo: item.system.tipo, ...comAutofogo(item) }));
   assert.deepEqual(diferentes.map(idDe), []);
   assert.deepEqual(daLoja.get('core_weapons:very-heavy-pistol').arma.mods, { slots: 2, classe: null, tipo: 'vHeavyPistol' });
+  assert.deepEqual(daLoja.get('core_weapons:assault-rifle').arma.mods, { slots: 2, classe: null, tipo: 'assaultRifle', autofogo: true });
   assert.deepEqual(daLoja.get('core_weapons:very-heavy-pistol-poor').arma.mods, { slots: 1, classe: null, tipo: 'vHeavyPistol' });
   // A Yukimura é exótica no catálogo do 14 (a loja do CORE dizia que não): 1 slot.
-  assert.deepEqual(daLoja.get('armas-2077:arasaka-hjke-11-yukimura').arma.mods, { slots: 1, classe: 'smart', tipo: 'smg' });
+  assert.deepEqual(daLoja.get('armas-2077:arasaka-hjke-11-yukimura').arma.mods, { slots: 1, classe: 'smart', tipo: 'smg', autofogo: true });
   // A Mono-Star é de arremesso na loja do CORE e branca média no 14: a bancada usa a do 14.
   assert.equal(daLoja.get('black-chrome_weapons:kendachi-mono-star').arma.mods.tipo, 'medMelee');
   assert.deepEqual(modsDaArma14(catalogo.find(item => idDe(item) === 'core_weapons:very-heavy-pistol')), { slots: 2, classe: null, tipo: 'vHeavyPistol' });

@@ -35,7 +35,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
         <div class="titulo">CYBERDECKS<span>{{decks.length}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="cyberdeck" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar cyberdeck">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each decks}}
-          <li data-item-id="{{id}}" class="{{#if guardado}}guardada{{/if}}">
+          <li data-item-id="{{id}}" class="draggable {{#if guardado}}guardada{{/if}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
@@ -89,7 +89,7 @@ turno e o deck equipado) e os cyberdecks; à direita, as habilidades de Interfac
         <div class="titulo">PROGRAMAS<span>{{programas.length}}{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="programa" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar programa">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each programas}}
-          <li data-item-id="{{id}}">
+          <li class="draggable" data-item-id="{{id}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>

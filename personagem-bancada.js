@@ -58,6 +58,7 @@
       fonte: 'mesa', id: `foundry:${linha.id}`, modelo: linha.nome, identidade: linha.identidade || null, quebra: QUEBRAS[linha.quebra] || '',
       aDistancia: b ? Boolean(b.aDistancia) : Boolean(linha.distancia), tipo: (b && b.tipo) || arma.tipo || '', classeCore: arma.classe || '', maos: Number(linha.maos) || Number(arma.maos) || 1,
       classe: b ? b.classe || null : (arma.mods && arma.mods.classe) || null, exotica: Boolean(arma.exotica),
+      autofogo: b && 'autofogo' in b ? Boolean(b.autofogo) : Boolean(arma.mods && arma.mods.autofogo),
       acessorios: b ? b.acessorios : null, modificacoes: b ? b.modificacoes : null, pecas, ataque: b ? b.ataque || null : null, semBancada: !b,
       dano: linha.dano || arma.dano || '', cdt: linha.cdt || arma.cdt || 1
     });
@@ -71,7 +72,7 @@
     return montar({
       fonte: 'criacao', id: row.uid, modelo: row.nome || row.item.nome, identidade: null,
       aDistancia: Boolean(arma.distancia), tipo: (arma.mods && arma.mods.tipo) || arma.tipo || '', classeCore: arma.classe || '', maos: Number(arma.maos) || 1, classe: (arma.mods && arma.mods.classe) || null, exotica: Boolean(arma.exotica),
-      acessorios: { usados, total: Number(arma.slots) || 0 }, modificacoes: { usados: 0, total: (arma.mods && arma.mods.slots) || 0 }, pecas, ataque: null, semBancada: false,
+      autofogo: Boolean(arma.mods && arma.mods.autofogo), acessorios: { usados, total: Number(arma.slots) || 0 }, modificacoes: { usados: 0, total: (arma.mods && arma.mods.slots) || 0 }, pecas, ataque: null, semBancada: false,
       dano: arma.dano || '', cdt: arma.cdt || 1
     });
   }
@@ -128,6 +129,7 @@
     if (encaixe.aDistancia !== undefined && Boolean(modelo.aDistancia) !== encaixe.aDistancia) return recusa(encaixe.aDistancia ? 'só serve em arma de longo alcance' : 'só serve em arma branca');
     if (encaixe.tipos && !encaixe.tipos.includes(modelo.tipo)) return recusa('não serve neste tipo de arma');
     if (encaixe.classe && modelo.classe !== encaixe.classe) return recusa(`só serve em arma ${CLASSES[encaixe.classe]}`);
+    if (encaixe.autofogo && !modelo.autofogo) return recusa('só serve em arma com autofogo');
     if (instaladas.some(mod => mod.id === nova.id)) return recusa('a arma já tem esta modificação');
     const defeitos = instaladas.filter(mod => mod.tipo === 'defeito').length + (nova.tipo === 'defeito' ? 1 : 0);
     if (defeitos > DEFEITOS) return recusa('só cabe um defeito por arma');

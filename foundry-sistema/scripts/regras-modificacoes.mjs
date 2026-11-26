@@ -32,7 +32,8 @@ const DADOS = /^[1-9]d(6|10)$/;
 
 // A condição de um efeito (a folha ou a combinação), contra o contexto do ataque { modo, mirado, aDistancia, metros,
 // municao, alvo, dono }. Devolve true, false ou null (o sistema não sabe: a janela de rolagem pergunta).
-const FOLHAS = ['modo', 'mirado', 'aDistancia', 'metros', 'municao', 'alvo', 'dono', 'manual'];
+// arremesso: a arma branca arremessada (o cabo balanceado, o C98).
+const FOLHAS = ['modo', 'mirado', 'aDistancia', 'metros', 'municao', 'alvo', 'dono', 'arremesso', 'manual'];
 export function avaliar(condicao, contexto = {}) {
   if (condicao === undefined || condicao === null) return true;
   if (condicao.todos) {
@@ -56,7 +57,7 @@ export function avaliar(condicao, contexto = {}) {
     const metros = Number(contexto.metros);
     return metros >= (condicao.metros.min ?? 0) && metros <= (condicao.metros.max ?? Infinity);
   }
-  for (const chave of ['mirado', 'aDistancia', 'dono']) if (chave in condicao) return sabido(chave) ? Boolean(contexto[chave]) === condicao[chave] : null;
+  for (const chave of ['mirado', 'aDistancia', 'dono', 'arremesso']) if (chave in condicao) return sabido(chave) ? Boolean(contexto[chave]) === condicao[chave] : null;
   // "manual" (no escuro, contra a gangue tal): só quem joga sabe.
   return null;
 }
@@ -98,7 +99,7 @@ function alvosExigidos(condicao) {
 }
 
 // A modificação, como fica na flag do item (o upgrade instalado na arma, a partir do C67):
-// { versao: 1, id, nome, tipo, tamanho, encaixe?: { aDistancia?, tipos? }, efeitos: [{ rotulo, quando?, grupo?,
+// { versao: 1, id, nome, tipo, tamanho, encaixe?: { aDistancia?, tipos?, classe?, autofogo? }, efeitos: [{ rotulo, quando?, grupo?,
 //   ligadoPorPadrao?, entao: [{ alvo, valor }] }] }. Devolve o motivo da recusa, ou '' quando vale.
 export function validarMod(mod) {
   if (!mod || typeof mod !== 'object') return 'a modificação está vazia';
@@ -109,9 +110,9 @@ export function validarMod(mod) {
   if (!Number.isInteger(mod.tamanho) || mod.tamanho < 0 || mod.tamanho > 2) return 'a modificação ocupa de 0 a 2 slots';
   if (mod.tipo === 'defeito' && mod.tamanho !== 0) return 'o defeito não ocupa slot: ele dá um';
   if (mod.encaixe !== undefined) {
-    const { aDistancia, tipos, classe, ...resto } = mod.encaixe ?? {};
+    const { aDistancia, tipos, classe, autofogo, ...resto } = mod.encaixe ?? {};
     if (Object.keys(resto).length || (aDistancia !== undefined && typeof aDistancia !== 'boolean') || (tipos !== undefined && (!Array.isArray(tipos) || !tipos.length))
-      || (classe !== undefined && !CLASSES[classe])) return 'o encaixe é { aDistancia, tipos, classe }';
+      || (classe !== undefined && !CLASSES[classe]) || (autofogo !== undefined && autofogo !== true)) return 'o encaixe é { aDistancia, tipos, classe, autofogo }';
   }
   if (!Array.isArray(mod.efeitos) || mod.efeitos.length > 4) return 'a modificação tem até 4 efeitos';
   for (const efeito of mod.efeitos) {
@@ -153,16 +154,18 @@ export function slotsDeModificacao({ aDistancia = true, slots = 3, qualidade = '
   return Math.min(SLOTS.maximo, base + Math.min(SLOTS.defeitos, defeitos) * SLOTS.porDefeito);
 }
 
-// A modificação nova cabe na arma? arma: { aDistancia, slots, qualidade, tipo, classe }; instaladas: as modificações que já
+// A modificação nova cabe na arma? arma: { aDistancia, slots, qualidade, tipo, classe, autofogo }; instaladas: as modificações que já
 // estão nela. Devolve { cabe, motivo }.
 export function modCabe(arma, instaladas, nova) {
   const recusa = motivo => ({ cabe: false, motivo });
   const invalida = validarMod(nova);
   if (invalida) return recusa(invalida);
-  const { aDistancia, tipos, classe } = nova.encaixe ?? {};
+  const { aDistancia, tipos, classe, autofogo } = nova.encaixe ?? {};
   if (aDistancia !== undefined && Boolean(arma.aDistancia) !== aDistancia) return recusa(aDistancia ? 'esta modificação só serve em arma de longo alcance' : 'esta modificação só serve em arma branca');
   if (tipos && !tipos.includes(arma.tipo)) return recusa('esta modificação não serve neste tipo de arma');
   if (classe && arma.classe !== classe) return recusa(`esta modificação só serve em arma ${CLASSES[classe]}`);
+  // O autofogo (o Compensador, o C98): só na arma que faz autofogo.
+  if (autofogo && !arma.autofogo) return recusa('esta modificação só serve em arma com autofogo');
   if (instaladas.some(mod => mod.id === nova.id)) return recusa('a arma já tem esta modificação');
   const defeitos = instaladas.filter(mod => mod.tipo === 'defeito').length + (nova.tipo === 'defeito' ? 1 : 0);
   if (defeitos > SLOTS.defeitos) return recusa('só cabe um defeito por arma');

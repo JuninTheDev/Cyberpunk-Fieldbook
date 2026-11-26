@@ -535,7 +535,8 @@ function bancadaParaAWiki(arma) {
   return {
     acessorios: { usados: pecas.filter(peca => peca.tipo === 'acessorio').reduce((soma, peca) => soma + peca.tamanho, 0), total: Number(arma.system.slots) || 0 },
     modificacoes: arma.slotsDeModificacao, pecas, ataque,
-    aDistancia: Boolean(arma.system.aDistancia), tipo: arma.system.tipo || '', qualidade: arma.system.qualidade || 'standard', classe: arma.perfil2077?.classe ?? null
+    aDistancia: Boolean(arma.system.aDistancia), tipo: arma.system.tipo || '', qualidade: arma.system.qualidade || 'standard', classe: arma.perfil2077?.classe ?? null,
+    autofogo: Number(arma.system.autofogo) > 0
   };
 }
 

@@ -1079,6 +1079,31 @@ export function acessorioCabe({ slots = 0, usados = 0, tamanho = 0, carregador =
   if (usados + tamanho > slots) return { cabe: false, motivo: `${usados} de ${slots} slots em uso` };
   return { cabe: true, motivo: '' };
 }
+// Onde o acessório serve (o C98, decisão do usuário de 2026-11-26: o Foundry segue a Montagem da wiki, criador.js,
+// accessoryFits, e personagem-bancada.js, acessorioCabe): na arma de longo alcance que não é exótica e tem slots; o
+// carregador com a classe no nome ("Extended Magazine (Assault Rifle)"), só nela; o de baixo do cano, só em arma de duas
+// mãos. O Rebuild tem as regras dele (rebuildCabe). arma: { aDistancia, exotica, slots, tipo, dano, maos }. A Heavy SMG do
+// CORE é uma SMG de 3d6 (como a classe da loja da wiki, foundry-2077/build/loja.mjs, weaponClass).
+const CLASSES_DOS_CARREGADORES = {
+  'assault-rifle': ['assaultRifle', 'fuzil de assalto'], 'grenade-launcher': ['grenadeLauncher', 'lança-granadas'],
+  'heavy-pistol': ['heavyPistol', 'pistola pesada'], 'heavy-smg': ['heavySmg', 'submetralhadora pesada'],
+  'medium-pistol': ['medPistol', 'pistola média'], 'rocket-launcher': ['rocketLauncher', 'lança-foguetes'],
+  shotgun: ['shotgun', 'espingarda'], smg: ['smg', 'submetralhadora'], 'sniper-rifle': ['sniperRifle', 'fuzil de precisão'],
+  'very-heavy-pistol': ['vHeavyPistol', 'pistola muito pesada']
+};
+export const classeDoAcessorio = catalogo => CLASSES_DOS_CARREGADORES[/^core_upgrades:(?:extended|drum)-magazine-(.+)$/.exec(catalogo ?? '')?.[1]] ?? null;
+export const ehDebaixoDoCano = catalogo => /underbarrel/.test(catalogo ?? '');
+export function encaixeDoAcessorio(arma = {}, catalogo = '') {
+  const recusa = motivo => ({ cabe: false, motivo });
+  if (!arma.aDistancia) return recusa('acessório só em arma de longo alcance');
+  if (arma.exotica) return recusa('a arma exótica não leva acessório');
+  if (!Number(arma.slots)) return recusa('a arma não tem slots de acessório');
+  const classe = classeDoAcessorio(catalogo);
+  const tipo = arma.tipo === 'smg' && arma.dano === '3d6' ? 'heavySmg' : arma.tipo;
+  if (classe && classe[0] !== tipo) return recusa(`só em ${classe[1]}`);
+  if (ehDebaixoDoCano(catalogo) && (Number(arma.maos) || 1) < 2) return recusa('só em arma de duas mãos');
+  return { cabe: true, motivo: '' };
+}
 // O Rebuild (o C47; o Kit, p. 31–32, e a wiki, system-2077.js, Rebuilds): o acessório que transforma uma arma de longo
 // alcance do RED em Power, Smart ou Tech (a flag arma2077.rebuild do catálogo). "Só um por arma"; "serve em qualquer arma
 // de longo alcance que não seja exótica" (a de 3 slots, a regra dos acessórios acima), com 2 slots; "numa arma exótica,

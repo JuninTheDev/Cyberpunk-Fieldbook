@@ -44,9 +44,9 @@
       mesa: 'No Foundry, entra na janela de rolagem: ligada quando o primeiro alvo está de 13 a 50 m.'
     }),
     mod('compensador', 'Compensador', 'situacional', {
-      eb: 500, encaixe: LONGE,
+      eb: 500, encaixe: { aDistancia: true, autofogo: true },
       efeitos: [{ rotulo: 'autofogo', quando: { modo: ['autofogo'] }, entao: ataque(1) }, { rotulo: 'não se esconde', entao: [{ alvo: 'ocultavel', valor: false }] }],
-      texto: '+1 no teste de Autofogo. Com ele, a arma não se esconde.',
+      texto: '+1 no teste de Autofogo. Só na arma que faz autofogo. Com ele, a arma não se esconde.',
       mesa: 'No Foundry, entra ligado na janela do autofogo, e a arma deixa de ser ocultável.'
     }),
     mod('bipe', 'Bipé', 'situacional', {
@@ -90,7 +90,9 @@
     }),
     mod('cabo-balanceado', 'Cabo balanceado', 'geral', {
       eb: 100, encaixe: { aDistancia: false, tipos: ['lightMelee', 'medMelee'] },
-      texto: 'A arma branca leve ou média é feita para o arremesso (Atletismo), como a Tomahawk.'
+      efeitos: [{ rotulo: 'arremessada', quando: { arremesso: true }, entao: ataque(1) }],
+      texto: 'A arma branca leve ou média é feita para o arremesso: +1 no ataque quando ela é arremessada (Atletismo). Conta no teto da arma e é a modificação de ataque dela.',
+      mesa: 'No Foundry, entra ligado na janela de rolagem do arremesso; fora dele, não aparece.'
     }),
     mod('carga-silenciosa', 'Carga silenciosa', 'geral', {
       eb: 100, encaixe: { aDistancia: true, classe: 'tech' },
@@ -171,6 +173,7 @@
   function serveEm({ encaixe } = {}) {
     if (!encaixe) return 'qualquer arma';
     if (encaixe.classe) return `arma ${CLASSES[encaixe.classe]}`;
+    if (encaixe.autofogo) return 'arma de longo alcance com autofogo';
     if (encaixe.tipos) return encaixe.tipos.map(tipo => TIPOS_DE_ARMA[tipo] || tipo).join(' ou ');
     return encaixe.aDistancia ? 'arma de longo alcance' : 'arma branca';
   }

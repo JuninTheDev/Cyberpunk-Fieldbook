@@ -8,7 +8,7 @@ import { tokenDoVeiculo } from './regras-ator-veiculo.mjs';
 import { AVISO_INICIATIVA_VEICULO, podeEntrarNaIniciativa } from './regras-iniciativa.mjs';
 import { perguntarModificador, perguntarTeste } from './janela-rolagem.mjs';
 import {
-  acessorioCabe, AGARRAO, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
+  acessorioCabe, AGARRAO, armaExotica, encaixeDoAcessorio, aplicarDano, artesMarciaisLiberadas, backup, BONUS_SMART, cabeNaFundacao, DANO_DE_PROGRAMA, danoDesarmado, danoNoCerebro, deLonge, FACEDOWN, formulaDeDano, HABILIDADES_DE_INTERFACE, ehCoprocessador, ehDesarmada, ehLuneta, ehReflexTuner, ehLigacaoSmart, ehTiroUnico, ficaNoMembroNatural, formaDasArtesMarciais, fundacaoDoLado, ladoEfetivo, linhaDoExtrato, nomeDoLado, LOCAIS_MIRADOS, localDaArmadura, LONGE, LUNETA, lunetaVale, novoSaldo, passouNoDeathSave,
   NUMEROS_DA_NET, ONDE_O_DANO_ENTRA, pedeFundacao, PENALIDADE_CORONHA, perfil2077, permissoesDoTipo, programaDeAtaque, REFLEX_TUNER, rezAtual, rezDepoisDoDano, ROLAGENS_DE_ROLE, sorteParaGastar, TELEOPTICS, teleopticsNoTiro,
   tipoDeTeleOptics, maosDaArma, maosLivres, maosParaAgarrar, ehSmartgunLink, smartgunLinkVale, perfilPelaMunicao, hpDepoisDoMaximo,
   classeDoRebuild, flagComRebuild, rebuildCabe, tamanhoDoRebuild, BALAS_RAJADA
@@ -269,9 +269,9 @@ export class AtorCPR extends Actor {
   // As modificações da arma (o C67; regras-modificacoes.efeitosDoAtaque) entram com a condição de cada efeito: o modo, o
   // mirado, a distância, a munição no pente, o alvo (pessoa ou veículo: o primeiro marcado) e se quem atira é o dono.
   // daArma: o bônus que vem da arma (o efeito dela, a luneta, a modificação), para o teto de +3 (combate.mjs).
-  situacionaisDoAtaque(arma, { pericia, modo, local = 'corpo', metros = null, alvo = null, dono = true }) {
+  situacionaisDoAtaque(arma, { pericia, modo, local = 'corpo', metros = null, alvo = null, dono = true, arremesso = false }) {
     const lista = this.#efeitosSituacionais(this.#chavesDoTeste(pericia), efeito => [null, arma.id].includes(this.armaDoEfeito(efeito)?.id ?? null), efeito => this.armaDoEfeito(efeito)?.id === arma.id);
-    const contexto = { modo, mirado: Boolean(LOCAIS_MIRADOS[local]), aDistancia: arma.system.aDistancia, metros, municao: arma.municaoCarregada?.system.tipo ?? null, alvo, dono };
+    const contexto = { modo, mirado: Boolean(LOCAIS_MIRADOS[local]), aDistancia: arma.system.aDistancia, metros, municao: arma.municaoCarregada?.system.tipo ?? null, alvo, dono, arremesso };
     lista.push(...efeitosDoAtaque(arma.modificacoes.map(item => item.modificacao), contexto).situacionais.map(situacional => ({ ...situacional, daArma: true })));
     if (!arma.system.aDistancia || !ehTiroUnico(modo)) return lista;
     const mirado = Boolean(LOCAIS_MIRADOS[local]);
@@ -869,9 +869,10 @@ export class ItemCPR extends Item {
         const usados = outros.reduce((soma, item) => soma + arma.tamanhoNaArma(item), 0);
         // O Rebuild (o C47) tem as regras dele; os outros acessórios, a dos slots e a do carregador.
         const rebuild = classeDoRebuild(this.getFlag(SISTEMA, 'arma2077'));
+        const encaixe = rebuild ? { cabe: true } : encaixeDoAcessorio(arma.paraAcessorios, this.getFlag(SISTEMA, 'catalogo'));
         const { cabe, motivo } = rebuild
           ? rebuildCabe({ rebuild, arma: arma.system, usados, outroRebuild: outros.some(item => classeDoRebuild(item.getFlag(SISTEMA, 'arma2077'))), classe2077: arma.getFlag(SISTEMA, 'arma2077')?.classe ?? null })
-          : acessorioCabe({
+          : !encaixe.cabe ? encaixe : acessorioCabe({
             slots: arma.system.slots, usados, tamanho: Number(sistema.tamanho) || 0,
             carregador: Boolean(sistema.modificadores?.pente), temCarregador: outros.some(item => item.type === 'upgrade' && item.system.modificadores.pente)
           });
@@ -925,7 +926,14 @@ export class ItemCPR extends Item {
   }
   get paraModificacoes() {
     const { aDistancia, slots, qualidade, tipo } = this.system;
-    return { aDistancia, slots, qualidade, tipo, exotica: this.getFlag(SISTEMA, 'arma2077')?.exotica ?? null, classe: this.perfil2077?.classe ?? null };
+    return { aDistancia, slots, qualidade, tipo, exotica: this.getFlag(SISTEMA, 'arma2077')?.exotica ?? null, classe: this.perfil2077?.classe ?? null, autofogo: Number(this.system.autofogo) > 0 };
+  }
+  // A arma, para o encaixe do acessório (o C98; regras.encaixeDoAcessorio). A exótica: a de 2077 pela flag; as outras pelos
+  // slots (menos de 3) ou pela descrição ("An Exotic..."; o lança-chamas e o bumerangue têm 3 slots), como a loja da wiki.
+  get paraAcessorios() {
+    const { aDistancia, slots, tipo, dano, maos } = this.system;
+    const exotica = this.getFlag(SISTEMA, 'arma2077')?.exotica ?? (armaExotica({ slots }) || /\bexotic\b/i.test(this.system.descricao ?? ''));
+    return { aDistancia, slots, tipo, dano, maos, exotica: Boolean(aDistancia) && exotica };
   }
   get slotsDeModificacao() {
     const mods = this.modificacoes.map(item => item.modificacao);

@@ -6527,6 +6527,23 @@ module.exports = async ({ edge, servidores, r }) => {
       return conferirArremessos(campos);
     });
 
+    await r.passo('C98: o cabo balanceado dá +1 no ataque arremessado (a faca a 5 m: 20 em vez de 19), e fora do arremesso ele não aparece', async () => {
+      const info = await comArremessos(`async ({ a, arma, token, dados, cartaoDe }) => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const [cabo] = await a.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['mods-armas:cabo-balanceado'])]);
+        await cabo.update({ 'system.instaladoEm': arma.id });
+        await token.update({ x: 600 }, { animate: false });
+        dados([[8, 10], [6, 6]]);
+        const r = await arma.atacar({ modo: 'arremesso', alvo: token, destinos: {} });
+        const desfeito = r?.linhas[0]?.dano ? await game.system.api.combate.desfazer(cartaoDe(r)) : null;
+        const daArma = opcoes => a.situacionaisDoAtaque(arma, opcoes).filter(s => s.daArma).map(s => [s.rotulo, s.valor, s.ligado]);
+        return { instalado: cabo.system.instaladoEm === arma.id, ataque: r?.ataque, arremesso: r?.arremesso, desfeito,
+          noArremesso: daArma({ pericia: 'athletics', modo: 'tiro', arremesso: true }), noGolpe: daArma({ pericia: 'melee-weapon', modo: 'tiro' }) };
+      }`);
+      return conferirArremessos({ instalado: [info.instalado, true], ataque: [info.ataque, 20], arremesso: [info.arremesso, true], desfeito: [info.desfeito, true],
+        noArremesso: [info.noArremesso, [['Cabo balanceado: arremessada', 1, true]]], noGolpe: [info.noGolpe, []] });
+    });
+
     await r.passo('arremesso (C37), Dano manual: o botão do cartão conserva o arremesso no dano, aplica contra SP inteiro e permite Desfazer', async () => {
       const info = await comArremessos(`async ({ arma, token, esperar, dados, estado, cartaoDe }) => {
         await game.settings.set('cpr-fieldbook', 'dano', 'manual');
@@ -22501,6 +22518,75 @@ module.exports = async ({ edge, servidores, r }) => {
       } finally {
         await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => /^C75 /.test(a.name))) await ator.delete(); return true; })()`);
       }
+    });
+
+    await r.passo('C98: a armadura vestida, o cyberdeck e o programa arrastam da ficha; o acessório cabe só onde a Montagem da wiki deixa (o carregador da classe, o de baixo do cano em duas mãos, a exótica e a branca sem acessório); o Compensador só em arma com autofogo', async () => {
+      const c98 = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const ids = ['core_weapons:assault-rifle', 'core_weapons:heavy-pistol', 'core_weapons:heavy-smg', 'black-chrome_weapons:militech-mastiff-smg', 'core_weapons:flamethrower', 'core_weapons:light-melee',
+          'core_upgrades:extended-magazine-heavy-pistol', 'core_upgrades:extended-magazine-heavy-smg', 'core_upgrades:grenade-launcher-underbarrel', 'core_upgrades:sniping-scope', 'mods-armas:compensador',
+          'core_armor:light-armorjack-body', 'core_programs:armor', 'core_gear:cyberdeck'];
+        const dados = ids.map(id => { const item = foundry.utils.deepClone(cat[id]); if (id.startsWith('core_armor:')) item.system.equipada = true; return item; });
+        const ator = await Actor.implementation.create({ name: 'C98 Montagem', type: 'personagem' });
+        try {
+          const criados = await ator.createEmbeddedDocuments('Item', dados);
+          // A ordem da volta não é a do pedido: cada um pelo catálogo.
+          const por = id => criados.find(item => item.getFlag('cpr-fieldbook', 'catalogo') === id);
+          const [fuzil, pistola, pesada, mastiff, chamas, faca] = ids.slice(0, 6).map(por);
+          const cabe = (arma, id) => { const { cabe, motivo } = game.system.api.montagem.pecaCabe(arma, por(id)); return cabe ? 'cabe' : motivo; };
+          const encaixes = {
+            penteDaPistolaNoFuzil: cabe(fuzil, 'core_upgrades:extended-magazine-heavy-pistol'), penteDaPistolaNaPistola: cabe(pistola, 'core_upgrades:extended-magazine-heavy-pistol'),
+            penteDaPesadaNaPesada: cabe(pesada, 'core_upgrades:extended-magazine-heavy-smg'), debaixoDoCanoNaPistola: cabe(pistola, 'core_upgrades:grenade-launcher-underbarrel'),
+            debaixoDoCanoNoFuzil: cabe(fuzil, 'core_upgrades:grenade-launcher-underbarrel'), lunetaNaMastiff: cabe(mastiff, 'core_upgrades:sniping-scope'),
+            lunetaNoLancaChamas: cabe(chamas, 'core_upgrades:sniping-scope'), lunetaNaFaca: cabe(faca, 'core_upgrades:sniping-scope'),
+            compensadorNaPistola: cabe(pistola, 'mods-armas:compensador'), compensadorNoFuzil: cabe(fuzil, 'mods-armas:compensador')
+          };
+          // A recusa de verdade (o _preUpdate), também para o mestre: o pente da pistola no fuzil e o Compensador na pistola, cada
+          // uma com o aviso dela (guardado aqui: o aviso esperado não conta no passo "nenhum aviso").
+          const avisar = ui.notifications.warn;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          const pente = por('core_upgrades:extended-magazine-heavy-pistol');
+          await pente.update({ 'system.instaladoEm': fuzil.id });
+          const penteRecusado = pente.system.instaladoEm === '';
+          await pente.update({ 'system.instaladoEm': pistola.id });
+          const penteNaPistola = pente.system.instaladoEm === pistola.id;
+          const compensador = por('mods-armas:compensador');
+          await compensador.update({ 'system.instaladoEm': pistola.id });
+          const compensadorRecusado = compensador.system.instaladoEm === '';
+          ui.notifications.warn = avisar;
+          // O arrasto: a armadura vestida (o bloco da aba Combate), o cyberdeck e o programa (a aba NET).
+          await ator.sheet.render({ force: true });
+          const arrastar = async (aba, id) => {
+            ator.sheet.changeTab(aba, 'primary');
+            const linha = () => ator.sheet.element?.querySelector('.tab.' + aba + ' li[data-item-id="' + id + '"]');
+            await esperar(linha);
+            const transferencia = new DataTransfer();
+            linha()?.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: transferencia }));
+            return JSON.parse(transferencia.getData('text/plain') || '{}').uuid ?? null;
+          };
+          const arrastos = {
+            armadura: await arrastar('combate', por('core_armor:light-armorjack-body').id) === por('core_armor:light-armorjack-body').uuid,
+            programa: await arrastar('net', por('core_programs:armor').id) === por('core_programs:armor').uuid,
+            deck: await arrastar('net', por('core_gear:cyberdeck').id) === por('core_gear:cyberdeck').uuid
+          };
+          await ator.sheet.close({ animate: false });
+          return { encaixes, penteRecusado, penteNaPistola, compensadorRecusado, avisos, arrastos };
+        } finally {
+          await ator.delete();
+        }
+      })()`);
+      const esperado = {
+        penteDaPistolaNoFuzil: 'só em pistola pesada', penteDaPistolaNaPistola: 'cabe', penteDaPesadaNaPesada: 'cabe', debaixoDoCanoNaPistola: 'só em arma de duas mãos',
+        debaixoDoCanoNoFuzil: 'cabe', lunetaNaMastiff: 'a arma exótica não leva acessório', lunetaNoLancaChamas: 'a arma exótica não leva acessório',
+        lunetaNaFaca: 'acessório só em arma de longo alcance', compensadorNaPistola: 'esta modificação só serve em arma com autofogo', compensadorNoFuzil: 'cabe'
+      };
+      const avisosEsperados = ['Extended Magazine (Heavy Pistol) não cabe em Assault Rifle: só em pistola pesada.', 'Compensador não cabe em Heavy Pistol: esta modificação só serve em arma com autofogo.'];
+      const ok = JSON.stringify(c98.encaixes) === JSON.stringify(esperado) && c98.penteRecusado && c98.penteNaPistola && c98.compensadorRecusado
+        && JSON.stringify(c98.avisos) === JSON.stringify(avisosEsperados)
+        && c98.arrastos.armadura && c98.arrastos.programa && c98.arrastos.deck;
+      return [ok, JSON.stringify(c98)];
     });
 
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {

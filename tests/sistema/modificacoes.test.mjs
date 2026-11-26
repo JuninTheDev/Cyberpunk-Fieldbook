@@ -183,7 +183,8 @@ test('C68: as 26 modificações da wiki (a proposta aprovada), cada uma válida,
   assert.deepEqual([preco['mira-holografica'], preco['compensador'], preco['lanterna-tatica'], preco['supressor'], preco['nome-gravado'], preco['acabamento-de-grife']], [100, 500, 50, 500, 50, 100]);
   // As de ataque: só +1, numa situação (a mira, o compensador, o bipé); os defeitos que tiram.
   const deAtaque = mods.filter(mod => M.ehDeAtaque(wiki.regra(mod))).map(mod => mod.id);
-  assert.deepEqual(deAtaque, ['mira-holografica', 'mira-medio-alcance', 'compensador', 'bipe']);
+  // O cabo balanceado (o C98, decisão do usuário de 2026-11-26): +1 no arremesso.
+  assert.deepEqual(deAtaque, ['mira-holografica', 'mira-medio-alcance', 'compensador', 'bipe', 'cabo-balanceado']);
   const contexto12 = { modo: 'tiro', metros: 10 };
   const holo = M.efeitosDoAtaque([JSON.parse(JSON.stringify(wiki.regra(mods[0])))], contexto12);
   assert.deepEqual(holo.situacionais.map(s => [s.valor, s.ligado]), [[1, true]]);
@@ -198,7 +199,9 @@ test('C68: as 26 modificações da wiki (a proposta aprovada), cada uma válida,
   assert.equal(M.modCabe({ ...rifle, classe: 'power' }, [], regraDe('carga-silenciosa')).motivo, 'esta modificação só serve em arma Tech');
   assert.equal(M.modCabe({ ...rifle, tipo: 'shotgun' }, [], regraDe('cano-serrado')).cabe, true);
   assert.equal(M.modCabe(rifle, [], regraDe('cano-serrado')).cabe, false);
-  assert.equal(M.validarMod({ ...regraDe('carga-silenciosa'), encaixe: { classe: 'laser' } }), 'o encaixe é { aDistancia, tipos, classe }');
+  assert.equal(M.validarMod({ ...regraDe('carga-silenciosa'), encaixe: { classe: 'laser' } }), 'o encaixe é { aDistancia, tipos, classe, autofogo }');
+  // O autofogo do encaixe (o C98) é só o sim.
+  assert.equal(M.validarMod({ ...regraDe('carga-silenciosa'), encaixe: { autofogo: false } }), 'o encaixe é { aDistancia, tipos, classe, autofogo }');
   assert.deepEqual(['defletor-de-ricochete', 'carga-silenciosa', 'cano-serrado', 'cabo-balanceado', 'guarda-de-punho'].map(id => wiki.serveEm(mods.find(mod => mod.id === id))),
     ['arma Power', 'arma Tech', 'espingarda', 'branca leve ou branca média', 'arma branca']);
   // A página: a regra da casa declarada, a Invention Expertise, a tabela de 1d6 dos defeitos e o botão do sorteio.

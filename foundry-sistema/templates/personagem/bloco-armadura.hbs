@@ -17,7 +17,7 @@
   </div>
   <ol class="itens">
     {{#each armaduras}}
-    <li data-item-id="{{id}}" class="{{#unless equipada}}guardada{{/unless}}">
+    <li data-item-id="{{id}}" class="draggable {{#unless equipada}}guardada{{/unless}}">
       <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
       <span class="detalhe">{{detalhe}}</span>
       {{#if @root.editavel}}{{#if consertavel}}<button type="button" class="acao" data-action="consertarArmadura" data-tooltip="Restaura o SP desta armadura e informa o conserto no chat">Consertar</button>{{/if}}{{/if}}

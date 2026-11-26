@@ -30,7 +30,7 @@ test('C71: o menu da oficina refaz a regra das modificações da wiki (a situaç
   const casos = [
     ['mira-holografica', { tipo: 'tatica', tamanho: 1, serve: 'distancia', efeitos: [{ tipo: 'situacao', valor: 1, situacao: 'perto', metrosMax: 12 }] }],
     ['mira-medio-alcance', { tipo: 'tatica', tamanho: 1, serve: 'distancia', efeitos: [{ tipo: 'situacao', valor: '1', situacao: 'faixa', metrosMin: '13', metrosMax: '50' }] }],
-    ['compensador', { tipo: 'tatica', tamanho: 1, serve: 'distancia', efeitos: [{ tipo: 'situacao', valor: 1, situacao: 'autofogo' }, { tipo: 'ocultavel', valor: 'nao' }] }],
+    ['compensador', { tipo: 'tatica', tamanho: 1, serve: 'autofogo', efeitos: [{ tipo: 'situacao', valor: 1, situacao: 'autofogo' }, { tipo: 'ocultavel', valor: 'nao' }] }],
     ['cano-de-alta-pressao', { tipo: 'tatica', tamanho: 1, serve: 'distancia', efeitos: [{ tipo: 'dano', dados: '1d6', alvos: ['cobertura', 'objeto'] }] }],
     ['gatilho-sensivel', { tipo: 'defeito', tamanho: 1, serve: 'distancia', efeitos: [{ tipo: 'emperra', valor: 2 }] }],
     ['mira-descalibrada-para-estranhos', { tipo: 'defeito', serve: 'distancia', efeitos: [{ tipo: 'situacao', valor: -2, situacao: 'estranho' }] }],
@@ -45,6 +45,10 @@ test('C71: o menu da oficina refaz a regra das modificações da wiki (a situaç
     assert.equal(mod.tipo, wiki.tipo, id);
     assert.equal(mod.tamanho, wiki.tamanho, `${id}: o defeito não ocupa slot`);
   }
+  // O arremesso (o C98): a situação do cabo balanceado, e o "Serve em" do autofogo em palavras.
+  const { mod: arremessada } = O.modDoFormulario({ nome: 'Cabo', tamanho: 1, serve: 'branca', efeitos: [{ tipo: 'situacao', valor: 1, situacao: 'arremesso' }] });
+  assert.deepEqual(regra(arremessada.efeitos), regra(daWiki('cabo-balanceado').efeitos));
+  assert.equal(O.serveEm(O.modDoFormulario({ nome: 'C', tamanho: 1, serve: 'autofogo', efeitos: [] }).mod), 'arma de longo alcance com autofogo');
   // A situação escrita à mão (o bipé) e a da distância a partir de (o cano serrado).
   const { mod: bipe } = O.modDoFormulario({ nome: 'Bipé', tamanho: 1, efeitos: [{ tipo: 'situacao', valor: 1, situacao: 'manual', manual: 'a arma apoiada' }] });
   assert.deepEqual(bipe.efeitos[0].quando, { manual: 'a arma apoiada' });

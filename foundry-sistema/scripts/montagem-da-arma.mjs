@@ -7,12 +7,13 @@
 import { SISTEMA } from './config.mjs';
 import { abrirInstalacao, instalacaoDe, pedirInstalacao } from './instalacao-mod.mjs';
 import { modCabe } from './regras-modificacoes.mjs';
-import { acessorioCabe, classeDoRebuild, rebuildCabe } from './regras.mjs';
+import { acessorioCabe, classeDoRebuild, encaixeDoAcessorio, rebuildCabe } from './regras.mjs';
 
 const { DialogV2 } = foundry.applications.api;
 const esc = valor => foundry.utils.escapeHTML(String(valor ?? ''));
 
-// O acessório cabe na arma? Os slots, o carregador (um por vez) e o Rebuild de 2077 (o C47), como no _preUpdate.
+// O acessório cabe na arma? Onde ele serve (o C98, a Montagem da wiki), os slots, o carregador (um por vez) e o Rebuild de
+// 2077 (o C47), como no _preUpdate.
 export function compatibilidadeDoAcessorio(arma, acessorio) {
   const outros = arma.instalados.filter(item => item.id !== acessorio.id);
   const usados = outros.reduce((soma, item) => soma + arma.tamanhoNaArma(item), 0);
@@ -22,6 +23,8 @@ export function compatibilidadeDoAcessorio(arma, acessorio) {
     return rebuildCabe({ rebuild, arma: arma.system, usados,
       outroRebuild: outros.some(item => classeDoRebuild(item.getFlag(SISTEMA, 'arma2077'))), classe2077 });
   }
+  const encaixe = encaixeDoAcessorio(arma.paraAcessorios, acessorio.getFlag(SISTEMA, 'catalogo'));
+  if (!encaixe.cabe) return encaixe;
   return acessorioCabe({
     slots: arma.system.slots, usados, tamanho: Number(acessorio.system.tamanho) || 0,
     carregador: Boolean(acessorio.system.modificadores?.pente),

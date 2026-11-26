@@ -731,6 +731,11 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     armas do personagem em que ele cabe), e a arma tem o "Bancada" (abre a ficha dela na aba Bancada). O acessório entra na
     hora; a modificação vai pelo Tech (o C72): o jogador pede ao mestre, com a arma já escolhida. A API:
     `game.system.api.montagem`.
+  - **A montagem segue a regra da wiki** (o C98; as decisões do usuário de 2026-11-26): a armadura vestida, o cyberdeck e o
+    programa também arrastam da ficha (o cyberware e as lesões não). O acessório cabe só onde a Montagem da wiki deixa
+    (`regras.encaixeDoAcessorio`): na arma de longo alcance que não é exótica e tem slots; o carregador da classe só nela
+    (a Heavy SMG do CORE é a SMG de 3d6); o de baixo do cano só em arma de duas mãos. O Compensador só serve em arma com
+    autofogo, e o cabo balanceado dá +1 no ataque arremessado (a condição `arremesso`; a oficina também tem as duas).
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma
