@@ -660,7 +660,8 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   mestre manda à parte; a fila (até 3 esperando, as mais velhas viram só o texto); a falha vira um contador. O texto em
   cima do token saiu do socket do combate. "Efeitos na mesa" ganhou o Reduzido e virou o teto da mesa; "Efeitos neste
   navegador" (novo) é de cada um. Por enquanto só o texto toca: o desenho e o som são o C80 e o C81.
-- [ ] **C80 a C97:** os itens do plano (o palco PIXI do tiro e do impacto; o motor de
+- [~] **C80. O palco PIXI: o tiro e o impacto:** em andamento (sessão KouArt, 2026-11-26).
+- [ ] **C81 a C97:** os itens do plano (o motor de
   som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
   mestre; o Sequencer como opção; as folhas de sprite; o polimento; o VFX experimental do 14).
