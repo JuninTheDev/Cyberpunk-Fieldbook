@@ -707,6 +707,21 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     - **o teto da campanha** (só avisa): o teto da arma na rolagem (de +0 a +3) e as lendárias por arma. A bancada da wiki
       avisa a arma que passa, e o pedido avisa o mestre quando a modificação de ataque passaria do teto numa arma da ficha.
       A bancada que o Foundry manda leva a raridade de cada modificação.
+  - **O risco da arma** (o C73; decisões do usuário de 2026-11-25), no `regras-quebra.mjs` e no `quebra.mjs`:
+    - **a quebra:** a falha crítica da arma ruim (ou da que tem uma modificação instável) que quebra marca a arma sozinha: a
+      "Quebra" a deixa quebrada, e a "Quebra sem conserto", uma relíquia. O cartão do ataque diz o estado e tem o "Desfazer
+      a quebra" do mestre. Quebrada, a arma não ataca (o `motivoSemAtaque`), e o que está nela para (o
+      `motivoInoperante`: o EMP, a quebrada ou a relíquia); a ficha e a bancada da wiki mostram o estado;
+    - **o conserto:** o "Consertar" da ficha do mestre escolhe quem conserta (o Tech primeiro) e pede o teste (TECH +
+      Tecnologia de Armas + 1d10 contra a DV do preço da arma: 13 até a Onerosa, 17 na Premium, 21 na Cara, 24 da Muito
+      Cara para cima; custa o preço de uma categoria abaixo, que o mestre cobra), ou conserta direto (o Tech NPC). Passou,
+      a arma volta e o diário anota; falhou, continua quebrada;
+    - **a relíquia e o reforjar:** a relíquia não se usa mais, e a história fica. O "Reforjar" da ficha do mestre passa o
+      nome, a frase, a aparência, quem fez e uma modificação (se couber) para uma arma nova do mesmo tipo, sem nome
+      próprio; o diário da nova começa com "Reforjada da …", e os contadores voltam a zero. A relíquia anota "Reforjada em
+      …" e não se reforja de novo;
+    - **a modificação instável:** a oficina do mestre ganhou o efeito "Instável": a arma com ela falha como a ruim na
+      falha crítica (o seletor "Na falha crítica" aparece nela). A API: `game.system.api.quebra`.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

@@ -16,6 +16,7 @@ import {
 import { dadosDoCartao } from './dados-do-cartao.mjs';
 import { efeitosDoAtaque, modCabe, podeInstalarModificacao, slotsDeModificacao, validarMod } from './regras-modificacoes.mjs';
 import { nomeDeExibicao, normalizar as normalizarIdentidade } from './regras-identidade.mjs';
+import { ESTADOS as ESTADOS_DA_QUEBRA, estadoValido } from './regras-quebra.mjs';
 import { identidadeAoCriar } from './identidade.mjs';
 import { rolarPerdaDeHumanidade } from './humanidade.mjs';
 import { modoDaMesa } from './mesa.mjs';
@@ -782,19 +783,29 @@ export class ItemCPR extends Item {
   }
   // O EMP não desinstala nem guarda o item. A fundação parada leva suas opções; os estados originais ficam intactos.
   get inoperante() {
+    return Boolean(this.motivoInoperante);
+  }
+  // Por que o item está parado: o EMP, ou a arma quebrada (o C73) em que ele está (ou ela mesma), com o que está nela.
+  // '' quando funciona.
+  get motivoInoperante() {
     const pendentes = [this], vistos = new Set();
     while (pendentes.length) {
       const item = pendentes.pop();
       if (!item || vistos.has(item.id)) continue;
       vistos.add(item.id);
-      if (item.getFlag(SISTEMA, 'emp')) return true;
+      if (item.getFlag(SISTEMA, 'emp')) return 'EMP';
+      if (item.estadoDaQuebra) return ESTADOS_DA_QUEBRA[item.estadoDaQuebra].rotulo.toUpperCase();
       pendentes.push(item.actor?.items.get(item.system.instaladoEm));
       if (item.type === 'cyberdeck' && item.getFlag(SISTEMA, 'naPorta')) {
         pendentes.push(...(item.actor?.items.filter(porta => porta.type === 'cyberware' && porta.system.instalado
           && (porta.getFlag(SISTEMA, 'catalogo') === PORTA_DO_DECK || porta.name === 'Neuroport Cyberdeck Port')) ?? []));
       }
     }
-    return false;
+    return '';
+  }
+  // O estado da arma (o C73): 'quebrada', 'reliquia' ou null.
+  get estadoDaQuebra() {
+    return this.type === 'arma' ? estadoValido(this.getFlag(SISTEMA, 'quebra')?.estado) : null;
   }
   // A nova equipagem passa pela mesma conferência na ficha do personagem, na do item e no drop do capanga.
   // Guardar e editar uma arma já equipada continuam possíveis, inclusive num estado antigo com excesso de armas.
@@ -829,7 +840,9 @@ export class ItemCPR extends Item {
     const mod = this.type === 'upgrade' ? this.getFlag(SISTEMA, 'mod') : null;
     if (mod && destino !== undefined && destino !== this.system.instaladoEm && this.actor && !opcoes.montagemDaWiki) {
       const atual = this.actor.items.get(this.system.instaladoEm);
-      if (atual?.type === 'arma') { ui.notifications.warn(`${this.name} é permanente em ${atual.name}: não sai nem passa para outra arma. Só o mestre tira, e ela se destrói.`); return false; }
+      // O reforjar (o C73): o mestre passa uma modificação da relíquia para a arma nova; é a única que muda de arma.
+      const doReforjar = opcoes.reforjar === true && game.user.isGM && atual?.estadoDaQuebra === 'reliquia';
+      if (atual?.type === 'arma' && !doReforjar) { ui.notifications.warn(`${this.name} é permanente em ${atual.name}: não sai nem passa para outra arma. Só o mestre tira, e ela se destrói.`); return false; }
       // O defeito vem do mestre (o C72).
       if (destino && !game.user.isGM && mod.tipo === 'defeito') { ui.notifications.warn(`${this.name} é um defeito: quem o põe na arma é o mestre.`); return false; }
       if (destino && !podeInstalarModificacao({ mestre: game.user.isGM, roles: [this.actor.system.role?.nome, this.actor.system.roleSecundaria?.nome] })) {
@@ -1094,9 +1107,12 @@ export class ItemCPR extends Item {
   get periciaDaArma() {
     return this.type === 'arma' ? formaDasArtesMarciais(this.system.pericia, this.actor?.system.pericias) : '';
   }
-  // Por que a arma não ataca agora, ou '': as Artes Marciais pedem pelo menos 1 ponto numa forma (o C10).
+  // Por que a arma não ataca agora, ou '': a arma quebrada ou a relíquia (o C73); as Artes Marciais pedem pelo menos 1
+  // ponto numa forma (o C10).
   get motivoSemAtaque() {
     const ator = this.actor;
+    if (this.estadoDaQuebra === 'quebrada') return 'a arma está quebrada: o Tech conserta (a ficha da arma).';
+    if (this.estadoDaQuebra === 'reliquia') return 'a arma é uma relíquia: quebrou sem conserto.';
     if (this.type !== 'arma' || this.system.tipo !== 'martialArts' || !ator?.system.pericia) return '';
     return artesMarciaisLiberadas(ator.system.pericia(this.periciaDaArma).nivel) ? '' : 'as Artes Marciais pedem pelo menos 1 ponto numa forma (Aikido, Judô, Karatê ou Taekwondo).';
   }

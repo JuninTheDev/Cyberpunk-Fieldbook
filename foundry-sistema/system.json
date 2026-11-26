@@ -2,7 +2,7 @@
   "id": "cpr-fieldbook",
   "title": "Cyberpunk RED — Fieldbook",
   "description": "Sistema próprio de Cyberpunk RED para o Foundry VTT 14, feito em volta da wiki da mesa: ficha, rolagens com o crítico do d10, armadura com ablação, cyberware que só vale instalado, o combate do Fluxo de Combate (tiro, mirado, corpo a corpo, autofogo, fogo supressivo, cartucho e explosivo em área, com a esquiva às cegas e o dano na ficha), Lesão Crítica, Death Save e importação dos personagens criados na wiki.",
-  "version": "0.3.212",
+  "version": "0.3.213",
   "authors": [
     {
       "name": "Junin"

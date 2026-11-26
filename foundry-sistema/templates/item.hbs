@@ -33,7 +33,7 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos, e Banc
       <label class="celula"><span>Pente</span><span class="par"><input type="number" name="system.pente.value" aria-label="Munição atual no pente" value="{{fonte.pente.value}}"> / <input type="number" name="system.pente.max" aria-label="Capacidade do pente" value="{{fonte.pente.max}}"></span></label>
       <label class="celula"><span>Tabela de DV</span><input type="text" name="system.tabelaDV" value="{{fonte.tabelaDV}}"></label>
       <label class="celula"><span>Qualidade</span><select name="system.qualidade">{{selectOptions qualidades selected=fonte.qualidade}}</select></label>
-      {{#if (eq fonte.qualidade "poor")}}<label class="celula"><span>Na falha crítica</span><select name="system.falhaCritica">{{selectOptions falhasDaArma selected=fonte.falhaCritica}}</select></label>{{/if}}
+      {{#if falhaVisivel}}<label class="celula"><span>Na falha crítica</span><select name="system.falhaCritica">{{selectOptions falhasDaArma selected=fonte.falhaCritica}}</select></label>{{/if}}
       <label class="celula"><span>Ignora armadura (%)</span><input type="number" name="system.ignorarArmadura" value="{{fonte.ignorarArmadura}}"></label>
       <label class="celula"><span>Slots de acessório</span><input type="number" name="system.slots" value="{{fonte.slots}}" min="0"></label>
       {{#if instalados}}<p class="nota">{{slotsUsados}} de {{fonte.slots}} slots em uso: {{instalados}}.</p>{{/if}}
@@ -44,6 +44,13 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos, e Banc
         {{#if defeitoEscondido.nome}}<p class="nota">Defeito escondido: <b>{{defeitoEscondido.nome}}</b>. Só vale depois de revelado (a primeira falha crítica com a arma).</p>
         <button type="button" class="acao" data-action="revelarDefeito">REVELAR AGORA</button><button type="button" class="acao" data-action="tirarDefeito">TIRAR</button>
         {{else}}<button type="button" class="acao" data-action="esconderDefeito" data-tooltip="Sorteia um defeito (1d6) e guarda no servidor da wiki: o jogador não vê">ESCONDER UM DEFEITO (1D6)</button>{{/if}}
+      </div>
+      {{/if}}
+      {{#if quebraDaArma}}
+      {{!-- O risco da arma (o C73): a quebrada (o conserto pelo Tech) e a relíquia (o reforjar). --}}
+      <div class="quebra-da-arma-ficha">
+        <p class="nota"><b>{{quebraDaArma.rotulo}}</b>: {{quebraDaArma.texto}}.{{#if quebraDaArma.conserto}} O conserto: TECH + Tecnologia de Armas + 1d10 contra a DV {{quebraDaArma.conserto.dv}} ({{quebraDaArma.conserto.categoria}}); custa {{quebraDaArma.conserto.custo}}eb.{{/if}}{{#if quebraDaArma.reforjada}} Reforjada em {{quebraDaArma.reforjada}}.{{/if}}</p>
+        {{#if quebraDaArma.mestre}}{{#if quebraDaArma.conserto}}<button type="button" class="acao" data-action="consertarArma">CONSERTAR</button>{{/if}}{{#if quebraDaArma.podeReforjar}}<button type="button" class="acao" data-action="reforjarArma">REFORJAR</button>{{/if}}{{/if}}
       </div>
       {{/if}}
       <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>

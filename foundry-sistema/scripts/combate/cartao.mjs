@@ -16,6 +16,7 @@ import { danoDoExplosivo } from '../regras-black-chrome.mjs';
 import { CANAL, STATUS_SUPRIMIDO, ROTULO, conferirArmaVeicular, renderizar } from './apoio.mjs';
 import { ferir, linhaDe } from './modos.mjs';
 import { desistir } from './socket.mjs';
+import { desfazerPeloCartao as desfazerQuebra, marcarPelaFalha } from '../quebra.mjs';
 
 // ---------------- Cartão do resultado e "Desfazer" ----------------
 const RESULTADOS = {
@@ -48,6 +49,8 @@ export async function cartaoDoResultado(ctx) {
   }));
   if (ctx.lesoesDoAtirador?.length) desfazer.push({ ator: ctx.atacante.uuid, suprimido: false, municao: null, lesoes: ctx.lesoesDoAtirador, dano: null });
   const danoDoArremesso = resumo.arremesso && ctx.pedido.total !== null && config('dano') === 'manual' && !R.MUNICAO_SEM_DANO[ctx.arma.municaoCarregada?.system.efeito] && linhas.some(l => l.resultado === 'acertou');
+  // A quebra pela falha da arma (o C73): automática; o mestre desfaz no cartão.
+  resumo.quebra = ctx.falhaDaArma ? await marcarPelaFalha(ctx.arma, ctx.falhaDaArma.efeito, ctx.pedido.id).catch(erro => { console.warn(`${SISTEMA} | a quebra da arma:`, erro); return null; }) : null;
   const content = await renderizar('ataque.hbs', { ...resumo, danoDoArremesso, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 || (ctx.devolver?.length ?? 0) > 0 });
   const para = destinatarios(ctx);
   await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, ...(danoDoArremesso ? { armaDoArremesso: ctx.arma.uuid } : {}), desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [], diario: ctx.diario ?? [] } } });
@@ -231,6 +234,7 @@ export function ligarBotoes(mensagem, html) {
         else if (botao.dataset.cprfAcao === 'encerrarMunicao') await encerrarEfeitos(mensagem, botao.dataset.ator);
         else if (botao.dataset.cprfAcao === 'apagarFogo') await apagarFogo(await fromUuid(botao.dataset.ator));
         else if (botao.dataset.cprfAcao === 'desfazerHospital') await desfazerContaDoHospital(mensagem);
+        else if (botao.dataset.cprfAcao === 'desfazerQuebra') await desfazerQuebra(mensagem);
       } finally {
         cliquesEmAndamento.delete(chave);
       }

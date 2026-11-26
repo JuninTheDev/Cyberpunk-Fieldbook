@@ -4,11 +4,13 @@ import { ALVOS_UPGRADE, ATIVACOES, caminho, CLASSES_BLACK_ICE, CLASSES_PROGRAMA,
 import { config } from './configuracoes.mjs';
 import { prepararAcessibilidade } from './acessibilidade.mjs';
 import { PERICIAS } from './gerado.mjs';
-import { descreverEfeito, modCabe, podeInstalarModificacao, TIPOS as TIPOS_DE_MOD, validarMod } from './regras-modificacoes.mjs';
+import { derivadosDaArma, descreverEfeito, modCabe, podeInstalarModificacao, TIPOS as TIPOS_DE_MOD, validarMod } from './regras-modificacoes.mjs';
 import { contadores, descreverEvento, diario, LIMITES as LIMITES_DA_IDENTIDADE } from './regras-identidade.mjs';
 import { anotarMarco, temIdentidade, tornarDono } from './identidade.mjs';
 import { defeitoEscondido, esconder, revelar, tirar } from './defeito-escondido.mjs';
 import { abrir as abrirOficina } from './oficina.mjs';
+import { abrirConserto, abrirReforjar } from './quebra.mjs';
+import { consertoDaArma, ESTADOS as ESTADOS_DA_QUEBRA } from './regras-quebra.mjs';
 import { abrirInstalacao, instalacaoDe, pedirInstalacao, textoDaRegra, tirar as tirarModificacao } from './instalacao-mod.mjs';
 import { RARIDADES } from './regras-oficina.mjs';
 import { acessorioCabe, bonusDoCritico, classeDoRebuild, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque, rebuildCabe } from './regras.mjs';
@@ -64,7 +66,9 @@ function cabecalhoDoItem(item) {
     veiculo: () => [[`SDP ${s.sdp?.value}/${s.sdp?.max}`, `SP ${s.blindagem.sp}/${s.blindagem.max}`, `${s.assentos} assentos`], [s.familia && vazada('DA FAMÍLIA'), s.acessoNomade > 0 && vazada(`ACESSO NÔMADE ${s.acessoNomade}`), item.actor?.veiculoAtivo?.id === item.id && cheia(item.actor.system.dirigindo ? 'DIRIGINDO' : 'EM USO')]]
   };
   const [resumo, etiquetas] = porTipo[item.type]?.() ?? [[], []];
-  if (item.inoperante) etiquetas.push(vazada('INOPERANTE (EMP)'));
+  // A arma quebrada ou a relíquia (o C73) diz o estado; o que está nela (e o item do EMP), o motivo de estar parado.
+  if (item.estadoDaQuebra) etiquetas.push(cheia(item.motivoInoperante));
+  else if (item.inoperante) etiquetas.push(vazada(`INOPERANTE (${item.motivoInoperante})`));
   if ('uso' in s && USOS[s.uso]) etiquetas.push(s.uso === 'equipado' ? cheia(USOS[s.uso].toUpperCase()) : vazada(USOS[s.uso].toUpperCase()));
   return { resumo: resumo.filter(Boolean).join(' // '), etiquetas: etiquetas.filter(Boolean) };
 }
@@ -101,7 +105,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       esconderDefeito: FichaItem.#esconderDefeito, revelarDefeito: FichaItem.#revelarDefeito, tirarDefeito: FichaItem.#tirarDefeito, editarNaOficina: FichaItem.#editarNaOficina,
       instalarAcessorio: FichaItem.#instalarAcessorio, removerAcessorio: FichaItem.#removerAcessorio,
       instalarModificacao: FichaItem.#instalarModificacao, abrirItemBancada: FichaItem.#abrirItemBancada,
-      pedirInstalacao: FichaItem.#pedirInstalacao, tirarModificacao: FichaItem.#tirarModificacao
+      pedirInstalacao: FichaItem.#pedirInstalacao, tirarModificacao: FichaItem.#tirarModificacao,
+      consertarArma: FichaItem.#consertarArma, reforjarArma: FichaItem.#reforjarArma
     }
   };
 
@@ -222,6 +227,10 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       instalacaoMod: instalacaoDaFicha(item),
       semLugarDaMod: tipo === 'upgrade' && Boolean(item.modificacao) && !game.user.isGM,
       defeitoEscondido: tipo === 'arma' && game.user.isGM && temIdentidade(item) ? { nome: defeitoEscondido(item)?.nome ?? '' } : null,
+      // O risco da arma (o C73): o estado, o conserto e o reforjar (os botões, só o mestre); a falha crítica também na
+      // arma que tem uma modificação instável.
+      quebraDaArma: tipo === 'arma' ? quebraDaFicha(item) : null,
+      falhaVisivel: tipo === 'arma' && (fonte.qualidade === 'poor' || (item.actor ? derivadosDaArma(item.modificacoes.map(i => i.modificacao)).instavel : false)),
       // A identidade da arma (o C69): o nome próprio no alto e a aba História.
       apelidoDaArma: tipo === 'arma' ? item.identidade.apelido : '',
       historia: temIdentidade(item) ? historiaDaFicha(item) : null,
@@ -377,6 +386,9 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   static #editarNaOficina() { return abrirOficina({ item: this.item }); }
   // A instalação pelo Tech (o C72): o jogador pede ao mestre; o mestre abre a janela dele.
   static #pedirInstalacao() { return pedirInstalacao(this.item).catch(erro => ui.notifications.error(erro.message)); }
+  // O risco da arma (o C73): o conserto e o reforjar (o mestre).
+  static #consertarArma() { return abrirConserto(this.item).catch(erro => ui.notifications.error(erro.message)); }
+  static #reforjarArma() { return abrirReforjar(this.item).catch(erro => ui.notifications.error(erro.message)); }
   static #tirarModificacao() { return tirarModificacao(this.item).catch(erro => ui.notifications.error(erro.message)); }
   // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
   static #rolarHumanidade() {
@@ -409,6 +421,16 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
 // A instalação pelo Tech na ficha da modificação (o C72): a regra; instalada, onde (e, para o mestre, o "Tirar"); solta
 // num ator, o botão (o mestre: "Instalar com o Tech"; o dono: "Pedir a instalação"). O defeito e a modificação inválida
 // não têm.
+function quebraDaFicha(item) {
+  const estado = item.estadoDaQuebra;
+  if (!estado) return null;
+  const flag = item.getFlag(SISTEMA, 'quebra') ?? {};
+  const reforjada = flag.reforjada ? item.actor?.items.get(flag.reforjada.em)?.nomeDeExibicao ?? 'outra arma' : '';
+  return {
+    ...ESTADOS_DA_QUEBRA[estado], mestre: game.user.isGM, conserto: estado === 'quebrada' ? consertoDaArma(item.system.preco) : null,
+    reforjada, podeReforjar: estado === 'reliquia' && !flag.reforjada
+  };
+}
 function instalacaoDaFicha(item) {
   const inst = item.type === 'upgrade' ? instalacaoDe(item) : null;
   if (!inst) return null;

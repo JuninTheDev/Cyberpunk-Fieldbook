@@ -31,7 +31,7 @@ module.exports = async ({ edge, servidores, r }) => {
       defeito: [...s.querySelectorAll('.ar-grupos .ar-group:last-child .ar-chip :is(.ar-sigla, .ar-nome)')].map(t).join(' '),
       contas: [...s.querySelectorAll('.ar-contas div')].map(t),
       frase: t(s.querySelector('.ar-frase')), diario: [...s.querySelectorAll('.ar-diario li')].map(t),
-      ficha: t(s.querySelector('.ar-ficha-nome')), onde: t(s.querySelector('.ar-ficha-onde'))
+      ficha: t(s.querySelector('.ar-ficha-nome')), onde: t(s.querySelector('.ar-ficha-onde')), quebra: t(s.querySelector('[data-ar-quebra]'))
     };
   })()`);
 
@@ -61,7 +61,7 @@ module.exports = async ({ edge, servidores, r }) => {
           ],
           ataque: { fixos: [{ rotulo: 'Smartgun Link', valor: 1 }], situacionais: [{ rotulo: 'Mira holográfica: tiro único ou mirado a até 12 m', valor: 1 }], teto: 3 }
         } },
-      { id: 'arma2', nome: 'Assault Rifle', tipo: 'weapon', qtd: 1, uso: 'carried', uid: 'loja:fuzil', catalogo: 'core_weapons:assault-rifle', dano: '5d6', cdt: 1, pericia: 'Shoulder Arms', distancia: true, maos: 2, pente: { atual: 25, max: 25 }, municao: '', carregada: '',
+      { id: 'arma2', nome: 'Assault Rifle', quebra: 'quebrada', tipo: 'weapon', qtd: 1, uso: 'carried', uid: 'loja:fuzil', catalogo: 'core_weapons:assault-rifle', dano: '5d6', cdt: 1, pericia: 'Shoulder Arms', distancia: true, maos: 2, pente: { atual: 25, max: 25 }, municao: '', carregada: '',
         bancada: { acessorios: { usados: 0, total: 3 }, modificacoes: { usados: 0, total: 2 }, aDistancia: true, tipo: 'assaultRifle', qualidade: 'standard', classe: null, pecas: [], ataque: { fixos: [], situacionais: [], teto: 3 } } },
       { id: 'arma3', nome: 'Knife', tipo: 'weapon', qtd: 1, uso: 'carried', uid: '', catalogo: '', dano: '1d6', cdt: 2, pericia: 'Melee Weapon', distancia: false, maos: 1, pente: null, municao: '', carregada: '',
         bancada: { acessorios: { usados: 0, total: 0 }, modificacoes: { usados: 0, total: 2 }, aDistancia: false, tipo: 'lightMelee', qualidade: 'standard', classe: null, pecas: [], ataque: { fixos: [], situacionais: [], teto: 3 } } },
@@ -78,7 +78,7 @@ module.exports = async ({ edge, servidores, r }) => {
     const b = await bancada();
     const ok = abas === 'resumo,pericias,equipamento,arsenal,cyberware,compras,anotacoes'
       // A Briga (sem bancada) fica de fora; a faca, sem catálogo, entra pelo que o Foundry mandou.
-      && b.armas.join('|') === 'Velha Senhora · Very Heavy Pistol|Assault Rifle|Knife'
+      && b.armas.join('|') === 'Velha Senhora · Very Heavy Pistol|Assault Rifle|Knife' && b.quebra === ''
       && b.numeros.join('|') === 'Arma:4d6 · CDT 1|Acessórios:3 / 3|Modificações:2 / 3|Defeito:1 / 1|Teto na rolagem:+2 / +3'
       && /dono: Arsenal Mesa/.test(b.fonte) && /Smartgun Link \+1/.test(b.fonte) && (await texto('.ar-top h3')) === 'Velha Senhora · Very Heavy Pistol';
     return [ok, JSON.stringify({ abas, ...b })];
@@ -116,7 +116,8 @@ module.exports = async ({ edge, servidores, r }) => {
     await clicar('[data-ar-arma="foundry:arma3"]');
     const faca = await bancada();
     const hud = await texto('.ar-hud-topo');
-    const ok = fuzil.chamadas.join() === 'trilho:livre,pente:livre,cano:livre' && fuzil.acesas === 0 && fuzil.mods.join() === 'livre,livre' && /^Nenhum/.test(fuzil.defeito || 'Nenhum')
+    // O fuzil quebrado (o C73: o estado que o Foundry manda).
+    const ok = fuzil.quebra === 'Quebrada: o Tech conserta' && fuzil.chamadas.join() === 'trilho:livre,pente:livre,cano:livre' && fuzil.acesas === 0 && fuzil.mods.join() === 'livre,livre' && /^Nenhum/.test(fuzil.defeito || 'Nenhum')
       && cabem.includes('Carregador estendido (Rifle de assalto)') && !cabem.includes('Carregador estendido (Espingarda)') && cabem.includes('Lança-granadas sob o cano')
       && faca.chamadas.length === 0 && faca.mods.join() === 'livre,livre' && /sem slots de acessório/.test(hud) && faca.contas.length === 0;
     return [ok, JSON.stringify({ fuzil, cabem: cabem.length, faca, hud })];

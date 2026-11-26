@@ -58,11 +58,13 @@ function notasDasModificacoes(arma, alvo) {
 // A falha da arma ruim (regras.falhaDaArma). Na Combinação do Black Chrome (o C48, parte 2), o emperramento é só do modo
 // que disparou, menos na que emperra os dois (a Sternmeyer).
 // O defeito que emperra (o C67, o gatilho sensível): o d10 natural até o número dele emperra a arma de qualquer qualidade.
+// A modificação instável (o C73): a falha crítica vale como a da arma ruim (a falha que a arma tem: emperra ou quebra).
 function falhaDaArma(arma, critico, natural = null) {
   const mods = arma.modificacoes?.map(item => item.modificacao) ?? [];
-  const pelaMod = emperraPelaMod(natural, derivadosDaArma(mods).emperraAte);
+  const derivados = derivadosDaArma(mods);
+  const pelaMod = emperraPelaMod(natural, derivados.emperraAte);
   const defeito = pelaMod ? mods.find(mod => mod.efeitos.some(efeito => efeito.entao.some(({ alvo }) => alvo === 'emperraAte'))) : null;
-  const falha = R.falhaDaArma({ qualidade: arma.system.qualidade, efeito: arma.system.falhaCritica, critico })
+  const falha = R.falhaDaArma({ qualidade: derivados.instavel ? 'poor' : arma.system.qualidade, efeito: arma.system.falhaCritica, critico })
     ?? (defeito ? { efeito: 'jammed', texto: `${R.FALHAS_DA_ARMA.jammed.texto.replace('.', ` (${defeito.nome}).`)}` } : null);
   if (falha?.efeito !== 'jammed' || !(arma.system.combinacao?.ataca || ehArmaDaCombinacao(arma))) return falha;
   return { ...falha, texto: falhaNaCombinacao(falha.texto, { emperraJunto: Boolean(arma.perfilDoBlackChrome?.emperraJunto) }) };

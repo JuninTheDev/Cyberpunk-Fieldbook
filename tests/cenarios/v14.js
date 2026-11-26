@@ -1808,6 +1808,8 @@ module.exports = async ({ edge, servidores, r }) => {
           };
           CONFIG.Dice.randomUniform = () => { const p = window.__fila.shift(); return p ? 1 - (p[0] - 0.5) / p[1] : foundry.dice.MersenneTwister.random(); };
           const atirar = async (primeiro = 1, solo = false) => {
+            // A quebra automática do tiro anterior (o C73) sai: cada tiro começa com a arma inteira.
+            if (arma.getFlag('${S}', 'quebra')) await arma.unsetFlag('${S}', 'quebra');
             await alvo.update({ 'system.hp.value': 50 });
             await arma.update({ 'system.pente.value': 8 });
             window.__fila = [[primeiro, 10], ...(primeiro === 1 && !solo ? [[2, 10]] : []), [2, 6], [2, 6], [2, 6]];
@@ -1820,12 +1822,19 @@ module.exports = async ({ edge, servidores, r }) => {
             const teste = game.messages.filter(m => m.getFlag('${S}', 'teste')?.ataque).at(-1).getFlag('${S}', 'teste');
             return { efeitoSalvo: arma.system.falhaCritica, efeitoNaFicha: campo()?.value ?? null, falha: r.falhaDaArma, flag: mensagem.getFlag('${S}', 'ataque').falhaDaArma,
               texto: aviso?.textContent.trim() ?? null, quantidade: caixa?.querySelectorAll('.falha-da-arma').length,
-              critico: teste.critico, ataque: r.ataque, resultado: r.linhas[0].resultado, hp: alvo.system.hp.value, balas: arma.system.pente.value, fila: window.__fila.length };
+              critico: teste.critico, ataque: r.ataque, resultado: r.linhas[0].resultado, hp: alvo.system.hp.value, balas: arma.system.pente.value, fila: window.__fila.length,
+              mensagem: mensagem.id, quebra: arma.getFlag('${S}', 'quebra')?.estado ?? null, botaoQuebra: Boolean(caixa?.querySelector('[data-cprf-acao="desfazerQuebra"]')) };
           };
           const efeitos = [];
           for (const efeito of ['jammed', 'destroyed', 'destroyedBeyondRepair', 'coinToss']) {
             await escolher(efeito);
-            efeitos.push(await atirar());
+            const tiro = await atirar();
+            // A quebra automática (o C73): o "Desfazer a quebra" do cartão (o mestre) tira a marca.
+            if (tiro.botaoQuebra) {
+              document.querySelector('[data-message-id="' + tiro.mensagem + '"] [data-cprf-acao="desfazerQuebra"]').click();
+              tiro.desfeita = await esperar(() => !arma.getFlag('${S}', 'quebra'));
+            }
+            efeitos.push(tiro);
           }
           const qualidades = [];
           for (const qualidade of ['standard', 'excellent']) {
@@ -1833,12 +1842,19 @@ module.exports = async ({ edge, servidores, r }) => {
             await esperar(() => !campo());
             qualidades.push({ qualidade, semCampo: !campo(), tiro: await atirar() });
           }
+          // A modificação instável (o C73): na arma padrão, a falha crítica vale como a da ruim (aqui, a quebra).
+          await arma.update({ 'system.qualidade': 'standard', 'system.falhaCritica': 'destroyed' });
+          const [instavel] = await a.createEmbeddedDocuments('Item', [{ name: 'C73 Cano instável', type: 'upgrade', system: { alvo: 'arma', tamanho: 1, instaladoEm: arma.id },
+            flags: { '${S}': { mod: { versao: 1, id: 'c73-instavel', nome: 'Cano instável', tipo: 'tatica', tamanho: 1, efeitos: [{ rotulo: 'instável', entao: [{ alvo: 'instavel', valor: true }] }] } } } }]);
+          const tiroInstavel = await atirar();
+          await instavel.delete();
+          if (arma.getFlag('${S}', 'quebra')) await arma.unsetFlag('${S}', 'quebra');
           await arma.update({ 'system.qualidade': 'poor' });
           await escolher('jammed');
           const comum = await atirar(2);
           await a.update({ 'system.role.habilidades.Fumble Recovery': 4 });
           const solo = await atirar(1, true);
-          return { padrao, opcoes, efeitos, qualidades, comum, solo };
+          return { padrao, opcoes, efeitos, qualidades, tiroInstavel, comum, solo };
         })()`);
         await edge.shot('falha-da-arma');
         // O mestre lê o crítico da mensagem criada no navegador do jogador, com o ataque escondido na configuração.
@@ -1889,6 +1905,8 @@ module.exports = async ({ edge, servidores, r }) => {
             && tiro.efeitoSalvo === ids[i] && tiro.efeitoNaFicha === ids[i] && tiro.texto === 'Falha crítica da arma: ' + textos[i] && tiro.quantidade === 1
             && tiro.critico === 'falha' && tiro.ataque === 27 && tiro.resultado === 'acertou' && tiro.hp === 44 && tiro.balas === 7 && tiro.fila === 0)
           && info.qualidades.every(q => q.semCampo && q.tiro.critico === 'falha' && semAviso(q.tiro))
+          && info.efeitos.map(t => t.quebra ?? '').join() === ',quebrada,reliquia,' && info.efeitos.map(t => Boolean(t.desfeita)).join() === 'false,true,true,false'
+          && info.tiroInstavel.critico === 'falha' && info.tiroInstavel.falha?.efeito === 'destroyed' && info.tiroInstavel.quebra === 'quebrada'
           && info.comum.critico === null && info.comum.ataque === 30 && semAviso(info.comum)
           && info.solo.critico === null && info.solo.ataque === 29 && semAviso(info.solo)
           && [info.jogador.mestre, info.jogador.jogador].every(lado => igual(lado.falha, { efeito: 'destroyedBeyondRepair', texto: textos[2] })
@@ -21682,6 +21700,153 @@ module.exports = async ({ edge, servidores, r }) => {
           await jogador.evaluate(`(async () => { const ator = game.actors.get('ACTOR_ID'); for (const item of ator?.items ?? []) await item.sheet?.close(); await ator?.sheet?.close(); return true; })()`.replaceAll('ACTOR_ID', preparo.ator)).catch(() => {});
           await edge.evaluate(`(async () => { const ator = game.actors.get('ACTOR_ID'); for (const item of ator?.items ?? []) await item.sheet?.close(); await ator?.sheet?.close(); await ator?.delete(); return true; })()`.replaceAll('ACTOR_ID', preparo.ator)).catch(() => {});
         }
+      }
+    });
+
+    await r.passo('C73: a arma quebrada não ataca e o que está nela para; o conserto é o teste do Tech no computador do jogador (falhou, continua quebrada; passou, volta e o diário anota); a relíquia se reforja pela janela do mestre (o nome, a frase e uma modificação passam, os contadores zeram); a ficha do jogador não tem os botões', async () => {
+      const c73 = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const dono = game.users.getName('Jogador');
+        const dele = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE, [dono.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER };
+        const ator = await Actor.implementation.create({ name: 'C73 Vex', type: 'personagem', ownership: dele, system: { role: { nome: 'Solo', rank: 4 } } });
+        // TECH 6 + Tecnologia de Armas 4 = 10 + 1d10, contra a DV 17 da pistola de 100eb (Premium).
+        const tech = await Actor.implementation.create({ name: 'C73 Tech', type: 'personagem', ownership: dele, system: {
+          atributos: { tech: { valor: 6 } }, pericias: { weaponstech: { nivel: 4 } }, role: { nome: 'Tech', rank: 4, habilidades: { 'Upgrade Expertise': 1 } }
+        } });
+        const [velha] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:very-heavy-pistol'])]);
+        const [nova] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:very-heavy-pistol'])]);
+        const identidade = velha.getFlag('${S}', 'arma');
+        await velha.setFlag('${S}', 'arma', { ...identidade, apelido: 'Velha Senhora', frase: 'Nunca falhou quando importava.', eventos: [...identidade.eventos, { tipo: 'abate', data: new Date().toISOString(), alvo: 'Capanga', chave: 'c73:abate' }] });
+        const mods = await ator.createEmbeddedDocuments('Item', ['mira-holografica', 'nome-gravado'].map(id => foundry.utils.deepClone(cat['mods-armas:' + id])));
+        const mira = mods.find(m => m.name === 'Mira holográfica'), nome = mods.find(m => m.name === 'Nome gravado');
+        for (const mod of [mira, nome]) await mod.update({ 'system.instaladoEm': velha.id });
+        return { ator: ator.id, tech: tech.id, velha: velha.id, nova: nova.id, mira: mira.id, nome: nome.id };
+      })()`);
+      const quebrada = await edge.evaluate(`(async () => {
+        const ator = game.actors.get('${c73.ator}');
+        const velha = ator.items.get('${c73.velha}');
+        const api = game.system.api;
+        const marca = await api.quebra.marcarPelaFalha(velha, 'destroyed', 'c73-a');
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let ataque;
+        try { ataque = await velha.atacar({}); } finally { ui.notifications.warn = avisar; }
+        const linha = api.wiki.fichaParaAWiki(ator).itens.find(l => l.id === velha.id);
+        return { marca, ataque: ataque ?? null, avisos, motivoDaMod: ator.items.get('${c73.mira}').motivoInoperante, naWiki: linha?.quebra ?? null };
+      })()`);
+      // O conserto que falha: 3 + 10 = 13, abaixo da DV 17.
+      const falha = await edge.evaluate(`(async () => {
+        const ator = game.actors.get('${c73.ator}');
+        const m = await game.system.api.quebra.pedirConserto({ arma: ator.items.get('${c73.velha}'), tech: game.actors.get('${c73.tech}') });
+        const dados = m.getFlag('${S}', 'pedidoDeTeste');
+        return { id: m.id, dv: dados.dv, mostrarDv: dados.mostrarDv, teste: dados.teste, rotulo: dados.rotulo, motivo: dados.motivo };
+      })()`);
+      await jogador.evaluate(`game.settings.set('${S}', 'rolarDireto', true)`);
+      await fixar(jogador, [[3, 10]]);
+      const janelaDaFalha = await jogador.evaluate(`(async () => {
+        const daqui = () => [...document.querySelectorAll('.pedido-de-teste-jogador')].find(j => /Consertar/.test(j.textContent));
+        for (let i = 0; i < 80 && !daqui()?.querySelector('button[data-action^="rolar-"]'); i++) await new Promise(r => setTimeout(r, 100));
+        const alvo = daqui()?.querySelector('button[data-action^="rolar-"]');
+        alvo?.click();
+        return { clicou: Boolean(alvo) };
+      })()`);
+      const depoisDaFalha = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        await esperar(() => game.messages.contents.some(m => /não conseguiu consertar/.test(m.content)));
+        const pedido = game.messages.get('${falha.id}').getFlag('${S}', 'pedidoDeTeste');
+        return { total: pedido.linhas[0].total, aberto: pedido.aberto, estado: game.actors.get('${c73.ator}').items.get('${c73.velha}').estadoDaQuebra };
+      })()`);
+      // O conserto pela ficha do mestre (o CONSERTAR e a janela): 8 + 10 = 18, passa.
+      const pelaFicha = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const velha = game.actors.get('${c73.ator}').items.get('${c73.velha}');
+        await velha.sheet.render({ force: true });
+        await esperar(() => velha.sheet.element?.querySelector('[data-action="consertarArma"]'));
+        const bloco = textoDe(velha.sheet.element.querySelector('.quebra-da-arma-ficha'));
+        const antes = game.messages.size;
+        velha.sheet.element.querySelector('[data-action="consertarArma"]').click();
+        const janela = () => document.querySelector('.application.conserto-da-arma');
+        await esperar(janela);
+        const texto = textoDe(janela());
+        janela().querySelector('select[name="tech"]').value = '${c73.tech}';
+        janela().querySelector('button[data-action="teste"]').click();
+        await esperar(() => game.messages.contents.slice(antes).some(m => m.getFlag('${S}', 'pedidoDeTeste')));
+        await velha.sheet.close({ animate: false });
+        return { bloco, texto, cartao: game.messages.contents.slice(antes).find(m => m.getFlag('${S}', 'pedidoDeTeste'))?.id ?? null };
+      })()`);
+      await fixar(jogador, [[8, 10]]);
+      const janelaDoConserto = await jogador.evaluate(`(async () => {
+        const daqui = () => [...document.querySelectorAll('.pedido-de-teste-jogador')].find(j => /Consertar/.test(j.textContent) && j.querySelector('button[data-action^="rolar-"]'));
+        for (let i = 0; i < 80 && !daqui(); i++) await new Promise(r => setTimeout(r, 100));
+        const alvo = daqui()?.querySelector('button[data-action^="rolar-"]');
+        alvo?.click();
+        return { clicou: Boolean(alvo) };
+      })()`);
+      const consertada = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const velha = game.actors.get('${c73.ator}').items.get('${c73.velha}');
+        await esperar(() => !velha.estadoDaQuebra);
+        await esperar(() => velha.identidade.eventos.some(e => e.tipo === 'marco' && /^Consertada por C73 Tech$/.test(e.texto)));
+        return { estado: velha.estadoDaQuebra, marco: velha.identidade.eventos.some(e => e.tipo === 'marco' && e.texto === 'Consertada por C73 Tech'),
+          cartao: game.messages.contents.some(m => /Velha Senhora · Very Heavy Pistol<\\/b> foi consertada por C73 Tech/.test(m.content)), motivoDaMod: velha.actor.items.get('${c73.mira}').motivoInoperante };
+      })()`);
+      // A relíquia: o jogador vê o estado, sem os botões; o mestre reforja pela janela (a mira passa; o nome gravado fica).
+      await edge.evaluate(`game.system.api.quebra.marcarPelaFalha(game.actors.get('${c73.ator}').items.get('${c73.velha}'), 'destroyedBeyondRepair', 'c73-b').then(() => true)`);
+      const doJogador = await jogador.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const velha = game.actors.get('${c73.ator}')?.items.get('${c73.velha}');
+        await esperar(() => velha?.estadoDaQuebra === 'reliquia');
+        await velha.sheet.render({ force: true });
+        await esperar(() => velha.sheet.element?.querySelector('.quebra-da-arma-ficha'));
+        const resultado = { texto: velha.sheet.element.querySelector('.quebra-da-arma-ficha').textContent.replace(/\\s+/g, ' ').trim(), botoes: velha.sheet.element.querySelectorAll('[data-action="reforjarArma"], [data-action="consertarArma"]').length };
+        await velha.sheet.close({ animate: false });
+        return resultado;
+      })()`);
+      const reforjada = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const ator = game.actors.get('${c73.ator}');
+        const velha = ator.items.get('${c73.velha}'), nova = ator.items.get('${c73.nova}');
+        await velha.sheet.render({ force: true });
+        await esperar(() => velha.sheet.element?.querySelector('[data-action="reforjarArma"]'));
+        velha.sheet.element.querySelector('[data-action="reforjarArma"]').click();
+        const janela = () => document.querySelector('.application.reforjar-reliquia');
+        await esperar(janela);
+        const opcoes = [...janela().querySelectorAll('select[name="mod"] option')].map(o => o.textContent.trim());
+        janela().querySelector('select[name="nova"]').value = nova.id;
+        janela().querySelector('select[name="mod"]').value = '${c73.mira}';
+        janela().querySelector('button[data-action="reforjar"]').click();
+        await esperar(() => nova.identidade.apelido === 'Velha Senhora' && ator.items.get('${c73.mira}')?.system.instaladoEm === nova.id && velha.getFlag('${S}', 'quebra')?.reforjada);
+        await velha.sheet.close({ animate: false });
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let deNovo;
+        try { deNovo = await game.system.api.quebra.reforjar(velha, nova, {}); } finally { ui.notifications.warn = avisar; }
+        const contas = game.system.api.identidade?.contadores ? game.system.api.identidade.contadores(nova.getFlag('${S}', 'arma')) : null;
+        return {
+          opcoes, apelido: nova.identidade.apelido, frase: nova.identidade.frase, marcos: nova.identidade.eventos.filter(e => e.tipo === 'marco').map(e => e.texto), tipos: nova.identidade.eventos.map(e => e.tipo),
+          contas, miraEm: ator.items.get('${c73.mira}').system.instaladoEm === nova.id, nomeEm: ator.items.get('${c73.nome}').system.instaladoEm === velha.id,
+          reforjadaEm: velha.getFlag('${S}', 'quebra')?.reforjada?.em === nova.id, marcoDaVelha: velha.identidade.eventos.some(e => e.tipo === 'marco' && e.texto === 'Reforjada em Velha Senhora · Very Heavy Pistol'),
+          estado: velha.estadoDaQuebra, deNovo: deNovo ?? null, avisos, cartao: game.messages.contents.some(m => /foi reforjada: o nome, a história e Mira holográfica passam/.test(m.content))
+        };
+      })()`);
+      try {
+        const quebradaOk = quebrada.marca?.estado === 'quebrada' && quebrada.ataque === null && quebrada.avisos.join() === 'Very Heavy Pistol: a arma está quebrada: o Tech conserta (a ficha da arma).'
+          && quebrada.motivoDaMod === 'QUEBRADA' && quebrada.naWiki === 'quebrada';
+        const falhaOk = falha.dv === 17 && falha.mostrarDv === true && JSON.stringify(falha.teste) === JSON.stringify({ tipo: 'pericia', id: 'weaponstech' }) && /custa 50eb/.test(falha.motivo)
+          && janelaDaFalha.clicou && depoisDaFalha.total === 13 && depoisDaFalha.aberto === false && depoisDaFalha.estado === 'quebrada';
+        const consertoOk = /Quebrada/.test(pelaFicha.bloco) && /DV 17 \(Premium\); custa 50eb/.test(pelaFicha.bloco) && /DV 17 \(Premium\); custa 50eb/.test(pelaFicha.texto) && pelaFicha.cartao
+          && janelaDoConserto.clicou && consertada.estado === null && consertada.marco && consertada.cartao && consertada.motivoDaMod === '';
+        const reliquiaOk = /Relíquia/.test(doJogador.texto) && doJogador.botoes === 0
+          && reforjada.opcoes[0] === 'Nenhuma' && reforjada.opcoes.slice(1).sort().join() === 'Mira holográfica,Nome gravado' && reforjada.apelido === 'Velha Senhora' && reforjada.frase === 'Nunca falhou quando importava.'
+          && reforjada.marcos.join() === 'Reforjada da Velha Senhora · Very Heavy Pistol' && !reforjada.tipos.includes('abate')
+          && reforjada.miraEm && reforjada.nomeEm && reforjada.reforjadaEm && reforjada.marcoDaVelha && reforjada.estado === 'reliquia' && reforjada.cartao
+          && reforjada.deNovo === null && reforjada.avisos.join() === 'Reforjar: esta relíquia já foi reforjada.';
+        return [quebradaOk && falhaOk && consertoOk && reliquiaOk, JSON.stringify({ c73, quebrada, falha, janelaDaFalha, depoisDaFalha, pelaFicha, janelaDoConserto, consertada, doJogador, reforjada })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => /^C73 /.test(a.name))) await ator.delete(); return true; })()`);
       }
     });
 

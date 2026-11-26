@@ -1664,7 +1664,7 @@
     const barra = (usados, total, cls = '') => `<div class="ar-bar${cls}" aria-hidden="true"><span style="width:${total ? Math.round(Math.min(1, usados / total) * 100) : 0}%"></span></div>`;
     const caixa = (rotulo, valor, extra = '', cls = '') => `<div class="ar-num${cls}"><small>${rotulo}</small><b>${valor}</b>${extra}</div>`;
     const teto = model.teto;
-    const top = `<div class="ar-top"><h3>${titulo}</h3>
+    const top = `<div class="ar-top"><h3>${titulo}${model.quebra ? ` <small class="ar-quebra cc-bad" data-ar-quebra>${esc(model.quebra)}</small>` : ''}</h3>
       ${caixa('Arma', esc(`${model.dano} · CDT ${model.cdt}`), `<small class="ar-sub">${{ pistola: 'Pistola', longa: 'Arma longa', branca: 'Arma branca' }[model.silhueta]}</small>`)}
       ${caixa('Acessórios', `${model.acessorios.usados} <span>/ ${model.acessorios.total}</span>`, barra(model.acessorios.usados, model.acessorios.total))}
       ${caixa('Modificações', `${model.modificacoes.usados} <span>/ ${model.modificacoes.total}</span>`, barra(model.modificacoes.usados, model.modificacoes.total))}

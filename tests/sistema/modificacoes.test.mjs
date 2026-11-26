@@ -127,8 +127,8 @@ test('o que entra no ataque e no dano, o que muda a arma e o teto de +3', () => 
   assert.deepEqual(M.efeitosDoDano([cano], { alvo: 'pessoa' }), []);
   assert.deepEqual(M.efeitosDoDano([cano], {}).map(d => d.ligado), [false]);
   // O que muda a arma de vez: o pente soma, o "não se esconde" ganha, o maior emperra.
-  assert.deepEqual(M.derivadosDaArma([]), { pente: 0, ocultavel: null, emperraAte: null });
-  assert.deepEqual(M.derivadosDaArma([pente, pente, compensador, gatilho, { ...grife, id: 'esconde', efeitos: [{ rotulo: 'se esconde', entao: [{ alvo: 'ocultavel', valor: true }] }] }]), { pente: 2, ocultavel: false, emperraAte: 2 });
+  assert.deepEqual(M.derivadosDaArma([]), { pente: 0, ocultavel: null, emperraAte: null, instavel: false });
+  assert.deepEqual(M.derivadosDaArma([pente, pente, compensador, gatilho, { ...grife, id: 'esconde', efeitos: [{ rotulo: 'se esconde', entao: [{ alvo: 'ocultavel', valor: true }] }] }]), { pente: 2, ocultavel: false, emperraAte: 2, instavel: false });
   // O teto: +3 da arma passa; o +4 perde 1; as penalidades não contam.
   assert.equal(M.parteDoTeto([1, 1, 1]), null);
   assert.deepEqual(M.parteDoTeto([1, 1, 1, 1]), { rotulo: 'Teto da arma (+3)', valor: -1 });
@@ -189,7 +189,7 @@ test('C68: as 26 modificações da wiki (a proposta aprovada), cada uma válida,
   assert.deepEqual(holo.situacionais.map(s => [s.valor, s.ligado]), [[1, true]]);
   assert.deepEqual(M.efeitosDoAtaque([JSON.parse(JSON.stringify(wiki.regra(mods[0])))], { modo: 'tiro', metros: 13 }).situacionais, []);
   const serrado = JSON.parse(JSON.stringify(wiki.regra(mods.find(mod => mod.id === 'cano-serrado'))));
-  assert.deepEqual(M.derivadosDaArma([serrado]), { pente: 0, ocultavel: true, emperraAte: null });
+  assert.deepEqual(M.derivadosDaArma([serrado]), { pente: 0, ocultavel: true, emperraAte: null, instavel: false });
   assert.deepEqual(M.efeitosDoAtaque([serrado], { modo: 'cartucho', metros: 30 }).situacionais.map(s => s.valor), [-2]);
   // Onde serve: a classe do Kit (o defletor só na Power, a carga silenciosa só na Tech), o tipo (o cano serrado na espingarda).
   const regraDe = id => JSON.parse(JSON.stringify(wiki.regra(mods.find(mod => mod.id === id))));

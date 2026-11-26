@@ -11,7 +11,7 @@ export const ONDE_SERVE = { qualquer: 'qualquer arma', distancia: 'arma de longo
 // O que um efeito do menu faz (o alvo do regras-modificacoes.ALVOS e se pede uma situação).
 export const EFEITOS = {
   situacao: 'Ataque numa situação', sempre: 'Ataque sempre (só negativo)', dano: 'Dano a mais contra coisas', pente: 'Pente',
-  ocultavel: 'Se esconde ou não', emperra: 'Emperra até o número'
+  ocultavel: 'Se esconde ou não', emperra: 'Emperra até o número', instavel: 'Instável (falha como a ruim)'
 };
 // As situações do menu (as condições das modificações da wiki).
 export const SITUACOES = {
@@ -77,6 +77,8 @@ function efeitoDe(efeito) {
       return com(sim ? 'se esconde' : 'não se esconde', [{ alvo: 'ocultavel', valor: sim }]);
     }
     case 'emperra': return Number.isInteger(valor) ? com(`emperra ${valor === 1 ? 'no 1' : `do 1 ao ${valor}`}`, [{ alvo: 'emperraAte', valor }]) : { erro: 'diga até que número a arma emperra' };
+    // A instável (o C73): na falha crítica, a arma falha como a de qualidade ruim.
+    case 'instavel': return com('instável', [{ alvo: 'instavel', valor: true }]);
     default: return { erro: 'escolha o que o efeito faz' };
   }
 }

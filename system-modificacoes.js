@@ -200,7 +200,13 @@
         ${section('Os defeitos', `<p>O defeito é <b>sorteado</b>, nunca escolhido: quando o mestre dá um defeito a uma arma, rola 1d6. Se o defeito não serve na arma (o gatilho numa arma branca), rola de novo.</p>
           ${table(['1d6', 'Defeito', 'O que faz'], defeitos.map((item, indice) => [`<b>${indice + 1}</b>`, item.nome, item.texto]))}
           <div class="roll-buttons"><button class="action" type="button" data-mods-defeito>Sortear um defeito (1d6)</button></div>`)}
-        ${section('As marcas de história', '<p>A arma também guarda a história dela: um nome, o momento, o que aconteceu. A marca de história <b>só conta história</b>: não muda nenhum número.</p>')}
+        ${section('O risco', list([
+          'A falha crítica da arma ruim (ou da que tem uma modificação <b>instável</b>) pode quebrá-la: a <b>Quebra</b> a deixa quebrada, e a <b>Quebra sem conserto</b> a torna uma <b>relíquia</b>. Quebrada, ela não ataca, e o que está nela para.',
+          'O <b>conserto</b> é do Tech: <b>TECH + Tecnologia de Armas + 1d10</b> contra a DV do preço da arma (13 até o Oneroso, 17 no Premium, 21 no Caro, 24 do Muito Caro para cima), e custa o preço de uma categoria abaixo. Na falha, ela continua quebrada.',
+          'A <b>relíquia</b> não se usa mais, e a história dela fica. Ela se <b>reforja</b>: o nome, a frase, a linha "Reforjada da …" e uma modificação (se couber) passam para uma arma nova do mesmo tipo, e os contadores voltam a zero.',
+          'A modificação <b>instável</b> (da oficina do mestre) faz a falha crítica valer como a da arma ruim, mesmo numa arma boa: mais poder, mais risco.'
+        ]))}
+        ${section('As marcas de história','<p>A arma também guarda a história dela: um nome, o momento, o que aconteceu. A marca de história <b>só conta história</b>: não muda nenhum número.</p>')}
         ${section('Táticas de situação', grade('situacional'))}
         ${section('Táticas gerais', grade('geral'))}
         ${section('Sabor', grade('sabor'))}

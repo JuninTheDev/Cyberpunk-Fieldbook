@@ -21,8 +21,10 @@ export const CLASSES = { power: 'Power', smart: 'Smart', tech: 'Tech' };
 // O que um efeito muda: o ataque (soma; o positivo só com condição e até +1), o dano (os dados a mais, nunca contra gente:
 // a condição tem de dizer o alvo, sem "pessoa"), o pente (soma), se a arma se esconde e até que número do dado ela emperra
 // (o gatilho sensível: no 1 e no 2).
+// A instável (o C73, decisão do usuário de 2026-11-25): na falha crítica, a arma falha como a de qualidade ruim (emperra
+// ou quebra, pela falha que ela tem). É a troca: mais poder, mais risco.
 export const ALVOS = {
-  ataque: 'Ataque', dano: 'Dano', pente: 'Pente', ocultavel: 'Ocultável', emperraAte: 'Emperra até'
+  ataque: 'Ataque', dano: 'Dano', pente: 'Pente', ocultavel: 'Ocultável', emperraAte: 'Emperra até', instavel: 'Instável'
 };
 // Os alvos de um ataque que a condição conhece.
 export const ALVOS_DO_ATAQUE = ['pessoa', 'veiculo', 'objeto', 'cobertura'];
@@ -133,7 +135,8 @@ export function validarMod(mod) {
       if (alvo === 'pente' && (!Number.isInteger(valor) || valor < -20 || valor > 20)) return `${efeito.rotulo}: o pente muda de −20 a +20`;
       if (alvo === 'ocultavel' && typeof valor !== 'boolean') return `${efeito.rotulo}: ocultável é sim ou não`;
       if (alvo === 'emperraAte' && (!Number.isInteger(valor) || valor < 1 || valor > 3)) return `${efeito.rotulo}: a arma emperra até o 1, o 2 ou o 3`;
-      if (['pente', 'ocultavel', 'emperraAte'].includes(alvo) && efeito.quando !== undefined) return `${efeito.rotulo}: ${ALVOS[alvo].toLowerCase()} muda a arma sempre, sem situação`;
+      if (alvo === 'instavel' && valor !== true) return `${efeito.rotulo}: a instável é sempre sim`;
+      if (['pente', 'ocultavel', 'emperraAte', 'instavel'].includes(alvo) && efeito.quando !== undefined) return `${efeito.rotulo}: ${ALVOS[alvo].toLowerCase()} muda a arma sempre, sem situação`;
     }
   }
   return '';
@@ -214,10 +217,10 @@ export function efeitosDoDano(mods, contexto = {}) {
   return lista;
 }
 
-// O que as modificações mudam na arma de vez: o pente (soma), se ela se esconde (o "não se esconde" ganha) e até que
-// número ela emperra (o maior). null: nenhuma muda.
+// O que as modificações mudam na arma de vez: o pente (soma), se ela se esconde (o "não se esconde" ganha), até que
+// número ela emperra (o maior) e se ela é instável (o C73). null: nenhuma muda.
 export function derivadosDaArma(mods) {
-  const derivados = { pente: 0, ocultavel: null, emperraAte: null };
+  const derivados = { pente: 0, ocultavel: null, emperraAte: null, instavel: false };
   const vistos = new Set();
   for (const mod of mods) {
     if (vistos.has(mod.id)) continue;
@@ -227,6 +230,7 @@ export function derivadosDaArma(mods) {
         if (alvo === 'pente') derivados.pente += valor;
         if (alvo === 'ocultavel') derivados.ocultavel = derivados.ocultavel === false ? false : valor;
         if (alvo === 'emperraAte') derivados.emperraAte = Math.max(derivados.emperraAte ?? 0, valor);
+        if (alvo === 'instavel') derivados.instavel = true;
       }
     }
   }
@@ -244,6 +248,7 @@ export function descreverEfeito(efeito) {
     if (alvo === 'dano') return `+${valor} no dano`;
     if (alvo === 'pente') return `${sinal(valor)} no pente`;
     if (alvo === 'ocultavel') return valor ? 'a arma se esconde' : 'a arma não se esconde';
+    if (alvo === 'instavel') return 'na falha crítica, a arma falha como a de qualidade ruim';
     const numeros = Array.from({ length: valor }, (_, i) => i + 1);
     return `emperra no ${numeros.length > 1 ? `${numeros.slice(0, -1).join(', no ')} e no ${numeros.at(-1)}` : numeros[0]}`;
   }).join(', ');

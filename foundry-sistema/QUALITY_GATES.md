@@ -517,6 +517,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   Ache a janela pelo texto do que se espera dela.
 - **A regra da loja da campanha também tem de chegar à ficha** (ciclo 212): a bancada não avisava o teto porque só a loja
   carregava as regras. O cenário do navegador pegou; o teste das contas, não.
+- **Um estado novo da arma passa pelos passos antigos que atiram com ela** (ciclo 213): a quebra automática deixava a
+  arma do passo da falha crítica (o C13) sem atacar nos tiros seguintes. O passo desfaz a quebra pelo botão do cartão,
+  confere o estado a cada tiro e começa cada tiro com a arma inteira.
 
 ## Build
 
