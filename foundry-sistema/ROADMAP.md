@@ -667,6 +667,9 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   s; o tiro que erra para na primeira parede. No `canvas.primary`, sob a névoa; um conjunto de contêineres por roteiro,
   destruído no fim e na troca de cena. O "Rever o efeito" no cartão. Sem a luz de verdade do clarão (a decisão 12 fica
   para o usuário).
+- [~] **C102. A luz do clarão (a decisão 12):** em andamento (sessão KouArt, 2026-11-26). O usuário respondeu "Sim":
+  o clarão do cano acende uma luz de verdade por 0,1 s, que revela quem atira no escuro para quem tem visão da área;
+  menos no Reduzido.
 - [ ] **C81 a C97:** os itens do plano (o motor de
   som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
