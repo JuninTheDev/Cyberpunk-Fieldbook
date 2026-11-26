@@ -39,7 +39,7 @@ test('C55: a área do explosivo, o supressivo sem alvo e os alvos marcados passa
 });
 
 test('C56: nenhum ouvinte do socket tira quem pediu da mensagem; todos usam o remetente do Foundry', () => {
-  const arquivos = ['combate/socket.mjs', 'netrun/socket.mjs', 'agarrao.mjs', 'artes-marciais.mjs', 'neuroport.mjs', 'tripulacao.mjs', 'vinculo-veiculo.mjs', 'pedido-teste.mjs', 'instalacao-mod.mjs'];
+  const arquivos = ['combate/socket.mjs', 'netrun/socket.mjs', 'agarrao.mjs', 'artes-marciais.mjs', 'neuroport.mjs', 'tripulacao.mjs', 'vinculo-veiculo.mjs', 'pedido-teste.mjs', 'instalacao-mod.mjs', 'coreografia.mjs'];
   for (const arquivo of arquivos) {
     const fonte = ler(`foundry-sistema/scripts/${arquivo}`);
     assert.match(fonte, /game\.socket\.on\(CANAL, (async )?\(mensagem, remetente\) =>/, `${arquivo}: o ouvinte recebe o remetente`);
@@ -56,6 +56,8 @@ test('C56: nenhum ouvinte do socket tira quem pediu da mensagem; todos usam o re
   assert.match(combate, /mensagem\.tipo === 'expirou' && quem\?\.isGM/);
   assert.match(combate, /if \(espera && espera\.de === remetente\) espera\(mensagem\.resposta\);/);
   assert.match(combate, /\{ de: usuario\.id \}/);
+  // Os efeitos na mesa (o C79): o evento pelo socket só vale vindo do mestre ativo.
+  assert.match(ler('foundry-sistema/scripts/coreografia.mjs'), /mensagem\?\.tipo === 'efeito' && quem\?\.isGM && remetente === game\.users\.activeGM\?\.id/);
   // A NET: a resposta vai para quem pediu de verdade e só vale vinda de um mestre.
   const net = ler('foundry-sistema/scripts/netrun/socket.mjs');
   assert.match(net, /executar\(mensagem\.op, mensagem\.dados, game\.users\.get\(remetente\)\)/);

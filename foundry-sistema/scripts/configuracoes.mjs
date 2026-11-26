@@ -68,9 +68,15 @@ export function registrarConfiguracoes() {
     name: 'Quem vê o cartão do resultado', hint: 'O cartão com a defesa, o dano e o Desfazer, e o texto em cima do token.',
     type: String, default: 'publico', choices: { publico: 'Todos', envolvidos: 'O mestre, quem atacou e os donos dos alvos', mestre: 'Só o mestre' }
   });
+  // O teto da mesa (o C79): cada navegador escolhe o dele em "Efeitos neste navegador", sem passar deste. Os valores
+  // guardados de antes (auto, texto, nao) continuam valendo; o Reduzido é novo.
   registrar('animacoes', {
-    name: 'Efeitos na mesa', hint: 'Texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro.',
-    type: String, default: 'auto', choices: { auto: 'Texto e animação', texto: 'Só o texto', nao: 'Nenhum' }
+    name: 'Efeitos na mesa', hint: 'O máximo da mesa; cada jogador pode pôr menos no navegador dele. Hoje: o texto em cima do token ("Esquivou!", "−12 HP") e, no Completo, com o Sequencer e o JB2A, a animação do acerto e do erro. O Reduzido mostra o texto, sem a animação.',
+    type: String, default: 'auto', choices: { auto: 'Completo (texto e animação)', reduzido: 'Reduzido', texto: 'Só o texto', nao: 'Nenhum' }
+  });
+  registrar('efeitosIntensidade', {
+    name: 'Efeitos neste navegador', hint: 'Só neste navegador, e nunca acima do que o mestre escolheu em Efeitos na mesa. O Automático usa o Reduzido no celular, no Safari, no computador fraco e com o modo fotossensível do Foundry; senão, o da mesa.',
+    scope: 'client', type: String, default: 'auto', choices: { auto: 'Automático', completo: 'Completo', reduzido: 'Reduzido', texto: 'Só o texto', nada: 'Nenhum' }
   });
   // As das armas de 2077 do cpr-2077 do Foundry 12 saíram com o Mission Kit: as do ataque Smart (o teste Smart e a arma
   // sem o Smart Link) no ciclo 110, e a da carga Tech que esfria uma rodada no ciclo 115.

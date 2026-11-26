@@ -618,6 +618,46 @@ export function roteiro(evento, { nivel = 'completo', sangue = true, tremor = tr
   return comprimir(passos, TETO[nivel] ?? TETO.completo);
 }
 
+// ---------------- O diretor (o C79): o que é puro ----------------
+// "Efeitos neste navegador" (efeitosIntensidade): o automático, ou o nível que o jogador escolhe (nunca acima do da mesa).
+export const INTENSIDADES = ['auto', 'completo', 'reduzido', 'texto', 'nada'];
+// O automático: o reduzido no celular, no Safari (o WebKit), no computador fraco (até 2 núcleos) e com o modo
+// fotossensível do Foundry; senão, o da mesa.
+export const nivelAutomatico = ({ fotossensivel = false, celular = false, webkit = false, nucleos = 8 } = {}) =>
+  (fotossensivel || celular || webkit || (finito(nucleos) && nucleos <= 2) ? 'reduzido' : 'mesa');
+// O nível deste navegador a partir das duas configurações (a da mesa, animacoes, e a dele) e do aparelho.
+export function nivelDoNavegador(mundo, escolha = 'auto', aparelho = {}) {
+  const cliente = escolha === 'auto' || !INTENSIDADES.includes(escolha) ? nivelAutomatico(aparelho) : escolha;
+  return nivelEfetivo(mundo, cliente);
+}
+
+// O que este navegador vê do roteiro: sai o passo num token que ele não vê (o escondido, o fora da visão) e, com o token
+// de quem atacou fora da vista, tudo o que sai dele (o clarão, o som no cano, o traçante): o jogador vê o impacto no
+// alvo, mas não descobre de onde veio o tiro. visivel(id): o teste de visão do Foundry neste cliente.
+export function passosVisiveis(passos, { visivel = () => true, origem = null } = {}) {
+  const veOrigem = !origem || Boolean(visivel(origem));
+  const vistos = new Map();
+  const ve = token => {
+    if (!vistos.has(token)) vistos.set(token, Boolean(visivel(token)));
+    return vistos.get(token);
+  };
+  return passos.filter(passo => (!passo.token || ve(passo.token)) && (veOrigem || (!passo.de && passo.token !== origem)));
+}
+
+// Quando o próximo evento pode começar: no fim do último passo; o texto e o que dura contam só pelo começo (o texto sobe
+// sozinho, e esperar por ele atrasaria a mesa).
+export const fimDoTocar = passos => passos.reduce((fim, p) => Math.max(fim, p.t + (p.persistente || p.passo === 'texto' ? 0 : p.duracao)), 0);
+// Só os textos, na hora: o evento que esperou demais (a fila cheia).
+export const soTexto = passos => passos.filter(p => p.passo === 'texto').map(p => ({ ...p, t: 0 }));
+// A fila deste navegador: até 3 eventos esperando; o que passa disso sai pelos mais velhos, que viram só o texto na hora,
+// para o efeito nunca ficar muito atrás do jogo. Devolve a fila nova e os que saíram.
+export const ESPERA_MAXIMA = 3;
+export function entrarNaFila(fila, item, maximo = ESPERA_MAXIMA) {
+  const nova = [...fila, item];
+  const sairam = nova.length > maximo ? nova.splice(0, nova.length - maximo) : [];
+  return { fila: nova, sairam };
+}
+
 // As chaves do catálogo que um roteiro e os perfis usam (o G3 confere que todas existem no catálogo).
 export const chavesDoRoteiro = passos => [...new Set(passos.map(p => p.chave).filter(Boolean))];
 export const chavesDosPerfis = () => [...new Set(Object.values(PERFIS).flatMap(p => [p.som, p.rajada, p.recarga, p.golpe && `golpe.${p.golpe}`]).filter(Boolean))];

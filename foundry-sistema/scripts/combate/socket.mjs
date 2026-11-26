@@ -2,7 +2,6 @@
 
 import { SISTEMA } from '../config.mjs';
 import { config } from '../configuracoes.mjs';
-import { textoFlutuante } from '../efeitos.mjs';
 import { JanelaDeDefesa } from '../janela-defesa.mjs';
 import { perguntarTeste } from '../janela-rolagem.mjs';
 import { rolarResistencia, rolarInteligente } from '../municoes.mjs';
@@ -119,11 +118,9 @@ export function registrarCombate() {
       const janela = janelas.get(mensagem.id);
       if (janela?.expirar) janela.expirar(); else janela?.close();
       janelas.delete(mensagem.id);
-    } else if (mensagem.tipo === 'texto' && quem?.isGM) {
-      // O texto em cima do token, só vindo de um mestre (o C77: antes, um jogador, pelo console, fazia aparecer qualquer
-      // texto no token de qualquer um).
-      textoFlutuante(mensagem.dados);
     }
+    // O texto em cima do token não vem mais pelo socket (o C79): vem no evento do cartão do resultado, que cada cliente
+    // toca quando o cartão chega até ele (coreografia.mjs).
   });
 }
 

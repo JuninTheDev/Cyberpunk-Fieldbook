@@ -3,7 +3,9 @@
 import { SISTEMA } from '../config.mjs';
 import { desfazerEventos } from '../identidade.mjs';
 import { config } from '../configuracoes.mjs';
-import { animar, textoFlutuante } from '../efeitos.mjs';
+import { animar } from '../efeitos.mjs';
+import { idDaOrigem } from '../armas-cyberware.mjs';
+import { eventoDoAtaque, validarEvento } from '../regras-coreografia.mjs';
 import { aplicarPerdaDeHumanidade } from '../humanidade.mjs';
 import { desfazerContaDoHospital } from '../hospital.mjs';
 import { escolherLesao, lesaoCritica } from '../lesoes.mjs';
@@ -13,7 +15,7 @@ import { desfazerEscudoHumano } from '../escudo-humano.mjs';
 import { rolarDanoDoArremesso } from '../arremessar.mjs';
 import * as R from '../regras.mjs';
 import { danoDoExplosivo } from '../regras-black-chrome.mjs';
-import { CANAL, STATUS_SUPRIMIDO, ROTULO, conferirArmaVeicular, renderizar } from './apoio.mjs';
+import { STATUS_SUPRIMIDO, ROTULO, conferirArmaVeicular, renderizar } from './apoio.mjs';
 import { ferir, linhaDe } from './modos.mjs';
 import { desistir } from './socket.mjs';
 import { desfazerPeloCartao as desfazerQuebra, marcarPelaFalha } from '../quebra.mjs';
@@ -53,7 +55,8 @@ export async function cartaoDoResultado(ctx) {
   resumo.quebra = ctx.falhaDaArma ? await marcarPelaFalha(ctx.arma, ctx.falhaDaArma.efeito, ctx.pedido.id).catch(erro => { console.warn(`${SISTEMA} | a quebra da arma:`, erro); return null; }) : null;
   const content = await renderizar('ataque.hbs', { ...resumo, danoDoArremesso, linhas: linhas.map((l, i) => ({ ...l, hp: barraDeHp(ctx.linhas[i]), contra: l.escolha === 'esquivar' || l.escolha === 'concentrar' ? `${l.escolha === 'concentrar' ? 'Concentração' : 'esquiva'} ${l.defesa}` : l.dv !== null ? `DV ${l.dv}` : null, escolhaNome: ROTULO[l.escolha] ?? '' })), desfazer: desfazer.length > 0 || (ctx.devolver?.length ?? 0) > 0 });
   const para = destinatarios(ctx);
-  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, ...(danoDoArremesso ? { armaDoArremesso: ctx.arma.uuid } : {}), desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [], diario: ctx.diario ?? [] } } });
+  const efeito = eventoDoCartao(ctx, resumo);
+  await ChatMessage.implementation.create({ speaker: { alias: ctx.nomeAtq }, content, rolls: ctx.rolagens, ...(para ? { whisper: para } : {}), flags: { [SISTEMA]: { ataque: resumo, ...(efeito ? { efeito } : {}), ...(danoDoArremesso ? { armaDoArremesso: ctx.arma.uuid } : {}), desfazer, marcas: ctx.marcas, devolver: ctx.devolver ?? [], diario: ctx.diario ?? [] } } });
   mostrarNaMesa(ctx, para);
   return resumo;
 }
@@ -73,21 +76,45 @@ export function destinatarios(ctx) {
   return [...ids];
 }
 
-// O texto em cima de cada alvo, para quem vê o cartão (aqui e, pelo socket, nos outros clientes), e a animação
-// (efeitos.mjs), pela configuração "Efeitos na mesa". O socket só leva o texto a quem vê o cartão (o C77): os outros nem
-// recebem.
+// O centro de um token pelo documento (o mestre pode estar vendo outra cena: o objeto do canvas pode não existir).
+const centroDoToken = token => {
+  const casa = token.parent?.grid?.size ?? 100;
+  return { x: token.x + (token.width * casa) / 2, y: token.y + (token.height * casa) / 2 };
+};
+
+// O evento dos efeitos na mesa (o C79; regras-coreografia.mjs), que vai na flag "efeito" do cartão: cada cliente que vê o
+// cartão toca o dele (coreografia.mjs), o texto em cima do token inclusive. As posições são as de agora; a arma, só as
+// chaves. Com "Efeitos na mesa" em Nenhum, nem se monta. Montar nunca segura o cartão: se falha, ele sai sem o evento.
+function eventoDoCartao(ctx, resumo) {
+  if (config('animacoes') === 'nao') return null;
+  try {
+    const arma = ctx.arma ?? null;
+    const municao = arma?.municaoCarregada?.system ?? null;
+    const doCyberware = arma?.actor?.items.get(idDaOrigem(arma))?.getFlag(SISTEMA, 'catalogo') ?? '';
+    const origem = ctx.tokenAtq && ctx.tokenAtq.parent?.id === ctx.cena.id ? { token: ctx.tokenAtq.id, ...centroDoToken(ctx.tokenAtq), rotacao: ctx.tokenAtq.rotation ?? 0 } : null;
+    const explodiu = ctx.modo === 'explosivo' && ctx.linhas.some(linha => ['acertou', 'esquivou'].includes(linha.resultado));
+    const evento = eventoDoAtaque(resumo, {
+      cena: ctx.cena.id, origem,
+      alvos: ctx.linhas.map(linha => (linha.token.parent?.id === ctx.cena.id ? { token: linha.token.id, ...centroDoToken(linha.token), escondido: Boolean(linha.token.hidden) } : null)),
+      arma: arma ? { tipo: arma.system.tipo, catalogo: arma.getFlag(SISTEMA, 'catalogo') ?? '', origem: doCyberware, classe2077: arma.perfil2077?.classe ?? null,
+        municao: municao ? { tipo: municao.tipo, efeito: municao.efeito } : null, doisCanos: Boolean(ctx.pedido.doisCanos) } : {},
+      balas: arma?.system.aDistancia ? R.balasDoModo(ctx.modo, { autofogo: arma.balasDoAutofogo, doisCanos: Boolean(ctx.pedido.doisCanos) }) : null,
+      area: explodiu && ctx.alvos?.[0] ? { ...centroDoToken(ctx.alvos[0]), lado: R.AREA_EXPLOSIVO } : null
+    });
+    return validarEvento(evento) ? null : evento;
+  } catch (erro) {
+    console.warn(`${SISTEMA} | o evento do efeito`, erro);
+    return null;
+  }
+}
+
+// A animação do Sequencer com o JB2A (efeitos.mjs), no "Completo" da configuração "Efeitos na mesa": o Sequencer a manda
+// só para quem vê o cartão (o C77). O texto em cima do token vem do evento do cartão (o C79): cada cliente toca o dele.
 function mostrarNaMesa(ctx, para) {
-  const modo = config('animacoes');
-  if (modo === 'nao') return;
-  const outros = R.destinatariosDoTexto(para, game.user.id);
+  if (config('animacoes') !== 'auto') return;
   for (const linha of ctx.linhas) {
     const resumo = R.textoNoToken(linha);
-    if (!resumo) continue;
-    const dados = { cena: linha.token.parent.id, token: linha.token.id, ...resumo, para };
-    textoFlutuante(dados);
-    if (!outros) game.socket.emit(CANAL, { tipo: 'texto', dados });
-    else if (outros.length) game.socket.emit(CANAL, { tipo: 'texto', dados }, { recipients: outros });
-    if (modo === 'auto' && !linha.token.hidden) animar(linha.token, resumo.estilo, para).catch(erro => console.warn(`${SISTEMA} | efeito`, erro));
+    if (resumo && !linha.token.hidden) animar(linha.token, resumo.estilo, para).catch(erro => console.warn(`${SISTEMA} | efeito`, erro));
   }
 }
 

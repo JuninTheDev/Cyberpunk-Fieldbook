@@ -9103,18 +9103,22 @@ module.exports = async ({ edge, servidores, r }) => {
       const janela = `document.querySelector('.application.cpr-fieldbook.janela-defesa:not(.minimizing)')`;
       const contarJanelas = `document.querySelectorAll('.application.cpr-fieldbook.janela-defesa:not(.minimizing)').length`;
       const rifle = `__ator('Atiradora').items.getName('Assault Rifle')`;
-      // Os textos em cima do token, nos dois navegadores: o createScrollingText grava o que mostra.
-      const gravar = `(() => {
+      // Os textos em cima do token, nos dois navegadores: o createScrollingText grava o que mostra. Desde o C79, o texto vem
+      // pela fila do diretor: espera o que sobrou dos passos de antes tocar, para não cair aqui.
+      const gravar = `(async () => {
+        for (let i = 0; i < 100 && game.system.api.efeitos.ocupado; i++) await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 200));
         window.__textos = [];
         const original = canvas.interface.constructor.prototype.createScrollingText;
         canvas.interface.createScrollingText = function (origem, texto, opcoes) { window.__textos.push(texto); return original.call(this, origem, texto, opcoes); };
         return true;
       })()`;
       // O C77: no jogador, os textos que o socket trouxe (os de fora do cartão nem chegam); um ouvinte só, que fica (tirar
-      // um ouvinte do socket no jogador quebrou passos bem depois: a lição do ciclo 200), e para de gravar no fim.
+      // um ouvinte do socket no jogador quebrou passos bem depois: a lição do ciclo 200), e para de gravar no fim. Desde o
+      // C79, o texto vem no evento do cartão: pelo socket não chega nada, nem o texto nem o efeito.
       const ouvirSocket = `(() => {
         window.__socketTextos = [];
-        if (!window.__ouvinteDoTexto) { window.__ouvinteDoTexto = true; game.socket.on('system.${S}', m => { if (m?.tipo === 'texto' && Array.isArray(window.__socketTextos)) window.__socketTextos.push(m.dados?.texto); }); }
+        if (!window.__ouvinteDoTexto) { window.__ouvinteDoTexto = true; game.socket.on('system.${S}', m => { if (['texto', 'efeito'].includes(m?.tipo) && Array.isArray(window.__socketTextos)) window.__socketTextos.push(m.dados?.texto ?? m.tipo); }); }
         return true;
       })()`;
       // O C77: no mestre, um Sequencer de mentira (o Sequencer e o JB2A não estão no Foundry 14 de teste) grava cada animação
@@ -9227,9 +9231,10 @@ module.exports = async ({ edge, servidores, r }) => {
           semEfeito: { ...semEfeito, texto: undefined }, textosD, textosDJogador, aVista,
           socket: { socketA, socketB, socketC, socketD }, animacoes: { animacoesA, animacoesB, animacoesC, animacoesD }
         };
-        // O C77: o texto pelo socket só chega a quem vê o cartão (no "só o mestre", o jogador nem recebe), e a animação do
-        // Sequencer vai só para quem vê o cartão (os envolvidos: o mestre e o dono do Alvo).
-        const c77 = socketA.join() === 'Errou,Errou' && socketB.length === 0 && socketC.join() === 'Errou' && socketD.length === 0
+        // O C77: o texto só chega a quem vê o cartão (no "só o mestre", o jogador nem recebe), e a animação do Sequencer
+        // vai só para quem vê o cartão (os envolvidos: o mestre e o dono do Alvo). Desde o C79, o texto vem no evento do
+        // cartão: o socket não leva nada, e o jogador ainda vê o texto dos cartões que vê (os textosAJogador e textosCJogador).
+        const c77 = socketA.length === 0 && socketB.length === 0 && socketC.length === 0 && socketD.length === 0
           && animacoesA.join() === 'todos,todos' && animacoesB.join() === 'Gamemaster' && animacoesC.join() === 'Gamemaster+Jogador' && animacoesD.length === 0;
         const ok = info.primeira && juntas === 1 && info.segunda && fila.join() === '14 errou,15 errou' && textosA.join() === 'Errou,Errou' && textosAJogador.join() === 'Errou,Errou'
           && soMestre.whisper.join() === 'Gamemaster' && !soMestre.viu && soMestre.resultado === 'errou' && textosB.join() === 'Errou' && textosBJogador.length === 0
@@ -12717,15 +12722,13 @@ module.exports = async ({ edge, servidores, r }) => {
           window.__textosC77.length = 0;
           return ve();
         })()`);
-        // O mestre manda o texto dos dois tokens pelo socket (como o cartão do resultado faz) e mostra o dele.
+        // O mestre manda o texto dos dois tokens a todos e mostra o dele: desde o C79, pelo evento do diretor (o caminho 2,
+        // o socket do mestre ativo; o cartão do resultado é o caminho 1, conferido no passo do C79).
         const mandar = rotulo => edge.evaluate(`(async () => {
-          const { textoFlutuante } = await import('/systems/${S}/scripts/efeitos.mjs');
           window.__textosC77.length = 0;
-          for (const [token, nome] of [['${m.olho}', 'Olho'], ['${m.sombra}', 'Sombra']]) {
-            const dados = { cena: '${m.cena}', token, texto: nome + ' ${rotulo}', estilo: 'erro', para: null };
-            textoFlutuante(dados);
-            game.socket.emit('system.${S}', { tipo: 'texto', dados });
-          }
+          const texto = [['${m.olho}', 'Olho'], ['${m.sombra}', 'Sombra']].map(([token, nome]) => ({ token, texto: nome + ' ${rotulo}', estilo: 'erro' }));
+          game.system.api.efeitos.emitir({ v: 1, id: foundry.utils.randomID(), tipo: 'movimento', fase: 'desfecho', cena: '${m.cena}', origem: null, alvos: [], texto });
+          await new Promise(r => setTimeout(r, 100));
           return window.__textosC77.slice().sort();
         })()`);
         const noJogador = () => jogador.evaluate(`(async () => { await new Promise(r => setTimeout(r, 1200)); return window.__textosC77.slice().sort(); })()`);
@@ -12736,7 +12739,11 @@ module.exports = async ({ edge, servidores, r }) => {
         const jogadorA = await noJogador();
         // 3. O texto falso de um jogador, pelo console: o mestre não mostra.
         await edge.evaluate('(() => { window.__textosC77.length = 0; return true; })()');
-        await jogador.evaluate(`(() => { game.socket.emit('system.${S}', { tipo: 'texto', dados: { cena: '${m.cena}', token: '${m.olho}', texto: 'Falso', estilo: 'acerto', para: null } }); return true; })()`);
+        await jogador.evaluate(`(() => {
+          game.socket.emit('system.${S}', { tipo: 'texto', dados: { cena: '${m.cena}', token: '${m.olho}', texto: 'Falso', estilo: 'acerto', para: null } });
+          game.socket.emit('system.${S}', { tipo: 'efeito', evento: { v: 1, id: foundry.utils.randomID(), tipo: 'movimento', fase: 'desfecho', cena: '${m.cena}', origem: null, alvos: [], texto: [{ token: '${m.olho}', texto: 'Falso', estilo: 'acerto' }] } });
+          return true;
+        })()`);
         await edge.sleep(1200);
         const falsoNoMestre = await edge.evaluate('window.__textosC77.slice()');
         // 4. Sem a parede: o jogador vê os dois.
@@ -12778,6 +12785,204 @@ module.exports = async ({ edge, servidores, r }) => {
             if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
             await game.scenes.get('${m.cena}')?.delete();
             for (const a of game.actors.filter(a => ['${NOME}', '${SOMBRA}'].includes(a.name))) await a.delete();
+            return true;
+          })()`);
+          await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);
+        }
+      }
+    });
+
+    await r.passo('o diretor dos efeitos (o C79): o cartão do resultado é o evento, e cada navegador toca o dele uma vez; quem não vê o cartão não toca nem recebe nada pelo socket; "Efeitos na mesa" desligado, ninguém; "Efeitos neste navegador" no Só o texto e o teto Reduzido da mesa; quem atirou escondido não aparece para o jogador; a outra cena não toca nem guarda; o evento falso de um jogador não toca no mestre, e o do mestre pelo socket toca no jogador; dez eventos seguidos não passam de 3 na fila', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const ATQ = 'Teste C79 Atiradora';
+      const ALVO = 'Teste C79 Alvo';
+      let m = null;
+      // O que cada navegador toca (o registro do diretor) e o texto que sobe; no jogador, também o socket (texto ou efeito).
+      const gravar = `(async () => {
+        window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        // O que sobrou dos passos de antes toca primeiro (o evento de um passo não cai no seguinte).
+        await window.__esperar(() => !game.system.api.efeitos.ocupado);
+        await new Promise(r => setTimeout(r, 200));
+        game.system.api.efeitos.gravar(true);
+        window.__falhasC79 = game.system.api.efeitos.falhas;
+        window.__textosC79 = [];
+        const original = canvas.interface.constructor.prototype.createScrollingText;
+        canvas.interface.createScrollingText = function (origem, texto, opcoes) { window.__textosC79.push(texto); return original.call(this, origem, texto, opcoes); };
+        window.__socketC79 = [];
+        if (!window.__ouvinteC79) { window.__ouvinteC79 = true; game.socket.on('system.${S}', x => { if (['texto', 'efeito'].includes(x?.tipo) && Array.isArray(window.__socketC79)) window.__socketC79.push(x.tipo); }); }
+        return true;
+      })()`;
+      const ler = navegador => navegador.evaluate(`(() => {
+        const registro = game.system.api.efeitos.registro.splice(0).map(e => ({ id: e.id, nivel: e.nivel, soTexto: e.soTexto, em: e.em, passos: e.passos.map(p => p.passo).join(), tokens: e.passos.map(p => p.token) }));
+        return { registro, textos: window.__textosC79.splice(0), socket: window.__socketC79.splice(0) };
+      })()`);
+      // No jogador: a cena do passo à vista, com os dois tokens.
+      const naCena = () => jogador.evaluate(`(async () => {
+        window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        return window.__esperar(() => canvas.ready && canvas.scene?.id === '${m.cena}' && canvas.tokens.get('${m.tAtq}') && canvas.tokens.get('${m.tAlvo}'));
+      })()`);
+      const configurar = (navegador, chave, valor) => navegador.evaluate(`game.settings.set('${S}', '${chave}', ${JSON.stringify(valor)}).then(() => true)`);
+      // Um tiro da Atiradora no Alvo, que não esquiva (REF 0): d10 9 + REF 8 + Pistola 8 contra a DV 13; o dano passa do SP.
+      const tiro = async () => {
+        await fixar(edge, [[9, 10], [4, 6], [4, 6], [4, 6]]);
+        const feito = await edge.evaluate(`(async () => {
+          const ataque = await game.actors.get('${m.atq}').items.getName('C79 Pistola').atacar({ alvo: game.scenes.get('${m.cena}').tokens.get('${m.tAlvo}') });
+          const cartao = game.messages.contents.findLast(x => x.getFlag('${S}', 'ataque')?.id === ataque?.id);
+          return { id: ataque?.id ?? null, resultado: ataque?.linhas[0]?.resultado ?? null, efeito: Boolean(cartao?.getFlag('${S}', 'efeito')) };
+        })()`);
+        await edge.sleep(1500);
+        return { ...feito, mestre: await ler(edge), jogador: await ler(jogador) };
+      };
+      const so = (lido, id) => lido.registro.filter(e => e.id === id);
+      try {
+        await edge.evaluate(`(() => { window.__dadosC79 = CONFIG.Dice.randomUniform; return true; })()`);
+        // 1. O mestre: uma cena só do passo (sem a visão dos tokens: o jogador vê os dois), a Atiradora e o Alvo (de
+        // ninguém: o mestre defende pelo automático), e as configurações do combate.
+        m = await edge.evaluate(`(async () => {
+          const S = '${S}', esperar = window.__esperar;
+          const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, mensagens: game.messages.map(x => x.id), modo: game.settings.get('core', 'messageMode'),
+            config: Object.fromEntries(['ativo', 'dano', 'defesaDosNpcs', 'exigeRef8', 'lesaoCritica', 'animacoes', 'resultado', 'rolarDireto', 'efeitosIntensidade'].map(k => [k, game.settings.get(S, k)])) };
+          await game.settings.set('core', 'messageMode', 'public');
+          for (const [k, v] of Object.entries({ ativo: true, dano: 'automatico', defesaDosNpcs: 'automatica', exigeRef8: true, lesaoCritica: 'ficha', animacoes: 'auto', resultado: 'publico', rolarDireto: true, efeitosIntensidade: 'auto' })) await game.settings.set(S, k, v);
+          const cena = await Scene.implementation.create({ name: 'C79 Diretor', active: false, width: 1600, height: 1000, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate();
+          await esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const atq = await Actor.implementation.create({ name: '${ATQ}', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, pericias: { handgun: { nivel: 8 } } },
+            items: [{ name: 'C79 Pistola', type: 'arma', system: { tipo: 'heavyPistol', pericia: 'handgun', dano: '3d6', equipada: true, tabelaDV: 'DV Pistol', municoes: ['heavyPistol'], pente: { value: 12, max: 12 } } },
+              { name: 'C79 Balas', type: 'municao', system: { tipo: 'heavyPistol', efeito: 'basic', quantidade: 40 } }] });
+          const alvo = await Actor.implementation.create({ name: '${ALVO}', type: 'personagem', system: { hp: { value: 110 }, atributos: { body: { valor: 20 }, will: { valor: 20 }, ref: { valor: 0 } } },
+            items: [{ name: 'C79 Proteção', type: 'armadura', system: { equipada: true, sp: { corpo: { value: 3, max: 3 }, cabeca: { value: 0, max: 0 } } } }] });
+          const arma = atq.items.getName('C79 Pistola');
+          await arma.update({ 'system.carregada': atq.items.getName('C79 Balas').id });
+          await cena.createEmbeddedDocuments('Token', [(await atq.getTokenDocument({ x: 300, y: 400, actorLink: true })).toObject(), (await alvo.getTokenDocument({ x: 500, y: 400, actorLink: true })).toObject()]);
+          // Cada token pelo ator dele (o createEmbeddedDocuments não devolve na ordem: a lição do C77).
+          const tAtq = cena.tokens.find(t => t.actorId === atq.id), tAlvo = cena.tokens.find(t => t.actorId === alvo.id);
+          await esperar(() => canvas.tokens.get(tAtq.id) && canvas.tokens.get(tAlvo.id));
+          return { antes, cena: cena.id, atq: atq.id, alvo: alvo.id, tAtq: tAtq.id, tAlvo: tAlvo.id };
+        })()`);
+        await naCena();
+        await jogador.evaluate(`game.settings.set('${S}', 'efeitosIntensidade', 'auto').then(() => true)`);
+        await edge.evaluate(gravar);
+        await jogador.evaluate(gravar);
+
+        // 2. O cartão de todos: os dois navegadores tocam o evento uma vez cada (pelo id), o mesmo roteiro e o mesmo texto,
+        // e nada passa pelo socket.
+        const a = await tiro();
+        // 3. Só o mestre vê o cartão: o jogador não toca nada (nem recebe pelo socket); 4. os envolvidos (o jogador não é
+        // dono de ninguém aqui): também não.
+        await configurar(edge, 'resultado', 'mestre');
+        const b = await tiro();
+        await configurar(edge, 'resultado', 'envolvidos');
+        const c = await tiro();
+        await configurar(edge, 'resultado', 'publico');
+        // 5. "Efeitos na mesa" desligado: o cartão sai sem o evento, e ninguém toca.
+        await configurar(edge, 'animacoes', 'nao');
+        const d = await tiro();
+        await configurar(edge, 'animacoes', 'auto');
+        // 6. "Efeitos neste navegador" no Só o texto, no jogador: ele só tem o texto; o mestre, tudo.
+        await configurar(jogador, 'efeitosIntensidade', 'texto');
+        const e = await tiro();
+        // 7. A mesa no Reduzido e o jogador no Completo: os dois no Reduzido (o jogador não passa do teto), sem o sangue.
+        await configurar(jogador, 'efeitosIntensidade', 'completo');
+        await configurar(edge, 'animacoes', 'reduzido');
+        const f = await tiro();
+        await configurar(edge, 'animacoes', 'auto');
+        await configurar(jogador, 'efeitosIntensidade', 'auto');
+        // 8. A Atiradora escondida: o jogador vê o impacto e o texto no Alvo, mas nada que saia dela.
+        await edge.evaluate(`game.scenes.get('${m.cena}').tokens.get('${m.tAtq}').update({ hidden: true }).then(() => true)`);
+        await jogador.evaluate(`window.__esperar(() => canvas.scene.tokens.get('${m.tAtq}')?.hidden)`);
+        const g = await tiro();
+        await edge.evaluate(`game.scenes.get('${m.cena}').tokens.get('${m.tAtq}').update({ hidden: false }).then(() => true)`);
+        // 9. O jogador vendo outra cena: não toca; ao voltar, nada toca sozinho.
+        let h = null, hVolta = null;
+        if (m.antes.cena && m.antes.cena !== m.cena) {
+          await jogador.evaluate(`(async () => { await game.scenes.get('${m.antes.cena}').view(); return window.__esperar(() => canvas.ready && canvas.scene?.id === '${m.antes.cena}'); })()`);
+          h = await tiro();
+          await jogador.evaluate(`game.scenes.get('${m.cena}').view().then(() => true)`);
+          await naCena();
+          await jogador.evaluate(gravar);
+          await jogador.sleep(1500);
+          hVolta = await ler(jogador);
+        }
+        // 10. O evento falso de um jogador, pelo socket (o efeito e o texto antigo): o mestre não toca. O do mestre (o
+        // caminho 2): o jogador toca uma vez.
+        await jogador.evaluate(`(() => {
+          game.socket.emit('system.${S}', { tipo: 'efeito', evento: { v: 1, id: foundry.utils.randomID(), tipo: 'movimento', fase: 'desfecho', cena: '${m.cena}', origem: null, alvos: [], texto: [{ token: '${m.tAlvo}', texto: 'Falso', estilo: 'acerto' }] } });
+          game.socket.emit('system.${S}', { tipo: 'texto', dados: { cena: '${m.cena}', token: '${m.tAlvo}', texto: 'Falso', estilo: 'acerto', para: null } });
+          return true;
+        })()`);
+        await edge.sleep(1200);
+        const falsoNoMestre = await ler(edge);
+        await edge.evaluate(`(() => game.system.api.efeitos.emitir({ v: 1, id: 'DoMestreC79', tipo: 'movimento', fase: 'desfecho', cena: '${m.cena}', origem: null, alvos: [], texto: [{ token: '${m.tAlvo}', texto: 'Do mestre', estilo: 'acerto' }] }))()`);
+        await jogador.sleep(1200);
+        const doMestre = { mestre: await ler(edge), jogador: await ler(jogador) };
+        // 11. Dez rajadas seguidas no jogador: a fila nunca passa de 3 esperando; as mais velhas viram só o texto; todas
+        // aparecem, e a última começa em até 5 s.
+        const fila = await jogador.evaluate(`(async () => {
+          const api = game.system.api.efeitos;
+          api.gravar(true);
+          const evento = i => ({ v: 1, id: 'FilaC79' + i, tipo: 'ataque', fase: 'desfecho', cena: '${m.cena}', origem: { token: '${m.tAtq}', x: 350, y: 450 }, arma: { perfil: 'fuzil' }, modo: 'autofogo', balas: 10,
+            alvos: [{ token: '${m.tAlvo}', x: 550, y: 450, resultado: 'acertou', multiplicador: 3, dano: { perdeu: 5, passou: true } }], texto: [{ token: '${m.tAlvo}', texto: 'Fila ' + i, estilo: 'acerto' }] });
+          const inicio = Date.now();
+          const entrou = [];
+          for (let i = 0; i < 10; i++) entrou.push(api.tocar(evento(i)));
+          await window.__esperar(() => api.registro.length >= 10 && !api.esperando, 100);
+          await new Promise(r => setTimeout(r, 1000));
+          const registro = api.registro.splice(0);
+          return { entrou: entrou.filter(Boolean).length, maior: api.maiorEspera, tocados: registro.length, soTexto: registro.filter(e => e.soTexto).length,
+            ultimo: Math.max(...registro.map(e => e.em)) - inicio, textos: window.__textosC79.splice(0).filter(t => t.startsWith('Fila ')).length, repetido: api.tocar(evento(9)) };
+        })()`);
+        const falhas = [await edge.evaluate('game.system.api.efeitos.falhas - window.__falhasC79'), await jogador.evaluate('game.system.api.efeitos.falhas - window.__falhasC79')];
+
+        const COMPLETO = 'clarao,som,tracante,impacto,sangue,texto';
+        const info = {
+          a: { feito: [a.resultado, a.efeito], mestre: so(a.mestre, a.id).map(x => [x.nivel, x.passos]), jogador: so(a.jogador, a.id).map(x => [x.nivel, x.passos]), textos: [a.mestre.textos.length, a.jogador.textos.length], iguais: a.mestre.textos.join() === a.jogador.textos.join(), socket: a.jogador.socket },
+          b: { mestre: so(b.mestre, b.id).length, jogador: b.jogador.registro.length, textos: b.jogador.textos.length, socket: b.jogador.socket },
+          c: { mestre: so(c.mestre, c.id).length, jogador: c.jogador.registro.length, textos: c.jogador.textos.length, socket: c.jogador.socket },
+          d: { efeito: d.efeito, mestre: d.mestre.registro.length, jogador: d.jogador.registro.length, textos: [d.mestre.textos.length, d.jogador.textos.length] },
+          e: { mestre: so(e.mestre, e.id).map(x => [x.nivel, x.passos]), jogador: so(e.jogador, e.id).map(x => [x.nivel, x.passos]), textos: e.jogador.textos.length },
+          f: { mestre: so(f.mestre, f.id).map(x => [x.nivel, x.passos]), jogador: so(f.jogador, f.id).map(x => [x.nivel, x.passos]) },
+          g: { mestre: so(g.mestre, g.id).map(x => x.passos), jogador: so(g.jogador, g.id).map(x => x.passos), doAtirador: so(g.jogador, g.id).flatMap(x => x.tokens).filter(t => t === m.tAtq).length, textos: g.jogador.textos.length },
+          h: h ? { mestre: so(h.mestre, h.id).length, jogador: h.jogador.registro.length, volta: hVolta.registro.length } : null,
+          falsoNoMestre: [falsoNoMestre.registro.length, falsoNoMestre.textos.length],
+          doMestre: { mestre: doMestre.mestre.registro.map(x => x.id), jogador: doMestre.jogador.registro.map(x => x.id), texto: doMestre.jogador.textos, socket: doMestre.jogador.socket },
+          fila, falhas
+        };
+        const conferir = {
+          aCartao: a.resultado === 'acertou' && a.efeito, aMestre: info.a.mestre.length === 1 && info.a.mestre[0].join() === 'completo,' + COMPLETO,
+          aJogador: info.a.jogador.length === 1 && info.a.jogador[0].join() === 'completo,' + COMPLETO, aTextos: info.a.textos.join() === '1,1' && info.a.iguais, aSocket: a.jogador.socket.length === 0,
+          bSoMestre: info.b.mestre === 1 && info.b.jogador === 0 && info.b.textos === 0 && info.b.socket.length === 0,
+          cEnvolvidos: info.c.mestre === 1 && info.c.jogador === 0 && info.c.textos === 0 && info.c.socket.length === 0,
+          dDesligado: d.efeito === false && info.d.mestre === 0 && info.d.jogador === 0 && info.d.textos.join() === '0,0',
+          eSoTexto: info.e.mestre.length === 1 && info.e.mestre[0].join() === 'completo,' + COMPLETO && info.e.jogador.length === 1 && info.e.jogador[0].join() === 'texto,texto' && info.e.textos === 1,
+          fReduzido: info.f.mestre[0]?.join() === 'reduzido,clarao,som,tracante,impacto,faisca,texto' && info.f.jogador[0]?.join() === 'reduzido,clarao,som,tracante,impacto,faisca,texto',
+          gEscondido: info.g.mestre.join() === COMPLETO && info.g.jogador.join() === 'impacto,sangue,texto' && info.g.doAtirador === 0 && info.g.textos === 1,
+          hOutraCena: !info.h || (info.h.mestre === 1 && info.h.jogador === 0 && info.h.volta === 0),
+          falsoNoMestre: info.falsoNoMestre.join() === '0,0',
+          doMestre: info.doMestre.mestre.join() === 'DoMestreC79' && info.doMestre.jogador.join() === 'DoMestreC79' && info.doMestre.texto.join() === 'Do mestre' && info.doMestre.socket.join() === 'efeito',
+          fila: fila.entrou === 10 && fila.maior <= 3 && fila.tocados === 10 && fila.soTexto >= 1 && fila.ultimo <= 5000 && fila.textos === 10 && fila.repetido === false,
+          falhas: falhas.join() === '0,0'
+        };
+        // O relatório corta a linha: só as conferências que falharam, com o que cada uma leu.
+        const caidas = Object.keys(conferir).filter(chave => !conferir[chave]);
+        const deQuem = chave => info[chave] ?? info[chave[0]];
+        return [!caidas.length, JSON.stringify({ caidas, ...Object.fromEntries(caidas.map(chave => [chave, deQuem(chave)])) })];
+      } finally {
+        await edge.evaluate(`(() => { if (window.__dadosC79) CONFIG.Dice.randomUniform = window.__dadosC79; delete window.__dadosC79; window.__fila = []; return true; })()`).catch(() => null);
+        for (const navegador of [edge, jogador]) {
+          await navegador.evaluate(`(() => { game.system.api.efeitos.gravar(false); delete canvas.interface.createScrollingText; delete window.__textosC79; window.__socketC79 = null; return true; })()`).catch(() => null);
+        }
+        await jogador.evaluate(`game.settings.set('${S}', 'efeitosIntensidade', 'auto').then(() => true)`).catch(() => null);
+        if (m) {
+          await edge.evaluate(`(async () => {
+            const S = '${S}', esperar = window.__esperar, antes = ${JSON.stringify(m.antes)};
+            for (const x of game.messages.filter(x => !antes.mensagens.includes(x.id))) await x.delete();
+            for (const [k, v] of Object.entries(antes.config)) await game.settings.set(S, k, v);
+            await game.settings.set('core', 'messageMode', antes.modo);
+            if (game.scenes.has(antes.ativa)) { await game.scenes.get(antes.ativa).activate(); await esperar(() => !canvas.loading); }
+            if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
+            await game.scenes.get('${m.cena}')?.delete();
+            for (const ator of game.actors.filter(a => ['${ATQ}', '${ALVO}'].includes(a.name))) await ator.delete();
             return true;
           })()`);
           await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);

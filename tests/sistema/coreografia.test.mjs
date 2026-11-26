@@ -7,8 +7,9 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CATALOGO, PROPRIO, candidatosDoEfeito, conferirCatalogo } from '../../foundry-sistema/scripts/catalogo-efeitos.mjs';
 import {
-  MAPA_DO_ANTIGO, NIVEIS, PASSOS, PERFIL_DO_TIPO, PERFIS, TETO, chavesDoRoteiro, chavesDosPerfis, comprimir, direcaoDoToken, eventoDoAtaque,
-  filtrarPeloNivel, montarPassos, nivelEfetivo, perfilDaArma, perfisDoMestre, roteiro, srcPermitido, validarEvento
+  ESPERA_MAXIMA, INTENSIDADES, MAPA_DO_ANTIGO, NIVEIS, PASSOS, PERFIL_DO_TIPO, PERFIS, TETO, chavesDoRoteiro, chavesDosPerfis, comprimir, direcaoDoToken,
+  entrarNaFila, eventoDoAtaque, filtrarPeloNivel, fimDoTocar, montarPassos, nivelAutomatico, nivelDoNavegador, nivelEfetivo, passosVisiveis, perfilDaArma,
+  perfisDoMestre, roteiro, soTexto, srcPermitido, validarEvento
 } from '../../foundry-sistema/scripts/regras-coreografia.mjs';
 import { textoNoToken } from '../../foundry-sistema/scripts/regras.mjs';
 
@@ -490,4 +491,81 @@ test('C78: o catálogo dos efeitos: o "proprio:" no fim de cada chave, os caminh
   }
   for (const chave of usadas) assert.ok(Object.hasOwn(CATALOGO, chave), `um roteiro usa ${chave}`);
   assert.ok(usadas.size >= 40, `as chaves usadas: ${usadas.size}`);
+});
+
+// ---------------- O C79: o diretor ----------------
+
+test('C79: o nível deste navegador: o Automático reduz no celular, no Safari, no computador fraco e no fotossensível; nunca acima da mesa', () => {
+  assert.deepEqual(INTENSIDADES, ['auto', 'completo', 'reduzido', 'texto', 'nada']);
+  assert.equal(nivelAutomatico({}), 'mesa');
+  for (const aparelho of [{ fotossensivel: true }, { celular: true }, { webkit: true }, { nucleos: 2 }]) assert.equal(nivelAutomatico(aparelho), 'reduzido', JSON.stringify(aparelho));
+  assert.equal(nivelAutomatico({ nucleos: 4 }), 'mesa');
+  assert.equal(nivelDoNavegador('auto', 'auto', {}), 'completo');
+  assert.equal(nivelDoNavegador('auto', 'auto', { celular: true }), 'reduzido');
+  assert.equal(nivelDoNavegador('texto', 'auto', {}), 'texto', 'o Automático segue a mesa');
+  assert.equal(nivelDoNavegador('nao', 'completo', {}), 'nada', 'o jogador nunca passa do teto do mestre');
+  assert.equal(nivelDoNavegador('auto', 'texto', {}), 'texto');
+  assert.equal(nivelDoNavegador('auto', 'nada', {}), 'nada');
+  assert.equal(nivelDoNavegador('reduzido', 'completo', {}), 'reduzido');
+  assert.equal(nivelDoNavegador('auto', 'outro', {}), 'completo', 'a escolha desconhecida: o Automático');
+});
+
+test('C79: o que este navegador vê do roteiro: nada no token escondido; com quem atacou fora da vista, nada que saia dele', () => {
+  const r = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(12) })], texto: [textoDe(ALVO, '−12 HP')] }), { casa: CASA });
+  assert.deepEqual(nomes(passosVisiveis(r, { origem: ATIRADOR.token })), nomes(r), 'vendo tudo, tudo fica');
+  const semAtirador = passosVisiveis(r, { visivel: id => id !== ATIRADOR.token, origem: ATIRADOR.token });
+  assert.deepEqual(nomes(semAtirador), ['impacto', 'sangue', 'texto'], 'o impacto e o texto no alvo, sem o clarão, o som no cano e o traçante');
+  assert.ok(semAtirador.every(p => p.token !== ATIRADOR.token && !p.de));
+  const semAlvo = passosVisiveis(r, { visivel: id => id !== ALVO, origem: ATIRADOR.token });
+  assert.deepEqual(nomes(semAlvo), ['clarao', 'som', 'tracante'], 'o alvo fora da vista: só o que sai de quem atirou');
+  // O dano à parte pelo cartão (sem origem) e o teste de visão uma vez por token.
+  let vezes = 0;
+  passosVisiveis(r, { visivel: () => { vezes++; return true; }, origem: null });
+  assert.equal(vezes, 2, 'um teste por token (o atirador e o alvo)');
+});
+
+test('C79: a fila deste navegador: até 3 esperando; o que passa disso sai pelos mais velhos, que viram só o texto na hora', () => {
+  assert.equal(ESPERA_MAXIMA, 3);
+  let fila = [];
+  const sairam = [];
+  for (let i = 1; i <= 10; i++) {
+    const r = entrarNaFila(fila, i);
+    fila = r.fila;
+    sairam.push(...r.sairam);
+    assert.ok(fila.length <= 3, `a fila no evento ${i}: ${fila.length}`);
+  }
+  assert.deepEqual(fila, [8, 9, 10], 'os três mais novos esperam');
+  assert.deepEqual(sairam, [1, 2, 3, 4, 5, 6, 7], 'os mais velhos saem na ordem');
+  assert.deepEqual(entrarNaFila([], 'a'), { fila: ['a'], sairam: [] });
+  const r = roteiro(evento({ modo: 'autofogo', balas: 10, alvos: [alvoEm(ALVO, 2650, 150, { multiplicador: 3, dano: dano(15) })], texto: [textoDe(ALVO, '−15 HP')] }), { casa: CASA });
+  assert.deepEqual(soTexto(r).map(p => [p.passo, p.t, p.texto]), [['texto', 0, '−15 HP']]);
+  // O próximo evento começa no fim do último passo, sem esperar o texto subir nem o que dura.
+  const ultimo = Math.max(...r.filter(p => p.passo !== 'texto').map(p => p.t + p.duracao));
+  assert.equal(fimDoTocar(r), ultimo);
+  assert.equal(fimDoTocar([{ t: 0, passo: 'texto', duracao: 600 }]), 0);
+  assert.equal(fimDoTocar([{ t: 100, passo: 'nuvem', duracao: 60000, persistente: true }]), 100);
+});
+
+test('C79: lexical: o cartão leva o evento e não o espera; cada cliente toca o cartão de um mestre que ele vê; o texto saiu do socket', () => {
+  const cartao = leia('scripts/combate/cartao.mjs');
+  assert.match(cartao, /const efeito = eventoDoCartao\(ctx, resumo\);/);
+  assert.match(cartao, /\.\.\.\(efeito \? \{ efeito \} : \{\}\)/, 'o evento na flag do cartão');
+  assert.match(cartao, /function eventoDoCartao\(ctx, resumo\) \{\r?\n  if \(config\('animacoes'\) === 'nao'\) return null;\r?\n  try \{/, 'com os efeitos desligados, nem se monta; montar nunca segura o cartão');
+  assert.doesNotMatch(cartao, /game\.socket\.emit\(CANAL, \{ tipo: 'texto'/);
+  const diretor = leia('scripts/coreografia.mjs');
+  assert.match(diretor, /Hooks\.on\('createChatMessage'/);
+  assert.match(diretor, /if \(evento && mensagem\.author\?\.isGM && mensagem\.isContentVisible\) tocar\(evento\);/);
+  assert.match(diretor, /if \(C\.validarEvento\(evento\)\) \{ estado\.recusados\+\+; return false; \}/, 'o evento confere de novo em quem toca');
+  assert.match(diretor, /canvas\.scene\?\.id !== evento\.cena\) return false;/, 'a outra cena: nada');
+  assert.match(diretor, /C\.passosVisiveis\(roteiro, \{ visivel: visivelAqui/, 'a visão deste navegador');
+  // A falha vira um contador: só o erro de programação vai ao console.
+  assert.match(diretor, /estado\.falhas\+\+;\r?\n  if \(erro instanceof TypeError \|\| erro instanceof ReferenceError\) console\.error/);
+  assert.doesNotMatch(diretor.replace(/\/\/.*$/gm, ''), /console\.(warn|log)/);
+  // As configurações: o Reduzido na da mesa (os valores de antes valem) e a deste navegador.
+  const configuracoes = leia('scripts/configuracoes.mjs');
+  assert.match(configuracoes, /choices: \{ auto: 'Completo \(texto e animação\)', reduzido: 'Reduzido', texto: 'Só o texto', nao: 'Nenhum' \}/);
+  assert.match(configuracoes, /registrar\('efeitosIntensidade', \{[^}]*\r?\n    scope: 'client', type: String, default: 'auto', choices: \{ auto: 'Automático', completo: 'Completo', reduzido: 'Reduzido', texto: 'Só o texto', nada: 'Nenhum' \}/);
+  const sistemaJs = leia('scripts/sistema.mjs');
+  assert.match(sistemaJs, /coreografia\.registrarCoreografia\(\);/);
+  assert.match(sistemaJs, /game\.system\.api\.efeitos = coreografia\.API;/);
 });

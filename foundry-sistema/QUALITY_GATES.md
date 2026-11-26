@@ -525,6 +525,13 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O ângulo dá a volta no 180°** (ciclo 217): a faixa do fogo supressivo ia do menor ao maior ângulo dos alvos, e dois
   alvos atrás do atirador, a 170° e a −170°, viravam uma varredura de 340° em vez de 20°. Meça os ângulos em volta de uma
   referência (o primeiro alvo, de −180° a +180° dele), e o teste com a direção do token em 90° e em 200° achou o caso.
+- **O cartão sussurrado com rolagem é "visible" para todos** (ciclo 218): o `ChatMessage#visible` do Foundry diz sim
+  ao cartão sussurrado que tem rolagem (o jogador vê a rolagem escondida); quem vê o conteúdo é o `isContentVisible`. O
+  diretor dos efeitos usava o `visible`, e no "só o mestre" o jogador tocou o efeito do tiro que acertou (o que errou,
+  sem rolagem, passava). Para decidir quem vê o resultado, use o `isContentVisible`, e teste com um cartão que tem rolagem.
+- **O efeito que vem pela fila cai no passo seguinte** (ciclo 218): o texto em cima do token passou a sair na fila
+  do diretor, uns décimos de segundo depois do cartão, e o último texto de um passo apareceu no passo seguinte, que
+  grava os textos. Antes de gravar, espere o `game.system.api.efeitos.ocupado` ficar falso.
 - **A janela que fecha ainda está no DOM** (ciclo 211): a do pedido anterior, fechando, recebeu o clique do passo seguinte.
   Ache a janela pelo texto do que se espera dela.
 - **A regra da loja da campanha também tem de chegar à ficha** (ciclo 212): a bancada não avisava o teto porque só a loja

@@ -344,7 +344,7 @@ na versão `0.3.<ciclo>`.
     todos os modos (mesmo os que só tocam nas fases seguintes), os níveis, o teto, a validação;
   - o `catalogo-efeitos.mjs` com o `proprio:` obrigatório e o `srcPermitido`.
   - Testa: os 17 testes do G3 do anexo do fx-coreografia (seção 6.1) e o teste do catálogo.
-- [ ] **C79. O diretor, o transporte e as configurações:** **M**; depende do C78; risco médio (mexe no texto que o passo do
+- [x] **C79. O diretor, o transporte e as configurações:** feito no ciclo 218; **M**; depende do C78; risco médio (mexe no texto que o passo do
   ciclo 29 confere).
   - o `coreografia.mjs` com os caminhos 1 e 2 (seção 4.3), a fila deste cliente, o teto e a falha que vira contador;
   - as configurações da seção 4.4, com a "Efeitos na mesa" ganhando o "Reduzido" sem quebrar quem já usa;

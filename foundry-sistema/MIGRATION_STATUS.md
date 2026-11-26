@@ -10432,6 +10432,56 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   de todos; o explosivo que errou e explode; o caminho no perfil do item; o reduzido com todos os traçantes; o supressivo
   sem a volta no 180°; o corpo a corpo sem o avanço), cada uma derrubando o teste dela; todas morreram, md5 igual.
 
+### Ciclo 218 (2026-11-26): C79, o diretor, o transporte e as configurações dos efeitos (sessão KouArt)
+
+- **Pedido do usuário:** "Siga", depois do C78: o item seguinte do plano dos efeitos (`efeitos-plano/PLANO.md`, a fase
+  1), reservado em 1c85df22.
+- **A fonte:** o PLANO (seções 4.3 e 4.4) e o anexo `equipe/fx-coreografia.md` (seções 3.5 a 3.8 e 6.2); o Foundry 14
+  (o `ChatMessage#isContentVisible`, o `handleCustomSocket` com `recipients`, o `game.users.activeGM`).
+- **Entrega:**
+  - `scripts/coreografia.mjs` (novo, o diretor): o caminho 1 (o `createChatMessage`: o cartão de um mestre, para quem vê
+    o conteúdo dele); o caminho 2 (o socket `efeito`, só do mestre ativo, e o `emitir` com `recipients`); a cena vista,
+    o nível deste navegador, a visão (o escondido e, com quem atirou fora da vista, nada que saia dele), o mesmo evento uma
+    vez só, a fila (um por vez, até 3 esperando; os mais velhos viram só o texto, na hora) e a falha que vira contador; a
+    API `game.system.api.efeitos` (`tocar`, `emitir`, `nivelDesteNavegador`, `falhas`, `ocupado` e o registro do G4);
+  - `regras-coreografia.mjs`: o `nivelAutomatico`, o `nivelDoNavegador`, o `passosVisiveis`, o `fimDoTocar`, o
+    `soTexto` e o `entrarNaFila` (puros);
+  - `combate/cartao.mjs`: o evento na flag `efeito` do cartão (montado num `try`; com os efeitos em Nenhum, nem se
+    monta), e a animação do Sequencer como antes (no Completo, para quem vê o cartão);
+  - `combate/socket.mjs`: o tipo `'texto'` saiu (o texto vem no evento do cartão);
+  - `configuracoes.mjs`: "Efeitos na mesa" com o Reduzido (os valores guardados de antes valem) e "Efeitos neste
+    navegador" (nova, de cada navegador, no Automático);
+  - a versão `0.3.218`.
+- **O que muda na mesa:** o texto em cima do token sai uns décimos de segundo depois do cartão (o tempo do tiro no
+  roteiro), e não na hora. As outras configurações do PLANO (o palco, o sangue, as marcas, o volume, os intensos) entram
+  com o item que as faz aparecer.
+- **Achado no caminho:** o `visible` do cartão sussurrado com rolagem é verdadeiro para todos; o diretor usa o
+  `isContentVisible` (a lição no QUALITY_GATES).
+- **Os testes que mudaram com o caminho novo:** o `efeitos-na-mesa.test.mjs` (o C77) conferia o texto no socket do
+  combate; agora confere as mesmas garantias no diretor (o efeito só do mestre ativo, o cartão só para quem vê, o
+  `recipients`) e que o socket do combate e o cartão não mandam mais o texto. O `combate-alvos.test.mjs` (o C56) tem o
+  ouvinte novo na lista, com a conferência do mestre ativo. No G4, o passo do ciclo 29 confere que o socket não leva nada
+  (antes, o texto), e o do C77 manda o texto pelo `emitir` do diretor; os dois esperam o diretor livre antes de gravar.
+- **Testes de referência:**
+  - **G3:** quatro testes novos no `coreografia.test.mjs`: o nível do navegador (o Automático e o teto da mesa), o que o
+    navegador vê do roteiro, a fila e o lexical (o cartão leva o evento e não o espera; o gancho do cartão; a falha que
+    não escreve no console; as configurações).
+  - **G4:** um passo novo, numa cena e com atores próprios: o tiro de todos toca uma vez em cada navegador, com o mesmo
+    roteiro e o mesmo texto, sem nada no socket; no "só o mestre" e nos envolvidos, o jogador (que não é dono de ninguém)
+    não toca nem recebe; desligado, ninguém, e o cartão sai sem o evento; o jogador no Só o texto; a mesa no Reduzido e o
+    jogador no Completo (os dois no Reduzido, sem o sangue); a Atiradora escondida (o jogador vê o impacto e o texto, e
+    nada que saia dela); o jogador vendo outra cena não toca, e ao voltar nada toca sozinho; o evento falso de um
+    jogador não toca no mestre, e o do mestre pelo socket toca no jogador; dez rajadas seguidas (no máximo 3 esperando,
+    todas com o texto, a última em até 5 s); nenhuma falha.
+- **Portões:** G1 sem erros; G2 sem erros; G3 843/843; G4 344/344 duas vezes seguidas (783 s e 773 s), como o plano pede
+  para este item. As rodadas antes: 342/344 (o texto atrasado do passo anterior no do ciclo 29, e o "visible") e
+  343/344 (o "visible").
+- **Mutações:** oito no G3 (M1, o Automático que não reduz no celular; M2, o jogador vê o que sai de quem atirou
+  escondido; M3, a fila sem o limite; M4, a fila que espera o texto subir; M5, o cartão que o jogador não vê também toca;
+  M6, o socket que aceita o efeito de qualquer um; M7, a outra cena que também toca; M8, o cartão que espera o evento) e
+  cinco no G4 (G1, o cartão que o jogador não vê também toca; G2, o diretor sem a visão; G3, o mestre manda o desfecho
+  também pelo socket; G4, o nível sem a escolha do navegador; G5, o mesmo evento duas vezes); cada uma derrubando o passo dela (a G1 também o do ciclo 29), e todas morreram, com os arquivos de volta. A primeira rodada da G3 não valeu (o Foundry de teste não abriu o mundo, antes de qualquer ataque); rodada de novo, morreu.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

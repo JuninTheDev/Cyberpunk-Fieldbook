@@ -39,12 +39,18 @@ test('C77: o texto vai pelo socket só para quem vê o cartão, menos quem já d
   assert.deepEqual(destinatariosDoTexto(['mestre', 'assistente', 'jogador', 'jogador'], 'mestre'), ['assistente', 'jogador']);
 });
 
+// O C79 levou o texto do socket do combate para o evento do cartão (coreografia.mjs): as mesmas garantias, no caminho
+// novo.
 test('C77: o socket só aceita o texto vindo de um mestre, e o cartão manda só para quem vê', () => {
   const socket = leia('scripts/combate/socket.mjs');
-  assert.match(socket, /mensagem\.tipo === 'texto' && quem\?\.isGM/, 'o texto de um jogador (pelo console) não aparece no token de ninguém');
+  assert.doesNotMatch(socket, /mensagem\.tipo === 'texto'/, 'o texto não vem mais pelo socket do combate (o C79)');
+  const diretor = leia('scripts/coreografia.mjs');
+  assert.match(diretor, /mensagem\?\.tipo === 'efeito' && quem\?\.isGM && remetente === game\.users\.activeGM\?\.id/, 'o texto de um jogador (pelo console) não aparece no token de ninguém');
+  assert.match(diretor, /evento && mensagem\.author\?\.isGM && mensagem\.isContentVisible\)/, 'o cartão: só o de um mestre e só para quem vê');
+  assert.match(diretor, /destinatariosDoTexto\(para, game\.user\.id\)/);
+  assert.match(diretor, /\{ recipients: outros \}/);
   const cartao = leia('scripts/combate/cartao.mjs');
-  assert.match(cartao, /destinatariosDoTexto\(para, game\.user\.id\)/);
-  assert.match(cartao, /\{ recipients: outros \}/);
+  assert.doesNotMatch(cartao, /tipo: 'texto'/, 'o cartão não manda o texto pelo socket a todos');
   assert.match(cartao, /animar\(linha\.token, resumo\.estilo, para\)/, 'a animação respeita quem vê o cartão');
 });
 

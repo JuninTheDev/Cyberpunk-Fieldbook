@@ -70,6 +70,7 @@ import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
 import { perceberArmadura } from './black-chrome.mjs';
 import { aplicarIconesDosEstados } from './icones.mjs';
 import { iconeDoEstado } from './regras-icones.mjs';
+import * as coreografia from './coreografia.mjs';
 
 Hooks.once('init', () => {
   CONFIG.Actor.documentClass = AtorCPR;
@@ -176,12 +177,15 @@ Hooks.once('init', () => {
   game.system.api.quebra = quebra.API;
   // Pôr o upgrade na arma sem o arrasto (o C75): o "Escolher do inventário" e o "Instalar em…".
   game.system.api.montagem = montagem.API;
+  // Os efeitos na mesa (o C79): o diretor, que toca o evento do cartão do resultado em cada navegador.
+  game.system.api.efeitos = coreografia.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);
 Hooks.once('ready', () => {
   aplicarIconesDosEstados();
   combate.registrarCombate();
+  coreografia.registrarCoreografia();
   pedidoDeTeste.registrarSocketDoPedido();
   instalacaoMod.registrarSocketDaInstalacao();
   agarrao.registrarAgarrao();

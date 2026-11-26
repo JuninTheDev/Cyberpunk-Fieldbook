@@ -641,8 +641,13 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   dano, o corpo a corpo, o arremesso, e os do agarrão, do corpo, da NET e da recarga para as fases seguintes), os níveis,
   o teto e a validação. O `catalogo-efeitos.mjs`: cada chave termina no `proprio:`, e o `srcPermitido` só aceita os
   caminhos de dentro do servidor. Nada aparece na mesa ainda: quem toca é o C79 em diante.
-- [~] **C79. O diretor, o transporte e as configurações:** em andamento (sessão KouArt, 2026-11-26).
-- [ ] **C80 a C97:** os itens do plano ( o palco PIXI do tiro e do impacto; o motor de
+- [x] **C79. O diretor, o transporte e as configurações:** feito no ciclo 218 (sessão KouArt, 2026-11-26). O
+  `coreografia.mjs`: o cartão do resultado leva o evento (a flag `efeito`), e cada navegador toca o dele quando o
+  cartão chega até ele, uma vez, pela visão dele e no nível dele; o socket `efeito`, só do mestre ativo, para o que o
+  mestre manda à parte; a fila (até 3 esperando, as mais velhas viram só o texto); a falha vira um contador. O texto em
+  cima do token saiu do socket do combate. "Efeitos na mesa" ganhou o Reduzido e virou o teto da mesa; "Efeitos neste
+  navegador" (novo) é de cada um. Por enquanto só o texto toca: o desenho e o som são o C80 e o C81.
+- [ ] **C80 a C97:** os itens do plano (o palco PIXI do tiro e do impacto; o motor de
   som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
   mestre; o Sequencer como opção; as folhas de sprite; o polimento; o VFX experimental do 14).
