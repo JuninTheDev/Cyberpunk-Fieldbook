@@ -634,7 +634,8 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   de um mestre e só para quem vê o cartão; o texto em cima do token só na visão do jogador (como o C76); a animação de
   hoje respeitando quem vê o cartão; o `foundry.utils.srcExists`; o ramo do Diwako fora (não há Diwako no 14); a pasta
   `efeitos/` no `instalar.mjs`, com o `CREDITOS.md` e o `LICENCAS.csv` conferido pelo G3.
-- [ ] **C78 a C97:** os itens do plano (a regra pura e o catálogo; o diretor; o palco PIXI do tiro e do impacto; o motor de
+- [~] **C78. A regra pura da coreografia e o catálogo:** em andamento (sessão KouArt, 2026-11-26).
+- [ ] **C79 a C97:** os itens do plano (o diretor; o palco PIXI do tiro e do impacto; o motor de
   som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
   mestre; o Sequencer como opção; as folhas de sprite; o polimento; o VFX experimental do 14).
