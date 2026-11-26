@@ -525,6 +525,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O ângulo dá a volta no 180°** (ciclo 217): a faixa do fogo supressivo ia do menor ao maior ângulo dos alvos, e dois
   alvos atrás do atirador, a 170° e a −170°, viravam uma varredura de 340° em vez de 20°. Meça os ângulos em volta de uma
   referência (o primeiro alvo, de −180° a +180° dele), e o teste com a direção do token em 90° e em 200° achou o caso.
+- **O desenho do efeito se confere pelo palco, não pela tela** (ciclo 219): o Edge sem janela do G4 roda o ticker do
+  PIXI, mas um quadro a mais ou a menos não diz nada. O palco conta as peças que desenhou, as partículas (o pico) e os
+  contêineres nossos na cena (o maior visto enquanto toca e o que sobra no fim); o passo espera o palco esvaziar e
+  confere que nada sobrou. O roteiro tem uma segurança (encerra sozinho depois do fim), para a aba no segundo plano,
+  onde o ticker para.
 - **O cartão sussurrado com rolagem é "visible" para todos** (ciclo 218): o `ChatMessage#visible` do Foundry diz sim
   ao cartão sussurrado que tem rolagem (o jogador vê a rolagem escondida); quem vê o conteúdo é o `isContentVisible`. O
   diretor dos efeitos usava o `visible`, e no "só o mestre" o jogador tocou o efeito do tiro que acertou (o que errou,

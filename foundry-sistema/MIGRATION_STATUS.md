@@ -10495,6 +10495,52 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   cinco no G4 (G1, o cartão que o jogador não vê também toca; G2, o diretor sem a visão; G3, o mestre manda o desfecho
   também pelo socket; G4, o nível sem a escolha do navegador; G5, o mesmo evento duas vezes); cada uma derrubando o passo dela (a G1 também o do ciclo 29), e todas morreram, com os arquivos de volta. A primeira rodada da G3 não valeu (o Foundry de teste não abriu o mundo, antes de qualquer ataque); rodada de novo, morreu.
 
+### Ciclo 219 (2026-11-26): C80, o palco PIXI do tiro e do impacto (sessão KouArt)
+
+- **Pedido do usuário:** "Siga para ele", depois do C79: o C80 do plano dos efeitos (`efeitos-plano/PLANO.md`, a fase 1),
+  reservado em 24d9a46c.
+- **A fonte:** o PLANO (seções 5.1 a 5.3) e o anexo `equipe/fx-visual.md` (seções 2.3, 2.4, 3, 4.1, 5 e 9); o Foundry 14
+  (o `PrimaryCanvasContainer` do `canvas.primary`, como o do VFX do core; o `testCollision` do `ClockwiseSweepPolygon`
+  com o `mode: 'closest'`; o `PreciseText`; a `uiScale`).
+- **Entrega:**
+  - `scripts/tocador-pixi.mjs` (novo, o palco): as peças P1 (o clarão), P14 (o chão aceso, só como desenho: sem a luz de
+    verdade), P2 (o traçante), P3 (a faísca), P4 (o sangue estilizado), P5 (a poeira e as lascas), P9 (o glitch), P10 (o
+    eco da esquiva), P11 (o retículo e o rótulo) e P16 (a marca), e o projetil e o arco simples (a flecha, a faca); três
+    camadas por roteiro (acima dos tokens e abaixo deles, no `canvas.primary`; o retículo na interface), destruídas no
+    fim, no `canvasTearDown` e por uma segurança; o sorteio pela semente do id (o mesmo desenho em todos os navegadores);
+    o orçamento de 300 partículas (120 no reduzido); a contagem para o G4 (`game.system.api.efeitos.palco`);
+  - `regras-coreografia.mjs`: o desfecho de cada alvo no impacto (a morte, o crítico, o veículo, a carne, o escudo, a
+    estase, a armadura, o acerto: o `desfechoDoAlvo`); a direção do tiro no impacto, no sangue, na faísca e na esquiva
+    (e o `passosVisiveis` a tira sem ver quem atirou); o HUD ("CRÍTICO", "FLATLINE", "SP −N" da armadura que segurou); o
+    glitch no crítico e na morte; a parada de 60 ms do crítico; o traço de cada classe (`TRACOS`); a direção do clarão;
+    a marca de 4 s no erro (`MARCA_DURA`, a decisão 11), que não segura a fila; o `pararNaParede` (o tiro que erra vai até
+    10 casas além e para na primeira parede, com a faísca e a marca);
+  - `coreografia.mjs`: o desenho vai para o palco (menos no que esperou demais e virou só o texto); a parede pelo
+    `testCollision` neste navegador; o "calmo" (o reduzido e o fotossensível: nada pisca); o `rever`;
+  - `combate/cartao.mjs`: o botão **Rever o efeito**, para quem vê o conteúdo do cartão;
+  - `catalogo-efeitos.mjs`: a chave `marca.bala`;
+  - a versão `0.3.219`.
+- **As decisões do plano nesta fase:** a 11 (as marcas somem em 4 s) segue a recomendação, que é o que o PLANO dava como
+  padrão. A 12 (o clarão que ilumina a cena e revela quem atira no escuro) fica aberta: o C80 desenha só o brilho no chão,
+  sob a névoa e a iluminação da cena, que não revela ninguém; a luz de verdade (uma `PointLightSource` de 0,1 s, que
+  revela) é uma escolha de jogo, e vai para o usuário.
+- **Fora deste item:** a dessaturação do token na morte (mexe na malha do token: fica com o token dinâmico, no C96); o
+  escudo humano (o `linha.cadaver` não está no evento); o botão do mestre para o efeito na cobertura; o tremor (o C83 em
+  diante). A animação do Sequencer com o JB2A do Completo continua como antes (o C94 decide a troca).
+- **Testes de referência:**
+  - **G3:** cinco testes novos no `coreografia.test.mjs`: o desfecho de cada alvo, com o HUD, o glitch e a parada; o
+    traço de cada classe e a direção do clarão; a marca e a parede; a direção que sai sem ver quem atirou; o lexical do
+    palco, do diretor e do cartão. O teste 16 do C78 tinha a lista exata dos passos do crítico sem origem; agora a lista
+    tem o HUD e o glitch (continua exata) e confere que o impacto vem sem a direção.
+  - **G4:** um passo novo, numa cena com uma parede atrás do alvo: o tiro que acerta (os dois navegadores desenham o
+    clarão, o traçante, o impacto e o sangue, nos nossos contêineres, e nada sobra no fim); o crítico (o glitch e o
+    HUD); o 1 natural que erra e para na parede (o traçante, a faísca e a marca na parede, sem impacto); a mesa no
+    Reduzido (sem o sangue e sem partícula); o "Rever o efeito" (o jogador tem o botão, e só ele toca de novo); o cartão
+    só do mestre (só o mestre tem o botão); dez rajadas seguidas (no orçamento, tudo destruído); a troca de cena no meio
+    de um efeito (o palco limpo); nenhuma falha.
+- **Portões:** G1 sem erros; G2 sem erros; G3 848/848; G4 345/345 duas vezes seguidas (790 s e 771 s).
+- **Mutações:** oito no G3 (o desfecho, o HUD só da armadura, o glitch, a parada do crítico, o traço da classe, a direção do clarão, a marca, a parede) e seis no G4 (o palco que não destrói o contêiner, o palco sem o ticker, o diretor sem a parede, o rever que não toca de novo, o reduzido com as partículas, a troca de cena que não limpa o palco): todas caíram, e os arquivos voltaram iguais (md5).
+
 ### Ciclo 220 (2026-11-26): C98, a montagem segue a regra da wiki (sessão KouArt)
 
 - **Decisões do usuário (2026-11-26),** sobre as dúvidas do C68 ao C75: "1. B" (a armadura vestida e a NET arrastam),

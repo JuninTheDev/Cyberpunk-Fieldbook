@@ -4,6 +4,7 @@ import { SISTEMA } from '../config.mjs';
 import { desfazerEventos } from '../identidade.mjs';
 import { config } from '../configuracoes.mjs';
 import { animar } from '../efeitos.mjs';
+import { rever } from '../coreografia.mjs';
 import { idDaOrigem } from '../armas-cyberware.mjs';
 import { eventoDoAtaque, validarEvento } from '../regras-coreografia.mjs';
 import { aplicarPerdaDeHumanidade } from '../humanidade.mjs';
@@ -271,4 +272,24 @@ export function ligarBotoes(mensagem, html) {
     });
   }
   if (mensagem.getFlag(SISTEMA, 'desfeito')) html.querySelector('.cartao.ataque')?.classList.add('desfeito');
+  botaoDeRever(mensagem, html);
+}
+
+// O "Rever o efeito" (o C80): no cartão com o efeito, para quem vê o conteúdo dele (o jogador também), toca de novo o
+// efeito só neste navegador. Não mexe em nada: o mesmo roteiro, a mesma visão e o mesmo nível de antes.
+function botaoDeRever(mensagem, html) {
+  const cartao = html.querySelector('.cartao.ataque');
+  if (!cartao || !mensagem.getFlag(SISTEMA, 'efeito') || !mensagem.author?.isGM || !mensagem.isContentVisible) return;
+  const linha = document.createElement('div');
+  linha.className = 'botoes';
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.dataset.cprfRever = '';
+  botao.textContent = 'Rever o efeito';
+  botao.addEventListener('click', evento => {
+    evento.preventDefault();
+    if (!rever(mensagem)) ui.notifications.info('Nada para rever aqui: o efeito é de outra cena, ou os efeitos estão desligados neste navegador.');
+  });
+  linha.append(botao);
+  cartao.append(linha);
 }

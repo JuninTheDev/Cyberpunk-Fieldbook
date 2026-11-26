@@ -7,9 +7,9 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CATALOGO, PROPRIO, candidatosDoEfeito, conferirCatalogo } from '../../foundry-sistema/scripts/catalogo-efeitos.mjs';
 import {
-  ESPERA_MAXIMA, INTENSIDADES, MAPA_DO_ANTIGO, NIVEIS, PASSOS, PERFIL_DO_TIPO, PERFIS, TETO, chavesDoRoteiro, chavesDosPerfis, comprimir, direcaoDoToken,
-  entrarNaFila, eventoDoAtaque, filtrarPeloNivel, fimDoTocar, montarPassos, nivelAutomatico, nivelDoNavegador, nivelEfetivo, passosVisiveis, perfilDaArma,
-  perfisDoMestre, roteiro, soTexto, srcPermitido, validarEvento
+  DESFECHOS, ESPERA_MAXIMA, INTENSIDADES, MAPA_DO_ANTIGO, MARCA_DURA, NIVEIS, PASSOS, PERFIL_DO_TIPO, PERFIS, TETO, TRACOS, chavesDoRoteiro, chavesDosPerfis,
+  comprimir, desfechoDoAlvo, direcaoDoToken, entrarNaFila, eventoDoAtaque, filtrarPeloNivel, fimDoTocar, montarPassos, nivelAutomatico, nivelDoNavegador,
+  nivelEfetivo, pararNaParede, passosVisiveis, perfilDaArma, perfisDoMestre, roteiro, soTexto, srcPermitido, validarEvento
 } from '../../foundry-sistema/scripts/regras-coreografia.mjs';
 import { textoNoToken } from '../../foundry-sistema/scripts/regras.mjs';
 
@@ -424,10 +424,11 @@ test('C78, 16: o evento a partir do resumo do cartão e das posições; o texto 
   assert.deepEqual(e.texto.map(t => t.texto), ['−12 HP · crítico!', 'Esquivou!', '−3 HP']);
   // Só dados: o evento sobrevive ao JSON (vai na flag do cartão e pelo socket).
   assert.deepEqual(JSON.parse(JSON.stringify(e)), e);
-  // O dano à parte pelo cartão: sem origem, só os impactos e os textos.
+  // O dano à parte pelo cartão: sem origem, só o que acontece no alvo (o crítico: desde o C80, o HUD e o glitch também).
   const aParte = eventoDoAtaque({ ...resumo, linhas: resumo.linhas.slice(0, 1) }, { cena: 'cena000000000001', alvos: alvos.slice(0, 1), arma: { tipo: 'assaultRifle' } });
   assert.equal(aParte.origem, null);
-  assert.deepEqual(nomes(roteiro(aParte, { casa: CASA })), ['impacto', 'sangue', 'som', 'texto']);
+  assert.deepEqual(nomes(roteiro(aParte, { casa: CASA })), ['impacto', 'sangue', 'som', 'hud', 'texto', 'glitch']);
+  assert.equal(de(roteiro(aParte, { casa: CASA }), 'impacto')[0].direcao, null, 'sem origem, sem a direção do tiro');
   // O veículo: o dano na estrutura.
   const veiculo = eventoDoAtaque({ id: 'Pedido0000000001', modo: 'tiro', linhas: [{ resultado: 'acertou', veicular: { perdeu: 7, ablado: 1 } }] }, { cena: 'cena000000000001', origem: ATIRADOR, alvos: [{ token: ALVO, x: 2650, y: 150 }], arma: { tipo: 'assaultRifle' } });
   assert.deepEqual(veiculo.alvos[0].dano, { perdeu: 7, passou: true, critico: false, lesoes: 0, escudo: false, estase: false, ablado: 1, veicular: true });
@@ -568,4 +569,128 @@ test('C79: lexical: o cartão leva o evento e não o espera; cada cliente toca o
   const sistemaJs = leia('scripts/sistema.mjs');
   assert.match(sistemaJs, /coreografia\.registrarCoreografia\(\);/);
   assert.match(sistemaJs, /game\.system\.api\.efeitos = coreografia\.API;/);
+});
+
+// ---------------- O C80: o palco PIXI do tiro e do impacto ----------------
+test('C80: o desfecho de cada alvo (o primeiro que vale), o HUD com o rótulo, o glitch no crítico e na morte e o tiro que congela antes de bater', () => {
+  const mortal = { mortal: true, derrubado: false, fogo: false, suprimido: false };
+  const casos = [
+    [{ dano: dano(20, { critico: true, lesoes: 1 }), estados: mortal }, 'morte'],
+    [{ dano: dano(12, { critico: true, lesoes: 1, ablado: 1 }) }, 'critico'],
+    [{ dano: dano(7, { veicular: true, ablado: 1 }) }, 'veiculo'],
+    [{ dano: dano(5, { ablado: 1 }) }, 'carne'],
+    [{ dano: dano(0, { escudo: true }) }, 'escudo'],
+    [{ dano: dano(0, { estase: true }) }, 'estase'],
+    [{ dano: dano(0, { ablado: 1 }) }, 'armadura'],
+    [{ dano: null }, 'acerto']
+  ];
+  assert.deepEqual(casos.map(([, desfecho]) => desfecho), DESFECHOS, 'todo desfecho tem o caso dele, na ordem de prioridade');
+  for (const [extra, desfecho] of casos) {
+    assert.equal(desfechoDoAlvo(alvoEm(ALVO, 2650, 150, extra)), desfecho);
+    const r = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, extra)] }), { casa: CASA });
+    const [impacto] = de(r, 'impacto');
+    assert.equal(impacto.desfecho, desfecho, `o impacto leva o desfecho: ${desfecho}`);
+    assert.equal(impacto.direcao, 0, 'a direção do tiro (o alvo à direita do atirador)');
+    const rotulos = de(r, 'hud').map(p => p.rotulo);
+    assert.deepEqual(rotulos, { morte: ['FLATLINE'], critico: ['CRÍTICO'], armadura: ['SP −1'] }[desfecho] ?? [], `o HUD: ${desfecho}`);
+    const glitch = de(r, 'glitch');
+    assert.deepEqual(glitch.map(p => [p.token, p.duracao]), { morte: [[ALVO, 600]], critico: [[ALVO, 300]] }[desfecho] ?? [], `o glitch: ${desfecho}`);
+    for (const passo of [...glitch, ...de(r, 'hud')]) assert.ok(passo.t > impacto.t, 'o glitch e o HUD depois do impacto');
+  }
+  // O crítico congela 60 ms antes de bater: o impacto chega 60 ms depois do tiro comum.
+  const comum = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(12) })] }), { casa: CASA });
+  const critico = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(12, { critico: true, lesoes: 1 }) })] }), { casa: CASA });
+  assert.equal(de(critico, 'tracante')[0].parada, 60);
+  assert.equal(de(comum, 'tracante')[0].parada, undefined);
+  assert.equal(de(critico, 'impacto')[0].t, de(comum, 'impacto')[0].t + 60);
+  assert.equal(de(critico, 'impacto')[0].t, de(critico, 'tracante')[0].t + de(critico, 'tracante')[0].duracao, 'o impacto na chegada, com a parada');
+  // A explosão: a direção a partir do centro, para fora.
+  const granada = roteiro(evento({ modo: 'explosivo', arma: arma('lanca-granadas', { tipo: 'grenadeLauncher', municao: { tipo: 'grenade', efeito: 'basic' } }), area: { x: 1650, y: 650, lado: 10 },
+    alvos: [alvoEm(ALVO, 1650, 850, { dano: dano(8) })] }), { casa: CASA });
+  assert.equal(de(granada, 'impacto')[0].direcao, 90, 'o alvo abaixo do centro: a direção para baixo');
+});
+
+test('C80: o tiro único de cada classe: o clarão aponta para o alvo, e o traçante tem a largura e a cauda da classe; o rastro no fuzil de precisão', () => {
+  const doTipo = { medPistol: [2, 40], heavyPistol: [3, 60], vHeavyPistol: [3, 70], smg: [2, 50], heavySmg: [2, 50], assaultRifle: [3, 90], sniperRifle: [4, 140], shotgun: [4, 60] };
+  for (const [tipo, [largura, cauda]] of Object.entries(doTipo)) {
+    const perfil = PERFIL_DO_TIPO[tipo];
+    assert.deepEqual([TRACOS[perfil].largura, TRACOS[perfil].cauda], [largura, cauda], tipo);
+    const r = roteiro(evento({ arma: arma(perfil, { tipo }), alvos: [alvoEm(ALVO, 150, 2650, { dano: dano(4) })] }), { casa: CASA });
+    const [tracante] = de(r, 'tracante');
+    assert.deepEqual([tracante.largura, tracante.cauda, Boolean(tracante.rastro)], [largura, cauda, tipo === 'sniperRifle'], tipo);
+    assert.equal(de(r, 'clarao')[0].direcao, 90, `${tipo}: o clarão para o alvo, abaixo do atirador`);
+  }
+  // O perfil do mestre herda o traço da base; o arco, sem clarão, solta a flecha (sem o traço).
+  const doMestre = { perfis: { 'fuzil-pesado': { base: 'fuzil-de-precisao' } } };
+  const mestre = roteiro(evento({ arma: arma('fuzil-pesado'), alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(4) })] }), { casa: CASA, doMestre });
+  assert.deepEqual([de(mestre, 'tracante')[0].cauda, de(mestre, 'tracante')[0].rastro], [140, true]);
+  const arco = roteiro(evento({ arma: arma('arco', { tipo: 'bow' }), alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(4) })] }), { casa: CASA });
+  assert.deepEqual([de(arco, 'clarao').length, de(arco, 'projetil')[0]?.chave, de(arco, 'projetil')[0]?.cauda], [0, 'projetil.flecha', undefined]);
+  // Sem alvo (o supressivo sem ninguém na área): o clarão para onde o token olha.
+  assert.equal(de(roteiro(evento({ modo: 'supressivo', origem: { ...ATIRADOR, rotacao: 90 }, alvos: [] }), { casa: CASA }), 'clarao')[0].direcao, 180);
+});
+
+test('C80: o erro deixa a marca da bala por 4 s, sem segurar a fila; a bala que erra para na primeira parede, com a faísca e a marca', () => {
+  const errou = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { resultado: 'errou' })], texto: [textoDe(ALVO, 'Errou', 'erro')] }), { casa: CASA });
+  const [tracante] = de(errou, 'tracante'), [faisca] = de(errou, 'faisca'), [marca] = de(errou, 'marca');
+  assert.deepEqual([marca.chave, marca.duracao, marca.persistente, marca.t], ['marca.bala', MARCA_DURA, true, faisca.t]);
+  assert.equal(MARCA_DURA, 4000, 'a decisão 11: some em 4 s');
+  assert.deepEqual(marca.para, faisca.para);
+  assert.equal(fimDoTocar(errou), Math.max(...errou.filter(p => !['texto', 'marca'].includes(p.passo)).map(p => p.t + p.duracao)), 'a marca não segura o próximo efeito');
+  // A parede a 5 casas do atirador, no caminho: o traçante para nela, e a faísca e a marca vão para lá, na chegada.
+  const chamadas = [];
+  const parede = { x: 650, y: 150 };
+  const colidir = (a, b) => { chamadas.push([a, b]); return b.x > parede.x ? parede : null; };
+  const batida = pararNaParede(errou, colidir, { alcance: 10 * CASA });
+  const [t2] = de(batida, 'tracante'), [f2] = de(batida, 'faisca'), [m2] = de(batida, 'marca');
+  assert.deepEqual([t2.para, t2.parede, f2.para, m2.para], [parede, true, parede, parede]);
+  assert.equal(t2.duracao, Math.round(tracante.duracao * (500 / distancia(tracante.de, tracante.para))), 'o voo encurta na mesma proporção');
+  assert.deepEqual([f2.t, m2.t], [t2.t + t2.duracao, t2.t + t2.duracao], 'a faísca e a marca na chegada à parede');
+  assert.ok(distancia(chamadas[0][0], chamadas[0][1]) > distancia(tracante.de, tracante.para) + 9 * CASA, 'o teste vai além do fim (o alcance)');
+  assert.ok(naoDesce(batida));
+  // Sem parede, ou o teste que falha: nada muda. O tiro que acertou nunca para na parede.
+  assert.deepEqual(pararNaParede(errou, () => null, { alcance: 10 * CASA }), errou);
+  assert.deepEqual(pararNaParede(errou, () => { throw new Error('sem paredes'); }), errou);
+  const acertou = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(4) })] }), { casa: CASA });
+  assert.deepEqual(pararNaParede(acertou, () => parede), acertou);
+  // A parede depois do alcance (o voo dobra, no máximo).
+  const longe = pararNaParede(errou, () => ({ x: 99999, y: 150 }), { alcance: 1e6 });
+  assert.equal(de(longe, 'tracante')[0].duracao, 2 * tracante.duracao);
+  // O autofogo que errou: os traçantes param, sem marca (não há faísca no fim deles).
+  const rajada = roteiro(evento({ modo: 'autofogo', balas: 10, alvos: [alvoEm(ALVO, 2650, 150, { resultado: 'errou' })] }), { casa: CASA });
+  assert.ok(de(pararNaParede(rajada, () => parede), 'tracante').every(p => p.parede && p.para.x === parede.x));
+});
+
+test('C80: sem ver quem atirou, a direção do tiro também sai do sangue, da faísca e da esquiva', () => {
+  const r = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(12) }), alvoEm('Outro00000000001', 2650, 550, { resultado: 'esquivou' })] }), { casa: CASA });
+  assert.ok(de(r, 'sangue')[0].direcao !== null && de(r, 'esquiva')[0].direcao !== null);
+  const semAtirador = passosVisiveis(r, { visivel: id => id !== ATIRADOR.token, origem: ATIRADOR.token });
+  assert.ok(semAtirador.length > 0);
+  assert.ok(semAtirador.every(p => p.direcao === null || p.direcao === undefined), 'nenhuma direção');
+  assert.ok(passosVisiveis(r, { origem: ATIRADOR.token }).some(p => p.direcao !== null && p.direcao !== undefined), 'vendo quem atirou, a direção fica');
+});
+
+test('C80: lexical: o palco desenha no primary, destrói tudo no fim e na troca de cena, nunca mexe num documento; o diretor manda o desenho ao palco; o cartão tem o "Rever o efeito"', () => {
+  const palco = leia('scripts/tocador-pixi.mjs');
+  const codigo = palco.replace(/\/\/.*$/gm, '');
+  assert.match(codigo, /new primary\.PrimaryCanvasContainer\(\)/, 'sob a névoa: no canvas.primary');
+  assert.match(codigo, /conteiner\.destroy\(\{ children: true \}\)/, 'o contêiner destruído com os filhos');
+  assert.match(codigo, /Hooks\.on\('canvasTearDown', limpar\)/, 'a troca de cena limpa o palco');
+  assert.match(codigo, /setTimeout\(\(\) => this\.encerrar\(\), fim \+ 3000\)/, 'a segurança: o roteiro que o ticker não andou se encerra');
+  assert.doesNotMatch(codigo, /\.update\(|setFlag|createEmbeddedDocuments|\.filters\s*=|mesh\.(alpha|tint|texture)\s*=/, 'nunca um documento nem a imagem do token');
+  assert.doesNotMatch(codigo, /console\.(warn|log)/);
+  for (const peca of ['clarao', 'tracante', 'projetil', 'arco', 'impacto', 'sangue', 'faisca', 'esquiva', 'glitch', 'hud', 'marca']) {
+    assert.match(codigo, new RegExp(`\\n  ${peca}\\(passo, r\\)`), `a peça ${peca}`);
+    assert.ok(PASSOS.includes(peca), `o passo ${peca} na regra`);
+  }
+  const diretor = leia('scripts/coreografia.mjs');
+  assert.match(diretor, /C\.pararNaParede\(C\.roteiro\(evento,/, 'a bala que erra para na parede');
+  assert.match(diretor, /if \(!degradado\) \{\r?\n    try \{ desenhar\(evento, lista, \{ nivel, calmo \}\); \}/, 'o que esperou demais (só o texto) não desenha');
+  assert.match(diretor, /calmo: nivel !== 'completo' \|\| fotossensivel/, 'nada pisca no reduzido nem no fotossensível');
+  assert.match(diretor, /registrarPalco\(\);/);
+  assert.match(diretor, /if \(!rever && estado\.tocados\.includes\(marca\)\) return false;/, 'só o rever toca de novo');
+  assert.match(diretor, /if \(!evento \|\| !mensagem\.author\?\.isGM \|\| !mensagem\.isContentVisible\) return false;\r?\n  return tocar\(evento, \{ rever: true \}\);/, 'o rever: só o cartão de um mestre que este navegador vê');
+  const cartao = leia('scripts/combate/cartao.mjs');
+  assert.match(cartao, /botao\.textContent = 'Rever o efeito';/);
+  assert.match(cartao, /if \(!cartao \|\| !mensagem\.getFlag\(SISTEMA, 'efeito'\) \|\| !mensagem\.author\?\.isGM \|\| !mensagem\.isContentVisible\) return;/, 'o botão só para quem vê o conteúdo');
 });
