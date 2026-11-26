@@ -13,7 +13,8 @@ import { abrirConserto, abrirReforjar } from './quebra.mjs';
 import { consertoDaArma, ESTADOS as ESTADOS_DA_QUEBRA } from './regras-quebra.mjs';
 import { abrirInstalacao, instalacaoDe, pedirInstalacao, textoDaRegra, tirar as tirarModificacao } from './instalacao-mod.mjs';
 import { RARIDADES } from './regras-oficina.mjs';
-import { acessorioCabe, bonusDoCritico, classeDoRebuild, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque, rebuildCabe } from './regras.mjs';
+import { bonusDoCritico, ehDesarmada, FALHAS_DA_ARMA, FAMILIA_ARTES_MARCIAIS, ladosDoTipo, nomeDoLado, programaDeAtaque } from './regras.mjs';
+import { abrirEscolha, compatibilidadeDoAcessorio } from './montagem-da-arma.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
 import { ARMAS_VEICULARES } from './armas-veiculos.mjs';
@@ -106,7 +107,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       instalarAcessorio: FichaItem.#instalarAcessorio, removerAcessorio: FichaItem.#removerAcessorio,
       instalarModificacao: FichaItem.#instalarModificacao, abrirItemBancada: FichaItem.#abrirItemBancada,
       pedirInstalacao: FichaItem.#pedirInstalacao, tirarModificacao: FichaItem.#tirarModificacao,
-      consertarArma: FichaItem.#consertarArma, reforjarArma: FichaItem.#reforjarArma
+      consertarArma: FichaItem.#consertarArma, reforjarArma: FichaItem.#reforjarArma, escolherDoInventario: FichaItem.#escolherDoInventario
     }
   };
 
@@ -387,6 +388,12 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   // A instalação pelo Tech (o C72): o jogador pede ao mestre; o mestre abre a janela dele.
   static #pedirInstalacao() { return pedirInstalacao(this.item).catch(erro => ui.notifications.error(erro.message)); }
   // O risco da arma (o C73): o conserto e o reforjar (o mestre).
+  // O "Escolher do inventário" da bancada (o C75): as peças soltas do personagem, com o que cabe.
+  static async #escolherDoInventario() {
+    const resultado = await abrirEscolha(this.item).catch(erro => { ui.notifications.error(erro.message); return null; });
+    if (resultado && this.rendered) await this.render({ force: true });
+    return resultado;
+  }
   static #consertarArma() { return abrirConserto(this.item).catch(erro => ui.notifications.error(erro.message)); }
   static #reforjarArma() { return abrirReforjar(this.item).catch(erro => ui.notifications.error(erro.message)); }
   static #tirarModificacao() { return tirarModificacao(this.item).catch(erro => ui.notifications.error(erro.message)); }
@@ -498,22 +505,6 @@ function bancadaDaArma(arma, editavel) {
     acessoriosInstalados: acessoriosInstalados.map(item => ({ id: item.id, nome: item.name, imagem: item.img, tamanho: arma.tamanhoNaArma(item) })),
     acessoriosDisponiveis: acessorios, podeEditar, podeVerMontagem, semAtor: !ator
   };
-}
-
-function compatibilidadeDoAcessorio(arma, acessorio) {
-  const outros = arma.instalados.filter(item => item.id !== acessorio.id);
-  const usados = outros.reduce((soma, item) => soma + arma.tamanhoNaArma(item), 0);
-  const rebuild = classeDoRebuild(acessorio.getFlag(SISTEMA, 'arma2077'));
-  if (rebuild) {
-    const classe2077 = arma.getFlag(SISTEMA, 'arma2077')?.classe ?? null;
-    return rebuildCabe({ rebuild, arma: arma.system, usados,
-      outroRebuild: outros.some(item => classeDoRebuild(item.getFlag(SISTEMA, 'arma2077'))), classe2077 });
-  }
-  return acessorioCabe({
-    slots: arma.system.slots, usados, tamanho: Number(acessorio.system.tamanho) || 0,
-    carregador: Boolean(acessorio.system.modificadores?.pente),
-    temCarregador: outros.some(item => item.type === 'upgrade' && item.system.modificadores?.pente)
-  });
 }
 
 // A aba História da arma (o C69): a identidade, os contadores, o diário (os mais novos primeiro) e, só para o mestre, o

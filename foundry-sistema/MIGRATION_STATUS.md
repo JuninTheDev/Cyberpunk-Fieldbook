@@ -164,6 +164,10 @@ CORE 0.92.4 com os módulos (cpr-2077, Fluxo de Combate, NET Architect e Painel 
 
 ## Dúvidas de regra e discrepâncias
 
+- **C75, pôr o upgrade na arma (2026-11-26, sessão KouArt):** fica para o usuário: as outras listas da ficha que não
+  arrastam (o cyberware, os programas e o hardware da NET, a armadura vestida do bloco geral e as lesões) continuam assim:
+  arrastar o cyberware instalado para outra ficha passaria por fora da cirurgia.
+
 - **C73, o risco da arma (2026-11-25, sessão KouArt):** ficam para o usuário:
   - **a DV e o custo do conserto** são os da proposta (a DV pela categoria de preço da arma; o custo de uma categoria
     abaixo): a tabela do livro não está na wiki. A arma Barata, sem categoria abaixo, custa os 10eb dela;
@@ -10276,6 +10280,30 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   - **Wiki:** no cenário `arsenal`, o fuzil quebrado com o selo na bancada.
 - **Portões:** G1 sem erros; G2 sem erros; G3 810/810; G4 339/339 (721 s); os cenários da wiki arsenal 8/8, conta 20/20 e criador 65/65. Rodadas antes: a ordem das modificações na janela do reforjar (o teste esperava uma ordem fixa: agora não).
 - **Mutações:** doze no G3 (Q1 a Q12), doze no G4 (G1 a G12, no passo do C13 e no do C73), duas na wiki (W1 e W2, o cenário arsenal) e uma na página (T1); todas morreram, md5 igual.
+
+### Ciclo 216 (2026-11-26): C75, pôr o upgrade na arma sem depender do arrasto (sessão KouArt)
+
+- **Pedido do usuário (2026-11-26):** no Foundry, a bancada pede para arrastar o upgrade do inventário, mas "no inventário
+  do personagem não é possível pegar algum item e arrastar"; e "um botão que mostre todos os upgrades que o personagem tem
+  no inventário e podem ser colocados naquela arma".
+- **A causa:** o Foundry 14 só arrasta da ficha do ator o que tem a classe `draggable` (o `_dragDrop` do `ActorSheetV2`), e a
+  linha da lista "Upgrades e acessórios" da aba Equipamento não tinha. O passo do C74 instalava pela API e não pegou.
+- **Entrega:**
+  - `equipamento.hbs`: a linha do upgrade arrasta e tem o "Instalar em…" (o solto); a da arma tem o "Bancada";
+  - `montagem-da-arma.mjs` (novo): o que é peça de arma, o que cabe (a conta do acessório saiu da `ficha-item.mjs` para cá),
+    as peças para a arma e as armas para a peça, a instalação (o acessório na hora; a modificação pelo C72) e as duas
+    janelas;
+  - a bancada: o "Escolher do inventário"; o `pedirInstalacao` já recebia a arma escolhida;
+  - a versão `0.3.216`.
+- **Testes de referência:**
+  - **G3:** o `montagem.test.mjs` (novo, 2 testes): a linha do upgrade (e as da arma e do veículo) com a classe
+    `draggable`; os botões novos e a conta do acessório num lugar só.
+  - **G4:** um passo do C75, no navegador do jogador: o arrasto de verdade (o `dragstart` na linha e o `drop` na bancada), o
+    "Escolher do inventário" (o que cabe primeiro, o motivo do tambor e do Smartgun Link, o "Pedir a instalação" da
+    modificação), o "Instalar em…" (o Smartgun Link na pistola; a lanterna pedida ao mestre, com a pistola escolhida na
+    janela dele) e o "Bancada" (a ficha da arma na aba Bancada).
+- **Portões:** G1, G2 e G3 (812/812) passam; o G4, 340/340 (a rodada anterior, 338/340, com só as instáveis conhecidas dos tokens dinâmicos, o C45 parte 2 e o C52).
+- **Mutações:** três no G3 (M1 a M3) e nove no G4 (F1 a F9); todas morreram, md5 igual. O F8 (o "Bancada" sem a troca de aba) e o F9 (o pedido sem a arma escolhida) sobreviveram na primeira rodada: a ficha do fuzil lembrava a aba Bancada, e a pistola às vezes era a primeira arma da ficha. O passo passou a deixar o fuzil nos Detalhes antes do clique e a criar a pistola por último; as duas morreram na segunda.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

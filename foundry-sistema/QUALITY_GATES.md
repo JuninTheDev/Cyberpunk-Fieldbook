@@ -520,6 +520,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **Um estado novo da arma passa pelos passos antigos que atiram com ela** (ciclo 213): a quebra automática deixava a
   arma do passo da falha crítica (o C13) sem atacar nos tiros seguintes. O passo desfaz a quebra pelo botão do cartão,
   confere o estado a cada tiro e começa cada tiro com a arma inteira.
+- **O arrasto do G4 tem de ser o do navegador** (ciclo 216): o passo do C74 chamava a instalação pela API, e o
+  arrasto do inventário (a linha sem a classe `draggable`) nunca funcionou para quem joga. O passo do C75 faz o
+  `dragstart` na linha da ficha e o `drop` na área da bancada, com o mesmo `DataTransfer`.
 
 ## Build
 
