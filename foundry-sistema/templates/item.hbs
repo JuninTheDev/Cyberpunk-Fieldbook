@@ -222,6 +222,8 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos, e Banc
         </dl>
       </div>
       <div class="bancada-montagem">
+        {{!-- O C75: as peças soltas do personagem que cabem nesta arma, sem precisar arrastar. --}}
+        {{#if podeVerMontagem}}<div class="escolher-da-bancada"><button type="button" class="acao" data-action="escolherDoInventario">ESCOLHER DO INVENTÁRIO</button></div>{{/if}}
         <section class="bancada-modulo acessorios-da-arma" aria-labelledby="bancada-acessorios">
           <header class="bancada-titulo"><div><span>01 / MONTAGEM</span><h2 id="bancada-acessorios">Acessórios</h2></div><b>{{acessorios.usados}} / {{acessorios.total}}</b></header>
           <div class="slots-da-arma" role="img" aria-label="{{acessorios.usados}} de {{acessorios.total}} slots de acessório ocupados">

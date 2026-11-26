@@ -724,6 +724,13 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
       …" e não se reforja de novo;
     - **a modificação instável:** a oficina do mestre ganhou o efeito "Instável": a arma com ela falha como a ruim na
       falha crítica (o seletor "Na falha crítica" aparece nela). A API: `game.system.api.quebra`.
+  - **Pôr o upgrade na arma** (o C75; pedido do usuário de 2026-11-26), no `montagem-da-arma.mjs`: o upgrade arrasta da aba
+    Equipamento para a bancada (a linha dele não tinha a classe `draggable`, e o Foundry só arrasta da ficha o que tem). A
+    bancada tem o "Escolher do inventário": os acessórios e as modificações soltos do personagem, os que cabem primeiro
+    (com o "Instalar") e os que não cabem apagados, com o motivo. No inventário, o upgrade solto tem o "Instalar em…" (as
+    armas do personagem em que ele cabe), e a arma tem o "Bancada" (abre a ficha dela na aba Bancada). O acessório entra na
+    hora; a modificação vai pelo Tech (o C72): o jogador pede ao mestre, com a arma já escolhida. A API:
+    `game.system.api.montagem`.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

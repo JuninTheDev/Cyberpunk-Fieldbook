@@ -51,6 +51,7 @@ import * as identidade from './identidade.mjs';
 import * as oficina from './oficina.mjs';
 import * as instalacaoMod from './instalacao-mod.mjs';
 import * as quebra from './quebra.mjs';
+import * as montagem from './montagem-da-arma.mjs';
 import * as defeitos from './defeito-escondido.mjs';
 import * as direcao from './direcao.mjs';
 import * as regras from './regras.mjs';
@@ -173,6 +174,8 @@ Hooks.once('init', () => {
   // O risco da arma (o C73): a quebra pela falha, o conserto pelo Tech e o reforjar da relíquia.
   quebra.registrarQuebra();
   game.system.api.quebra = quebra.API;
+  // Pôr o upgrade na arma sem o arrasto (o C75): o "Escolher do inventário" e o "Instalar em…".
+  game.system.api.montagem = montagem.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);

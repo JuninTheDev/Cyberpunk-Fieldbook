@@ -30,6 +30,7 @@ import { FAMILIAS, HABILIDADES_DE_ROLE, PERICIAS, ROLES } from './gerado.mjs';
 import { FLAG_CONEXAO, FLAG_PONTO } from './netrun/constantes.mjs';
 import { opcoesDaLesao, tratarLesao, voltouALesao } from './tratamento.mjs';
 import { instalarComCirurgia, retirarComCirurgia } from './cirurgia.mjs';
+import { abrirInstalarEm, tipoDaPeca } from './montagem-da-arma.mjs';
 import { abrirContaDoHospital } from './hospital.mjs';
 import { lesaoCritica } from './lesoes.mjs';
 import { acabouOEfeito, usarDroga } from './drogas.mjs';
@@ -181,6 +182,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       instalar: FichaPersonagem.#instalar,
       instalarOpcao: FichaPersonagem.#instalarOpcao,
       editarItem: FichaPersonagem.#editarItem,
+      instalarEmArma: FichaPersonagem.#instalarEmArma, abrirBancada: FichaPersonagem.#abrirBancada,
       criarItem: FichaPersonagem.#criarItem,
       apagarItem: FichaPersonagem.#apagarItem,
       rolarLesao: FichaPersonagem.#rolarLesao,
@@ -520,6 +522,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       upgrades: itens('upgrade').map(u => ({
         id: u.id, nome: u.name, img: u.img,
         prepararArma: u.instaladoNo?.type === 'veiculo' && Object.hasOwn(ARMAS_VEICULARES, u.getFlag(SISTEMA, 'catalogo')),
+        // O "Instalar em…" (o C75): o acessório de arma e a modificação soltos.
+        instalarEm: !u.system.instaladoEm && Boolean(tipoDaPeca(u)) && this.isEditable,
         detalhe: [ALVOS_UPGRADE[u.system.alvo] ?? u.system.alvo, `${u.system.tamanho} ${u.system.tamanho === 1 ? 'slot' : 'slots'}`, u.instaladoNo ? `em ${u.instaladoNo.name}` : 'não instalado'].join(' · ')
       })),
       rolesDaFicha, temSegundaRole: Boolean(s.roleSecundaria.nome),
@@ -869,6 +873,15 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return opcao.system.instalado || evento.shiftKey ? this.actor.instalarOpcao(opcao, fundacao, { rolar: !evento.shiftKey }) : instalarComCirurgia(this.actor, opcao, { fundacao });
   }
   static #editarItem(evento, alvo) { return this.#item(alvo)?.sheet.render(true); }
+  // O C75: o upgrade solto escolhe a arma; a arma abre direto na bancada.
+  static #instalarEmArma(evento, alvo) { const item = this.#item(alvo); return item ? abrirInstalarEm(item).catch(erro => ui.notifications.error(erro.message)) : null; }
+  static async #abrirBancada(evento, alvo) {
+    const arma = this.#item(alvo);
+    if (!arma) return null;
+    await arma.sheet.render({ force: true });
+    arma.sheet.changeTab('bancada', 'item');
+    return arma.sheet;
+  }
   // O "+" de cada lista (o C32; o item-create do CORE, cpr-actor-sheet.js:1693-1702): um item em branco do tipo da lista,
   // com o nome do CORE em português ("Arma nova"; regras-inventario.nomeDoItemNovo), que abre para ser preenchido, como o
   // "+" do contêiner.

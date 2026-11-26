@@ -43,6 +43,7 @@ branco do tipo dela (o C32), e o nome dela a recolhe e expande (o C34). --}}
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{dano}}{{#if sistema.pente.max}} · pente {{sistema.pente.value}}/{{sistema.pente.max}}{{/if}}{{#if classe2077}} · {{classe2077}}{{/if}}{{#if acessorios}} · {{acessorios}}{{/if}}</span>
+            <button type="button" class="acao" data-action="abrirBancada" data-tooltip="Abrir a bancada da arma: os acessórios e as modificações">Bancada</button>
             <button type="button" class="alternar {{#if sistema.equipada}}ligado{{/if}}" data-action="equipar" aria-pressed="{{#if sistema.equipada}}true{{else}}false{{/if}}">{{#if sistema.equipada}}Equipada{{else}}Guardada{{/if}}</button>
             <button type="button" class="estrela {{#if favorito}}ligada{{/if}}" data-action="favoritarItem" data-tooltip="Favorito: fica no painel Favoritos da aba Combate" aria-pressed="{{#if favorito}}true{{else}}false{{/if}}" aria-label="Item favorito: {{nome}}"><i class="fa-solid fa-star"></i></button>
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
@@ -107,10 +108,12 @@ branco do tipo dela (o C32), e o nome dela a recolhe e expande (o C34). --}}
         <div class="titulo">{{> "systems/cpr-fieldbook/templates/personagem/bloco-recolher.hbs" lista="upgrade" titulo="UPGRADES E ACESSÓRIOS"}}<span>ONDE ESTÁ INSTALADO{{#if podeCriarItem}}<button type="button" class="criar" data-action="criarItem" data-tipo="upgrade" data-tooltip="Criar um item em branco nesta lista e abrir a ficha dele" aria-label="Criar upgrade">+</button>{{/if}}</span></div>
         <ol class="itens">
           {{#each upgrades}}
-          <li data-item-id="{{id}}">
+          {{!-- O C75: o upgrade arrasta para a bancada da arma, e o solto tem o "Instalar em…" (as armas em que cabe). --}}
+          <li class="draggable" data-item-id="{{id}}">
             <img src="{{img}}" alt="">
             <a class="nome" data-action="editarItem" role="button" tabindex="0">{{nome}}</a>
             <span class="detalhe">{{detalhe}}</span>
+            {{#if instalarEm}}<button type="button" class="acao" data-action="instalarEmArma" data-tooltip="As armas deste personagem em que ele cabe">Instalar em…</button>{{/if}}
             {{#if prepararArma}}<button type="button" class="acao" data-action="prepararArmaVeicular" data-tooltip="Preparar a arma montada neste veículo">Preparar arma</button>{{/if}}
             <button type="button" class="apagar" data-action="apagarItem" data-tooltip="Apagar" aria-label="Apagar item">✕</button>
           </li>

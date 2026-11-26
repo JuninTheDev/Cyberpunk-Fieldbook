@@ -22168,6 +22168,136 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('C75: o upgrade arrasta do inventário para a bancada (no navegador do jogador); o "Escolher do inventário" da bancada lista o que cabe (e o motivo do que não cabe); o "Instalar em…" do inventário escolhe a arma (a modificação pede ao mestre); o "Bancada" abre a arma na aba dela', async () => {
+      const c75 = await edge.evaluate(`(async () => {
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const dono = game.users.getName('Jogador');
+        const ator = await Actor.implementation.create({ name: 'C75 Vex', type: 'personagem', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE, [dono.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }, system: { role: { nome: 'Solo', rank: 4 } } });
+        const ids = ['core_weapons:assault-rifle', 'core_upgrades:sniping-scope', 'core_upgrades:extended-magazine-assault-rifle', 'core_upgrades:drum-magazine-assault-rifle', 'core_upgrades:smartgun-link', 'mods-armas:lanterna-tatica'];
+        // A pistola por último, num pedido à parte: a primeira arma da ficha é o fuzil, e o pedido da lanterna na pistola
+        // só chega ao mestre na pistola se a arma escolhida passar (e não a primeira onde cabe).
+        const criados = [...await ator.createEmbeddedDocuments('Item', ids.map(id => foundry.utils.deepClone(cat[id]))),
+          ...await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:heavy-pistol'])])];
+        // A ordem da volta não é a do pedido: cada um pelo nome.
+        const por = nome => criados.find(item => item.name === nome)?.id ?? null;
+        return { ator: ator.id, fuzil: por('Assault Rifle'), pistola: por('Heavy Pistol'), luneta: por('Sniping Scope'), pente: por('Extended Magazine (Assault Rifle)'),
+          tambor: por('Drum Magazine (Assault Rifle)'), link: por('Smartgun Link'), lanterna: por('Lanterna tática') };
+      })()`);
+      const noJogador = codigo => jogador.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        await esperar(() => game.actors.get('${c75.ator}')?.isOwner);
+        const ator = game.actors.get('${c75.ator}');
+        const item = id => ator.items.get(id);
+        ${codigo}
+      })()`);
+      // O arrasto de verdade: o dragstart na linha do upgrade (aba Equipamento) e o drop na área da bancada do fuzil.
+      const arrasto = await noJogador(`
+        await ator.sheet.render({ force: true });
+        ator.sheet.changeTab('equipamento', 'primary');
+        const linha = () => ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="${c75.luneta}"]');
+        await esperar(linha);
+        const arrastavel = linha().getAttribute('draggable');
+        const dados = new DataTransfer();
+        linha().dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dados }));
+        const levou = dados.getData('text/plain');
+        const fuzil = item('${c75.fuzil}');
+        await fuzil.sheet.render({ force: true });
+        fuzil.sheet.changeTab('bancada', 'item');
+        await esperar(() => fuzil.sheet.element?.querySelector('[data-bancada-drop="acessorio"]'));
+        fuzil.sheet.element.querySelector('[data-bancada-drop="acessorio"]').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dados }));
+        await esperar(() => item('${c75.luneta}').system.instaladoEm === fuzil.id);
+        return { arrastavel, levou: JSON.parse(levou || '{}').uuid ?? null, instalou: item('${c75.luneta}').system.instaladoEm === fuzil.id };
+      `);
+      // O "Escolher do inventário": o pente entra; na segunda vez, o tambor (outro carregador) e o Smartgun Link (2 slots) não cabem.
+      const escolha = await noJogador(`
+        const fuzil = item('${c75.fuzil}');
+        const janela = () => document.querySelector('.application.escolha-da-montagem');
+        const abrir = async () => {
+          await esperar(() => fuzil.sheet.element?.querySelector('[data-action="escolherDoInventario"]'));
+          fuzil.sheet.element.querySelector('[data-action="escolherDoInventario"]').click();
+          await esperar(janela);
+          return [...janela().querySelectorAll('.lista-da-montagem li')].map(li => ({ nome: textoDe(li.querySelector('b')), cabe: li.classList.contains('cabe'), botao: textoDe(li.querySelector('[data-escolher]')), motivo: textoDe(li.querySelector('.motivo')) }));
+        };
+        const primeira = await abrir();
+        janela().querySelector('[data-escolher="${c75.pente}"]').click();
+        await esperar(() => item('${c75.pente}').system.instaladoEm === fuzil.id);
+        await esperar(() => !janela());
+        const segunda = await abrir();
+        janela().querySelector('button[data-action="fechar"]').click();
+        await esperar(() => !janela());
+        await fuzil.sheet.close({ animate: false });
+        return { primeira, segunda, pente: item('${c75.pente}').system.instaladoEm === fuzil.id };
+      `);
+      // O "Instalar em…" do inventário: o Smartgun Link vai para a pistola; a lanterna (uma modificação) pede ao mestre.
+      const instalarEm = await noJogador(`
+        const janela = () => document.querySelector('.application.instalar-em-arma');
+        const abrir = async id => {
+          await ator.sheet.render({ force: true });
+          ator.sheet.changeTab('equipamento', 'primary');
+          await esperar(() => ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="' + id + '"] [data-action="instalarEmArma"]'));
+          ator.sheet.element.querySelector('.tab.equipamento li[data-item-id="' + id + '"] [data-action="instalarEmArma"]').click();
+          await esperar(janela);
+          return [...janela().querySelectorAll('.lista-da-montagem li')].map(li => ({ nome: textoDe(li.querySelector('b')), cabe: li.classList.contains('cabe'), botao: textoDe(li.querySelector('[data-escolher]')), motivo: textoDe(li.querySelector('.motivo')) }));
+        };
+        const doLink = await abrir('${c75.link}');
+        janela().querySelector('[data-escolher="${c75.pistola}"]').click();
+        await esperar(() => item('${c75.link}').system.instaladoEm === '${c75.pistola}');
+        await esperar(() => !janela());
+        const daLanterna = await abrir('${c75.lanterna}');
+        janela().querySelector('[data-escolher="${c75.pistola}"]').click();
+        await new Promise(r => setTimeout(r, 600));
+        return { doLink, link: item('${c75.link}').system.instaladoEm === '${c75.pistola}', daLanterna, primeiraArma: ator.items.find(i => i.type === 'arma')?.id ?? null, semBotaoNaInstalada: !ator.sheet.element.querySelector('.tab.equipamento li[data-item-id="${c75.luneta}"] [data-action="instalarEmArma"]') };
+      `);
+      // O mestre recebe o pedido da lanterna, já na pistola, e instala direto (o Tech NPC).
+      const mestre = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const janela = () => [...document.querySelectorAll('.application.instalacao-da-mod')].find(j => /Lanterna tática/.test(j.textContent));
+        await esperar(janela);
+        const arma = janela()?.querySelector('select[name="arma"]')?.value;
+        janela()?.querySelector('button[data-action="direto"]')?.click();
+        const ator = game.actors.get('${c75.ator}');
+        await esperar(() => ator.items.get('${c75.lanterna}')?.system.instaladoEm === '${c75.pistola}');
+        return { arma, instalou: ator.items.get('${c75.lanterna}')?.system.instaladoEm === '${c75.pistola}' };
+      })()`);
+      // O "Bancada" da lista de armas abre o fuzil na aba Bancada.
+      const bancada = await noJogador(`
+        // Antes, o fuzil fica nos Detalhes (a ficha lembra a última aba): o "Bancada" é que tem de levar à aba dele.
+        const fuzil = item('${c75.fuzil}');
+        await fuzil.sheet.render({ force: true });
+        await esperar(() => fuzil.sheet.element?.querySelector('.tab[data-tab="detalhes"]'));
+        fuzil.sheet.changeTab('detalhes', 'item');
+        const antes = fuzil.sheet.tabGroups?.item ?? null;
+        await fuzil.sheet.close({ animate: false });
+        await esperar(() => !fuzil.sheet.rendered);
+        ator.sheet.changeTab('equipamento', 'primary');
+        await esperar(() => ator.sheet.element?.querySelector('.tab.equipamento li[data-item-id="${c75.fuzil}"] [data-action="abrirBancada"]'));
+        ator.sheet.element.querySelector('.tab.equipamento li[data-item-id="${c75.fuzil}"] [data-action="abrirBancada"]').click();
+        await esperar(() => fuzil.sheet.rendered && fuzil.sheet.element?.querySelector('.tab.bancada-da-arma.active'));
+        const resultado = { antes, aberta: Boolean(fuzil.sheet.element?.querySelector('.tab.bancada-da-arma.active')), aba: fuzil.sheet.tabGroups?.item ?? null };
+        await fuzil.sheet.close({ animate: false });
+        await ator.sheet.close({ animate: false });
+        return resultado;
+      `);
+      try {
+        const linha = (lista, nome) => lista.find(l => l.nome === nome) ?? {};
+        const arrastoOk = arrasto.arrastavel === 'true' && arrasto.levou === `Actor.${c75.ator}.Item.${c75.luneta}` && arrasto.instalou;
+        const escolhaOk = linha(escolha.primeira, 'Extended Magazine (Assault Rifle)').botao === 'Instalar' && linha(escolha.primeira, 'Smartgun Link').cabe
+          && linha(escolha.primeira, 'Lanterna tática').botao === 'Pedir a instalação' && !escolha.primeira.some(l => l.nome === 'Sniping Scope') && escolha.pente
+          && linha(escolha.segunda, 'Drum Magazine (Assault Rifle)').cabe === false && /carregador/i.test(linha(escolha.segunda, 'Drum Magazine (Assault Rifle)').motivo)
+          && linha(escolha.segunda, 'Drum Magazine (Assault Rifle)').botao === '' && linha(escolha.segunda, 'Smartgun Link').cabe === false && linha(escolha.segunda, 'Smartgun Link').motivo !== ''
+          && escolha.segunda.findIndex(l => !l.cabe) > escolha.segunda.findIndex(l => l.cabe);
+        const instalarEmOk = linha(instalarEm.doLink, 'Assault Rifle').cabe === false && linha(instalarEm.doLink, 'Heavy Pistol').botao === 'Instalar' && instalarEm.link
+          && linha(instalarEm.daLanterna, 'Heavy Pistol').botao === 'Pedir a instalação' && linha(instalarEm.daLanterna, 'Assault Rifle').cabe === true
+          && instalarEm.primeiraArma === c75.fuzil && instalarEm.semBotaoNaInstalada
+          && mestre.arma === c75.pistola && mestre.instalou;
+        const bancadaOk = bancada.antes === 'detalhes' && bancada.aberta && bancada.aba === 'bancada';
+        return [arrastoOk && escolhaOk && instalarEmOk && bancadaOk, JSON.stringify({ c75, arrasto, escolha, instalarEm, mestre, bancada })];
+      } finally {
+        await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => /^C75 /.test(a.name))) await ator.delete(); return true; })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

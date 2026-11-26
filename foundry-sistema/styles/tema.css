@@ -771,6 +771,13 @@ do capanga é um botão do mesmo jeito, que rola. */
 .cpr-fieldbook.oficina-do-mestre .nota { color: var(--cp-fraco); font-size: 12px; }
 .cpr-fieldbook.ficha-item .defeito-escondido-da-arma { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 0; padding: 6px 8px; border: 1px dashed var(--cp-vermelho); }
 .cpr-fieldbook.ficha-item .defeito-escondido-da-arma .nota { flex: 1 1 100%; margin: 0; }
+/* As janelas do C75: as peças que cabem na arma e as armas em que a peça cabe. */
+.cpr-fieldbook .lista-da-montagem { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cpr-fieldbook .lista-da-montagem li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px; border: 1px solid var(--cp-ciano, #2ee6f5); }
+.cpr-fieldbook .lista-da-montagem li > div { display: flex; flex-direction: column; }
+.cpr-fieldbook .lista-da-montagem li.nao-cabe { opacity: 0.55; border-style: dashed; }
+.cpr-fieldbook .lista-da-montagem .motivo { color: var(--cp-vermelho, #ff3b5c); }
+.cpr-fieldbook.ficha-item .escolher-da-bancada { display: flex; justify-content: flex-end; margin: 0 0 8px; }
 .cpr-fieldbook.defeito-escondido button, .cpr-fieldbook.defeito-escondido b { color: var(--cp-vermelho); }
 .cpr-fieldbook.cartao .contra { color: var(--cp-fraco); font: 400 11px/1.3 var(--cp-dados); letter-spacing: 0.06em; }
 .cpr-fieldbook.cartao .dano { margin: 4px 0 0; padding-left: 16px; color: var(--cp-texto); font-size: 13px; line-height: 1.35; }
