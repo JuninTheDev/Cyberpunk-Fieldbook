@@ -894,6 +894,18 @@ export function textoNoToken({ resultado, dano = null }) {
   return texto ? { texto, estilo: resultado === 'suprimido' || resultado === 'acertou' ? 'acerto' : 'erro' } : null;
 }
 
+// O texto em cima do token só para quem vê o token (o C77): a camada de interface, onde o texto sobe, fica por cima da
+// névoa, e um "−12 HP" num token no escuro mostrava ao jogador onde ele está (como o marcador do ponto de acesso no C76).
+// O mestre sempre vê; o jogador nunca vê o token escondido e, com a visão dos tokens ligada na cena, só o que está na
+// visão dele (proprio: o token com a visão ativa é dele). testar(): o canvas.visibility.testVisibility do Foundry.
+export const textoNaVisao = ({ gm = false, escondido = false, visaoDosTokens = true, proprio = false, testar = null } = {}) =>
+  gm || (!escondido && (!visaoDosTokens || proprio || Boolean(testar?.())));
+
+// Para quem o mestre manda o texto pelo socket (o C77): todos (null: o cartão é de todos) ou só quem vê o cartão (os ids
+// de "para"), menos ele mesmo, que já desenhou aqui. Antes ia a todos, e o filtro só acontecia em quem recebia: no "só o
+// mestre", o jogador recebia o "−12 HP" (a lição do ciclo 209). A lista vazia: ninguém.
+export const destinatariosDoTexto = (para, eu) => (Array.isArray(para) ? [...new Set(para)].filter(id => id !== eu) : null);
+
 // O ataque pegou? true / false; null quando falta a DV (o mestre decide).
 // Na Concentração, true quer dizer que o alvo perdeu (foi suprimido).
 export function acertou({ modo, escolha, ataque, defesa = null, dv = null }) {

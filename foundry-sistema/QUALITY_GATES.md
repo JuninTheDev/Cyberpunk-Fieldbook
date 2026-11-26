@@ -517,7 +517,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O executor das mutações troca o texto exato do arquivo** (ciclo 209): no arquivo de CRLF, o trecho de várias linhas
   precisa do CRLF; o gerador da lista confere que cada trecho aparece uma vez, como o arquivo está.
 - **O createEmbeddedDocuments não devolve na ordem do pedido** (ciclo 211): o passo do G4 que pegava a modificação pelo
-  índice pegou a errada. Ache cada item criado pelo nome (ou pela flag).
+  índice pegou a errada. Ache cada item criado pelo nome (ou pela flag). Vale para os tokens (ciclo 215): o passo do texto
+  na visão trocou o token do jogador pelo da Sombra e deu o contrário do esperado em tudo; ache o token pelo `actorId`.
+- **O foundry.utils não se muda no teste** (ciclo 215): é um módulo, e trocar uma função dele não pega. Para um
+  `srcExists` de mentira, troque o `foundry.utils` inteiro por uma cópia (o `foundry` é um objeto comum) e devolva no
+  `finally`, como o Sequencer de mentira do passo do ciclo 29.
 - **A janela que fecha ainda está no DOM** (ciclo 211): a do pedido anterior, fechando, recebeu o clique do passo seguinte.
   Ache a janela pelo texto do que se espera dela.
 - **A regra da loja da campanha também tem de chegar à ficha** (ciclo 212): a bancada não avisava o teto porque só a loja

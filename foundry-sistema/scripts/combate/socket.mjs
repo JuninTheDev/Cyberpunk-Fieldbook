@@ -119,7 +119,9 @@ export function registrarCombate() {
       const janela = janelas.get(mensagem.id);
       if (janela?.expirar) janela.expirar(); else janela?.close();
       janelas.delete(mensagem.id);
-    } else if (mensagem.tipo === 'texto') {
+    } else if (mensagem.tipo === 'texto' && quem?.isGM) {
+      // O texto em cima do token, só vindo de um mestre (o C77: antes, um jogador, pelo console, fazia aparecer qualquer
+      // texto no token de qualquer um).
       textoFlutuante(mensagem.dados);
     }
   });

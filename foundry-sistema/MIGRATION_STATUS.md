@@ -10311,6 +10311,56 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   o gancho do `sightRefresh`; G3, o clique que ignora a visão; G4, sem o mestre; G5, sem a cena sem visão); todas
   morreram, md5 igual.
 
+### Ciclo 215 (2026-11-26): C77, os consertos dos efeitos na mesa (sessão KouArt)
+
+- **Pedido do usuário (2026-11-26):** "efeitos mais bonitos para o RPG, por exemplo, quando o personagem atirar fazer um
+  efeito de tiro com som, granadas com efeito, brigas e etc.", com uma equipe especializada e um plano. A equipe
+  (`fx-visual`, `fx-audio`, `fx-coreografia`, `fx-assets`, em `.claude/agents/`) fez o plano
+  (`foundry-sistema/efeitos-plano/PLANO.md`, com os anexos); o usuário aceitou as decisões da fase 1 ("Aceito todas") e
+  pediu o C77 ("Sim, comece o C77"), os consertos do que existe antes dos efeitos novos.
+- **O que a equipe achou no código:**
+  - o tipo `'texto'` do socket era aceito de qualquer cliente: um jogador, pelo console, fazia aparecer qualquer texto
+    no token de qualquer um (o C56 conferiu os outros tipos, e este ficou de fora);
+  - o texto ia a todos os clientes, e o filtro do "Quem vê o cartão" só acontecia em quem recebia: no "só o mestre", o
+    jogador recebia o "−12 HP" (a lição do ciclo 209);
+  - o texto só conferia o token escondido, e a camada de interface fica por cima da névoa: o texto num token no escuro
+    mostrava ao jogador onde ele está (o mesmo problema do marcador da NET, no C76);
+  - a animação do Sequencer ia a todos, sem olhar o "Quem vê o cartão";
+  - o `foundry.canvas.srcExists` está obsoleto no 14 (sai no 16), e o Diwako só roda até o 12: o som dele nunca tocava;
+  - o `instalar.mjs` copia uma lista fixa de pastas: uma pasta nova não chegaria à mesa.
+- **A fonte:** o `Token#isVisible` do Foundry 14 (`client/canvas/placeables/token.mjs:605-625`: o escondido só para o
+  mestre; sem a visão dos tokens, todos; o próprio token pela visão ativa, porque a detecção não vê a própria fonte; o
+  resto pelo `testVisibility` nos pontos do token) e o `handleCustomSocket` do servidor (`dist/server/sockets.mjs`: com
+  `recipients`, só a esses usuários).
+- **Entrega:**
+  - `regras.mjs`: o `textoNaVisao` e o `destinatariosDoTexto` (puros);
+  - `efeitos.mjs`: o texto pelo `textoNaVisao`; a animação com o `forUsers` de quem vê o cartão; o
+    `foundry.utils.srcExists`; o Diwako fora;
+  - `combate/cartao.mjs`: o texto pelo socket só a quem vê o cartão (com `recipients`), menos o próprio mestre;
+  - `combate/socket.mjs`: o `'texto'` só vindo de um mestre;
+  - `instalar.mjs`: a pasta `efeitos/`, nova, com o `CREDITOS.md` e o `LICENCAS.csv` (vazios: ainda não há arquivo);
+  - o plano dos efeitos e o bloco novo do ROADMAP (C77 a C97), reservados em f194daf1;
+  - a versão `0.3.215`.
+- **Fica para depois:** os efeitos novos (o C78 em diante, um item por vez, reservado antes). Se alguém da mesa joga no
+  Safari (o iPhone, o iPad ou o Mac) ainda está em aberto: decide a cópia AAC dos sons, no C92.
+- **Testes de referência:**
+  - **G3:** o `efeitos-na-mesa.test.mjs` (novo, 7 testes): o `textoNaVisao` (o mestre, o escondido, a visão, o próprio
+    token, a cena sem a visão dos tokens), o `destinatariosDoTexto`, o socket e o cartão, o `efeitos.mjs` sem a API
+    obsoleta e sem o Diwako, o instalador com a pasta, e a conferência das licenças (o arquivo sem linha, a licença
+    proibida, a linha sem arquivo e a pasta de agora).
+  - **G4:** o passo do ciclo 29 ficou mais forte: no jogador, o que o socket trouxe (no "só o mestre", nada; nos
+    envolvidos, o texto) e, no mestre, um Sequencer de mentira que grava para quem vai cada animação (todos; só o mestre;
+    o mestre e o dono do Alvo; nenhuma com os efeitos desligados). E um passo novo, numa cena só dele com a visão dos
+    tokens: com a parede, o jogador vê o texto do token dele e não o do token atrás dela, e o mestre vê os dois; o texto
+    falso de um jogador não aparece no mestre; sem a parede, o jogador vê os dois; o escondido, nunca; a cena sem a visão
+    dos tokens mostra para todos; e a pasta `efeitos/` chegou ao Foundry.
+- **Portões:** G1 sem erros (275 arquivos); G2 sem erros; G3 819/819; G4 341/341 (800 s). A rodada antes deu 340/341: o
+  passo novo pegava os tokens pela ordem do `createEmbeddedDocuments`, que trocou os dois (a lição no QUALITY_GATES).
+- **Mutações:** cinco no G3 (M1, o escondido aparece; M2, fora da visão aparece; M3, o mestre manda para ele mesmo; M4,
+  o socket aceita o texto de qualquer um; M5, o instalador sem a pasta) e quatro no G4 (G1, o texto pelo socket a todos;
+  G2, o texto sem o teste de visão; G3, a animação sem o `forUsers`; G4, o socket que aceita o texto de qualquer um),
+  cada uma derrubando só o passo dela (340/341); todas morreram, md5 igual.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

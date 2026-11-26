@@ -849,8 +849,8 @@ As opções de combate, com os padrões da mesa:
 - **Explosivos pegam toda a área** (padrão: sim).
 - **Fogo supressivo sem alvo pega todos à vista** (padrão: sim).
 - **Esconder o total do ataque até a defesa** (padrão: sim).
-- **Quem vê o cartão do resultado:** todos, os envolvidos (o mestre, quem atacou e os donos dos alvos) ou só o mestre (padrão: todos). O texto em cima do token segue o cartão.
-- **Efeitos na mesa:** o texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro; só o texto; ou nada (padrão: texto e animação).
+- **Quem vê o cartão do resultado:** todos, os envolvidos (o mestre, quem atacou e os donos dos alvos) ou só o mestre (padrão: todos). O texto em cima do token e a animação seguem o cartão: o socket só leva o texto a quem vê o cartão (os outros nem recebem), e o Sequencer só mostra a animação a eles (ciclo 215).
+- **Efeitos na mesa:** o texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro; só o texto; ou nada (padrão: texto e animação). O texto só aparece para quem vê o token: o mestre sempre; o jogador nunca no token escondido e, com a visão dos tokens na cena, só no que está na visão dele (a camada do texto fica por cima da névoa; ciclo 215). O texto mandado pelo socket só vale vindo de um mestre. Não há som: o do Diwako saiu, porque o módulo só roda até o Foundry 12. Os efeitos novos (o tiro com som, as granadas, a briga) são o plano em `efeitos-plano/PLANO.md` (do C78 ao C97), e os arquivos deles vão na pasta `efeitos/`, com o `CREDITOS.md` e o `LICENCAS.csv` (o G3 confere a licença de cada arquivo: o repositório é público).
 
 As três do módulo cpr-2077 para as armas de 2077 saíram com o Mission Kit: as duas do ataque Smart no ciclo 110 e a da carga Tech que esfria uma rodada no 115.
 
@@ -965,7 +965,8 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o escudo (com a janela do mestre para a defesa de um NPC, que mostra o total e, fechada no X, deixa o sistema escolher, e o explosivo que passa do escudo destruído), o corpo a corpo com esquiva e a armadura pesada;
   - a Consciência de Combate do Solo (com o Ponto Fraco e a Deflexão por rodada e o Desfazer) e o MOVE do mortalmente ferido;
   - a defesa e o ataque de um jogador num segundo navegador: a janela de reação (o texto sem o total, a conta da esquiva, a DV e a barra do tempo), o X e o tempo esgotado valendo a escolha padrão, o dano rolado por ele, o ataque dele sem mestre na mesa e o mestre respondendo por ele quando demora;
-  - o que a mesa vê do ataque: um ataque por vez no mestre, quem vê o cartão do resultado (todos, os envolvidos, só o mestre), o texto em cima do token nos dois navegadores, os efeitos desligados e o total à vista;
+  - o que a mesa vê do ataque: um ataque por vez no mestre, quem vê o cartão do resultado (todos, os envolvidos, só o mestre), o texto em cima do token nos dois navegadores (e, pelo socket, só para quem vê o cartão), a animação do Sequencer só para quem vê o cartão (com um Sequencer de mentira), os efeitos desligados e o total à vista;
+  - o texto em cima do token só na visão do jogador (uma cena com a visão dos tokens e uma parede): o do token atrás da parede não aparece, o do escondido nunca, o mestre vê tudo, o texto falso de um jogador não aparece no mestre, e a pasta `efeitos/` chega ao Foundry;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 12 rolagens, os boosters ativos, as Ações NET, os slots do deck em caixas e o estado de cada programa), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
