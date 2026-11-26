@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const campaignBase = require('./campanha-base');
+const narrar = require('./narrar');
 
 // nomeJogadores: o nome que os jogadores veem (o do mestre pode ser segredo: Morana é o vírus da campanha). Os
 // jogadores do Protocolo Morana viam "Night City, 2077" antes das campanhas e continuam vendo.
@@ -278,7 +279,8 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic, docsDi
       const text = readScript(id, name) || '';
       const title = ((text.match(/^﻿?#\s+(.+)$/m) || [])[1] || name).trim().slice(0, 120);
       const handouts = [...new Set([...text.matchAll(/^###\s+(H-\d+)\s+·/gm)].map(match => match[1]))];
-      return { nome: name, titulo: title, handouts };
+      // narrar: o roteiro tem momentos marcados ("- **Momento:** id"), e a sessão ganha a aba Narrar (narrar.js).
+      return { nome: name, titulo: title, handouts, ...(narrar.temNarrar(text) ? { narrar: true } : {}) };
     });
   }
   function writeScript(id, name, text) {

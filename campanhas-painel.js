@@ -423,6 +423,13 @@
       // no arquivo público de Handouts e textos.
       const fromScript = def.kind === 'handouts' && def.roteiro ? `api/campanhas/${encodeURIComponent(campaign)}/roteiros/${def.roteiro}` : '';
       if (def.kind === 'handouts') docs[def.id] = { file: fromScript || def.file, eyebrow: def.eyebrow || 'Para entregar / handouts da sessão', title: def.title, lede: def.lede || 'Os documentos que o grupo pode encontrar nesta sessão, prontos para entregar.', transform: text => pickHandouts(text, def.handouts, fromScript ? SCRIPT_HANDOUTS_INTRO : HANDOUTS_INTRO), semBusca: true, vista: true, entregar: campaign, ...(fromScript ? { erro: '<p>O roteiro desta sessão ainda não está no servidor, e os handouts dela estão nele. Mande o arquivo pela aba Roteiro.</p>' } : {}) };
+      // narrar: a aba de narração (narrar.js), tirada do roteiro (def.roteiroDoc, a página da aba Roteiro). manterAlvo: o
+      // momento aberto fica no endereço (#página/momento), e o Voltar do navegador volta à cena anterior.
+      if (def.kind === 'narrar') {
+        pages[def.id] = { eyebrow: def.eyebrow || 'Mesa do mestre / narrar', title: def.title, lede: 'Só o que se usa narrando: o texto para ler, as cenas e os caminhos. O roteiro inteiro está na aba Roteiro.', manterAlvo: true, html: '<div class="narrar" data-narrar>Carregando o roteiro…</div>' };
+        pageSetup[def.id] = (content, helpers) => window.fieldbookNarrar && window.fieldbookNarrar.montar(content, { campanha: campaign, roteiro: def.roteiro, pagina: def.id, docRoteiro: def.roteiroDoc, docHandouts: def.handoutsDoc || '', alvo: helpers && helpers.target });
+        if (window.fieldbookNarrar) window.fieldbookNarrar.marcarRoteiro(def.roteiroDoc);
+      }
       if (def.kind === 'npcs') { pages[def.id] = npcPage(def); pageSetup[def.id] = content => setupNpcPage(content, campaign, def); }
       if (def.kind === 'notas') { pages[def.id] = sessionNotesPage(def); pageSetup[def.id] = content => setupSessionNotes(content, campaign, def); }
     }
@@ -455,14 +462,17 @@
       // Handouts quando o roteiro tem "### H-xx · Título" (os botões entregam aos jogadores).
       const scripts = (item.roteiros || []).map((script, index) => {
         const base = `roteiro-${item.id}-${slug(script.nome)}`;
-        const defs = [{ kind: 'roteiro', id: base, roteiro: script.nome, title: escapeHtml(script.titulo), eyebrow: `${escapeHtml(item.nome)} / roteiro, só você vê` }];
-        if ((script.handouts || []).length) defs.push({ kind: 'handouts', id: `${base}-handouts`, roteiro: script.nome, title: 'Handouts', eyebrow: `${escapeHtml(item.nome)} / handouts`, handouts: script.handouts });
+        const temHandouts = (script.handouts || []).length > 0;
+        // As abas, nesta ordem: Roteiro, Narrar (com momentos marcados) e Handouts (com "### H-xx · Título").
+        const defs = [{ kind: 'roteiro', id: base, tab: 'Roteiro', roteiro: script.nome, title: escapeHtml(script.titulo), eyebrow: `${escapeHtml(item.nome)} / roteiro, só você vê` }];
+        if (script.narrar) defs.push({ kind: 'narrar', id: `${base}--narrar`, tab: 'Narrar', roteiro: script.nome, roteiroDoc: base, handoutsDoc: temHandouts ? `${base}-handouts` : '', title: escapeHtml(script.titulo), eyebrow: `${escapeHtml(item.nome)} / narrar, só você vê` });
+        if (temHandouts) defs.push({ kind: 'handouts', id: `${base}-handouts`, tab: 'Handouts', roteiro: script.nome, title: 'Handouts', eyebrow: `${escapeHtml(item.nome)} / handouts`, handouts: script.handouts });
         const extra = extraPages(item.id, defs);
         Object.assign(pages, extra.pages);
         Object.assign(pageSetup, extra.pageSetup);
         Object.assign(docs, extra.markdownDocs);
         const icon = String(index).padStart(2, '0');
-        return { id: base, label: escapeHtml(script.titulo), icon, ...(defs.length > 1 ? { tabs: [{ id: base, label: 'Roteiro' }, { id: `${base}-handouts`, label: 'Handouts' }] } : {}) };
+        return { id: base, label: escapeHtml(script.titulo), icon, ...(defs.length > 1 ? { tabs: defs.map(def => ({ id: def.id, label: def.tab })) } : {}) };
       });
       // O mesmo desenho do Protocolo Morana: a campanha em cima, a mesa (o que se usa durante e entre as sessões) e os
       // personagens dos jogadores.

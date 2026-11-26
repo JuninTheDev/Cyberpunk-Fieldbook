@@ -151,6 +151,11 @@ test('o roteiro da sessão fica na pasta de dados e só o mestre lê', async t =
   ]);
   const doJogador = await servidor.pedir('/api/campanhas', { cookie: jogador.cookie });
   assert.ok(doJogador.json.campanhas.length && doJogador.json.campanhas.every(item => item.roteiros === undefined));
+  // O roteiro com momentos marcados ("- **Momento:** id") ganha a aba Narrar: a lista traz narrar: true; sem a marcação,
+  // a chave não vem (o deepEqual de cima).
+  fs.writeFileSync(path.join(pasta, 'sessao-04.md'), '# Sessão 4\n\n## A abertura\n\n- **Momento:** abertura\n\n> A chuva cai.\n');
+  const comNarrar = (await servidor.pedir('/api/campanhas', { cookie: mestre })).json.campanhas.find(item => item.id === 'morana').roteiros.find(item => item.nome === 'sessao-04');
+  assert.deepEqual(comNarrar, { nome: 'sessao-04', titulo: 'Sessão 4', handouts: [], narrar: true });
 });
 
 test('o resumo do personagem traz a Humanidade (EMP × 10 sem ficha da mesa), para o cartão do Início', async t => {

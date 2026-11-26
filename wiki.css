@@ -2063,3 +2063,79 @@ body.map-immersive.sidebar-open aside .side-status { justify-items: stretch; mar
   body.map-immersive .map-stage { position: relative; height: 85vh; }
   body.map-immersive :is(.map-corner, .map-zoom-controls, .map-overlay, .map-menu-close, .nav-backdrop) { display: none !important; }
 }
+
+/* ---------------- A aba Narrar da sessão (narrar.js) ----------------
+   Um cartão por vez (a cena do endereço), a faixa de cima fixa (as cenas, os cartões fixados, o alarme e a Mesa) e o painel
+   Mesa: na tela larga, uma coluna à direita; na estreita, aberto pelo botão Mesa, logo abaixo da faixa. As cores são as
+   variáveis dos dois temas. Sem animação na troca de cena. */
+.narrar { --narrar-faixa: 52px; }
+.narrar-avisos ul { margin: 6px 0 0; padding-left: 18px; }
+.narrar-topo { position: sticky; z-index: 3; top: var(--topbar-h, 66px); margin: 14px 0 0; background: var(--bg); border-bottom: 1px solid var(--line); }
+.narrar-faixa { display: flex; align-items: center; gap: 8px; min-height: var(--narrar-faixa); padding: 6px 0; }
+.narrar-fixados { display: flex; flex: 1 1 auto; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.narrar-abrir, .narrar-chip, .narrar-cena, .narrar-degrau, .narrar-passo, .narrar-fixar, .narrar-handout, .narrar-consulta, .narrar-link {
+  min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: 600 14px/1.2 var(--sans); cursor: pointer; }
+.narrar-abrir { flex: 0 0 auto; color: var(--yellow); text-transform: uppercase; letter-spacing: .04em; }
+.narrar-abrir[aria-expanded="true"] { border-color: var(--yellow); }
+.narrar-chip { flex: 0 0 auto; max-width: 15em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cyan); }
+.narrar-chip[aria-current="true"] { border-color: var(--cyan); background: var(--panel-raised); }
+.narrar-selo { flex: 0 0 auto; padding: 4px 8px; border: 1px solid var(--muted); color: var(--muted); font: 600 12px/1.2 var(--mono); text-transform: uppercase; }
+.narrar-selo-1 { border-color: var(--yellow); color: var(--yellow); }
+.narrar-selo-2, .narrar-selo-3 { border-color: var(--coral); color: var(--coral); }
+.narrar-cenas { display: grid; gap: 4px; max-height: min(60vh, 520px); overflow-y: auto; padding: 0 0 10px; }
+.narrar-cenas[hidden] { display: none; }
+.narrar-cena { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; }
+.narrar-cena[aria-current="step"] { border-color: var(--cyan); color: var(--cyan); }
+.narrar-visto { color: var(--muted); font: 400 12px/1.2 var(--mono); text-transform: uppercase; }
+.narrar-corpo { display: grid; gap: 24px; margin-top: 16px; }
+.narrar-palco { min-width: 0; }
+.narrar-mesa { display: none; }
+.narrar-mesa.aberta { display: block; position: sticky; z-index: 3; top: calc(var(--topbar-h, 66px) + var(--narrar-faixa) + 2px); max-height: 70vh; overflow-y: auto; margin-top: -16px; padding: 12px; border: 1px solid var(--yellow); background: var(--bg); order: -1; }
+@media (min-width: 1280px) {
+  .narrar-corpo { grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
+  .narrar-mesa, .narrar-mesa.aberta { display: block; position: sticky; top: calc(var(--topbar-h, 66px) + var(--narrar-faixa) + 16px); order: 0; max-height: calc(100vh - var(--topbar-h, 66px) - 90px); overflow-y: auto; margin: 0; padding: 0; border: 0; background: none; }
+  .narrar-abrir-mesa { display: none; }
+}
+.narrar-cartao { max-width: 46rem; }
+.narrar-cabeca { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 12px; }
+.narrar-cabeca .narrar-tipo { flex: 1 0 100%; margin: 0; color: var(--cyan); font: 600 12px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.narrar-titulo { flex: 1 1 auto; margin: 0; color: var(--text); font: 700 26px/1.15 var(--sans); scroll-margin-top: calc(var(--topbar-h, 66px) + 70px); }
+/* O título recebe o foco a cada troca de cena (o leitor de tela anuncia onde o mestre está), sem moldura. */
+.narrar-titulo:focus, .narrar-titulo:focus-visible { outline: none; }
+.narrar-fixar[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+.narrar-texto { color: var(--text); font-size: 16px; line-height: 1.55; }
+.narrar-ler { margin: 16px 0; padding: 12px 16px 14px; border-left: 3px solid var(--cyan); background: var(--panel-raised); }
+.narrar-ler blockquote, .narrar-ler p { margin: 0 0 10px; padding: 0; border: 0; background: none; color: var(--text); font-size: 18px; font-style: normal; line-height: 1.6; }
+.narrar-ler p:last-child { margin-bottom: 0; }
+.narrar-rotulo { margin: 0 0 8px; color: var(--cyan); font: 600 12px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.narrar-mestre blockquote { font-style: normal; }
+.narrar-escolha { margin: 18px 0; }
+.narrar-pergunta { margin: 0 0 10px; color: var(--yellow); font: 700 17px/1.3 var(--sans); }
+.narrar-opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 8px; }
+.narrar-opcao { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 64px; padding: 10px 12px; border: 1px solid var(--yellow); background: var(--panel); color: var(--text); text-align: left; cursor: pointer; }
+.narrar-opcao b { color: var(--yellow); font: 700 16px/1.25 var(--sans); }
+.narrar-opcao span { color: var(--muted); font-size: 14px; line-height: 1.35; }
+.narrar-opcao:hover, .narrar-opcao:focus-visible, .narrar-ir:hover, .narrar-ir:focus-visible { outline: 2px solid var(--yellow); outline-offset: 1px; }
+.narrar-ir { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; margin: 2px 0; padding: 4px 12px; border: 1px solid var(--yellow); background: var(--yellow); color: #090b0c; font: 700 15px/1.2 var(--sans); cursor: pointer; vertical-align: middle; }
+.narrar-ir .narrar-visto { color: #2b2b22; }
+.narrar-gatilho { width: 100%; justify-content: center; }
+.narrar-quebrado { color: var(--coral); text-decoration: line-through; }
+.narrar-handouts { margin-top: 18px; color: var(--muted); }
+.narrar-bloco { margin: 0 0 16px; padding: 12px; border: 1px solid var(--line); background: var(--panel); }
+.narrar-hora { margin: 0 0 8px; color: var(--text); font: 700 32px/1 var(--mono); }
+.narrar-botoes, .narrar-degraus, .narrar-gatilhos, .narrar-lista { display: flex; flex-wrap: wrap; gap: 6px; }
+.narrar-gatilhos { margin-top: 10px; }
+.narrar-degrau[aria-pressed="true"] { border-color: var(--coral); background: var(--panel-raised); color: var(--coral); }
+.narrar-agora, .narrar-proximo { margin: 8px 0 0; color: var(--text); font-size: 14px; line-height: 1.45; }
+.narrar-proximo { color: var(--muted); }
+.narrar-consulta { flex: 1 1 100%; text-align: left; color: var(--cyan); }
+.narrar-rodape { margin: 0; }
+.narrar-link { border-color: transparent; background: none; color: var(--muted); text-decoration: underline; }
+@media (max-width: 560px) {
+  .narrar-titulo { font-size: 22px; }
+  .narrar-ler blockquote, .narrar-ler p { font-size: 17px; }
+  .narrar-ir { width: 100%; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .narrar * { transition: none !important; } }
+/* Na tela estreita, a frase de apresentação da página sai na aba Narrar: sobra espaço para a cena. */
+@media (max-width: 820px) { .content:has(.narrar) > .lede { display: none; } }
