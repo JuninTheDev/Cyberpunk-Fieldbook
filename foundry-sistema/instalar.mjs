@@ -45,7 +45,8 @@ if (precisaGerar(fonte, marca, fontesDosPacks)) {
 
 fs.rmSync(destino, { recursive: true, force: true });
 fs.mkdirSync(destino, { recursive: true });
-for (const item of ['system.json', 'README.md', 'scripts', 'templates', 'styles', 'fontes', 'lang', 'icones', 'dados', 'packs']) {
+// A pasta efeitos/ (o C77): os sons e as texturas dos efeitos na mesa, com o CREDITOS.md e o LICENCAS.csv.
+for (const item of ['system.json', 'README.md', 'scripts', 'templates', 'styles', 'fontes', 'lang', 'icones', 'dados', 'packs', 'efeitos']) {
   if (fs.existsSync(path.join(fonte, item))) fs.cpSync(path.join(fonte, item), path.join(destino, item), { recursive: true, filter: origem => path.basename(origem) !== '.gerado' });
 }
 console.log(`${manifesto.title} ${manifesto.version} instalado em ${destino}`);

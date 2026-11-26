@@ -39,6 +39,11 @@ deixam passar nenhum 403 nem 409 (o padrão da suíte da wiki deixa os dois). Os
 navegador contam (o `edge.avisos`), e não só os da página de agora. A versão do `system.json` é `0.3.<ciclo>`: suba
 junto com o registro do ciclo (o G3 confere).
 
+**A lição do ciclo 214:** o que o jogador vê no mapa depende da visão do token que ele controla. Os tokens dos passos
+nascem com a visão ligada e o alcance 0, e as cenas do G4 não têm luz: o jogador está no escuro. Um passo que confere o
+que o jogador vê (o marcador da NET, desde o ciclo 214) dá alcance à visão do token dele e o seleciona antes de ler,
+porque o token de um passo anterior, ainda controlado, é o que conta.
+
 **A lição do ciclo 201:** a mutação que sobrevive pode mostrar o que nenhum passo cobre. A das munições do token solto
 (o C61) sobreviveu ao G4 inteiro: nada conferia o EMP no item de um capanga fora da cena vista, e o passo novo entrou.
 
@@ -512,7 +517,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O executor das mutações troca o texto exato do arquivo** (ciclo 209): no arquivo de CRLF, o trecho de várias linhas
   precisa do CRLF; o gerador da lista confere que cada trecho aparece uma vez, como o arquivo está.
 - **O createEmbeddedDocuments não devolve na ordem do pedido** (ciclo 211): o passo do G4 que pegava a modificação pelo
-  índice pegou a errada. Ache cada item criado pelo nome (ou pela flag).
+  índice pegou a errada. Ache cada item criado pelo nome (ou pela flag). Vale para os tokens (ciclo 215): o passo do texto
+  na visão trocou o token do jogador pelo da Sombra e deu o contrário do esperado em tudo; ache o token pelo `actorId`.
+- **O foundry.utils não se muda no teste** (ciclo 215): é um módulo, e trocar uma função dele não pega. Para um
+  `srcExists` de mentira, troque o `foundry.utils` inteiro por uma cópia (o `foundry` é um objeto comum) e devolva no
+  `finally`, como o Sequencer de mentira do passo do ciclo 29.
 - **A janela que fecha ainda está no DOM** (ciclo 211): a do pedido anterior, fechando, recebeu o clique do passo seguinte.
   Ache a janela pelo texto do que se espera dela.
 - **A regra da loja da campanha também tem de chegar à ficha** (ciclo 212): a bancada não avisava o teto porque só a loja

@@ -74,17 +74,20 @@ export function destinatarios(ctx) {
 }
 
 // O texto em cima de cada alvo, para quem vê o cartão (aqui e, pelo socket, nos outros clientes), e a animação
-// (efeitos.mjs), pela configuração "Efeitos na mesa".
+// (efeitos.mjs), pela configuração "Efeitos na mesa". O socket só leva o texto a quem vê o cartão (o C77): os outros nem
+// recebem.
 function mostrarNaMesa(ctx, para) {
   const modo = config('animacoes');
   if (modo === 'nao') return;
+  const outros = R.destinatariosDoTexto(para, game.user.id);
   for (const linha of ctx.linhas) {
     const resumo = R.textoNoToken(linha);
     if (!resumo) continue;
     const dados = { cena: linha.token.parent.id, token: linha.token.id, ...resumo, para };
     textoFlutuante(dados);
-    game.socket.emit(CANAL, { tipo: 'texto', dados });
-    if (modo === 'auto' && !linha.token.hidden) animar(linha.token, resumo.estilo).catch(erro => console.warn(`${SISTEMA} | efeito`, erro));
+    if (!outros) game.socket.emit(CANAL, { tipo: 'texto', dados });
+    else if (outros.length) game.socket.emit(CANAL, { tipo: 'texto', dados }, { recipients: outros });
+    if (modo === 'auto' && !linha.token.hidden) animar(linha.token, resumo.estilo, para).catch(erro => console.warn(`${SISTEMA} | efeito`, erro));
   }
 }
 

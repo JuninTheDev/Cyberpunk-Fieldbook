@@ -158,7 +158,9 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
   o DV, os requisitos (o cyberdeck equipado, a Interface mínima), se o ponto é oculto e se as defesas reiniciam sem
   ninguém conectado. O Tile não precisa de imagem: o marcador e o clique não dependem dela (desde 2026-10-18, o sistema não
   põe mais a de terminal, que todos viam mesmo com o ponto oculto; a configuração oferece tirar a que ele já pôs). No
-  mapa, o marcador "NET" fica sobre o Tile (o oculto, só para o mestre). O jogador seleciona o token e clica no
+  mapa, o marcador "NET" fica sobre o Tile (o oculto, só para o mestre), e o jogador só o vê com o centro do Tile na
+  visão do token dele (ciclo 214: a névoa, a escuridão e as paredes escondem, como as portas do Foundry; fora da visão, o
+  clique no lugar dele não pega; a cena sem a visão dos tokens mostra para todos). O jogador seleciona o token e clica no
   marcador: perto o bastante (o Range Upgrade no deck soma 2 m), sem parede no meio (ciclo 91: a linha do centro do
   token ao centro do Tile não cruza parede que barra o movimento; a porta aberta passa) e com os requisitos, conecta, e
   o mestre ativo confere tudo de novo. O token conectado ganha o status "Conectado à NET" e um anel ciano. A **janela
@@ -854,8 +856,8 @@ As opções de combate, com os padrões da mesa:
 - **Explosivos pegam toda a área** (padrão: sim).
 - **Fogo supressivo sem alvo pega todos à vista** (padrão: sim).
 - **Esconder o total do ataque até a defesa** (padrão: sim).
-- **Quem vê o cartão do resultado:** todos, os envolvidos (o mestre, quem atacou e os donos dos alvos) ou só o mestre (padrão: todos). O texto em cima do token segue o cartão.
-- **Efeitos na mesa:** o texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro; só o texto; ou nada (padrão: texto e animação).
+- **Quem vê o cartão do resultado:** todos, os envolvidos (o mestre, quem atacou e os donos dos alvos) ou só o mestre (padrão: todos). O texto em cima do token e a animação seguem o cartão: o socket só leva o texto a quem vê o cartão (os outros nem recebem), e o Sequencer só mostra a animação a eles (ciclo 215).
+- **Efeitos na mesa:** o texto em cima do token ("Esquivou!", "−12 HP") e, com o Sequencer e o JB2A, a animação do acerto e do erro; só o texto; ou nada (padrão: texto e animação). O texto só aparece para quem vê o token: o mestre sempre; o jogador nunca no token escondido e, com a visão dos tokens na cena, só no que está na visão dele (a camada do texto fica por cima da névoa; ciclo 215). O texto mandado pelo socket só vale vindo de um mestre. Não há som: o do Diwako saiu, porque o módulo só roda até o Foundry 12. Os efeitos novos (o tiro com som, as granadas, a briga) são o plano em `efeitos-plano/PLANO.md` (do C78 ao C97), e os arquivos deles vão na pasta `efeitos/`, com o `CREDITOS.md` e o `LICENCAS.csv` (o G3 confere a licença de cada arquivo: o repositório é público).
 
 As três do módulo cpr-2077 para as armas de 2077 saíram com o Mission Kit: as duas do ataque Smart no ciclo 110 e a da carga Tech que esfria uma rodada no 115.
 
@@ -970,11 +972,13 @@ O procedimento completo está no [MIGRATION_STATUS.md](MIGRATION_STATUS.md). As 
   - o escudo (com a janela do mestre para a defesa de um NPC, que mostra o total e, fechada no X, deixa o sistema escolher, e o explosivo que passa do escudo destruído), o corpo a corpo com esquiva e a armadura pesada;
   - a Consciência de Combate do Solo (com o Ponto Fraco e a Deflexão por rodada e o Desfazer) e o MOVE do mortalmente ferido;
   - a defesa e o ataque de um jogador num segundo navegador: a janela de reação (o texto sem o total, a conta da esquiva, a DV e a barra do tempo), o X e o tempo esgotado valendo a escolha padrão, o dano rolado por ele, o ataque dele sem mestre na mesa e o mestre respondendo por ele quando demora;
-  - o que a mesa vê do ataque: um ataque por vez no mestre, quem vê o cartão do resultado (todos, os envolvidos, só o mestre), o texto em cima do token nos dois navegadores, os efeitos desligados e o total à vista;
+  - o que a mesa vê do ataque: um ataque por vez no mestre, quem vê o cartão do resultado (todos, os envolvidos, só o mestre), o texto em cima do token nos dois navegadores (e, pelo socket, só para quem vê o cartão), a animação do Sequencer só para quem vê o cartão (com um Sequencer de mentira), os efeitos desligados e o total à vista;
+  - o texto em cima do token só na visão do jogador (uma cena com a visão dos tokens e uma parede): o do token atrás da parede não aparece, o do escondido nunca, o mestre vê tudo, o texto falso de um jogador não aparece no mestre, e a pasta `efeitos/` chega ao Foundry;
   - o fogo supressivo, a parede que bloqueia a linha de visão e os turnos (o Suprimido saindo e o Death Save que passa e depois falha);
   - o Facedown: pela janela, com Ctrl + clique, gravemente ferido e no capanga, com a Reputação de covarde;
   - a NET: a Interface (as 12 rolagens, os boosters ativos, as Ações NET, os slots do deck em caixas e o estado de cada programa), os programas (o ataque, o dano sem crítico, a REZ) e o dano aplicado pelo mestre (no cérebro, com o Armor e o Shield, e num programa);
   - o ponto de acesso à NET, nos dois navegadores: a configuração pelo HUD do Tile (as arquiteturas do mundo e do compêndio; o Tile sem imagem fica sem, e o com a de terminal do sistema perde a imagem), o marcador (o oculto, só para o mestre), o jogador a 7 m que não conecta (nem pedindo direto ao mestre) e que conecta com o Range Upgrade (a flag, o status, o anel e a janela com o andar 1 como "?"), a queda ao sair do alcance, o "Desconectar" da janela, o reinício só pelo mestre e o token e o Tile apagados;
+  - o marcador do ponto de acesso só na visão do jogador (o ciclo 214), numa cena própria: com a parede no meio, o jogador não o vê e o clique no lugar dele não pega; o mestre vê, mesmo controlando o token atrás da parede; sem a parede, o jogador vê e o clique abre o ponto; a cena sem a visão dos tokens mostra para todos;
   - "Conectar" e "Desconectar" na aba NET da ficha: a 7 m, o aviso de longe demais; com o Range Upgrade, conecta no ponto mais perto (o nome dele na ficha e a arquitetura ao vivo, que acompanha o netrunner descer) e sai com segurança;
   - andar e as habilidades na NET, no navegador do jogador: o "?" do andar 1 que vira a senha ao chegar, a senha que trava a descida, o Breach que o mestre rola (o empate com a DV não passa), o Eye-Dee com o arquivo, o Pathfinder que para no nó de DV maior, o Control e o comando, o Virus no andar mais fundo com a DV e as Ações NET do mestre, e o mestre que vê o andar escondido e o revela; o visual da janela (o andar com a cor da senha e depois limpo, o cabo em degrau do ramo B, a base do Backdoor no botão, as Ações NET livres, a hora no registro e os ícones do cabeçalho da janela);
   - o deck na janela da NET, em combate: o Sword ativado ataca o Hellhound e tira da REZ dele, desativa e não religa na mesma rodada; sem Ação NET, o Hellbolt não ataca; na rodada seguinte, o Hellbolt acerta o cérebro da netrunner inimiga (a ficha dela); o Sword contra ela é recusado;

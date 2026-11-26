@@ -7,7 +7,7 @@ import { FLAG_ESTADO, FLAG_PONTO, IMAGEM_DO_TERMINAL, PONTO_PADRAO } from './con
 import { arquiteturaDoPonto, conexaoDoToken, estadoDoTile, PAREDE_NO_MEIO, pontoDoTile } from './estado.mjs';
 import { documentoDe, nomeDe, objetosDaCena, TIPOS as TIPOS_DE_LIGACAO } from './ligacoes.mjs';
 import { JanelaDaNet } from './janela.mjs';
-import { alcanceDo, distancia, faltasPara, netrunnerDo, paredeEntre } from './regras-da-net.mjs';
+import { alcanceDo, distancia, faltasPara, netrunnerDo, paredeEntre, pontoNaVisao } from './regras-da-net.mjs';
 import { pedir } from './socket.mjs';
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -61,7 +61,19 @@ export function desenharPontos() {
     nome.position.set(0, raio * 1.15);
     marca.addChild(nome);
     camada.addChild(marca);
-    alvos.push({ tile, x, y, raio: raio * 1.2 });
+    alvos.push({ tile, x, y, raio: raio * 1.2, marca });
+  }
+  atualizarVisaoDosPontos();
+}
+
+// O marcador some fora da visão do jogador (a camada de interface fica por cima da névoa): a cada atualização da visão
+// (o sightRefresh do Foundry, ao andar o token, abrir uma porta ou mudar a luz). Escondido, o clique não pega.
+export function atualizarVisaoDosPontos() {
+  if (!canvas.ready || !alvos.length) return;
+  const testar = (ponto, folga) => canvas.visibility.testVisibility(ponto, { tolerance: folga });
+  for (const alvo of alvos) {
+    if (alvo.marca.destroyed) continue;
+    alvo.marca.visible = pontoNaVisao(alvo.tile, { gm: game.user.isGM, visaoDosTokens: canvas.visibility.tokenVision, testar, folga: alvo.raio / 2 });
   }
 }
 
@@ -71,14 +83,15 @@ export function apagarPontos() {
   alvos = [];
 }
 
-// Os marcadores desenhados neste cliente (os testes conferem).
-export const pontosDesenhados = () => alvos.map(alvo => ({ tile: alvo.tile.id, nome: pontoDoTile(alvo.tile)?.nome ?? '' }));
+// Os marcadores que este cliente mostra (os testes conferem): os desenhados e na visão.
+const alvosVisiveis = () => alvos.filter(alvo => alvo.marca.visible && !alvo.marca.destroyed);
+export const pontosDesenhados = () => alvosVisiveis().map(alvo => ({ tile: alvo.tile.id, nome: pontoDoTile(alvo.tile)?.nome ?? '' }));
 
 function pontoSob(evento) {
   if (!canvas.ready || !alvos.length || evento.target !== canvas.app.view) return null;
   const caixa = canvas.app.view.getBoundingClientRect();
   const p = canvas.stage.worldTransform.applyInverse(new PIXI.Point(evento.clientX - caixa.left, evento.clientY - caixa.top));
-  return alvos.find(alvo => Math.hypot(p.x - alvo.x, p.y - alvo.y) <= alvo.raio) ?? null;
+  return alvosVisiveis().find(alvo => Math.hypot(p.x - alvo.x, p.y - alvo.y) <= alvo.raio) ?? null;
 }
 
 // Antes do Foundry (na fase de captura): o clique no marcador não seleciona nem arrasta nada no mapa.
