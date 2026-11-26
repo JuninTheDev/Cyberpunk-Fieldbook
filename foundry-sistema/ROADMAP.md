@@ -622,6 +622,23 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
 
 No fim de tudo, uma sessão de teste com a mesa.
 
+**Os efeitos na mesa** (pedido do usuário em 2026-11-26: "efeitos mais bonitos para o RPG, por exemplo, quando o
+personagem atirar fazer um efeito de tiro com som, granadas com efeito, brigas e etc."). O plano da equipe de efeitos
+(`fx-visual`, `fx-audio`, `fx-coreografia`, `fx-assets`) está em `foundry-sistema/efeitos-plano/PLANO.md`, com os anexos.
+As decisões da fase 1 foram aceitas pelo usuário em 2026-11-26 ("Aceito todas"): o sistema desenha e toca sozinho, sem
+módulo (o Sequencer e o JB2A só como opção); o tiro soa no clique; o disparo para quem vê o atirador e o desfecho só para
+quem vê o cartão; o sangue estilizado; o tremor só perto e nunca no modo fotossensível; os sons só CC0, CC-BY ou nossos;
+o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam um por vez, como o protocolo manda.
+
+- [~] **C77. Os consertos do que existe:** em andamento (sessão KouArt, 2026-11-26). O `'texto'` do socket só do mestre
+  ativo e só para quem está no "Quem vê o cartão"; o texto em cima do token só na visão do jogador (como o C76); a
+  animação de hoje respeitando quem vê o cartão; o `foundry.utils.srcExists`; o ramo do Diwako fora (não há Diwako no
+  14); a pasta `efeitos/` no `instalar.mjs`, com o `CREDITOS` e o `LICENCAS.csv`.
+- [ ] **C78 a C97:** os itens do plano (a regra pura e o catálogo; o diretor; o palco PIXI do tiro e do impacto; o motor de
+  som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
+  agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
+  mestre; o Sequencer como opção; as folhas de sprite; o polimento; o VFX experimental do 14).
+
 ## P0: dados, integridade das regras e compatibilidade básica
 
 - [x] **Servidor da mesa real fora do alcance do sistema v14.** O `servidor/atualizar-modulo.sh` rodava todo
