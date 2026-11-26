@@ -17237,6 +17237,56 @@ module.exports = async ({ edge, servidores, r }) => {
         editouZero: [info.editouZero, true], nunca: [info.nunca, [18, false, 0, false, 0, false, 0]], borracha: [info.borracha, [18, true, 5, true, 5, false, 0]], semLesao: [info.semLesao, true] });
     });
 
+    await r.passo('a regra pura da coreografia no Foundry (o C78): o resumo de um cartão de verdade e as posições dos tokens viram um evento válido, e o roteiro dele é o clarão, o som, o traçante entre os centros, o impacto, o sangue e o texto de hoje; toda arma dos compêndios do sistema tem perfil, e o catálogo dos efeitos chega inteiro', async () => {
+      // Na cena e com os atores do comFormulasC43 (a lição do ciclo 200): a C78 Atiradora atira no C43 Alvo, a 2 casas.
+      // d10 9 + REF 8 + Pistola 8 = 25 contra a DV 13 (4 m): acertou; 3d6 = 12 menos o SP 3 = 9.
+      const info = await comFormulasC43(`async ({ S, criar, alvo, token, cena, dados, esperar }) => {
+        const coreografia = await import('/systems/' + S + '/scripts/regras-coreografia.mjs');
+        const catalogo = await import('/systems/' + S + '/scripts/catalogo-efeitos.mjs');
+        const { textoNoToken } = await import('/systems/' + S + '/scripts/regras.mjs');
+        const atiradora = await criar({ name: 'C78 Atiradora', type: 'personagem', system: { atributos: { ref: { valor: 8 }, dex: { valor: 8 } }, pericias: { handgun: { nivel: 8 } } },
+          items: [{ name: 'C78 Pistola', type: 'arma', system: { tipo: 'heavyPistol', pericia: 'handgun', dano: '3d6', equipada: true, tabelaDV: 'DV Pistol', municoes: ['heavyPistol'], pente: { value: 8, max: 8 } } },
+            { name: 'C78 Balas', type: 'municao', system: { tipo: 'heavyPistol', efeito: 'basic', quantidade: 20 } }] });
+        const arma = atiradora.items.getName('C78 Pistola'), municao = atiradora.items.getName('C78 Balas');
+        await arma.update({ 'system.carregada': municao.id });
+        await cena.createEmbeddedDocuments('Token', [(await atiradora.getTokenDocument({ x: 300, y: 400, actorLink: true })).toObject()]);
+        // O token pelo ator (o createEmbeddedDocuments não devolve na ordem: a lição do C77).
+        const deQuemAtira = cena.tokens.find(t => t.actorId === atiradora.id);
+        await esperar(() => deQuemAtira?.object && token.object);
+        const hpAntes = alvo.system.hp.value;
+        dados([[9, 10], [4, 6], [4, 6], [4, 6]]);
+        const ataque = await arma.atacar({ alvo: token });
+        const mensagem = game.messages.contents.findLast(m => m.getFlag(S, 'ataque')?.id === ataque?.id);
+        const resumo = mensagem?.getFlag(S, 'ataque');
+        const centro = t => ({ x: t.object.center.x, y: t.object.center.y });
+        const evento = coreografia.eventoDoAtaque(resumo, {
+          cena: cena.id, origem: { token: deQuemAtira.id, ...centro(deQuemAtira), rotacao: deQuemAtira.rotation },
+          alvos: resumo.linhas.map(() => ({ token: token.id, ...centro(token), escondido: token.hidden })),
+          arma: { tipo: arma.system.tipo, catalogo: arma.getFlag(S, 'catalogo') ?? '', classe2077: arma.perfil2077?.classe ?? null, municao: { tipo: municao.system.tipo, efeito: municao.system.efeito } }, balas: 1
+        });
+        const passos = coreografia.roteiro(evento, { casa: cena.grid.size, agora: game.time.worldTime });
+        const tracante = passos.find(p => p.passo === 'tracante');
+        // Toda arma dos compêndios do sistema (o RED, o 2077, o Black Chrome) tem perfil, pelos dados que o Foundry tem.
+        const armas = [];
+        for (const pack of game.packs.filter(p => p.metadata.system === S && p.documentName === 'Item')) {
+          const indice = await pack.getIndex({ fields: ['type', 'system.tipo', 'system.municoes', 'flags.' + S + '.catalogo', 'flags.' + S + '.arma2077'] });
+          for (const item of indice.filter(i => i.type === 'arma')) armas.push(item);
+        }
+        const semPerfil = armas.filter(item => !coreografia.perfilDaArma({ tipo: item.system?.tipo, catalogo: item.flags?.[S]?.catalogo ?? '', classe2077: item.flags?.[S]?.arma2077?.classe ?? null,
+          municao: item.system?.municoes?.length ? { tipo: item.system.municoes[0] } : null })).map(item => item.name);
+        return {
+          resultado: ataque?.linhas[0]?.resultado, perdeu: hpAntes - alvo.system.hp.value, validacao: coreografia.validarEvento(evento), ids: [evento.id === ataque?.id, evento.cena === cena.id, evento.origem?.token === deQuemAtira.id, evento.alvos[0]?.token === token.id],
+          perfil: evento.arma.perfil, dano: evento.alvos[0]?.dano?.perdeu ?? null, json: JSON.stringify(JSON.parse(JSON.stringify(evento))) === JSON.stringify(evento),
+          passos: passos.map(p => p.passo).join(), caminho: tracante ? [tracante.de, tracante.para].map(p => p.x + ',' + p.y).join(' > ') : null,
+          texto: passos.filter(p => p.passo === 'texto').map(p => p.texto).join(), deHoje: textoNoToken(resumo.linhas[0])?.texto ?? null,
+          armas: armas.length, semPerfil: semPerfil.slice(0, 5), catalogo: catalogo.conferirCatalogo().length
+        };
+      }`, true);
+      return conferirFormulasC43({ resultado: [info.resultado, 'acertou'], perdeu: [info.perdeu, 9], validacao: [info.validacao, null], ids: [info.ids, [true, true, true, true]],
+        perfil: [info.perfil, 'pistola'], dano: [info.dano, 9], json: [info.json, true], passos: [info.passos, 'clarao,som,tracante,impacto,sangue,texto'],
+        caminho: [info.caminho, '350,450 > 550,450'], texto: [info.texto, '−9 HP'], deHoje: [info.deHoje, '−9 HP'], armas: [info.armas >= 150, true], semPerfil: [info.semPerfil, []], catalogo: [info.catalogo, 0] });
+    });
+
     await r.passo('C55 (a auditoria de 2026-11-16): o fogo supressivo sem alvo e o explosivo com um contêiner, um Black ICE e um demônio perto do alvo não quebram: o cartão sai, e só o alvo está nele', async () => {
       // Antes, o resolver dava TypeError (o contêiner e os atores da NET não têm perícias) depois de gastar a bala. Na cena
       // do C43 (os atores e a cena são só deste passo). A atiradora a 8 m do C43 Alvo (REF 0: só aguenta). Supressivo: d10 5

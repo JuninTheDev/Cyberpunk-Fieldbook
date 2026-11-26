@@ -634,7 +634,13 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   de um mestre e só para quem vê o cartão; o texto em cima do token só na visão do jogador (como o C76); a animação de
   hoje respeitando quem vê o cartão; o `foundry.utils.srcExists`; o ramo do Diwako fora (não há Diwako no 14); a pasta
   `efeitos/` no `instalar.mjs`, com o `CREDITOS.md` e o `LICENCAS.csv` conferido pelo G3.
-- [~] **C78. A regra pura da coreografia e o catálogo:** em andamento (sessão KouArt, 2026-11-26).
+- [x] **C78. A regra pura da coreografia e o catálogo:** feito no ciclo 217 (sessão KouArt, 2026-11-26). O
+  `regras-coreografia.mjs` (puro): o evento v1 a partir do resumo do cartão e das posições, os perfis de todas as 198
+  armas do catálogo (pela classe, pela arma especial, pelo cyberware de origem, pela classe de 2077 e pela munição, e os
+  do mestre por cima), o roteiro de cada modo (o tiro, o autofogo, o supressivo, o cartucho, o explosivo, as granadas sem
+  dano, o corpo a corpo, o arremesso, e os do agarrão, do corpo, da NET e da recarga para as fases seguintes), os níveis,
+  o teto e a validação. O `catalogo-efeitos.mjs`: cada chave termina no `proprio:`, e o `srcPermitido` só aceita os
+  caminhos de dentro do servidor. Nada aparece na mesa ainda: quem toca é o C79 em diante.
 - [ ] **C79 a C97:** os itens do plano (o diretor; o palco PIXI do tiro e do impacto; o motor de
   som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do

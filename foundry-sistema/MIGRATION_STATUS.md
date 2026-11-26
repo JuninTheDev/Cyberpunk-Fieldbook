@@ -10361,6 +10361,48 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   G2, o texto sem o teste de visão; G3, a animação sem o `forUsers`; G4, o socket que aceita o texto de qualquer um),
   cada uma derrubando só o passo dela (340/341); todas morreram, md5 igual.
 
+### Ciclo 217 (2026-11-26): C78, a regra pura da coreografia e o catálogo dos efeitos (sessão KouArt)
+
+- **Pedido do usuário:** depois do C77, "Continue": o item seguinte do plano dos efeitos
+  (`foundry-sistema/efeitos-plano/PLANO.md`, a fase 1), reservado em 00750a41.
+- **A fonte:** o anexo `efeitos-plano/equipe/fx-coreografia.md` (seções 3.3 a 3.6: o evento v1, o roteiro, os tempos, os
+  níveis, o teto, a segurança; a 6.1: os 17 testes) e o `fx-assets.md` (o catálogo com o `proprio:` no fim). O resultado
+  é o do combate de hoje: o resumo do cartão (`combate/cartao.mjs`), o `R.textoNoToken` e o `R.MUNICAO_SEM_DANO`, sem
+  conta paralela.
+- **Entrega:**
+  - `scripts/regras-coreografia.mjs` (novo, puro): o `eventoDoAtaque` (o resumo do cartão e as posições na hora da
+    decisão viram o evento v1, só com chaves e números; o texto é o de hoje); os `PERFIS` e o `perfilDaArma` (o do item,
+    o do mestre para o item do catálogo, o do cyberware de origem, a arma especial, a granada na arma de arremesso, o do
+    mestre para a classe e o padrão da classe; a Power, a Tech, a Smart, a incendiária, o EMP e a borracha por cima); o
+    `perfisDoMestre` (só os caminhos permitidos); o `roteiro` de cada modo, com os tempos do anexo; o
+    `filtrarPeloNivel`, o `nivelEfetivo` (o menor entre a mesa e o navegador; o `auto`, o `texto` e o `nao` de hoje
+    valem), o `comprimir` (3,5 s no completo, 1,5 s no reduzido, sem perder um texto) e o `validarEvento`;
+  - `scripts/catalogo-efeitos.mjs` (novo, puro): as chaves dos efeitos, cada uma terminando no `proprio:` (o JB2A de hoje
+    antes dele no impacto e no erro), o `candidatosDoEfeito`, o `conferirCatalogo` e o `srcPermitido` (só o sistema, um
+    módulo ou um mundo, com a extensão de mídia; nunca `http`, `//`, `..`, `data:`, `%` nem `?`);
+  - a versão `0.3.217`.
+- **Nada muda na mesa:** ninguém chama a regra ainda. O diretor (quem vê, a fila, as configurações) é o C79; o desenho e o
+  som, o C80 e o C81.
+- **Achado no caminho:** a faixa do supressivo dava a volta inteira com os alvos dos dois lados do 180° (a lição no
+  QUALITY_GATES).
+- **Testes de referência:**
+  - **G3:** o `coreografia.test.mjs` (novo, 18 testes): os 17 do anexo (as 198 armas do catálogo com perfil; o tiro que
+    acertou, na ordem e nos tempos; o errou e o esquivou; a armadura, o escudo e a estase; o autofogo; o supressivo, com a
+    faixa em três direções e os alvos atrás; o cartucho; o explosivo que explodiu, o que errou e a queda marcada; as
+    granadas sem dano; o corpo a corpo pela classe; os níveis; o nível efetivo; o teto; a validação e o `srcPermitido`;
+    os perfis em camadas; o evento a partir do resumo; o lexical) e o do catálogo (o `proprio:` no fim, o conferidor e
+    toda chave que um roteiro ou um perfil usa).
+  - **G4:** um passo novo, na cena e com os atores do `comFormulasC43`: um tiro de verdade no Foundry, e o resumo do cartão
+    com as posições dos tokens vira um evento válido, que sobrevive ao JSON, com o roteiro clarão, som, traçante (entre os
+    centros), impacto, sangue e o texto de hoje ("−9 HP"); toda arma dos compêndios do sistema tem perfil; o catálogo
+    chega inteiro.
+- **Portões:** G1 sem erros (278 arquivos); G2 sem erros; G3 837/837; G4 342/342 (748 s).
+- **Mutações:** 17 no G3 (o impacto na saída do traçante; o roteiro sem o nível; sem o teto; a espingarda sem o perfil; o
+  `srcPermitido` que aceita tudo; a fumaça sem o fim; a validação sem o limite de alvos; o jogador acima do teto do
+  mestre; uma chave sem o `proprio:`; o texto que não é o de hoje; o sangue com a armadura segurando; o flashbang na tela
+  de todos; o explosivo que errou e explode; o caminho no perfil do item; o reduzido com todos os traçantes; o supressivo
+  sem a volta no 180°; o corpo a corpo sem o avanço), cada uma derrubando o teste dela; todas morreram, md5 igual.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

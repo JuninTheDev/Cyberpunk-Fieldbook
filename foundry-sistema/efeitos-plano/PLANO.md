@@ -339,7 +339,7 @@ na versão `0.3.<ciclo>`.
 
 ### Fase 1: o tiro e o impacto com som (a mesa já sente a diferença no fim dela)
 
-- [ ] **C78. A regra pura da coreografia e o catálogo:** **M**; depende do C77; risco baixo (sem Foundry).
+- [x] **C78. A regra pura da coreografia e o catálogo:** feito no ciclo 217; **M**; depende do C77; risco baixo (sem Foundry).
   - o `regras-coreografia.mjs`: o evento v1, os perfis por classe (todos os tipos do catálogo: 198 armas), o roteiro de
     todos os modos (mesmo os que só tocam nas fases seguintes), os níveis, o teto, a validação;
   - o `catalogo-efeitos.mjs` com o `proprio:` obrigatório e o `srcPermitido`.

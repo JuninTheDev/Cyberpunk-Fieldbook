@@ -522,6 +522,9 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O foundry.utils não se muda no teste** (ciclo 215): é um módulo, e trocar uma função dele não pega. Para um
   `srcExists` de mentira, troque o `foundry.utils` inteiro por uma cópia (o `foundry` é um objeto comum) e devolva no
   `finally`, como o Sequencer de mentira do passo do ciclo 29.
+- **O ângulo dá a volta no 180°** (ciclo 217): a faixa do fogo supressivo ia do menor ao maior ângulo dos alvos, e dois
+  alvos atrás do atirador, a 170° e a −170°, viravam uma varredura de 340° em vez de 20°. Meça os ângulos em volta de uma
+  referência (o primeiro alvo, de −180° a +180° dele), e o teste com a direção do token em 90° e em 200° achou o caso.
 - **A janela que fecha ainda está no DOM** (ciclo 211): a do pedido anterior, fechando, recebeu o clique do passo seguinte.
   Ache a janela pelo texto do que se espera dela.
 - **A regra da loja da campanha também tem de chegar à ficha** (ciclo 212): a bancada não avisava o teto porque só a loja
