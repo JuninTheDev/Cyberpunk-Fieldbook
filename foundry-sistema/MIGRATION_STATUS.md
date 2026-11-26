@@ -10424,7 +10424,8 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     com as posições dos tokens vira um evento válido, que sobrevive ao JSON, com o roteiro clarão, som, traçante (entre os
     centros), impacto, sangue e o texto de hoje ("−9 HP"); toda arma dos compêndios do sistema tem perfil; o catálogo
     chega inteiro.
-- **Portões:** G1 sem erros (278 arquivos); G2 sem erros; G3 837/837; G4 342/342 (748 s).
+- **Portões:** G1 sem erros (278 arquivos); G2 sem erros; G3 837/837; G4 342/342 (748 s). Depois do merge com o C75 (o ciclo
+  216, da outra rodada da sessão): G1 sem erros (280 arquivos); G2 sem erros; G3 839/839; G4 343/343 (761 s).
 - **Mutações:** 17 no G3 (o impacto na saída do traçante; o roteiro sem o nível; sem o teto; a espingarda sem o perfil; o
   `srcPermitido` que aceita tudo; a fumaça sem o fim; a validação sem o limite de alvos; o jogador acima do teto do
   mestre; uma chave sem o `proprio:`; o texto que não é o de hoje; o sangue com a armadura segurando; o flashbang na tela
