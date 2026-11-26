@@ -606,6 +606,10 @@ modificações foi aprovada pelo usuário em 2026-11-23 (entra no C68): as 26 da
   modificações e itens equipadas nela... através de uma tela de modificação da arma". A aba Bancada da ficha da arma, com
   os dados da bancada da wiki (o C70): o acessório entra arrastando do inventário; a modificação, só pelo Tech ou pelo
   mestre.
+- [~] **C75. Pôr o upgrade na arma sem depender do arrasto:** em andamento (sessão KouArt, 2026-11-26). Pedido do usuário
+  (2026-11-26): no inventário do personagem "não é possível arrastar" o upgrade até a bancada; "um botão que mostre todos os
+  upgrades que o personagem tem no inventário e podem ser colocados naquela arma". O arrasto da lista de upgrades, o
+  "Escolher do inventário" da bancada, o "Instalar em…" do inventário e o atalho para a bancada na lista de armas.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);
