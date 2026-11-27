@@ -10593,6 +10593,33 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 a G3 limpos; G4 348/348. A primeira rodada do G4 deu 346/348: o passo do C99 pegou o aviso do C73 (que clica no CONSERTAR com a caixa marcada sem o dono ter o bastante), e por isso a caixa agora só vem marcada quando o dinheiro basta; a outra falha, o Neuroport (o Jack In longe demais), passou na rodada seguinte sem mudança.
 - **Mutações:** 10 no G3 (N1 a N10) e 9 no G4 (F1 a F9), todas mortas; os arquivos voltaram pelo md5.
 
+### Ciclo 222 (2026-11-26): C100, a loja da wiki (sessão KouArt)
+
+- **Decisões do usuário (2026-11-26),** sobre as dúvidas do C68 ao C75: "8. B" (a loja de criação sem as Caras), "9. A" (o
+  presente do mestre entregue na hora), "10. Leve o aviso" (o teto também nos "Pedidos da campanha"), "11. Usar sempre
+  relógio do servidor"; "Aplique todas as sugestões".
+- **Entrega (a wiki, pedida pelo usuário):**
+  - `criador.js`: a modificação Cara fica fora da loja de criação ("só no Night Market"; o mestre libera uma a uma, como
+    as outras); o aviso do teto numa conta só (`tetoDoPedido`), na loja do personagem (o pendente e o aprovado: o mestre
+    ainda recusa) e nos "Pedidos da campanha" (a ficha só de quem tem uma modificação de ataque no pedido aberto); o prazo
+    da vitrine pelo relógio do servidor (`shopNow`: a diferença para o "agora" que vem com as regras); o presente enviado
+    diz que já foi aprovado (ou entregue);
+  - `api-personagens.js`: o GET de `/api/loja/regras` manda o `agora`; o presente do mestre nasce aprovado
+    (`decidido`), e na mesa da wiki a entrega é na hora (`deliverInWiki`, a mesma conta do Aprovar);
+  - `loja-vitrine.js`: o dia no fuso da mesa (`America/Sao_Paulo`, pelo `Intl`), para o servidor em UTC e o navegador
+    concordarem;
+  - o G4 do C72: o presente não passa mais pelo Aprovar (e confere que nasceu aprovado);
+  - a versão `0.3.222`.
+- **Testes de referência:**
+  - **Isolados:** o `loja-relogio-presente.test.js` (novo, 5 testes): o dia no fuso da mesa (também num relógio de Tóquio),
+    a vitrine na virada do dia, o `agora` do GET, o presente aprovado (e o pedido do jogador pendente), a mesma entrega
+    da wiki no presente e no Aprovar, a loja da wiki pelo relógio do servidor e a criação sem as Caras.
+  - **Cenário `arsenal`:** um passo: com o relógio do navegador dois dias à frente, a vitrine aberta até hoje continua
+    aberta (no estado e no selo); o presente aprovado; o aviso do teto nos "Pedidos da campanha"; o supressor "só no Night
+    Market" na criação, e o bipe visível.
+- **Portões:** G1 (284 arquivos), G2 e G3 (858/858) passam; os isolados, 233 de 234 (1 pulado: o symlink, sem permissão no Windows); o cenário `arsenal` 9/9; o G4 348/349 (com o C101 na mesma árvore; só o C45, das instáveis conhecidas).
+- **Mutações:** isoladas M1 a M5 morreram; no cenário `arsenal`, W1 a W5 morreram depois do relógio falso trocar o `Date` inteiro (o W1 sobrevivia com o relógio falso só no `Date.now`: o QUALITY_GATES). Duas rodadas das do cenário estouraram o tempo esperando a trava e foram rodadas de novo.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

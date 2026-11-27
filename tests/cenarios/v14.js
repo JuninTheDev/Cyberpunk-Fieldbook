@@ -10218,7 +10218,7 @@ module.exports = async ({ edge, servidores, r }) => {
 
     await r.passo('C72: o presente do mestre pela loja da wiki: o Foundry entrega sem cobrar, com a "Recompensa do mestre" no extrato', async () => {
       const { pedido: criado } = await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'core_ammo:rifle-basic', qtd: 10 }], presente: true });
-      await api(`/api/personagens/${solo.id}/pedidos/${criado.id}/aprovar`, 'POST', {});
+      // O presente nasce aprovado (o C100): o Foundry entrega sem o mestre aprovar de novo.
       const pedido = (await api(`/api/personagens/${solo.id}`)).personagem.pedidos.find(p => p.id === criado.id);
       const info = await edge.evaluate(`(async () => {
         const id = ${JSON.stringify(solo.id)};
@@ -10231,7 +10231,7 @@ module.exports = async ({ edge, servidores, r }) => {
           balas: a.items.filter(i => String(i.getFlag('${S}', 'wikiUid') || '').startsWith('pedido:${criado.id}:')).map(i => i.name) };
       })()`);
       const depois = (await api(`/api/personagens/${solo.id}`)).personagem.pedidos.find(p => p.id === criado.id);
-      const ok = pedido.presente === true && pedido.total === 0 && pedido.valor === 10 && info.resultado.ok === true
+      const ok = criado.status === 'aprovado' && pedido.presente === true && pedido.total === 0 && pedido.valor === 10 && info.resultado.ok === true
         && info.depois.dinheiro === info.antes.dinheiro && info.depois.itens === info.antes.itens + 1 && info.balas.length === 1
         && info.linha.delta === 0 && info.linha.motivo === `Recompensa do mestre: ${pedido.itens[0].nome}` && depois.status === 'entregue';
       return [ok, JSON.stringify({ pedido: { total: pedido.total, presente: pedido.presente, valor: pedido.valor }, info, status: depois.status })];
