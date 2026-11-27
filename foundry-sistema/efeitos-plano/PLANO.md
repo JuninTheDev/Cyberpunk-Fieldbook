@@ -568,7 +568,7 @@ no C92.
 | 9 | **A granada que erra:** o mestre clica onde caiu, ou uma regra de desvio sorteada? | O mestre clica (a wiki hoje diz "o mestre decide onde caiu"). Uma regra de desvio é regra nova: só com a fonte na wiki e o `rpg-mecanicas`. | C84 |
 | 10 | A fumaça, o gás e o fogo ficam no mapa pelo tempo da regra (1 minuto de jogo), como uma Região? E a fumaça escurece a visão do Foundry? | Ficam (a fumaça é tática: o −4). Escurecer a visão: opcional, desligado. | C85 |
 | 11 | As marcas no chão (o queimado, o buraco de bala) somem ou ficam até o mestre limpar? | Somem em 4 s: marca persistente vira lixo no mapa. | C80 |
-| 12 | O clarão do cano ilumina a cena por 0,1 s (e revela quem atira no escuro)? | Sim, menos no reduzido: o clarão denuncia, e a luz só aparece para quem tem visão da área. | C80 |
+| 12 | O clarão do cano ilumina a cena por 0,1 s (e revela quem atira no escuro)? | Sim, menos no reduzido: o clarão denuncia, e a luz só aparece para quem tem visão da área. **Respondida: "Sim"; feito no C102, o ciclo 223.** | C80 |
 | 13 | O som posicional (mais baixo longe e atrás da parede) ou para todos igual? E quem não tem token na cena? | O posicional no tiro, na explosão e no golpe; o de interface no crítico e no flatline. Sem token: tudo a 50%. | C81 e C92 |
 | 14 | **O silenciador:** um acessório (regra nova, o `rpg-mecanicas`) ou um campo "Silenciada" que o mestre marca? O RED não tem silenciador no catálogo. | É escolha de regra: sua. | C92 |
 | 15 | A NET no mapa: o som só para quem está na NET e o mestre, e o glitch para todos que veem o token? | Sim. | C89 |

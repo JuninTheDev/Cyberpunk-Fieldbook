@@ -12951,7 +12951,7 @@ module.exports = async ({ edge, servidores, r }) => {
         })()`);
         const falhas = [await edge.evaluate('game.system.api.efeitos.falhas - window.__falhasC79'), await jogador.evaluate('game.system.api.efeitos.falhas - window.__falhasC79')];
 
-        const COMPLETO = 'clarao,som,tracante,impacto,sangue,texto';
+        const COMPLETO = 'clarao,luz,som,tracante,impacto,sangue,texto';
         const info = {
           a: { feito: [a.resultado, a.efeito], mestre: so(a.mestre, a.id).map(x => [x.nivel, x.passos]), jogador: so(a.jogador, a.id).map(x => [x.nivel, x.passos]), textos: [a.mestre.textos.length, a.jogador.textos.length], iguais: a.mestre.textos.join() === a.jogador.textos.join(), socket: a.jogador.socket },
           b: { mestre: so(b.mestre, b.id).length, jogador: b.jogador.registro.length, textos: b.jogador.textos.length, socket: b.jogador.socket },
@@ -13188,6 +13188,120 @@ module.exports = async ({ edge, servidores, r }) => {
             if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
             await game.scenes.get('${m.cena}')?.delete();
             for (const ator of game.actors.filter(a => ['${ATQ}', '${ALVO}'].includes(a.name))) await ator.delete();
+            return true;
+          })()`);
+          await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);
+        }
+      }
+    });
+
+    await r.passo('a luz do clarão (o C102, a decisão 12): numa cena escura, o tiro de quem está no escuro acende 0,1 s de luz no navegador do jogador, que vê a atiradora só enquanto ela dura, sem o clarão desenhado; no Reduzido, sem luz; o token que o mestre escondeu, sem luz; com uma parede no meio, a luz acende, mas não revela; a luz sempre se apaga, e nada falha', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const VIGIA = 'Teste C102 Vigia';
+      const ATQ = 'Teste C102 Atiradora';
+      let m = null;
+      // Um tiro da Atiradora (no escuro, sem luz própria) no Vigia do jogador, tocado no navegador do jogador. Logo depois
+      // do tocar (a luz entra na hora, com o primeiro passo do palco), e em cada quadro e a cada 5 ms até o palco
+      // esvaziar: a Atiradora está à vista do jogador? E a luz está acesa?
+      const disparar = () => jogador.evaluate(`(async () => {
+        const api = game.system.api.efeitos;
+        const atiradora = canvas.tokens.get('${m.tAtq}');
+        // A cena assentada: o token novo (e a parede nova) aparece até a visão se refazer, no quadro seguinte.
+        await window.__esperar(() => !api.ocupado && !api.palco.vivos && !api.palco.luzAcesa && !atiradora.isVisible && !atiradora.visible, 150);
+        const antes = atiradora.isVisible || atiradora.visible, luzesAntes = api.palco.luzes, falhasAntes = [api.falhas, api.palco.falhas];
+        let viu = 0, naTela = 0, comLuz = 0, olhadas = 0;
+        // isVisible: o teste de visão, na hora; visible: o que o jogador vê de fato (o token redesenhado no quadro).
+        const olhar = () => { olhadas++; if (api.palco.luzAcesa) comLuz++; if (atiradora.isVisible) viu++; if (atiradora.visible) naTela++; };
+        api.gravar(true);
+        canvas.app.ticker.add(olhar);
+        const intervalo = setInterval(olhar, 5);
+        const tocou = api.tocar({ v: 1, id: foundry.utils.randomID(), tipo: 'ataque', fase: 'desfecho', cena: '${m.cena}', origem: { token: '${m.tAtq}', x: 1150, y: 550, tamanho: 1, rotacao: 180 },
+          arma: { perfil: 'pistola' }, modo: 'tiro', alvos: [{ token: '${m.tVigia}', x: 550, y: 550, resultado: 'errou' }], texto: [] });
+        const logo = atiradora.isVisible, acesaLogo = api.palco.luzAcesa;
+        await window.__esperar(() => !api.ocupado && !api.palco.vivos, 150);
+        await new Promise(r => setTimeout(r, 300));
+        canvas.app.ticker.remove(olhar);
+        clearInterval(intervalo);
+        const registro = api.registro.splice(0).map(e => e.passos.map(p => p.passo).join());
+        api.gravar(false);
+        return { tocou, antes, logo, acesaLogo, viu, naTela, comLuz, olhadas, luzes: api.palco.luzes - luzesAntes, depois: atiradora.isVisible || atiradora.visible, acesa: api.palco.luzAcesa,
+          naColecao: canvas.effects.lightSources.has('${S}.clarao'), registro: registro.join(' | '), falhas: [api.falhas - falhasAntes[0], api.palco.falhas - falhasAntes[1]].join() };
+      })()`);
+      const configurar = valor => jogador.evaluate(`game.settings.set('${S}', 'efeitosIntensidade', ${JSON.stringify(valor)}).then(() => true)`);
+      try {
+        // 1. O mestre: a cena escura (sem a luz global), com a visão dos tokens e sem a margem (o padding: o Foundry não usa
+        // a visão de um token na margem para ver dentro da cena); o Vigia do jogador (a visão sem alcance: no escuro, só vê o
+        // que está aceso) e a Atiradora, de ninguém, a 6 casas, sem luz.
+        m = await edge.evaluate(`(async () => {
+          window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id };
+          const cena = await Scene.implementation.create({ name: 'C102 Escuro', active: false, width: 2400, height: 1200, padding: 0, tokenVision: true, grid: { size: 100, distance: 2, units: 'm' },
+            environment: { darknessLevel: 1, globalLight: { enabled: false } } });
+          await cena.activate();
+          await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const usuario = game.users.getName('Jogador');
+          const vigia = await Actor.implementation.create({ name: '${VIGIA}', type: 'personagem', ownership: { default: 0, [usuario.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          const atiradora = await Actor.implementation.create({ name: '${ATQ}', type: 'personagem', ownership: { default: 0 } });
+          const dados = (await vigia.getTokenDocument({ x: 500, y: 500 })).toObject();
+          dados.sight = { ...dados.sight, enabled: true, range: 0 };
+          const dela = (await atiradora.getTokenDocument({ x: 1100, y: 500 })).toObject();
+          dela.light = { ...dela.light, dim: 0, bright: 0 };
+          await cena.createEmbeddedDocuments('Token', [dados, dela]);
+          const tVigia = cena.tokens.find(t => t.actorId === vigia.id), tAtq = cena.tokens.find(t => t.actorId === atiradora.id);
+          await window.__esperar(() => canvas.tokens.get(tVigia.id) && canvas.tokens.get(tAtq.id));
+          return { antes, cena: cena.id, tVigia: tVigia.id, tAtq: tAtq.id };
+        })()`);
+        // O jogador: na cena, controlando o Vigia (a fonte de visão), no Completo.
+        const pronto = await jogador.evaluate(`(async () => {
+          window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          await window.__esperar(() => canvas.ready && canvas.scene?.id === '${m.cena}' && canvas.tokens.get('${m.tVigia}') && canvas.tokens.get('${m.tAtq}'));
+          canvas.tokens.get('${m.tVigia}').control({ releaseOthers: true });
+          await window.__esperar(() => canvas.visibility.tokenVision && canvas.effects.visionSources.some(s => s.active));
+          return canvas.visibility.tokenVision && canvas.effects.visionSources.some(s => s.active);
+        })()`);
+        await configurar('completo');
+
+        // 2. No escuro: a luz acende na hora, a Atiradora aparece enquanto ela dura e some depois; o clarão desenhado não
+        // entra (o jogador não via de onde veio o tiro).
+        const escuro = await disparar();
+        // 3. O jogador no Reduzido: sem luz, e a Atiradora continua no escuro.
+        await configurar('reduzido');
+        const reduzido = await disparar();
+        await configurar('completo');
+        // 4. A Atiradora escondida pelo mestre: nenhuma luz a denuncia.
+        await edge.evaluate(`game.scenes.get('${m.cena}').tokens.get('${m.tAtq}').update({ hidden: true }).then(() => true)`);
+        await jogador.evaluate(`window.__esperar(() => canvas.scene.tokens.get('${m.tAtq}')?.hidden)`);
+        const oculto = await disparar();
+        await edge.evaluate(`game.scenes.get('${m.cena}').tokens.get('${m.tAtq}').update({ hidden: false }).then(() => true)`);
+        await jogador.evaluate(`window.__esperar(() => canvas.scene.tokens.get('${m.tAtq}')?.hidden === false)`);
+        // 5. Uma parede entre os dois: a luz acende, mas o jogador não tem a linha de visão até ela.
+        await edge.evaluate(`game.scenes.get('${m.cena}').createEmbeddedDocuments('Wall', [{ c: [800, 200, 800, 900], move: 20, sight: 20, light: 20, sound: 20 }]).then(() => true)`);
+        // A parede no navegador do jogador e na visão dele (o polígono da visão se refaz com ela no quadro seguinte).
+        await jogador.evaluate(`window.__esperar(() => canvas.walls.placeables.length >= 1 && canvas.effects.visionSources.some(s => s.active && !s.los.contains(1150, 550)))`);
+        const parede = await disparar();
+
+        const info = { pronto, escuro, reduzido, oculto, parede };
+        const conferir = {
+          pronto,
+          escuro: escuro.tocou && !escuro.antes && escuro.logo && escuro.acesaLogo && escuro.viu >= 1 && escuro.naTela >= 1 && escuro.comLuz >= 1 && escuro.luzes === 1 && !escuro.depois
+            && escuro.registro.split(',').includes('luz') && !escuro.registro.split(',').includes('clarao'),
+          reduzido: !reduzido.antes && !reduzido.logo && !reduzido.acesaLogo && reduzido.viu === 0 && reduzido.naTela === 0 && reduzido.comLuz === 0 && reduzido.luzes === 0 && !reduzido.registro.split(',').includes('luz'),
+          oculto: !oculto.antes && !oculto.logo && !oculto.acesaLogo && oculto.viu === 0 && oculto.naTela === 0 && oculto.luzes === 0 && !oculto.registro.split(',').includes('luz'),
+          parede: parede.tocou && !parede.antes && !parede.logo && parede.acesaLogo && parede.viu === 0 && parede.naTela === 0 && parede.luzes === 1 && !parede.depois,
+          apagou: [escuro, reduzido, oculto, parede].every(x => !x.acesa && !x.naColecao),
+          falhas: [escuro, reduzido, oculto, parede].every(x => x.falhas === '0,0')
+        };
+        const caidas = Object.keys(conferir).filter(chave => !conferir[chave]);
+        return [!caidas.length, JSON.stringify({ caidas, ...Object.fromEntries(caidas.map(chave => [chave, info[chave] ?? info]))})];
+      } finally {
+        await jogador.evaluate(`game.settings.set('${S}', 'efeitosIntensidade', 'auto').then(() => true)`).catch(() => null);
+        if (m) {
+          await edge.evaluate(`(async () => {
+            const esperar = window.__esperar, antes = ${JSON.stringify(m.antes)};
+            if (game.scenes.has(antes.ativa)) { await game.scenes.get(antes.ativa).activate(); await esperar(() => !canvas.loading); }
+            if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
+            await game.scenes.get('${m.cena}')?.delete();
+            for (const ator of game.actors.filter(a => ['${VIGIA}', '${ATQ}'].includes(a.name))) await ator.delete();
             return true;
           })()`);
           await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);
@@ -17693,7 +17807,7 @@ module.exports = async ({ edge, servidores, r }) => {
         };
       }`, true);
       return conferirFormulasC43({ resultado: [info.resultado, 'acertou'], perdeu: [info.perdeu, 9], validacao: [info.validacao, null], ids: [info.ids, [true, true, true, true]],
-        perfil: [info.perfil, 'pistola'], dano: [info.dano, 9], json: [info.json, true], passos: [info.passos, 'clarao,som,tracante,impacto,sangue,texto'],
+        perfil: [info.perfil, 'pistola'], dano: [info.dano, 9], json: [info.json, true], passos: [info.passos, 'clarao,luz,som,tracante,impacto,sangue,texto'],
         caminho: [info.caminho, '350,450 > 550,450'], texto: [info.texto, '−9 HP'], deHoje: [info.deHoje, '−9 HP'], armas: [info.armas >= 150, true], semPerfil: [info.semPerfil, []], catalogo: [info.catalogo, 0] });
     });
 

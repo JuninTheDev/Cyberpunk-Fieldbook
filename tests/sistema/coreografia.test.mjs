@@ -7,7 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CATALOGO, PROPRIO, candidatosDoEfeito, conferirCatalogo } from '../../foundry-sistema/scripts/catalogo-efeitos.mjs';
 import {
-  DESFECHOS, ESPERA_MAXIMA, INTENSIDADES, MAPA_DO_ANTIGO, MARCA_DURA, NIVEIS, PASSOS, PERFIL_DO_TIPO, PERFIS, TETO, TRACOS, chavesDoRoteiro, chavesDosPerfis,
+  DESFECHOS, ESPERA_MAXIMA, INTENSIDADES, LUZ, MAPA_DO_ANTIGO, MARCA_DURA, NIVEIS, PASSOS, PERFIL_DO_TIPO, PERFIS, TETO, TRACOS, chavesDoRoteiro, chavesDosPerfis,
   comprimir, desfechoDoAlvo, direcaoDoToken, entrarNaFila, eventoDoAtaque, filtrarPeloNivel, fimDoTocar, montarPassos, nivelAutomatico, nivelDoNavegador,
   nivelEfetivo, pararNaParede, passosVisiveis, perfilDaArma, perfisDoMestre, roteiro, soTexto, srcPermitido, validarEvento
 } from '../../foundry-sistema/scripts/regras-coreografia.mjs';
@@ -73,7 +73,7 @@ test('C78, 1: toda arma do catálogo tem perfil; a granada na arma de arremesso,
 
 test('C78, 2: o tiro que acertou: o clarão, o som, o traçante, o impacto e o sangue na chegada, e o texto depois', () => {
   const r = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(12) })], texto: [textoDe(ALVO, '−12 HP')] }), { casa: CASA });
-  assert.deepEqual(nomes(r), ['clarao', 'som', 'tracante', 'impacto', 'sangue', 'texto']);
+  assert.deepEqual(nomes(r), ['clarao', 'luz', 'som', 'tracante', 'impacto', 'sangue', 'texto']);
   const [tracante] = de(r, 'tracante'), [impacto] = de(r, 'impacto'), [texto] = de(r, 'texto');
   assert.equal(tracante.t, 40);
   assert.equal(tracante.duracao, 200, 'o voo: 4 ms por metro (50 m)');
@@ -110,7 +110,7 @@ test('C78, 3: o errou e o esquivou: nenhum impacto no alvo, o traçante passa de
   }
   // O "fora do alcance" e o "sem DV": nenhum traçante, só o disparo e o texto.
   const fora = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { resultado: 'fora' })], texto: [textoDe(ALVO, 'Fora do alcance', 'erro')] }), { casa: CASA });
-  assert.deepEqual(nomes(fora), ['clarao', 'som', 'texto']);
+  assert.deepEqual(nomes(fora), ['clarao', 'luz', 'som', 'texto']);
 });
 
 test('C78, 4: a armadura, o escudo e a estase seguraram: a faísca no lugar do sangue', () => {
@@ -515,10 +515,11 @@ test('C79: o que este navegador vê do roteiro: nada no token escondido; com que
   const r = roteiro(evento({ alvos: [alvoEm(ALVO, 2650, 150, { dano: dano(12) })], texto: [textoDe(ALVO, '−12 HP')] }), { casa: CASA });
   assert.deepEqual(nomes(passosVisiveis(r, { origem: ATIRADOR.token })), nomes(r), 'vendo tudo, tudo fica');
   const semAtirador = passosVisiveis(r, { visivel: id => id !== ATIRADOR.token, origem: ATIRADOR.token });
-  assert.deepEqual(nomes(semAtirador), ['impacto', 'sangue', 'texto'], 'o impacto e o texto no alvo, sem o clarão, o som no cano e o traçante');
+  // A luz do clarão fica (o C102): é ela que revela quem atirou no escuro, e o Foundry decide quem a vê.
+  assert.deepEqual(nomes(semAtirador), ['luz', 'impacto', 'sangue', 'texto'], 'o impacto e o texto no alvo e a luz, sem o clarão, o som no cano e o traçante');
   assert.ok(semAtirador.every(p => p.token !== ATIRADOR.token && !p.de));
   const semAlvo = passosVisiveis(r, { visivel: id => id !== ALVO, origem: ATIRADOR.token });
-  assert.deepEqual(nomes(semAlvo), ['clarao', 'som', 'tracante'], 'o alvo fora da vista: só o que sai de quem atirou');
+  assert.deepEqual(nomes(semAlvo), ['clarao', 'luz', 'som', 'tracante'], 'o alvo fora da vista: só o que sai de quem atirou');
   // O dano à parte pelo cartão (sem origem) e o teste de visão uma vez por token.
   let vezes = 0;
   passosVisiveis(r, { visivel: () => { vezes++; return true; }, origem: null });
@@ -693,4 +694,55 @@ test('C80: lexical: o palco desenha no primary, destrói tudo no fim e na troca 
   const cartao = leia('scripts/combate/cartao.mjs');
   assert.match(cartao, /botao\.textContent = 'Rever o efeito';/);
   assert.match(cartao, /if \(!cartao \|\| !mensagem\.getFlag\(SISTEMA, 'efeito'\) \|\| !mensagem\.author\?\.isGM \|\| !mensagem\.isContentVisible\) return;/, 'o botão só para quem vê o conteúdo');
+});
+
+test('C102: a luz do clarão (a decisão 12): 0,1 s de luz no centro de quem atira, em todo disparo com clarão; fica sem ver o atirador, sai no token oculto, no reduzido e no fotossensível', () => {
+  const alvos = [alvoEm(ALVO, 2650, 150, { dano: dano(12) })];
+  const r = roteiro(evento({ alvos }), { casa: CASA });
+  const luzes = de(r, 'luz');
+  assert.equal(luzes.length, 1, 'uma luz por disparo');
+  const [luz] = luzes;
+  assert.deepEqual({ t: luz.t, duracao: luz.duracao, para: luz.para, fonte: luz.fonte, raio: luz.raio, token: luz.token, de: luz.de },
+    { t: 0, duracao: 100, para: { x: 150, y: 150 }, fonte: ATIRADOR.token, raio: 2, token: null, de: null }, 'no centro do atirador, sem o token no passo');
+  assert.deepEqual(LUZ, { duracao: 100, raio: 2, raioGrande: 3 });
+  assert.ok(PASSOS.includes('luz'));
+  // O clarão grande (o fuzil de precisão, a espingarda) acende 3 m; quem não tem clarão (a lâmina, o arco), nada.
+  for (const [perfil, raio] of [['pistola-leve', 2], ['fuzil', 2], ['fuzil-de-precisao', 3], ['espingarda', 3]]) {
+    const modo = perfil === 'espingarda' ? 'cartucho' : 'tiro';
+    assert.deepEqual(de(roteiro(evento({ arma: arma(perfil), modo, alvos }), { casa: CASA }), 'luz').map(p => p.raio), [raio], perfil);
+  }
+  for (const perfil of ['lamina', 'arco', 'soco']) assert.equal(de(roteiro(evento({ arma: arma(perfil), modo: perfil === 'arco' ? 'tiro' : 'corpo', alvos }), { casa: CASA }), 'luz').length, 0, perfil);
+  // A rajada e o supressivo: uma luz só, no começo.
+  assert.deepEqual(de(roteiro(evento({ modo: 'autofogo', balas: 10, alvos: [alvoEm(ALVO, 2650, 150, { multiplicador: 3, dano: dano(12) })] }), { casa: CASA }), 'luz').map(p => p.t), [0]);
+  // Sem origem (o dano à parte pelo cartão): nenhuma luz.
+  assert.equal(de(roteiro(evento({ origem: null, alvos }), { casa: CASA }), 'luz').length, 0);
+  // O nível: o reduzido e o fotossensível tiram a luz; o completo sem o fotossensível fica com ela.
+  assert.equal(de(roteiro(evento({ alvos }), { casa: CASA, nivel: 'reduzido' }), 'luz').length, 0, 'o reduzido');
+  assert.equal(de(roteiro(evento({ alvos }), { casa: CASA, fotossensivel: true }), 'luz').length, 0, 'o fotossensível');
+  assert.equal(de(filtrarPeloNivel(r, { nivel: 'completo', sangue: false, tremor: false }), 'luz').length, 1, 'o sangue e o tremor desligados não tiram a luz');
+  // A visão: sem ver quem atirou, a luz fica (é ela que o revela); o token oculto pelo mestre, não.
+  const semAtirador = passosVisiveis(r, { visivel: id => id !== ATIRADOR.token, origem: ATIRADOR.token });
+  assert.equal(de(semAtirador, 'luz').length, 1);
+  assert.equal(de(semAtirador, 'clarao').length, 0, 'o clarão desenhado no cano continua saindo');
+  assert.equal(de(passosVisiveis(r, { visivel: id => id !== ATIRADOR.token, origem: ATIRADOR.token, oculto: id => id === ATIRADOR.token }), 'luz').length, 0, 'o oculto');
+  assert.equal(de(passosVisiveis(r, { origem: ATIRADOR.token, oculto: id => id === ALVO }), 'luz').length, 1, 'o alvo oculto não apaga a luz de quem atira');
+  // A parede não mexe na luz.
+  assert.deepEqual(de(pararNaParede(r, () => ({ x: 650, y: 150 }), { alcance: 1000 }), 'luz'), luzes);
+});
+
+test('C102: lexical: o palco acende uma luz do Foundry fora de documento, uma por vez, e a apaga no fim, no fim do roteiro e na troca de cena; o diretor passa o oculto', () => {
+  const palco = leia('scripts/tocador-pixi.mjs');
+  assert.match(palco, /const Classe = CONFIG\.Canvas\?\.lightSourceClass;/);
+  assert.match(palco, /new Classe\(\{ sourceId: ID_DA_LUZ, object: null \}\)/, 'fora de qualquer documento');
+  assert.match(palco, /vision: false, walls: true/, 'a luz não dá visão: só acende; e a parede a segura');
+  assert.match(palco, /  apagarLuz\(\);\r?\n  const dono = /, 'a nova apaga a de antes');
+  assert.match(palco, /try \{ luz\.remove\(\); luz\.destroy\(\); \} finally \{ perceber\(\); \}/);
+  assert.match(palco, /canvas\.perception\?\.renderFlags\.set\(\{ refreshLighting: true, refreshVision: true \}\)/, 'a luz e a visão se refazem no próximo quadro');
+  assert.match(palco, /  luz\.add\(\);\r?\n  estado\.luz = luz;\r?\n  estado\.luzes\+\+;\r?\n  perceber\(\);/, 'acender também refaz a visão');
+  assert.match(palco, /destruir\(\) \{ if \(estado\.luz === luz\) apagarLuz\(\); \}/);
+  assert.match(palco, /for \(const roteiro of \[\.\.\.estado\.vivos\]\) roteiro\.encerrar\(\);\r?\n  try \{ apagarLuz\(\); \}/, 'a troca de cena apaga a luz');
+  assert.doesNotMatch(palco, /createEmbeddedDocuments|AmbientLight/, 'nunca cria uma luz na cena (um documento)');
+  const diretor = leia('scripts/coreografia.mjs');
+  assert.match(diretor, /const ocultoAqui = id => !game\.user\.isGM && Boolean\(canvas\.tokens\?\.get\(id\)\?\.document\.hidden\);/);
+  assert.match(diretor, /oculto: ocultoAqui \}\);/);
 });

@@ -666,13 +666,20 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   com a largura e a cauda de cada classe (o rastro no fuzil de precisão), a faísca, o sangue estilizado, a poeira, o
   glitch e o eco da esquiva no token, o retículo com "CRÍTICO", "SP −N" e "FLATLINE", e a marca da bala, que some em 4
   s; o tiro que erra para na primeira parede. No `canvas.primary`, sob a névoa; um conjunto de contêineres por roteiro,
-  destruído no fim e na troca de cena. O "Rever o efeito" no cartão. Sem a luz de verdade do clarão (a decisão 12 fica
-  para o usuário).
-- [~] **C102. A luz do clarão (a decisão 12):** em andamento (sessão KouArt, 2026-11-26). O usuário respondeu "Sim":
-  o clarão do cano acende uma luz de verdade por 0,1 s, que revela quem atira no escuro para quem tem visão da área;
-  menos no Reduzido.
-- [ ] **C81 a C97:** os itens do plano (o motor de
-  som; o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
+  destruído no fim e na troca de cena. O "Rever o efeito" no cartão. Sem a luz de verdade do clarão (a decisão 12, que o
+  usuário respondeu depois: o C102).
+- [x] **C102. A luz do clarão (a decisão 12):** feito no ciclo 223 (sessão KouArt, 2026-11-26). O usuário respondeu
+  "Sim": o clarão do cano acende uma luz de verdade por 0,1 s (2 m; 3 m no clarão grande), em cada navegador, que revela
+  quem atira no escuro para quem tem a linha de visão até ele. Uma luz por vez, nunca um documento (nada se grava na
+  cena); sem a luz no Reduzido, no modo fotossensível e no token que o mestre escondeu.
+- [~] **C81. O motor de som:** em andamento (sessão KouArt, 2026-11-27). O usuário disse "Comece". O motor (o
+  `sons.mjs` e o `regras-sons.mjs`, o barramento, o volume de cada aparelho, as vozes, o pitch, o posicional pela
+  distância, o áudio travado descartado, a pré-carga) neste item; o banco de sons fica no C103, porque pede os downloads
+  e a curadoria de ouvido do usuário.
+- [ ] **C103. O banco de sons da fase 1:** os cerca de 120 arquivos do PLANO (o tiro de cada classe, a cauda, os impactos,
+  o erro, o pente vazio, a recarga), só CC0, CC-BY e nossos, em Ogg Opus mono, com o `build/sons.mjs` (o ffmpeg no PC) e
+  o `LICENCAS.csv`; depende do C81 e da audição com o usuário.
+- [ ] **C82 a C97:** os itens do plano (o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
   mestre; o Sequencer como opção; as folhas de sprite; o polimento; o VFX experimental do 14).
 

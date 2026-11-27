@@ -10620,6 +10620,34 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 (284 arquivos), G2 e G3 (858/858) passam; os isolados, 233 de 234 (1 pulado: o symlink, sem permissão no Windows); o cenário `arsenal` 9/9; o G4 348/349 (com o C101 na mesma árvore; só o C45, das instáveis conhecidas).
 - **Mutações:** isoladas M1 a M5 morreram; no cenário `arsenal`, W1 a W5 morreram depois do relógio falso trocar o `Date` inteiro (o W1 sobrevivia com o relógio falso só no `Date.now`: o QUALITY_GATES). Duas rodadas das do cenário estouraram o tempo esperando a trava e foram rodadas de novo.
 
+### Ciclo 223 (2026-11-26): C102, a luz do clarão, a decisão 12 do plano dos efeitos (sessão KouArt)
+
+- **Pedido do usuário:** "Sim", à pergunta "O clarão do tiro deve iluminar a cena e revelar quem atira no escuro?" (a
+  decisão 12 do `efeitos-plano/PLANO.md`, que o C80 deixou aberta); reservado em f0cbd05d.
+- **A fonte:** o PLANO (a decisão 12 e a peça P14) e o anexo `equipe/fx-visual.md`; o Foundry 14 (a
+  `CONFIG.Canvas.lightSourceClass`, o `PointLightSource` sem objeto, o `canvas.effects.lightSources`, o
+  `canvas.perception` com o `refreshLighting` e o `refreshVision`, a Percepção de luz do `DetectionModeLightPerception`).
+- **Entrega:**
+  - `regras-coreografia.mjs`: o passo `luz` no disparo com clarão (no ponto e no token de quem atira; 2 m, 3 m no clarão
+    grande; 100 ms: o `LUZ`); sai no Reduzido e no fotossensível; o `passosVisiveis` o mantém sem ver quem atirou (é a
+    luz que o revela) e o tira com o `oculto` (o token que o mestre escondeu);
+  - `tocador-pixi.mjs`: a peça `luz`: uma fonte de luz só deste navegador (sem documento, sem gravar nada), com a cor
+    quente (o ciano na arma Tech), que bate nas paredes e não dá visão; uma por vez; apagada no fim da peça, no `limpar`
+    e na troca de cena; a luz e a visão se refazem no quadro seguinte; o `palco.luzes` e o `palco.luzAcesa` para o G4;
+  - `coreografia.mjs`: o `oculto` do diretor (o token escondido, para o jogador);
+  - a versão `0.3.223`.
+- **Fora deste item:** a luz da explosão e a do golpe (ficam com os itens delas, o C84 e o C86).
+- **Testes de referência:**
+  - **G3:** dois testes novos no `coreografia.test.mjs`: a luz do clarão (os campos, o raio de cada perfil, nenhuma luz
+    sem clarão, uma só no autofogo, sem origem, o Reduzido e o fotossensível, quem atira fora da visão e escondido, a
+    parede) e o lexical do palco e do diretor. As listas exatas do C78 e do C79 ganharam o passo `luz` (continuam
+    exatas).
+  - **G4:** um passo novo, numa cena escura sem a luz global: o tiro de quem está no escuro acende a luz no navegador do
+    jogador, que vê quem atirou (no teste de visão e na tela) só enquanto ela dura, sem o clarão desenhado; no Reduzido,
+    sem luz; o token escondido pelo mestre, sem luz; uma parede no meio, a luz acende e não revela; a luz sempre se
+    apaga, e nada falha. Os passos do C78 e do C79 ganharam o `luz` na lista do Completo.
+- **Portões:** G1 sem erros; G2 sem erros; G3 855/855; G4 348/348 duas vezes seguidas (808 s e 803 s). Antes, o passo novo caiu três vezes pelo teste, não pela luz: a cena com a margem padrão (o Vigia na margem, sem a visão valer dentro da cena), o token novo à vista até a visão se refazer e a parede nova que ainda não cortava a visão; o passo agora cria a cena com o `padding: 0` e espera a cena assentar, sem tirar nem afrouxar nenhuma checagem. Numa das rodadas caíram também as instáveis conhecidas (os estados do C26, as chaves do Fluxo e os tokens dinâmicos).
+- **Mutações:** oito no G3 (o disparo sem a luz, o clarão grande com a luz de 2 m, a luz presa ao token, o Reduzido com a luz, o fotossensível com a luz, a luz de quem o mestre escondeu, a luz nova que não apaga a de antes, o diretor sem o oculto) e cinco no G4 (a luz que não se apaga, a luz sem raio, o palco sem refazer a percepção, o diretor sem o oculto, o Reduzido com a luz): todas caíram, e os arquivos voltaram iguais (md5). As do G4 rodaram antes dos dois últimos acertos de tempo do passo; a sem refazer a percepção rodou de novo depois do primeiro, e caiu. Sem mutação: a luz que não bate nas paredes (o `walls`), porque a parede já corta a visão de quem olha.
 ### Ciclo 224 (2026-11-26): C101, a modificação da oficina não chega antes da hora (sessão KouArt)
 
 - **Decisão do usuário (2026-11-26),** sobre a dúvida 13 do C68 ao C75: "Faça o teste", com a sugestão aceita ("Se

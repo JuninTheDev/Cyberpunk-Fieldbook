@@ -47,6 +47,9 @@ function visivelAqui(id) {
   return textoNaVisao({ gm: game.user.isGM, escondido: objeto.document.hidden, visaoDosTokens: visao.tokenVision, proprio: Boolean(objeto.vision?.active), testar });
 }
 
+// O token que o mestre escondeu (o hidden), para o jogador: nem a luz do clarão o revela (o C102).
+const ocultoAqui = id => !game.user.isGM && Boolean(canvas.tokens?.get(id)?.document.hidden);
+
 function falhou(erro) {
   estado.falhas++;
   if (erro instanceof TypeError || erro instanceof ReferenceError) console.error(`${SISTEMA} | efeito`, erro);
@@ -112,7 +115,7 @@ export function tocar(evento, { rever = false } = {}) {
     const { fotossensivel } = aparelho();
     const casa = canvas.grid?.size ?? 100;
     const roteiro = C.pararNaParede(C.roteiro(evento, { nivel, fotossensivel, casa, agora: game.time.worldTime }), primeiraParede, { alcance: ALCANCE_DO_ERRO * casa });
-    const passos = C.passosVisiveis(roteiro, { visivel: visivelAqui, origem: evento.origem?.token ?? null });
+    const passos = C.passosVisiveis(roteiro, { visivel: visivelAqui, origem: evento.origem?.token ?? null, oculto: ocultoAqui });
     if (!passos.length) return false;
     const { fila, sairam } = C.entrarNaFila(estado.fila, { evento, passos, nivel, calmo: nivel !== 'completo' || fotossensivel });
     estado.fila = fila;
