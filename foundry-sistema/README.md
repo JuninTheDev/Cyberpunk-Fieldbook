@@ -675,7 +675,10 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     sempre, só negativo; o dano a mais contra coisas; o pente; se a arma se esconde; até que número ela emperra). O
     `validarMod` recusa o que a regra da casa não deixa e diz o motivo. A modificação vira um item do mundo na pasta
     "Arsenal do mestre" (sem permissão para os jogadores), no formato das do catálogo; a ficha dela tem o "Editar na
-    oficina". A API: `game.system.api.oficina` (`abrir`, `criar` e as contas do `regras-oficina.mjs`).
+    oficina". A janela pergunta onde ela nasce: no mundo ou na ficha de um personagem dos jogadores. O item do mundo chega
+    ao navegador de todos (o Foundry manda os itens do mundo a cada um, sem olhar a permissão), e a janela avisa; por isso
+    a lendária, o segredo do mestre até a entrega, nasce na ficha de quem a recebe: a oficina recusa a lendária no mundo
+    (também a do mundo que muda para lendária). O C101. A API: `game.system.api.oficina` (`abrir`, `criar` e as contas do `regras-oficina.mjs`).
   - **O defeito escondido** (o C71): na ficha da arma de um personagem, o mestre vê "Esconder um defeito (1d6)": o sorteio da
     tabela da página da regra (de novo quando o defeito não serve na arma) fica no servidor da wiki
     (`campanhas/<id>/defeitos.json`, só o mestre lê; fora do `mesa.json`, que o NetWire manda para a IA), com a chave do

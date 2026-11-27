@@ -559,6 +559,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O relógio falso troca o `Date` inteiro** (ciclo 222): o passo que adianta o relógio do navegador só com o
   `Date.now` deixou viva a mutação que lia o `new Date()` (o W1 do C100). O relógio falso troca a classe (o `new Date()`
   sem argumento e o `Date.now`), e o `finally` põe a de verdade de volta.
+- **A permissão do Foundry não guarda segredo** (ciclo 224): o item do mundo com a permissão padrão NONE chega
+  inteiro ao navegador do jogador (o `game.items`, o `fromUuid`, a descrição): a permissão só esconde da barra lateral.
+  O segredo do mestre fica fora do Foundry do jogador (o servidor da wiki, como o defeito escondido do C71) ou nasce só
+  na entrega; e o passo do G4 confere no navegador do jogador, não pela `testUserPermission`.
 
 ## Build
 

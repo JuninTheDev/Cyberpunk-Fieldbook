@@ -10620,6 +10620,30 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 (284 arquivos), G2 e G3 (858/858) passam; os isolados, 233 de 234 (1 pulado: o symlink, sem permissão no Windows); o cenário `arsenal` 9/9; o G4 348/349 (com o C101 na mesma árvore; só o C45, das instáveis conhecidas).
 - **Mutações:** isoladas M1 a M5 morreram; no cenário `arsenal`, W1 a W5 morreram depois do relógio falso trocar o `Date` inteiro (o W1 sobrevivia com o relógio falso só no `Date.now`: o QUALITY_GATES). Duas rodadas das do cenário estouraram o tempo esperando a trava e foram rodadas de novo.
 
+### Ciclo 224 (2026-11-26): C101, a modificação da oficina não chega antes da hora (sessão KouArt)
+
+- **Decisão do usuário (2026-11-26),** sobre a dúvida 13 do C68 ao C75: "Faça o teste", com a sugestão aceita ("Se
+  vazar, a lendária secreta passa a ser criada direto na ficha"; "Aplique todas as sugestões").
+- **O que o teste achou:** vazava. A modificação criada na oficina, no mundo (a pasta "Arsenal do mestre", a permissão
+  padrão NONE), chegava inteira ao navegador do jogador: o item no `game.items`, pelo uuid, e a nota do mestre na
+  descrição. O Foundry manda os itens do mundo a cada cliente; a permissão só os esconde da barra lateral.
+- **Entrega:**
+  - `regras-oficina.mjs`: o `ondeNasce` (a lendária só na ficha) e o `AVISO_DO_MUNDO`;
+  - `oficina.mjs`: o `criar` recusa a lendária no mundo (também a do mundo que muda para lendária); a janela nova
+    pergunta onde ela nasce (no mundo ou na ficha de um personagem dos jogadores), avisa que o item do mundo chega a todos
+    e recusa a lendária no mundo com o motivo;
+  - o passo do C71 do G4 cria a dele rara (no mundo) e confere o "Onde nasce" e o aviso;
+  - a versão `0.3.224`.
+- **Testes de referência:**
+  - **G3:** no `oficina.test.mjs`, o `ondeNasce` em cada raridade e o código da recusa e da janela.
+  - **G4:** o passo do C101, antes do C75: a rara do mundo chega ao navegador do jogador (com a nota: o fato que pede a
+    regra); a lendária no mundo e a rara que muda para lendária são recusadas; a janela cria a lendária na ficha do
+    personagem escolhido (sem o "Onde nasce" na flag), e o jogador a recebe ali, com a nota, e nada dela no mundo.
+- **Portões:** G1, G2 e G3 passam; o G4 348/349 (só o C45, das instáveis conhecidas). A primeira rodada do passo novo estourou os 300 s: a janela da oficina do C99 ainda fechava na tela, e o passo preencheu a dela; agora ele acha a dele pelo conteúdo (a opção do C101 Vex) e, se a janela não devolver nada em 20 s, falha com o que viu (os avisos, as janelas abertas, as opções).
+- **Mutações:** G3, N1 a N4 morreram; G4, F1 a F5 morreram (o F1 e o F4 estouraram o tempo na primeira rodada, esperando a trava de um teste de outra sessão, e morreram na segunda).
+- **Aberto (para o usuário):** a rara e a do catálogo continuam no mundo, e chegam ao navegador de todos (a janela avisa).
+  Para guardar todas até a entrega, elas teriam de ficar fora do mundo (um compêndio só do mestre, ou o servidor da wiki).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
