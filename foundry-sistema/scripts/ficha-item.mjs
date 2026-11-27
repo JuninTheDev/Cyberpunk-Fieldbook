@@ -9,7 +9,7 @@ import { contadores, descreverEvento, diario, LIMITES as LIMITES_DA_IDENTIDADE }
 import { anotarMarco, temIdentidade, tornarDono } from './identidade.mjs';
 import { defeitoEscondido, esconder, revelar, tirar } from './defeito-escondido.mjs';
 import { abrir as abrirOficina } from './oficina.mjs';
-import { abrirConserto, abrirReforjar } from './quebra.mjs';
+import { abrirConserto, abrirQuebrar, abrirReforjar } from './quebra.mjs';
 import { consertoDaArma, ESTADOS as ESTADOS_DA_QUEBRA } from './regras-quebra.mjs';
 import { abrirInstalacao, instalacaoDe, pedirInstalacao, textoDaRegra, tirar as tirarModificacao } from './instalacao-mod.mjs';
 import { RARIDADES } from './regras-oficina.mjs';
@@ -107,7 +107,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       instalarAcessorio: FichaItem.#instalarAcessorio, removerAcessorio: FichaItem.#removerAcessorio,
       instalarModificacao: FichaItem.#instalarModificacao, abrirItemBancada: FichaItem.#abrirItemBancada,
       pedirInstalacao: FichaItem.#pedirInstalacao, tirarModificacao: FichaItem.#tirarModificacao,
-      consertarArma: FichaItem.#consertarArma, reforjarArma: FichaItem.#reforjarArma, escolherDoInventario: FichaItem.#escolherDoInventario
+      consertarArma: FichaItem.#consertarArma, reforjarArma: FichaItem.#reforjarArma, quebrarArma: FichaItem.#quebrarArma, escolherDoInventario: FichaItem.#escolherDoInventario
     }
   };
 
@@ -231,6 +231,8 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
       // O risco da arma (o C73): o estado, o conserto e o reforjar (os botões, só o mestre); a falha crítica também na
       // arma que tem uma modificação instável.
       quebraDaArma: tipo === 'arma' ? quebraDaFicha(item) : null,
+      // O "Quebrar" do mestre (o C99): o EMP, a história.
+      podeQuebrar: tipo === 'arma' && game.user.isGM && Boolean(item.actor) && !item.estadoDaQuebra,
       falhaVisivel: tipo === 'arma' && (fonte.qualidade === 'poor' || (item.actor ? derivadosDaArma(item.modificacoes.map(i => i.modificacao)).instavel : false)),
       // A identidade da arma (o C69): o nome próprio no alto e a aba História.
       apelidoDaArma: tipo === 'arma' ? item.identidade.apelido : '',
@@ -396,6 +398,7 @@ export class FichaItem extends HandlebarsApplicationMixin(ItemSheetV2) {
   }
   static #consertarArma() { return abrirConserto(this.item).catch(erro => ui.notifications.error(erro.message)); }
   static #reforjarArma() { return abrirReforjar(this.item).catch(erro => ui.notifications.error(erro.message)); }
+  static #quebrarArma() { return abrirQuebrar(this.item).catch(erro => ui.notifications.error(erro.message)); }
   static #tirarModificacao() { return tirarModificacao(this.item).catch(erro => ui.notifications.error(erro.message)); }
   // "Rolar Humanidade" no cyberware de um ator (ItemCPR.rolarHumanidade).
   static #rolarHumanidade() {

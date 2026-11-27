@@ -19,8 +19,13 @@
 
   const ehModCara = item => Boolean(item) && item.cat === CATEGORIA_DAS_MODS && Number(item.preco) >= PRECO_DO_CARO;
   const doDia = valor => (/^\d{4}-\d{2}-\d{2}$/.test(String(valor || '')) ? String(valor) : '');
-  // Hoje, no relógio de quem confere (AAAA-MM-DD): a vitrine vale até o fim do dia "ate".
-  const hoje = (agora = new Date()) => `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+  // Hoje (AAAA-MM-DD) no fuso da mesa: a vitrine vale até o fim do dia "ate". O relógio é o do servidor (o C100, decisão
+  // do usuário de 2026-11-26): ele confere o pedido, e a loja da wiki conta pelo "agora" que o GET das regras manda. O fuso
+  // fixo faz o servidor (em UTC) e o navegador concordarem no dia.
+  const FUSO_DA_MESA = 'America/Sao_Paulo';
+  const DIA_NO_FUSO = (() => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: FUSO_DA_MESA, year: 'numeric', month: '2-digit', day: '2-digit' }); } catch { return null; } })();
+  const hoje = (agora = new Date()) => (DIA_NO_FUSO ? DIA_NO_FUSO.format(agora)
+    : `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`);
   const inteiro = (valor, minimo, maximo, padrao) => {
     const numero = Math.trunc(Number(valor));
     return valor === '' || valor === null || valor === undefined || !Number.isFinite(numero) ? padrao : Math.max(minimo, Math.min(maximo, numero));
@@ -75,5 +80,5 @@
     return passam.length ? `Teto da campanha (+${teto.arma}): em ${passam.join(', ')}, ela passaria do teto.` : '';
   }
 
-  return { PRECO_DO_CARO, MAXIMO_NA_VITRINE, TETO_DA_ARMA, LENDARIAS_POR_ARMA, ehModCara, hoje, vitrineAberta, limparVitrine, foraDaVitrine, sortear, tetoDaCampanha, avisosDoTeto, avisoNoPedido };
+  return { PRECO_DO_CARO, MAXIMO_NA_VITRINE, TETO_DA_ARMA, LENDARIAS_POR_ARMA, FUSO_DA_MESA, ehModCara, hoje, vitrineAberta, limparVitrine, foraDaVitrine, sortear, tetoDaCampanha, avisosDoTeto, avisoNoPedido };
 });

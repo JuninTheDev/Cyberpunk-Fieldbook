@@ -10565,8 +10565,60 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   - **G4:** dois passos: o cabo balanceado na faca arremessada (o ataque 20 em vez de 19, e fora do arremesso nada); e o
     arrasto da armadura, do cyberdeck e do programa, o encaixe de cada caso pela API da bancada e as recusas de verdade, com
     o aviso de cada uma.
-- **Portões:** G1 a G3 limpos (o G3 com o `montagem-da-wiki.test.mjs` novo); G4 346/346, de novo depois do merge do ciclo 219; os cenários `arsenal` (8/8) e `conta` (20/20) da wiki.
+- **Portões:** G1 a G3 limpos (o G3 com o `montagem-da-wiki.test.mjs` novo); G4 346/346, e 347/347 de novo depois do merge do ciclo 219; os cenários `arsenal` (8/8) e `conta` (20/20) da wiki.
 - **Mutações:** 12 no G3 (N1 a N12: as marcações do arrasto, cada recusa do encaixe, a Heavy SMG, a exótica pela descrição, o Compensador, o arremesso no avaliar e no combate, a bancada e a loja da wiki sem o autofogo) e 8 no G4 (F1 a F8: o `_preUpdate` e a bancada sem o encaixe, o combate e os situacionais sem o arremesso, a armadura e o cyberdeck sem o arrasto, a exótica sem a descrição, a arma sem o autofogo): todas morreram, os arquivos de volta pelo md5.
+
+### Ciclo 221 (2026-11-26): C99, a quebra à mão, o conserto pago e a DV da oficina (sessão KouArt)
+
+- **Decisões do usuário (2026-11-26),** sobre as dúvidas do C68 ao C75: "5. B" (um botão "Quebrar" do mestre na ficha da
+  arma), "6. B" (o custo do conserto sai do dinheiro do dono quando o mestre aprova), "7. B" (um campo "DV" na oficina, com
+  21 de padrão); "Aplique todas as sugestões".
+- **Entrega:**
+  - `regras-quebra.quebraAMao` (o estado da regra e o motivo, até 120 letras) e `cobrancaDoConserto` (cobra só com o
+    bastante; o saldo não fica negativo);
+  - `quebra.quebrar` e `abrirQuebrar` (a janela: o estado e o motivo; o cartão e o diário); o `consertar` com o
+    `cobrar` (o `mudarComExtrato` do dinheiro, ou o aviso ao mestre); a caixa "Cobrar" na janela do conserto, que vai na
+    ação do pedido de teste até o resultado;
+  - a ficha da arma: o QUEBRAR do mestre (a arma inteira, num ator);
+  - `regras-oficina.DV_DA_INSTALACAO` e `dvDaOficina` (a escala da wiki, `regras-pedido-teste.DIFICULDADES`); a janela
+    da oficina com a "DV da instalação"; `regras-modificacoes.instalacaoDaMod` com a DV da oficina no lugar da do preço, e
+    o `instalacaoDe` lê a DV guardada no formulário (a flag `oficina`);
+  - a versão `0.3.221`.
+- **Testes de referência:**
+  - **G3:** o `quebra-e-conserto.test.mjs` (novo, 4 testes): a quebra à mão, a cobrança (o bastante, o pouco, o sem custo),
+    o QUEBRAR e o "Cobrar" no caminho do teste, a DV da oficina na escala e na instalação.
+  - **G4:** um passo: o QUEBRAR da ficha e a janela (o EMP; o cartão e o diário; o botão some); o CONSERTAR com o "Cobrar"
+    marcado (50eb dos 60, a linha no extrato, o cartão); de novo com 10eb (sem cobrar, o aviso); a oficina com a DV 21 de
+    padrão e a 13 escolhida, que a instalação usa.
+- **Portões:** G1 a G3 limpos; G4 348/348. A primeira rodada do G4 deu 346/348: o passo do C99 pegou o aviso do C73 (que clica no CONSERTAR com a caixa marcada sem o dono ter o bastante), e por isso a caixa agora só vem marcada quando o dinheiro basta; a outra falha, o Neuroport (o Jack In longe demais), passou na rodada seguinte sem mudança.
+- **Mutações:** 10 no G3 (N1 a N10) e 9 no G4 (F1 a F9), todas mortas; os arquivos voltaram pelo md5.
+
+### Ciclo 222 (2026-11-26): C100, a loja da wiki (sessão KouArt)
+
+- **Decisões do usuário (2026-11-26),** sobre as dúvidas do C68 ao C75: "8. B" (a loja de criação sem as Caras), "9. A" (o
+  presente do mestre entregue na hora), "10. Leve o aviso" (o teto também nos "Pedidos da campanha"), "11. Usar sempre
+  relógio do servidor"; "Aplique todas as sugestões".
+- **Entrega (a wiki, pedida pelo usuário):**
+  - `criador.js`: a modificação Cara fica fora da loja de criação ("só no Night Market"; o mestre libera uma a uma, como
+    as outras); o aviso do teto numa conta só (`tetoDoPedido`), na loja do personagem (o pendente e o aprovado: o mestre
+    ainda recusa) e nos "Pedidos da campanha" (a ficha só de quem tem uma modificação de ataque no pedido aberto); o prazo
+    da vitrine pelo relógio do servidor (`shopNow`: a diferença para o "agora" que vem com as regras); o presente enviado
+    diz que já foi aprovado (ou entregue);
+  - `api-personagens.js`: o GET de `/api/loja/regras` manda o `agora`; o presente do mestre nasce aprovado
+    (`decidido`), e na mesa da wiki a entrega é na hora (`deliverInWiki`, a mesma conta do Aprovar);
+  - `loja-vitrine.js`: o dia no fuso da mesa (`America/Sao_Paulo`, pelo `Intl`), para o servidor em UTC e o navegador
+    concordarem;
+  - o G4 do C72: o presente não passa mais pelo Aprovar (e confere que nasceu aprovado);
+  - a versão `0.3.222`.
+- **Testes de referência:**
+  - **Isolados:** o `loja-relogio-presente.test.js` (novo, 5 testes): o dia no fuso da mesa (também num relógio de Tóquio),
+    a vitrine na virada do dia, o `agora` do GET, o presente aprovado (e o pedido do jogador pendente), a mesma entrega
+    da wiki no presente e no Aprovar, a loja da wiki pelo relógio do servidor e a criação sem as Caras.
+  - **Cenário `arsenal`:** um passo: com o relógio do navegador dois dias à frente, a vitrine aberta até hoje continua
+    aberta (no estado e no selo); o presente aprovado; o aviso do teto nos "Pedidos da campanha"; o supressor "só no Night
+    Market" na criação, e o bipe visível.
+- **Portões:** G1 (284 arquivos), G2 e G3 (858/858) passam; os isolados, 233 de 234 (1 pulado: o symlink, sem permissão no Windows); o cenário `arsenal` 9/9; o G4 348/349 (com o C101 na mesma árvore; só o C45, das instáveis conhecidas).
+- **Mutações:** isoladas M1 a M5 morreram; no cenário `arsenal`, W1 a W5 morreram depois do relógio falso trocar o `Date` inteiro (o W1 sobrevivia com o relógio falso só no `Date.now`: o QUALITY_GATES). Duas rodadas das do cenário estouraram o tempo esperando a trava e foram rodadas de novo.
 
 ### Ciclo 223 (2026-11-26): C102, a luz do clarão, a decisão 12 do plano dos efeitos (sessão KouArt)
 

@@ -196,4 +196,38 @@ module.exports = async ({ edge, servidores, r }) => {
       await api('/api/loja/regras', 'PUT', antes);
     }
   });
+
+  await r.passo('C100: a loja de criação esconde as Caras (só no Night Market); o presente do mestre nasce aprovado; o aviso do teto nos "Pedidos da campanha"; a vitrine conta pelo relógio do servidor', async () => {
+    const antes = (await api('/api/loja/regras')).regras;
+    const hoje = (await api('/api/loja/regras')).agora;
+    try {
+      // O teto +1, e a vitrine aberta só até hoje (no fuso da mesa), com o supressor.
+      const dia = await edge.evaluate(`window.shopShowcase.hoje(new Date(${js(hoje)}))`);
+      await api('/api/loja/regras', 'PUT', { ...antes, tetoDaArma: 1, lendariasPorArma: 1, nightMarket: { itens: ['mods-armas:supressor'], ate: dia } });
+      const { pedido } = await api(`/api/personagens/${personagem.id}/pedidos`, 'POST', { itens: [{ id: 'mods-armas:mira-holografica', qtd: 1 }], presente: true });
+      // O relógio deste navegador dois dias à frente (o Date inteiro: o Date.now e o new Date() sem argumento): a loja conta
+      // pelo do servidor, e a vitrine continua aberta.
+      await edge.evaluate(`(() => { const Real = window.__DataDeVerdade = window.__DataDeVerdade || Date; const desvio = 2 * 86400000; window.Date = class extends Real { constructor(...a) { super(...(a.length ? a : [Real.now() + desvio])); } static now() { return Real.now() + desvio; } }; return new Date().getTime() - Real.now() > 86400000; })()`);
+      await edge.evaluate(`wikiApp.openPage('loja')`);
+      await espere(`!!document.querySelector('[data-gm-teto]') && !!document.querySelector('[data-gm-catalog] [data-shop-cat="modificacoes"]')`, 50);
+      await clicar('[data-gm-catalog] [data-shop-cat="modificacoes"]', 500);
+      await espere(`!!document.querySelector('[data-shop-row="mods-armas:supressor"]')`);
+      const tetoNaLista = await texto('[data-gm-teto]');
+      const naCriacao = { supressor: await texto('[data-shop-row="mods-armas:supressor"] .shop-status'), bipe: await texto('[data-shop-row="mods-armas:bipe"] .shop-status') };
+      const estado = await texto('[data-nm-estado]');
+      await edge.evaluate(`wikiApp.openPage('loja', { section: ${js(personagem.id)} })`);
+      await espere(`!!document.querySelector('[data-shop-cat="modificacoes"]')`);
+      await clicar('[data-shop-cat="modificacoes"]', 500);
+      const selo = await texto('[data-shop-row="mods-armas:supressor"] .cc-shop-info');
+      const dd = `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+      const ok = pedido?.status === 'aprovado' && pedido.presente === true && Boolean(pedido.decidido) && pedido.total === 0
+        && tetoNaLista === 'Teto da campanha (+1): em Velha Senhora, ela passaria do teto.'
+        && naCriacao.supressor === 'Escondido // só no Night Market' && naCriacao.bipe === 'Visível'
+        && estado === `Aberto até ${dd}: 1 modificação Cara à venda.` && selo.includes(`Night Market até ${dd}`);
+      return [ok, JSON.stringify({ hoje, dia, pedido, tetoNaLista, naCriacao, estado, selo })];
+    } finally {
+      await edge.evaluate(`(() => { if (window.__DataDeVerdade) window.Date = window.__DataDeVerdade; return true; })()`);
+      await api('/api/loja/regras', 'PUT', antes);
+    }
+  });
 };

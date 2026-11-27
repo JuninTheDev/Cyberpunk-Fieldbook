@@ -10,6 +10,7 @@ import { registrarEventos, temIdentidade } from './identidade.mjs';
 import { aoResultado, encerrarPedido, pedir } from './pedido-teste.mjs';
 import { eventoDeMarco } from './regras-identidade.mjs';
 import { instalacaoDaMod, modCabe } from './regras-modificacoes.mjs';
+import { dvDaOficina } from './regras-oficina.mjs';
 import { passou } from './regras-pedido-teste.mjs';
 
 const { DialogV2 } = foundry.applications.api;
@@ -17,7 +18,9 @@ const esc = valor => foundry.utils.escapeHTML(String(valor ?? ''));
 const TIPO = 'instalacaoDeMod';
 
 // A instalação da modificação (o item): { dv, categoria, tempo, teste }, ou null (não é modificação, ou é um defeito).
-export const instalacaoDe = item => (item?.modificacao ? instalacaoDaMod(item.modificacao, item.system.preco) : null);
+// A da oficina do mestre (o C99) tem a DV que ele escolheu (a flag "oficina", o formulário guardado).
+const dvDaOficinaDe = item => { const oficina = item.getFlag(SISTEMA, 'oficina'); return oficina ? dvDaOficina(oficina.dv) : null; };
+export const instalacaoDe = item => (item?.modificacao ? instalacaoDaMod(item.modificacao, item.system.preco, dvDaOficinaDe(item)) : null);
 const cabeEm = (arma, mod) => modCabe(arma.paraModificacoes, arma.modificacoes.filter(item => item.id !== mod.id).map(item => item.modificacao), mod.modificacao);
 // As armas do dono da modificação em que ela cabe.
 export const armasOndeCabe = mod => mod.actor?.items.filter(arma => arma.type === 'arma' && cabeEm(arma, mod).cabe) ?? [];

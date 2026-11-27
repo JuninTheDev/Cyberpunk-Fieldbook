@@ -384,6 +384,17 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // senão, a própria wiki, ao aprovar.
   const inPlay = doc => importedSomewhere(doc) || Boolean(doc.jogo);
   const deliversInWiki = doc => !importedSomewhere(doc) && Boolean(doc.jogo);
+  // A entrega na mesa da wiki, ao aprovar (o mestre, ou o presente dele, que já nasce aprovado): sem dinheiro, fica
+  // aprovado com o motivo (como quando o Foundry não consegue), e o mestre tenta de novo depois.
+  function deliverInWiki(doc, pedido, now) {
+    if (!deliversInWiki(doc)) return;
+    const feito = characterGame.entrega(doc, pedido, now);
+    if (feito.erro) pedido.erro = feito.erro;
+    else {
+      doc.jogo = characterGame.comJogo(doc, feito.mudancas, now);
+      Object.assign(pedido, { status: 'entregue', entregue: now, avisos: feito.avisos, erro: '' });
+    }
+  }
   // A ficha inteira como sai: o vínculo que a wiki mostra (foundry), os dois à parte (foundry12 e foundry14) e o estado.
   const withLinks = doc => ({ ...doc,
     // Expõe o contrato novo também para arquivos antigos, sem regravar a ficha ou mudar seu hash de importação.
@@ -570,7 +581,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     if (pathname === '/api/loja/regras') {
       const id = identity.papel === 'visitante' ? null : chosenCampaign(identity, query.get('campanha'));
       if (id === undefined) return json(response, 404, { erro: 'Campanha não encontrada.' });
-      if (method === 'GET') return json(response, 200, { regras: readShopRules(id), etiquetas: SHOP_TAGS, campanha: idFor(identity, id) });
+      // O agora do servidor (o C100): a loja da wiki conta o prazo da vitrine por ele, como o servidor confere o pedido.
+      if (method === 'GET') return json(response, 200, { regras: readShopRules(id), etiquetas: SHOP_TAGS, campanha: idFor(identity, id), agora: new Date().toISOString() });
       if (method === 'PUT') {
         if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre muda as regras da loja.' });
         const rules = cleanShopRules(await readJson(request));
@@ -937,15 +949,18 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           }
           const total = itens.reduce((sum, line) => sum + line.preco * (line.lote > 1 ? line.qtd / line.lote : line.qtd), 0);
           // O presente do mestre (o C72): o pedido que o mestre faz como recompensa entra sem cobrar (o valor fica anotado).
+          // Ele já nasce aprovado (o C100, decisão do usuário de 2026-11-26): o Foundry entrega, ou a mesa da wiki, agora.
           const presente = identity.papel === 'mestre' && input.presente === true;
+          const criado = new Date().toISOString();
           const pedido = {
-            id: pedidoId, criado: new Date().toISOString(), status: 'pendente', itens, total: presente ? 0 : Math.round(total), ...(presente ? { presente: true, valor: Math.round(total) } : {}),
+            id: pedidoId, criado, status: presente ? 'aprovado' : 'pendente', ...(presente ? { decidido: criado, erro: '' } : {}), itens, total: presente ? 0 : Math.round(total), ...(presente ? { presente: true, valor: Math.round(total) } : {}),
             nota: String(input.nota || '').trim().slice(0, 300), por: identity.papel
           };
           const done = await update(doc => {
             const late = orderBlock(doc);
             if (late) return late;
             doc.pedidos = [...ordersOf(doc), pedido].slice(-50);
+            if (presente) deliverInWiki(doc, pedido, criado);
             return null;
           });
           return answer(done, () => reply(201, { pedido }));
@@ -970,16 +985,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
             // Aprovar de novo um aprovado que deu erro (faltou dinheiro na mesa) limpa o erro: o Foundry tenta outra vez.
             if (!(pedido.status === 'pendente' || (pedido.status === 'aprovado' && pedido.erro))) return { status: 400, data: { erro: 'Este pedido não está esperando.' } };
             Object.assign(pedido, { status: 'aprovado', decidido: now, erro: '' });
-            // Na mesa da wiki, a entrega é agora: sem dinheiro, fica aprovado com o motivo (como quando o Foundry não
-            // consegue), e o mestre tenta de novo depois.
-            if (deliversInWiki(doc)) {
-              const feito = characterGame.entrega(doc, pedido, now);
-              if (feito.erro) pedido.erro = feito.erro;
-              else {
-                doc.jogo = characterGame.comJogo(doc, feito.mudancas, now);
-                Object.assign(pedido, { status: 'entregue', entregue: now, avisos: feito.avisos, erro: '' });
-              }
-            }
+            // Na mesa da wiki, a entrega é agora.
+            deliverInWiki(doc, pedido, now);
           } else if (action === 'recusar') {
             if (!['pendente', 'aprovado'].includes(pedido.status)) return { status: 400, data: { erro: 'Este pedido já foi resolvido.' } };
             Object.assign(pedido, { status: 'recusado', decidido: now, motivo: String(input.motivo || '').trim().slice(0, 300) });

@@ -10218,7 +10218,7 @@ module.exports = async ({ edge, servidores, r }) => {
 
     await r.passo('C72: o presente do mestre pela loja da wiki: o Foundry entrega sem cobrar, com a "Recompensa do mestre" no extrato', async () => {
       const { pedido: criado } = await api(`/api/personagens/${solo.id}/pedidos`, 'POST', { itens: [{ id: 'core_ammo:rifle-basic', qtd: 10 }], presente: true });
-      await api(`/api/personagens/${solo.id}/pedidos/${criado.id}/aprovar`, 'POST', {});
+      // O presente nasce aprovado (o C100): o Foundry entrega sem o mestre aprovar de novo.
       const pedido = (await api(`/api/personagens/${solo.id}`)).personagem.pedidos.find(p => p.id === criado.id);
       const info = await edge.evaluate(`(async () => {
         const id = ${JSON.stringify(solo.id)};
@@ -10231,7 +10231,7 @@ module.exports = async ({ edge, servidores, r }) => {
           balas: a.items.filter(i => String(i.getFlag('${S}', 'wikiUid') || '').startsWith('pedido:${criado.id}:')).map(i => i.name) };
       })()`);
       const depois = (await api(`/api/personagens/${solo.id}`)).personagem.pedidos.find(p => p.id === criado.id);
-      const ok = pedido.presente === true && pedido.total === 0 && pedido.valor === 10 && info.resultado.ok === true
+      const ok = criado.status === 'aprovado' && pedido.presente === true && pedido.total === 0 && pedido.valor === 10 && info.resultado.ok === true
         && info.depois.dinheiro === info.antes.dinheiro && info.depois.itens === info.antes.itens + 1 && info.balas.length === 1
         && info.linha.delta === 0 && info.linha.motivo === `Recompensa do mestre: ${pedido.itens[0].nome}` && depois.status === 'entregue';
       return [ok, JSON.stringify({ pedido: { total: pedido.total, presente: pedido.presente, valor: pedido.valor }, info, status: depois.status })];
@@ -22690,6 +22690,85 @@ module.exports = async ({ edge, servidores, r }) => {
       } finally {
         await edge.evaluate(`(async () => { for (const ator of game.actors.filter(a => /^C73 /.test(a.name))) await ator.delete(); return true; })()`);
       }
+    });
+
+    await r.passo('C99: o mestre quebra a arma pela ficha (o QUEBRAR, o estado e o motivo; o diário anota); o conserto cobra do dono (o "Cobrar" da janela, a linha no extrato); sem o bastante, conserta sem cobrar e avisa; a oficina escolhe a DV da instalação (21 de padrão), e a instalação usa a escolhida', async () => {
+      const c99 = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const textoDe = el => el?.textContent.replace(/\\s+/g, ' ').trim() ?? '';
+        const api = game.system.api;
+        const cat = await api.wiki.carregarCatalogo();
+        const ator = await Actor.implementation.create({ name: 'C99 Vex', type: 'personagem', system: { dinheiro: 60 } });
+        let feita = null;
+        try {
+          const [arma] = await ator.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_weapons:very-heavy-pistol'])]);
+          // O QUEBRAR da ficha e a janela: o EMP.
+          await arma.sheet.render({ force: true });
+          await esperar(() => arma.sheet.element?.querySelector('[data-action="quebrarArma"]'));
+          const botaoAntes = Boolean(arma.sheet.element.querySelector('[data-action="quebrarArma"]'));
+          arma.sheet.element.querySelector('[data-action="quebrarArma"]').click();
+          const janelaQ = () => document.querySelector('.application.quebrar-a-arma');
+          await esperar(janelaQ);
+          const opcoes = [...janelaQ().querySelectorAll('select[name="estado"] option')].map(o => o.value);
+          janelaQ().querySelector('select[name="estado"]').value = 'quebrada';
+          janelaQ().querySelector('input[name="motivo"]').value = '  O EMP   do Netrunner ';
+          janelaQ().querySelector('button[data-action="quebrar"]').click();
+          await esperar(() => arma.estadoDaQuebra === 'quebrada');
+          await esperar(() => arma.sheet.element?.querySelector('[data-action="consertarArma"]'));
+          const quebrada = { estado: arma.estadoDaQuebra, motivo: arma.getFlag('${S}', 'quebra')?.motivo ?? null,
+            marco: arma.identidade.eventos.some(e => e.tipo === 'marco' && e.texto === 'Quebrada: O EMP do Netrunner'),
+            cartao: game.messages.contents.some(m => /Very Heavy Pistol<\\/b>: quebrada \\(O EMP do Netrunner\\)/.test(m.content)),
+            semQuebrar: !arma.sheet.element.querySelector('[data-action="quebrarArma"]') };
+          // O CONSERTAR e a janela, com o "Cobrar" marcado: 50eb dos 60.
+          arma.sheet.element.querySelector('[data-action="consertarArma"]').click();
+          const janelaC = () => document.querySelector('.application.conserto-da-arma');
+          await esperar(janelaC);
+          const textoDaJanela = textoDe(janelaC());
+          const marcado = janelaC().querySelector('input[name="cobrar"]')?.checked ?? null;
+          janelaC().querySelector('button[data-action="direto"]').click();
+          await esperar(() => !arma.estadoDaQuebra && ator.system.dinheiro === 10);
+          const linha = ator.system.extratos.dinheiro.at(-1);
+          const pago = { estado: arma.estadoDaQuebra, dinheiro: ator.system.dinheiro, linha: linha ? [linha.delta, linha.saldo, linha.motivo] : null,
+            cartao: game.messages.contents.some(m => /Very Heavy Pistol<\\/b> foi consertada \\(50eb de C99 Vex\\)/.test(m.content)) };
+          await arma.sheet.close({ animate: false });
+          // De novo, com 10eb: conserta sem cobrar, e o mestre recebe o aviso (guardado aqui).
+          const quebrouDeNovo = await api.quebra.quebrar(arma, {});
+          const deNovo = await api.quebra.quebrar(arma, {});
+          const avisar = ui.notifications.warn;
+          const avisos = [];
+          ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+          let semCobrar;
+          try { semCobrar = await api.quebra.consertar(arma, { cobrar: true }); } finally { ui.notifications.warn = avisar; }
+          const semDinheiro = { quebrouDeNovo, deNovo, semCobrar, avisos, estado: arma.estadoDaQuebra, dinheiro: ator.system.dinheiro, linhas: ator.system.extratos.dinheiro.length };
+          // A oficina: a DV vem 21 de padrão; o mestre escolhe 13, e a instalação usa a 13 (a sem preço teria a 21).
+          const janelaO = api.oficina.abrir();
+          await esperar(() => document.querySelector('.oficina-do-mestre form'));
+          const form = document.querySelector('.oficina-do-mestre form');
+          const dvPadrao = form.elements.dv?.value ?? null;
+          const dvs = [...form.querySelectorAll('select[name="dv"] option')].map(o => o.value).join();
+          form.elements.nome.value = 'C99 Trava fina';
+          form.elements.tamanho.value = '1';
+          form.elements.dv.value = '13';
+          form.closest('.application').querySelector('button[data-action="salvar"]').click();
+          feita = await janelaO;
+          const [instalavel] = await ator.createEmbeddedDocuments('Item', [feita.toObject()]);
+          const oficina = { dvPadrao, dvs, guardada: feita?.getFlag('${S}', 'oficina')?.dv ?? null, naInstalacao: api.instalacaoDeMod.instalacaoDe(instalavel) };
+          return { botaoAntes, opcoes, quebrada, textoDaJanela, marcado, pago, semDinheiro, oficina };
+        } finally {
+          await ator.delete();
+          if (feita) await feita.delete();
+        }
+      })()`);
+      const ok = c99.botaoAntes && c99.opcoes.join() === 'quebrada,reliquia'
+        && c99.quebrada.estado === 'quebrada' && c99.quebrada.motivo === 'O EMP do Netrunner' && c99.quebrada.marco && c99.quebrada.cartao && c99.quebrada.semQuebrar
+        && /Cobrar 50eb de C99 Vex \(tem 60eb\), quando o conserto passar/.test(c99.textoDaJanela) && c99.marcado === true
+        && c99.pago.estado === null && c99.pago.dinheiro === 10 && JSON.stringify(c99.pago.linha) === JSON.stringify([-50, 10, 'O conserto de Very Heavy Pistol']) && c99.pago.cartao
+        && c99.semDinheiro.quebrouDeNovo === true && c99.semDinheiro.deNovo === false && c99.semDinheiro.semCobrar === true
+        && c99.semDinheiro.avisos.join(' | ') === 'Very Heavy Pistol foi consertada sem cobrar: C99 Vex tem só 10eb (o conserto custa 50eb).'
+        && c99.semDinheiro.estado === null && c99.semDinheiro.dinheiro === 10 && c99.semDinheiro.linhas === 1
+        && c99.oficina.dvPadrao === '21' && c99.oficina.dvs === '9,13,15,17,21,24,29' && Number(c99.oficina.guardada) === 13
+        && c99.oficina.naInstalacao?.dv === 13 && c99.oficina.naInstalacao?.categoria === 'a da oficina do mestre';
+      return [ok, JSON.stringify(c99)];
     });
 
     await r.passo('C75: o upgrade arrasta do inventário para a bancada (no navegador do jogador); o "Escolher do inventário" da bancada lista o que cabe (e o motivo do que não cabe); o "Instalar em…" do inventário escolhe a arma (a modificação pede ao mestre); o "Bancada" abre a arma na aba dela', async () => {

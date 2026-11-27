@@ -38,21 +38,57 @@ export async function desfazerPeloCartao(mensagem) {
   return true;
 }
 
-// O conserto da arma (o mestre): a quebrada volta a funcionar, e o diário anota.
-export async function consertar(arma, { por = '' } = {}) {
+// A quebra à mão (o C99): o mestre quebra a arma (o EMP, a história), com o motivo no diário. Sem o ataque, o cartão não
+// desfaz: o mestre conserta (a quebrada) ou deixa (a relíquia).
+export async function quebrar(arma, { estado = 'quebrada', motivo = '' } = {}) {
+  if (!game.user.isGM || arma?.type !== 'arma' || arma.estadoDaQuebra) return false;
+  const quebra = R.quebraAMao(estado, motivo);
+  if (quebra.erro) { ui.notifications.warn(`${arma.name}: ${quebra.erro}.`); return false; }
+  await arma.setFlag(SISTEMA, 'quebra', { estado: quebra.estado, quando: agora(), ataque: null, ...(quebra.motivo ? { motivo: quebra.motivo } : {}) });
+  const rotulo = R.ESTADOS[quebra.estado].rotulo;
+  await falar(arma, `<p><b>${esc(arma.nomeDeExibicao)}</b>: ${esc(rotulo.toLowerCase())}${quebra.motivo ? ` (${esc(quebra.motivo)})` : ''}.</p>`);
+  await anotar(arma, `${rotulo}${quebra.motivo ? `: ${quebra.motivo}` : ''}`);
+  return true;
+}
+// A janela do "Quebrar": o estado e o motivo.
+export async function abrirQuebrar(arma) {
+  if (!game.user.isGM || arma?.type !== 'arma' || arma.estadoDaQuebra) return null;
+  const escolha = await DialogV2.wait({
+    window: { title: 'Quebrar a arma', icon: 'fa-solid fa-burst' }, classes: [SISTEMA, 'quebrar-a-arma', 'themed', 'theme-dark'], rejectClose: false,
+    content: `<p><b>${esc(arma.nomeDeExibicao)}</b> (de ${esc(arma.actor?.name ?? 'ninguém')}). Quebrada, ela não ataca e o que está nela para.</p>
+      <div class="form-group"><label>Como <select name="estado">${Object.entries(R.ESTADOS).map(([id, { rotulo, texto }]) => `<option value="${id}">${esc(rotulo)}: ${esc(texto)}</option>`).join('')}</select></label></div>
+      <div class="form-group"><label>O motivo <input name="motivo" type="text" maxlength="120" placeholder="O EMP, a queda, a briga"></label></div>`,
+    buttons: [
+      { action: 'quebrar', label: 'Quebrar', icon: 'fa-solid fa-burst', default: true, callback: (evento, botao) => ({ estado: botao.form.elements.estado.value, motivo: botao.form.elements.motivo.value }) },
+      { action: 'cancelar', label: 'Cancelar', icon: 'fa-solid fa-xmark' }
+    ]
+  });
+  if (!escolha || typeof escolha !== 'object') return null;
+  return quebrar(arma, escolha);
+}
+
+// O conserto da arma (o mestre): a quebrada volta a funcionar, e o diário anota. cobrar: o custo sai do dinheiro do dono
+// (o C99), com a linha no extrato; sem o bastante, o mestre recebe o aviso e o conserto sai sem cobrar. Na janela, o
+// "Cobrar" vem marcado só quando o dono tem o bastante.
+export async function consertar(arma, { por = '', cobrar = false } = {}) {
   if (!game.user.isGM || arma?.estadoDaQuebra !== 'quebrada') return false;
+  const dono = arma.actor?.type === 'personagem' ? arma.actor : null;
+  const cobranca = cobrar && dono ? R.cobrancaDoConserto({ custo: R.consertoDaArma(arma.system.preco).custo, saldo: dono.system.dinheiro, nome: dono.name }) : null;
   await arma.unsetFlag(SISTEMA, 'quebra');
-  await falar(arma, `<p><b>${esc(arma.nomeDeExibicao)}</b> foi consertada${por ? ` por ${esc(por)}` : ''}.</p>`);
+  if (cobranca?.cobra) await dono.mudarComExtrato('dinheiro', { acao: 'subtrair', valor: cobranca.valor, motivo: `O conserto de ${arma.nomeDeExibicao}` });
+  else if (cobranca) ui.notifications.warn(`${arma.name} foi consertada sem cobrar: ${cobranca.motivo}.`);
+  const pago = cobranca?.cobra ? ` (${cobranca.valor}eb de ${esc(dono.name)})` : '';
+  await falar(arma, `<p><b>${esc(arma.nomeDeExibicao)}</b> foi consertada${por ? ` por ${esc(por)}` : ''}${pago}.</p>`);
   await anotar(arma, `Consertada${por ? ` por ${por}` : ''}`);
   return true;
 }
 // O teste do conserto pedido ao Tech (o cartão do C65, com a DV à vista).
-export function pedirConserto({ arma, tech }) {
+export function pedirConserto({ arma, tech, cobrar = false }) {
   if (!game.user.isGM) throw new Error('Só o mestre pede o conserto.');
   if (arma?.estadoDaQuebra !== 'quebrada') { ui.notifications.warn(`${arma?.name ?? 'A arma'} não está quebrada.`); return null; }
   const conserto = R.consertoDaArma(arma.system.preco);
   return pedir({
-    teste: conserto.teste, dv: conserto.dv, mostrarDv: true, atores: [tech.uuid], acao: { tipo: TIPO, arma: arma.uuid },
+    teste: conserto.teste, dv: conserto.dv, mostrarDv: true, atores: [tech.uuid], acao: { tipo: TIPO, arma: arma.uuid, cobrar: Boolean(cobrar) },
     motivo: `Consertar ${arma.nomeDeExibicao} (custa ${conserto.custo}eb, uma categoria abaixo). Na falha, continua quebrada.`
   });
 }
@@ -62,7 +98,7 @@ async function aoTestar(mensagem, dados, indice) {
   if (linha?.estado !== 'rolou') return;
   const arma = await fromUuid(dados.acao.arma);
   if (arma) {
-    if (passou(linha.total, dados.dv)) await consertar(arma, { por: linha.nome });
+    if (passou(linha.total, dados.dv)) await consertar(arma, { por: linha.nome, cobrar: Boolean(dados.acao.cobrar) });
     else await falar(arma, `<p><b>${esc(linha.nome)}</b> não conseguiu consertar <b>${esc(arma.nomeDeExibicao)}</b>: ela continua quebrada.</p>`);
   }
   if (dados.aberto && mensagem) await encerrarPedido(mensagem.id);
@@ -71,22 +107,24 @@ async function aoTestar(mensagem, dados, indice) {
 export async function abrirConserto(arma) {
   if (!game.user.isGM || arma?.estadoDaQuebra !== 'quebrada') return null;
   const conserto = R.consertoDaArma(arma.system.preco);
+  const dono = arma.actor?.type === 'personagem' ? arma.actor : null;
   const personagens = game.actors.filter(ator => ator.type === 'personagem')
     .sort((a, b) => Number(Boolean(b.rolagemDeRole('upgrade'))) - Number(Boolean(a.rolagemDeRole('upgrade'))) || a.name.localeCompare(b.name, 'pt-BR'));
   const escolha = await DialogV2.wait({
     window: { title: 'Consertar a arma', icon: 'fa-solid fa-screwdriver-wrench' }, classes: [SISTEMA, 'conserto-da-arma', 'themed', 'theme-dark'], rejectClose: false,
     content: `<p><b>${esc(arma.nomeDeExibicao)}</b> (de ${esc(arma.actor?.name)}). TECH + Tecnologia de Armas + 1d10 contra a DV ${conserto.dv} (${esc(conserto.categoria)}); custa ${conserto.custo}eb. Na falha, continua quebrada.</p>
-      <div class="form-group"><label>Quem conserta <select name="tech">${personagens.map(ator => `<option value="${ator.id}">${esc(ator.name)}</option>`).join('')}</select></label></div>`,
+      <div class="form-group"><label>Quem conserta <select name="tech">${personagens.map(ator => `<option value="${ator.id}">${esc(ator.name)}</option>`).join('')}</select></label></div>
+      ${dono ? `<label class="caixa"><input type="checkbox" name="cobrar"${Number(dono.system.dinheiro) >= conserto.custo ? ' checked' : ''}> Cobrar ${conserto.custo}eb de ${esc(dono.name)} (tem ${Math.trunc(Number(dono.system.dinheiro) || 0)}eb), quando o conserto passar</label>` : ''}`,
     buttons: [
-      { action: 'teste', label: 'Pedir o teste', icon: 'fa-solid fa-dice-d10', default: true, callback: (evento, botao) => ({ jeito: 'teste', tech: botao.form.elements.tech?.value }) },
-      { action: 'direto', label: 'Consertada (o Tech NPC)', icon: 'fa-solid fa-check', callback: () => ({ jeito: 'direto' }) },
+      { action: 'teste', label: 'Pedir o teste', icon: 'fa-solid fa-dice-d10', default: true, callback: (evento, botao) => ({ jeito: 'teste', tech: botao.form.elements.tech?.value, cobrar: Boolean(botao.form.elements.cobrar?.checked) }) },
+      { action: 'direto', label: 'Consertada (o Tech NPC)', icon: 'fa-solid fa-check', callback: (evento, botao) => ({ jeito: 'direto', cobrar: Boolean(botao.form.elements.cobrar?.checked) }) },
       { action: 'cancelar', label: 'Cancelar', icon: 'fa-solid fa-xmark' }
     ]
   });
   if (!escolha || typeof escolha !== 'object') return null;
-  if (escolha.jeito === 'direto') return consertar(arma);
+  if (escolha.jeito === 'direto') return consertar(arma, { cobrar: escolha.cobrar });
   const tech = game.actors.get(escolha.tech);
-  return tech ? pedirConserto({ arma, tech }) : null;
+  return tech ? pedirConserto({ arma, tech, cobrar: escolha.cobrar }) : null;
 }
 
 // O reforjar (o mestre): a relíquia passa a identidade e, se couber, uma modificação para a arma nova (do mesmo ator, do
@@ -136,4 +174,4 @@ export function registrarQuebra() {
   aoResultado(aoTestar);
 }
 
-export const API = { ...R, marcarPelaFalha, desfazerPeloCartao, consertar, pedirConserto, abrirConserto, reforjar, abrirReforjar };
+export const API = { ...R, marcarPelaFalha, desfazerPeloCartao, quebrar, abrirQuebrar, consertar, pedirConserto, abrirConserto, reforjar, abrirReforjar };

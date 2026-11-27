@@ -14,6 +14,20 @@ export const ESTADOS = {
 const PELA_FALHA = { destroyed: 'quebrada', destroyedBeyondRepair: 'reliquia' };
 export const estadoDaFalha = efeito => PELA_FALHA[efeito] ?? null;
 export const estadoValido = estado => (Object.hasOwn(ESTADOS, estado) ? estado : null);
+// A quebra à mão (o C99, decisão do usuário de 2026-11-26: o "Quebrar" do mestre, para o EMP e a história): o estado e o
+// motivo (até 120 letras). Devolve { estado, motivo } ou { erro }.
+export function quebraAMao(estado, motivo = '') {
+  if (!estadoValido(estado)) return { erro: 'o estado é a quebrada ou a relíquia' };
+  return { estado, motivo: String(motivo ?? '').replace(/\s+/g, ' ').trim().slice(0, 120) };
+}
+// O custo do conserto sai do dinheiro do dono quando o conserto passa (o C99, decisão do usuário de 2026-11-26). Sem o
+// bastante, o conserto sai sem cobrar e o mestre resolve: o saldo não fica negativo. Devolve { cobra, valor, motivo }.
+export function cobrancaDoConserto({ custo = 0, saldo = 0, nome = 'o dono' } = {}) {
+  const valor = Math.max(0, Math.trunc(Number(custo) || 0));
+  if (!valor) return { cobra: false, valor: 0, motivo: 'o conserto não custa nada' };
+  if (Number(saldo) < valor) return { cobra: false, valor, motivo: `${nome} tem só ${Math.trunc(Number(saldo) || 0)}eb (o conserto custa ${valor}eb)` };
+  return { cobra: true, valor, motivo: '' };
+}
 
 // As categorias de preço do RED (p. 385; a página "Economia" da wiki), da mais barata à mais cara.
 export const CATEGORIAS = [

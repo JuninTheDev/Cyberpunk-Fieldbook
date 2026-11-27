@@ -52,6 +52,9 @@ no alto; as abas Detalhes (os campos em células), Descrição e Efeitos, e Banc
         <p class="nota"><b>{{quebraDaArma.rotulo}}</b>: {{quebraDaArma.texto}}.{{#if quebraDaArma.conserto}} O conserto: TECH + Tecnologia de Armas + 1d10 contra a DV {{quebraDaArma.conserto.dv}} ({{quebraDaArma.conserto.categoria}}); custa {{quebraDaArma.conserto.custo}}eb.{{/if}}{{#if quebraDaArma.reforjada}} Reforjada em {{quebraDaArma.reforjada}}.{{/if}}</p>
         {{#if quebraDaArma.mestre}}{{#if quebraDaArma.conserto}}<button type="button" class="acao" data-action="consertarArma">CONSERTAR</button>{{/if}}{{#if quebraDaArma.podeReforjar}}<button type="button" class="acao" data-action="reforjarArma">REFORJAR</button>{{/if}}{{/if}}
       </div>
+      {{else if podeQuebrar}}
+      {{!-- O "Quebrar" do mestre (o C99): o EMP, a história. --}}
+      <div class="quebra-da-arma-ficha"><button type="button" class="acao" data-action="quebrarArma" data-tooltip="A arma quebra por outro motivo (o EMP, a história): só o mestre">QUEBRAR</button></div>
       {{/if}}
       <label class="caixa"><input type="checkbox" name="system.aDistancia" {{checked fonte.aDistancia}}> À distância</label>
       {{#if armaDe}}<div class="celula arma-do-cyberware"><span>{{armaDe.rotulo}}</span><b>{{armaDe.nome}}</b></div><p class="nota">Os dados desta arma vêm de {{armaDe.nome}}: mude-os na ficha dele.</p>

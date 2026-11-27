@@ -7,6 +7,7 @@ import { SISTEMA } from './config.mjs';
 import { iconeNeon } from './regras-icones.mjs';
 import * as R from './regras-oficina.mjs';
 import { CLASSES, TIPOS } from './regras-modificacoes.mjs';
+import { DIFICULDADES } from './regras-pedido-teste.mjs';
 
 const { DialogV2 } = foundry.applications.api;
 const esc = valor => foundry.utils.escapeHTML(String(valor ?? ''));
@@ -47,7 +48,7 @@ function lerFormulario(form) {
       alvos: [...form.querySelectorAll(`[name="e${i}alvos"]:checked`)].map(caixa => caixa.value), manual: f[`e${i}manual`].value, dados: f[`e${i}dados`].value, rotulo: f[`e${i}rotulo`].value
     };
   });
-  return { nome: f.nome.value, raridade: f.raridade.value, tipo: f.tipo.value, tamanho: f.tamanho.value, serve: f.serve.value, classe: f.classe.value, texto: f.texto.value, efeitos };
+  return { nome: f.nome.value, raridade: f.raridade.value, tipo: f.tipo.value, tamanho: f.tamanho.value, serve: f.serve.value, classe: f.classe.value, dv: f.dv.value, texto: f.texto.value, efeitos };
 }
 
 // A janela da oficina (só o mestre). item: o upgrade da oficina para mudar (a janela vem com o que ele tem); ator: onde
@@ -67,7 +68,8 @@ export async function abrir({ item = null, ator = null } = {}) {
           <label>Tipo <select name="tipo">${opcoes(TIPOS, dados.tipo)}</select></label>
           <label>Slots <select name="tamanho">${[0, 1, 2].map(n => `<option${String(n) === String(dados.tamanho) ? ' selected' : ''}>${n}</option>`).join('')}</select></label></div>
         <div class="form-group"><label>Serve em <select name="serve">${opcoes(R.ONDE_SERVE, dados.serve)}</select></label>
-          <label>Classe <select name="classe"><option value="">qualquer</option>${opcoes(CLASSES, dados.classe ?? '')}</select></label></div>
+          <label>Classe <select name="classe"><option value="">qualquer</option>${opcoes(CLASSES, dados.classe ?? '')}</select></label>
+          <label>DV da instalação <select name="dv">${DIFICULDADES.map(({ dv, nome }) => `<option value="${dv}"${dv === R.dvDaOficina(dados.dv) ? ' selected' : ''}>${dv} (${esc(nome)})</option>`).join('')}</select></label></div>
         <div class="form-group"><label>O que ela é <textarea name="texto" rows="3" maxlength="600" placeholder="O que a mesa vê, e o que o efeito não cobre (o mestre resolve).">${esc(dados.texto)}</textarea></label></div>
         ${campoDoEfeito(0, dados.efeitos?.[0])}${campoDoEfeito(1, dados.efeitos?.[1])}`,
       buttons: [

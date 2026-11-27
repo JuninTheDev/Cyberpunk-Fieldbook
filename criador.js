@@ -1552,6 +1552,17 @@
   const benchState = { arma: null, sel: null };
   const SEM_ARSENAL = /^(martialArts|unarmed)$/;
   const benchMods = () => (window.systemModificacoes && window.systemModificacoes.data.mods) || [];
+  // O teto da campanha no pedido (o C72, só avisa): a modificação de ataque e as armas da ficha onde ela passaria dele. Na
+  // loja do personagem e nos "Pedidos da campanha" do mestre (o C100). Devolve os avisos, sem repetir.
+  function tetoDoPedido(doc, pedido, rules = shopRules) {
+    if (!SV || !BENCH || !doc) return [];
+    const mods = benchMods();
+    const armas = benchModels(doc).map(model => ({ nome: model.apelido || model.modelo, melhor: model.teto ? model.teto.melhor : 0 }));
+    const avisos = (pedido.itens || []).map(linha => mods.find(mod => `mods-armas:${mod.id}` === linha.id)).filter(Boolean)
+      .map(mod => SV.avisoNoPedido(BENCH.ehDeAtaque(mod), armas, rules)).filter(Boolean);
+    return [...new Set(avisos)];
+  }
+  const temModDeAtaque = pedido => Boolean(BENCH) && (pedido.itens || []).some(linha => benchMods().some(mod => `mods-armas:${mod.id}` === linha.id && BENCH.ehDeAtaque(mod)));
   function benchModels(doc) {
     if (!BENCH) return [];
     if (doc.mesa && doc.foundry) {
@@ -1989,9 +2000,15 @@
   // Cada campanha tem as suas: as carregadas são as da campanha do personagem aberto (ou da escolhida no menu).
   let shopRules = { teto: 1000, esconder: Object.keys(SHOP_TAG_NAMES).filter(tag => tag !== 'blackchrome'), liberados: [], bloqueados: [] };
   let shopRulesCampaign = null;
+  // O relógio do servidor (o C100): o prazo da vitrine conta pelo "agora" dele, que vem com as regras (a diferença para o
+  // relógio deste aparelho).
+  let shopClock = 0;
+  const shopNow = () => new Date(Date.now() + shopClock);
   async function loadShopRules(campaignId = (activeCampaign() || {}).id) {
     const answer = await api(`api/loja/regras${campaignQuery(campaignId)}`);
     if (answer.status === 200 && answer.data.regras) { shopRules = answer.data.regras; shopRulesCampaign = answer.data.campanha || null; }
+    const server = answer.status === 200 ? Date.parse(answer.data.agora || '') : NaN;
+    if (Number.isFinite(server)) shopClock = server - Date.now();
     return shopRules;
   }
   const saveShopRules = rules => api(`api/loja/regras${campaignQuery(shopRulesCampaign)}`, { method: 'PUT', body: rules });
@@ -1999,6 +2016,8 @@
   function hiddenReason(item, rules = shopRules) {
     if (rules.bloqueados.includes(item.id)) return 'escondido pelo mestre';
     if (rules.liberados.includes(item.id)) return '';
+    // A modificação Cara (o C100, decisão do usuário de 2026-11-26): só no Night Market, como na loja da campanha.
+    if (SV && SV.ehModCara(item)) return 'só no Night Market';
     if (item.preco > rules.teto) return `acima de ${eb(rules.teto)}`;
     const tag = (item.tags || []).find(name => rules.esconder.includes(name));
     return tag ? SHOP_TAG_NAMES[tag] : '';
@@ -2285,7 +2304,7 @@
           ${readOnly && doc ? '<div class="callout">Este personagem já está no Foundry: a loja inicial fechou. Compras durante a sessão chegam numa próxima versão.</div>' : ''}
           ${kit.length ? `<div class="cc-kit shop-kit"><span><b>Kit sugerido</b> (Rato de Rua de ${esc(roleName(doc.role))}): ${eb(kitCost(kitMain))}${kitFashion.length ? ` + ${eb(kitCost(kitFashion))} de moda` : ''}. Depois dá para devolver item por item.</span><button class="action" type="button" data-shop-kit>Comprar o kit</button></div>` : ''}
           ${filters}
-          ${hiddenCount && !showHidden ? `<p class="note-status shop-note">${hiddenCount} itens avançados ficam fora da loja de criação (acima de ${eb(shopRules.teto)}, ${shopRules.esconder.map(tag => SHOP_TAG_NAMES[tag]).join(', ') || 'nenhuma etiqueta'}). O mestre libera o que quiser.</p>` : ''}
+          ${hiddenCount && !showHidden ? `<p class="note-status shop-note">${hiddenCount} itens avançados ficam fora da loja de criação (acima de ${eb(shopRules.teto)}, ${shopRules.esconder.map(tag => SHOP_TAG_NAMES[tag]).join(', ') || 'nenhuma etiqueta'}${SV ? ', as modificações Caras, só no Night Market' : ''}). O mestre libera o que quiser.</p>` : ''}
           <div class="cc-shop-list shop-grid">${shown.map(item => {
             const reason = hiddenReason(item);
             const has = owned.get(item.id);
@@ -2432,11 +2451,11 @@
     if (gm && !shopState.painel && (doc.pedidos || []).some(pedido => pedido.status === 'pendente')) shopState.painel = 'pedidos';
     const paint = () => {
       // O Night Market (o C72): a modificação Cara fora da vitrine aberta não aparece para o jogador; o mestre vê tudo.
-      const { visible, shown, filters } = shopFilter(gm || !SV ? shop.itens : shop.itens.filter(item => !SV.foraDaVitrine(item, shopRules)));
+      const { visible, shown, filters } = shopFilter(gm || !SV ? shop.itens : shop.itens.filter(item => !SV.foraDaVitrine(item, shopRules, shopNow())));
       const total = cart.reduce((sum, line) => sum + cartCost(line), 0);
       const nightBadge = item => (!SV || !SV.ehModCara(item) ? ''
-        : SV.vitrineAberta(shopRules).includes(item.id) ? badge(`Night Market até ${diaBr(shopRules.nightMarket.ate)}`, 'ok')
-          : gm && SV.foraDaVitrine(item, shopRules) ? badge('fora do Night Market', 'wait') : '');
+        : SV.vitrineAberta(shopRules, shopNow()).includes(item.id) ? badge(`Night Market até ${diaBr(shopRules.nightMarket.ate)}`, 'ok')
+          : gm && SV.foraDaVitrine(item, shopRules, shopNow()) ? badge('fora do Night Market', 'wait') : '');
       const money = doc.mesa ? Number(doc.mesa.dinheiro) || 0 : naWiki && window.characterGame ? window.characterGame.valores(doc).dinheiro : null;
       const left = money === null ? null : money - total;
       const inCart = new Map();
@@ -2474,18 +2493,14 @@
       const orders = (doc.pedidos || []).slice().reverse();
       const waiting = orders.filter(pedido => pedido.status === 'pendente').length;
       const going = orders.filter(pedido => pedido.status === 'aprovado').length;
-      // O teto da campanha no pedido (o C72, só avisa): a modificação de ataque e as armas da ficha onde ela passaria dele.
+      // O teto da campanha no pedido (o C72, só avisa).
       const tetoNoPedido = pedido => {
-        if (!SV || !BENCH) return '';
-        const mods = benchMods();
-        const armas = benchModels(doc).map(model => ({ nome: model.apelido || model.modelo, melhor: model.teto ? model.teto.melhor : 0 }));
-        const avisos = pedido.itens.map(linha => mods.find(mod => `mods-armas:${mod.id}` === linha.id)).filter(Boolean)
-          .map(mod => SV.avisoNoPedido(BENCH.ehDeAtaque(mod), armas, shopRules)).filter(Boolean);
-        return avisos.length ? `<small class="cc-bad" data-pedido-teto>${esc([...new Set(avisos)].join(' '))}</small>` : '';
+        const avisos = tetoDoPedido(doc, pedido);
+        return avisos.length ? `<small class="cc-bad" data-pedido-teto>${esc(avisos.join(' '))}</small>` : '';
       };
       const orderLine = pedido => `<li class="cc-order cc-order-${pedido.status}"><div class="shop-line"><span><b>${pedido.itens.map(item => `${esc(item.nome)}${item.local ? ` · ${esc(CW.nome(item.local))}` : ''}${item.qtd > 1 ? ` ×${item.qtd}` : ''}`).join(', ')}</b><small>${when(pedido.criado)} · ${pedido.presente ? `presente do mestre (${eb(pedido.valor || 0)}, sem cobrar)` : eb(pedido.total)} · <span class="cc-order-status">${ORDER_STATUS[pedido.status] || pedido.status}</span></small></span>${statusChip(pedido.status)}</div>
         ${pedido.motivo || pedido.nota || pedido.erro || (pedido.avisos || []).length ? `<small>${pedido.nota ? `“${esc(pedido.nota)}”` : ''}${pedido.motivo ? ` Motivo: ${esc(pedido.motivo)}.` : ''}${(pedido.avisos || []).length ? ` ${esc(pedido.avisos.join(' '))}` : ''}${pedido.erro ? ` <span class="cc-bad">${esc(pedido.erro)}</span>` : ''}</small>` : ''}
-        ${gm && pedido.status === 'pendente' ? tetoNoPedido(pedido) : ''}
+        ${gm && (pedido.status === 'pendente' || pedido.status === 'aprovado') ? tetoNoPedido(pedido) : ''}
         ${pedido.status === 'pendente' || (gm && pedido.status === 'aprovado') ? `<div class="cc-mount-controls">${pedido.status === 'pendente' ? `${gm ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Aprovar</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-${gm ? 'recusar' : 'cancelar'}="${pedido.id}">${gm ? 'Recusar' : 'Cancelar'}</button>` : ''}${gm && pedido.status === 'aprovado' ? `${pedido.erro ? `<button type="button" class="action" data-pedido-aprovar="${pedido.id}">Tentar de novo</button>` : ''}<button type="button" class="action cc-ghost cc-ghost-danger" data-pedido-recusar="${pedido.id}">Recusar</button>` : ''}</div>` : ''}</li>`;
       const alert = waiting ? `<span class="cc-tab-alert">${waiting} ${gm ? 'para aprovar' : 'com o mestre'}</span>` : going ? `<span class="cc-tab-alert cc-tab-alert-go">${going} a caminho</span>` : '';
       const foot = item => {
@@ -2580,8 +2595,14 @@
         target.dataset.nota = '';
         target.dataset.presente = '';
         doc.pedidos = [...(doc.pedidos || []), answer.data.pedido];
+        // O presente entregue na mesa da wiki (o C100): o dinheiro e os itens mudam junto, como no Aprovar.
+        if (answer.data.pedido.status === 'entregue') {
+          const fresh = await api(`api/personagens/${doc.id}`);
+          if (fresh.status === 200) { doc.pedidos = fresh.data.personagem.pedidos; doc.jogo = fresh.data.personagem.jogo ?? doc.jogo; recalcular(); }
+        }
         shopState.painel = 'pedidos';
         draw();
+        if (answer.data.pedido.presente) return message(answer.data.pedido.status === 'entregue' ? 'Presente entregue na ficha.' : `Presente aprovado: ${quemEntrega} entrega na ficha.`);
         return message(`Pedido enviado. O mestre aprova, e ${quemEntrega} entrega na ficha.`);
       }
       const approve = event.target.closest('[data-pedido-aprovar]');
@@ -2681,10 +2702,14 @@
     const answers = await Promise.all(pending.map(item => api(`api/personagens/${item.id}/pedidos`).then(answer => ({ item, pedidos: (answer.data && answer.data.pedidos) || [] }))));
     const open = answers.flatMap(({ item, pedidos }) => pedidos.filter(pedido => pedido.status === 'pendente' || pedido.status === 'aprovado').map(pedido => ({ item, pedido })));
     open.sort((a, b) => (a.pedido.status === b.pedido.status ? String(a.pedido.criado).localeCompare(String(b.pedido.criado)) : a.pedido.status === 'pendente' ? -1 : 1));
+    // O aviso do teto (o C100): a ficha inteira só de quem tem uma modificação de ataque no pedido aberto.
+    const docs = new Map(await Promise.all([...new Set(open.filter(entry => temModDeAtaque(entry.pedido)).map(entry => entry.item.id))]
+      .map(id => api(`api/personagens/${id}`).then(answer => [id, (answer.data && answer.data.personagem) || null]))));
+    const teto = ({ item, pedido }) => { const avisos = tetoDoPedido(docs.get(item.id), pedido); return avisos.length ? `<p class="cc-bad" data-gm-teto>${esc(avisos.join(' '))}</p>` : ''; };
     const count = open.filter(entry => entry.pedido.status === 'pendente').length;
     const card = ({ item, pedido }) => `<div class="shop-order" style="--k:${(ORDER_CHIP[pedido.status] || [])[1] || 'var(--y)'}"><header><span>${esc(item.nome || 'Sem nome')}${item.donoNome ? ` <small>de ${esc(item.donoNome)}</small>` : ''}</span>${statusChip(pedido.status)}</header>
       <div class="shop-order-items">${pedido.itens.map(entry => `${esc(entry.nome)}${entry.qtd > 1 ? ` ×${entry.qtd}` : ''}`).join(' · ')} // ${eb(pedido.total)}</div>
-      ${pedido.nota ? `<p>${esc(pedido.nota)}</p>` : ''}${pedido.erro ? `<p class="cc-bad">${esc(pedido.erro)}</p>` : ''}
+      ${pedido.nota ? `<p>${esc(pedido.nota)}</p>` : ''}${pedido.erro ? `<p class="cc-bad">${esc(pedido.erro)}</p>` : ''}${teto({ item, pedido })}
       <div class="shop-order-actions">${pedido.status === 'pendente' || pedido.erro ? `<button type="button" class="action" data-gm-aprovar="${item.id}:${pedido.id}">${pedido.status === 'pendente' ? 'Aprovar' : 'Tentar de novo'}</button>` : '<small class="note-status">Esperando o Foundry entregar.</small>'}
         <button type="button" class="action cc-ghost cc-ghost-danger" data-gm-recusar="${item.id}:${pedido.id}">Recusar</button>
         <button type="button" class="action cc-ghost" data-gm-abrir="${item.id}">Abrir a loja</button></div></div>`;
@@ -3469,7 +3494,7 @@
   // digita não se perder) e o catálogo com os botões Esconder e Liberar.
   // O teto da campanha e a vitrine do Night Market (o C72), na caixa de regras do mestre: valem na loja da campanha.
   const nightMarketState = rules => {
-    const aberta = SV.vitrineAberta(rules);
+    const aberta = SV.vitrineAberta(rules, shopNow());
     return aberta.length ? `Aberto até ${diaBr(rules.nightMarket.ate)}: ${aberta.length} ${aberta.length === 1 ? 'modificação Cara à venda' : 'modificações Caras à venda'}.`
       : 'Fechado: as modificações Caras (500eb) ficam fora da loja da campanha.';
   };
@@ -3518,7 +3543,7 @@
         for (const chip of chips) chip.setAttribute('aria-pressed', String(sorteadas.includes(chip.dataset.nmItem)));
         const ate = rulesBox.querySelector('[data-nm-ate]');
         if (!sorteadas.length) ate.value = '';
-        else if (!ate.value) ate.value = SV.hoje(new Date(Date.now() + 7 * 86400000));
+        else if (!ate.value) ate.value = SV.hoje(new Date(shopNow().getTime() + 7 * 86400000));
         return;
       }
       if (!event.target.closest('[data-rule-save]')) return;

@@ -736,6 +736,12 @@ Sistema próprio de Cyberpunk RED para o **Foundry VTT 14**, feito em volta da w
     (`regras.encaixeDoAcessorio`): na arma de longo alcance que não é exótica e tem slots; o carregador da classe só nela
     (a Heavy SMG do CORE é a SMG de 3d6); o de baixo do cano só em arma de duas mãos. O Compensador só serve em arma com
     autofogo, e o cabo balanceado dá +1 no ataque arremessado (a condição `arremesso`; a oficina também tem as duas).
+  - **A quebra à mão, o conserto pago e a DV da oficina** (o C99; as decisões do usuário de 2026-11-26): o mestre quebra a
+    arma pela ficha dela (o QUEBRAR: quebrada ou relíquia, com o motivo, para o EMP e a história; o diário anota). O
+    conserto (o CONSERTAR, pelo teste do Tech ou direto) tem a caixa "Cobrar", marcada: quando passa, o custo sai do
+    dinheiro do dono, com a linha no extrato; sem o bastante, a arma volta sem cobrar e o mestre recebe o aviso. Na oficina,
+    o mestre escolhe a DV da instalação na escala da wiki (21 de padrão), e a instalação pelo Tech usa a escolhida.
+    `game.system.api.quebra.quebrar` e `abrirQuebrar`.
   - **O Rebuild** (o C47, ciclo 182; o Kit, p. 31–32): o Power, o Smart e o Tech Rebuild, instalados numa arma de longo
     alcance do RED, a fazem Power, Smart ou Tech, com as regras da classe (as das armas de 2077, o C29). Ocupa 2 slots (na
     arma exótica, 1, se houver um livre); só um por arma; o Tech não entra em lança-granadas nem em lança-foguetes; a arma

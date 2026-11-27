@@ -5,6 +5,7 @@
 // decisão do usuário de 2026-11-24 ("Sem limite próprio"). E o sorteio do defeito (1d6, de novo quando não serve na arma:
 // a página da regra, "Os defeitos").
 import { ALVOS_DO_ATAQUE, CLASSES, TIPOS, validarMod } from './regras-modificacoes.mjs';
+import { DIFICULDADES } from './regras-pedido-teste.mjs';
 
 export const RARIDADES = { catalogo: 'Do catálogo', rara: 'Rara', lendaria: 'Lendária' };
 export const ONDE_SERVE = { qualquer: 'qualquer arma', distancia: 'arma de longo alcance', autofogo: 'arma de longo alcance com autofogo', branca: 'arma branca' };
@@ -85,6 +86,11 @@ function efeitoDe(efeito) {
   }
 }
 
+// A DV da instalação pelo Tech (o C99, decisão do usuário de 2026-11-26): a modificação da oficina não tem preço, e o
+// mestre escolhe a DV na escala da wiki; 21 (a do Caro) de padrão.
+export const DV_DA_INSTALACAO = 21;
+export const dvDaOficina = valor => (DIFICULDADES.some(({ dv }) => dv === Number(valor)) ? Number(valor) : DV_DA_INSTALACAO);
+
 // O formulário da oficina vira a modificação. dados: { nome, raridade, tipo, tamanho, serve, classe, texto, efeitos: [{
 // tipo, valor, situacao, metrosMin, metrosMax, alvos, manual, dados, rotulo }] }; id: o da modificação (idDaOficina).
 // Devolve { mod, raridade, texto } ou { erro } (o primeiro motivo, com o número do efeito).
@@ -108,7 +114,7 @@ export function modDoFormulario(dados = {}, id = idDaOficina(dados.nome, '0')) {
   const mod = { versao: 1, id, nome, tipo, tamanho, ...(Object.keys(encaixe).length ? { encaixe } : {}), efeitos };
   const invalida = validarMod(mod);
   if (invalida) return { erro: invalida };
-  return { mod, raridade: RARIDADES[dados.raridade] ? dados.raridade : 'catalogo', texto: texto(dados.texto, 600) };
+  return { mod, raridade: RARIDADES[dados.raridade] ? dados.raridade : 'catalogo', texto: texto(dados.texto, 600), dv: dvDaOficina(dados.dv) };
 }
 
 // Onde a modificação serve, em palavras (como o serveEm da wiki).

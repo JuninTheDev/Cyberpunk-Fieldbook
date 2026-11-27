@@ -561,6 +561,12 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **A regra das duas pontas, conferida em todo o catálogo** (ciclo 220): o encaixe do acessório no Foundry e o da
   bancada da wiki rodam lado a lado em toda arma e todo acessório (193 × 31) no G3; a diferença que sobra (o Pulsar) fica
   escrita no teste e nas Dúvidas.
+- **A opção nova da janela muda os passos antigos** (ciclo 221): a caixa "Cobrar" do conserto vinha marcada, e o passo
+  do C73 (que clica no CONSERTAR sem dinheiro na ficha) passou a avisar. Quando a janela ganha uma opção, o padrão dela
+  é o que não muda o que já se fazia; aqui, a caixa vem marcada só quando o dono tem o bastante.
+- **O relógio falso troca o `Date` inteiro** (ciclo 222): o passo que adianta o relógio do navegador só com o
+  `Date.now` deixou viva a mutação que lia o `new Date()` (o W1 do C100). O relógio falso troca a classe (o `new Date()`
+  sem argumento e o `Date.now`), e o `finally` põe a de verdade de volta.
 
 ## Build
 
