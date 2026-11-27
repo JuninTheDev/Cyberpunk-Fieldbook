@@ -525,6 +525,15 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O ângulo dá a volta no 180°** (ciclo 217): a faixa do fogo supressivo ia do menor ao maior ângulo dos alvos, e dois
   alvos atrás do atirador, a 170° e a −170°, viravam uma varredura de 340° em vez de 20°. Meça os ângulos em volta de uma
   referência (o primeiro alvo, de −180° a +180° dele), e o teste com a direção do token em 90° e em 200° achou o caso.
+- **O áudio do G4 só toca depois de um gesto de verdade, e o Shift não serve** (ciclo 225): o Foundry destrava o áudio
+  no primeiro `keydown`, `pointerdown` ou `contextmenu` da página, sem olhar se o navegador deu a ativação; o Shift
+  (uma tecla modificadora) não a dá, e o contexto nasce suspenso: o som "toca" sem avançar e nunca chega ao fim. No G4,
+  o clique pelo `Input.dispatchMouseEvent` dá a ativação; o motor retoma o contexto suspenso só depois dela (o
+  `navigator.userActivation.hasBeenActive`). Confira o fim do som (o `onended` que larga a voz), e não só o `play`.
+  Duas armadilhas da primeira rodada: no G4 inteiro, a tecla de um passo anterior já destravou o Foundry do jogador
+  (sozinho, o passo o achava travado), então confira o estado em vez de supor; e o Edge retoma sozinho, depois do gesto,
+  o contexto que nasceu antes dele, e a mutação que tira o `resume` sobreviveu: para pegá-la, o passo suspende o
+  contexto depois do gesto (o celular em segundo plano) e confere que o tiro seguinte toca até o fim.
 - **A visão do token se confere de dois jeitos, e numa cena sem margem** (ciclo 223): o `Token#isVisible` é o teste
   de visão feito na hora, e o `visible` é o que a tela mostra (o token redesenhado no quadro seguinte); a luz que revela
   sem refazer a visão passa no primeiro e falha no segundo, e o G4 confere os dois. E a cena de teste vai com o

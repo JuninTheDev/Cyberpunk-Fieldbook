@@ -10649,6 +10649,47 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 sem erros; G2 sem erros; G3 855/855; G4 348/348 duas vezes seguidas (808 s e 803 s). Antes, o passo novo caiu três vezes pelo teste, não pela luz: a cena com a margem padrão (o Vigia na margem, sem a visão valer dentro da cena), o token novo à vista até a visão se refazer e a parede nova que ainda não cortava a visão; o passo agora cria a cena com o `padding: 0` e espera a cena assentar, sem tirar nem afrouxar nenhuma checagem. Numa das rodadas caíram também as instáveis conhecidas (os estados do C26, as chaves do Fluxo e os tokens dinâmicos).
 - **Mutações:** oito no G3 (o disparo sem a luz, o clarão grande com a luz de 2 m, a luz presa ao token, o Reduzido com a luz, o fotossensível com a luz, a luz de quem o mestre escondeu, a luz nova que não apaga a de antes, o diretor sem o oculto) e cinco no G4 (a luz que não se apaga, a luz sem raio, o palco sem refazer a percepção, o diretor sem o oculto, o Reduzido com a luz): todas caíram, e os arquivos voltaram iguais (md5). As do G4 rodaram antes dos dois últimos acertos de tempo do passo; a sem refazer a percepção rodou de novo depois do primeiro, e caiu. Sem mutação: a luz que não bate nas paredes (o `walls`), porque a parede já corta a visão de quem olha.
 
+### Ciclo 225 (2026-11-27): C81, o motor de som dos efeitos (sessão KouArt)
+
+- **Pedido do usuário:** "Comece", para o C81 do plano dos efeitos (`efeitos-plano/PLANO.md`, a fase 1); reservado em
+  741b82e0, que também abriu o C103 (o banco de sons, que pede os downloads e a curadoria de ouvido do usuário).
+- **A fonte:** o PLANO (seções 4.1, 4.4 e 4.6) e o anexo `equipe/fx-audio.md` (seções 2, 4, 5 e 6); o Foundry 14 (o
+  `Sound` com o `destination` público e o `_createNodes`, o `AudioHelper` com o `locked`, o `unlock` e o
+  `preloadSound`, o `getListenerPositions` do `SoundsLayer`, o cosseno do `PointSoundSource#getVolumeMultiplier`).
+- **Entrega:**
+  - `scripts/regras-sons.mjs` (novo, puro): a categoria de cada som (o volume, o pitch, o raio, as vozes, a prioridade,
+    o contexto); o crítico e a morte para todos, na interface (a recomendação da decisão 13); o banco e a conferência
+    dele; os arquivos de um som (o do mestre antes do banco; o vídeo do JB2A não é som); o sorteio pela semente do evento
+    (a mesma variação em todos os navegadores), sem repetir a última; o pitch e a variação de ±1,5 dB; o volume pela
+    distância (o cosseno, o maior entre os ouvintes, sem passar do volume da camada) e o pan até 0,6; quem não tem
+    ouvinte, pela metade; o motivo de não tocar; as vozes; o repetido em 40 ms;
+  - `scripts/sons.mjs` (novo, o motor): o barramento (um `GainNode` e um `DynamicsCompressor` antes do volume do
+    contexto do Foundry, pelo `Sound#destination`); o `SomDeEfeito` com o `playbackRate`; o pan pelo
+    `StereoPannerNode`; o áudio travado e o contexto suspenso sem gesto descartados (e o contexto retomado depois do
+    gesto); o teto de vozes; o banco lido no ready; a pré-carga depois do primeiro gesto; tudo parado na troca de cena;
+    o `game.system.api.efeitos.sons` para o G4 e as macros;
+  - `coreografia.mjs`: o tocador do passo `som`;
+  - `configuracoes.mjs`: "Sons na mesa" (do mundo: pela distância, para todos, nenhum) e "Volume dos efeitos de
+    combate" (de cada navegador, 0 a 1, padrão 0,7);
+  - `efeitos/sons/banco.json` (vazio) e a linha dele no `LICENCAS.csv`;
+  - a versão `0.3.225`.
+- **As decisões:** a 13 do PLANO (o posicional ou para todos; quem não tem token) seguiu a recomendação, que é o padrão
+  de "Sons na mesa" e que o mestre muda ali.
+- **Fora deste item:** o banco de sons (o C103); as paredes e o abafado, o silenciador e o token escondido "ouvido sem a
+  posição" (o C92); o ducking da música (o C84, na explosão); a cópia AAC para o Safari (a decisão 8, o C92).
+- **Testes de referência:**
+  - **G3:** `tests/sistema/sons.test.mjs` (novo, 9 testes): a categoria, o banco e a conferência, os arquivos de um som,
+    a variação, o pitch e o volume, a distância e o pan, o motivo de não tocar, as vozes e o repetido, o banco do sistema
+    com as licenças, e o lexical do motor, do diretor e das configurações.
+  - **G4:** um passo novo, numa cena clara: o tiro com o áudio travado se descarta no mestre e no jogador; com o Shift (o
+    Foundry destravado e o contexto suspenso), também; depois de um clique, o jogador toca o arquivo do banco de teste (um
+    estampido feito pelo próprio passo, na pasta do mundo de teste) uma vez, pela distância, com o pan para o lado de
+    quem atirou, e o som chega ao fim; com o contexto suspenso de novo (o celular em segundo plano), o tiro seguinte o
+    retoma e toca até o fim; o volume muda o barramento na hora; o tiro sem arquivo, o volume no zero e a mesa
+    sem som não tocam; o "Para todos" toca sem a distância; nada falha.
+- **Portões:** G1 e G2 limpos; G3 868/868; G4 350/350 duas vezes seguidas (843 s e 845 s). A primeira dupla de rodadas caiu no passo novo (o Foundry do jogador já destravado por um passo anterior, que o passo sozinho não mostrava) e, na primeira, nas instáveis conhecidas (o C45 e o C52 dos tokens dinâmicos); o passo passou a conferir o estado, ganhou o contexto suspenso de novo (o H8 tinha sobrevivido), e as duas rodadas seguintes passaram inteiras.
+- **Mutações:** 13 do G3 (N1 a N13: o crítico com a distância, o banco fora da pasta, o vídeo como som, a variação repetida, o pitch igual, a distância linear, o pan sem limite, sem ouvinte no volume inteiro, a ordem do mudo e da trava, a categoria sem teto, a voz fraca no teto cheio, o repetido com o igual, o som fora do barramento) e 8 do G4 (H1 a trava que não descarta, H2 o volume que não muda o barramento, H3 sem os ouvintes, H4 o diretor sem o som, H5 o som que nunca termina, H6 o Para todos pela distância, H7 o contexto suspenso sem o gesto que toca, H8 o contexto suspenso que não volta), todas mortas; o N6 sobreviveu primeiro (o teste ganhou o quarto e os três quartos do raio), e o H8 também (o Edge retoma sozinho o contexto que nasceu antes do gesto: o passo ganhou o contexto suspenso depois do gesto); os arquivos voltaram iguais (o md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

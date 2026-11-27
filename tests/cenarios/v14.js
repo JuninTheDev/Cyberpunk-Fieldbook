@@ -4,6 +4,7 @@
 //   no cliente do jogador do alvo e o dano na ficha, e a importação de um personagem feito na wiki de teste.
 // Os dados ficam fixos onde a conta importa: CONFIG.Dice.randomUniform devolve os lados pedidos, em ordem.
 // Só roda com a mesa do servidor vazia: a licença do Foundry vale para uma mesa por vez.
+const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const foundry14 = require('../lib/foundry14');
@@ -12,6 +13,25 @@ const { mesaOcupada } = require('../lib/foundry');
 // uma permissão quebrada.
 const { abrirEdge: abrirEdgeDaWiki } = require('../lib/edge');
 const abrirEdge = opcoes => abrirEdgeDaWiki({ httpPermitido: [], ...opcoes });
+
+// Um estampido de teste, feito aqui (o C81): 0,25 s de ruído com o ataque curto e o decaimento, em WAV mono de 16 bits a
+// 22 050 Hz (cerca de 11 KB). O ruído sai de um sorteio fixo: o mesmo arquivo em toda rodada.
+function estampidoWav() {
+  const taxa = 22050, amostras = Math.round(taxa * 0.25);
+  const dados = Buffer.alloc(44 + amostras * 2);
+  dados.write('RIFF', 0); dados.writeUInt32LE(36 + amostras * 2, 4); dados.write('WAVE', 8);
+  dados.write('fmt ', 12); dados.writeUInt32LE(16, 16); dados.writeUInt16LE(1, 20); dados.writeUInt16LE(1, 22);
+  dados.writeUInt32LE(taxa, 24); dados.writeUInt32LE(taxa * 2, 28); dados.writeUInt16LE(2, 32); dados.writeUInt16LE(16, 34);
+  dados.write('data', 36); dados.writeUInt32LE(amostras * 2, 40);
+  let semente = 12345;
+  for (let i = 0; i < amostras; i++) {
+    semente = (semente * 1103515245 + 12345) >>> 0;
+    const ruido = (semente / 4294967296) * 2 - 1;
+    const envelope = Math.min(1, i / 40) * Math.exp(-i / (taxa * 0.04));
+    dados.writeInt16LE(Math.round(ruido * envelope * 0.8 * 32767), 44 + i * 2);
+  }
+  return dados;
+}
 
 module.exports = async ({ edge, servidores, r }) => {
   // O compêndio "Arquiteturas da NET": as do documento da campanha, se a wiki o tiver (as da trama antiga saíram do master
@@ -13306,6 +13326,144 @@ module.exports = async ({ edge, servidores, r }) => {
           })()`);
           await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);
         }
+      }
+    });
+
+    await r.passo('o som dos efeitos (o C81): o tiro no navegador travado (antes do primeiro gesto) se descarta, no mestre e no jogador, e também com o áudio suspenso (o Shift destrava o Foundry sem a ativação da página); depois de um clique, o jogador toca o arquivo do banco uma vez, pela distância (o pan para o lado de quem atirou), no barramento com o volume dele, e o som chega ao fim, também com o contexto suspenso de novo depois (o celular em segundo plano); o tiro sem arquivo, o volume no zero e a mesa sem som não tocam, e o "Para todos" toca sem a distância; nada falha', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const OUVINTE = 'Teste C81 Ouvinte';
+      const ATQ = 'Teste C81 Atirador';
+      let m = null;
+      let arquivo = null;
+      // Um tiro do Atirador (à direita) no Ouvinte do jogador, tocado no navegador dado: o registro dos sons pedidos, o que
+      // mudou nas contagens, as vozes logo depois e no fim (o som que chega ao fim larga a voz) e o AudioBuffer em cache.
+      const disparar = (navegador, perfil = 'pistola') => navegador.evaluate(`(async () => {
+        const api = game.system.api.efeitos, sons = api.sons;
+        await window.__esperar(() => !api.ocupado && !api.palco.vivos && !sons.vozes, 150);
+        const antes = sons.contagem, falhasAntes = [api.falhas, api.palco.falhas, sons.falhas];
+        sons.gravar(true);
+        const tocou = api.tocar({ v: 1, id: foundry.utils.randomID(), tipo: 'ataque', fase: 'desfecho', cena: '${m.cena}', origem: { token: '${m.tAtq}', x: 1650, y: 550, tamanho: 1, rotacao: 90 },
+          arma: { perfil: '${perfil}' }, modo: 'tiro', alvos: [{ token: '${m.tOuvinte}', x: 550, y: 550, resultado: 'errou' }], texto: [] });
+        const vozesLogo = sons.vozes;
+        const terminou = await window.__esperar(() => !api.ocupado && !api.palco.vivos && !sons.vozes, 50);
+        const registro = (sons.registro ?? []).map(s => ({ ...s }));
+        sons.gravar(false);
+        const depois = sons.contagem;
+        const mudou = Object.fromEntries(Object.keys(depois).filter(k => depois[k] !== antes[k]).map(k => [k, depois[k] - antes[k]]));
+        return { tocou, vozesLogo, terminou, registro, mudou, emCache: Boolean(game.audio.buffers?.getBuffer('${m.src}')), barramento: sons.barramento,
+          travado: game.audio.locked, falhas: [api.falhas - falhasAntes[0], api.palco.falhas - falhasAntes[1], sons.falhas - falhasAntes[2]].join() };
+      })()`);
+      const noJogador = expressao => jogador.evaluate(expressao);
+      try {
+        // 1. O mestre: a cena clara (sem a visão dos tokens) e sem a margem; o Ouvinte do jogador à esquerda e o Atirador, de
+        // ninguém, 11 casas à direita. O arquivo de teste (um estampido de 0,25 s, feito aqui) na pasta do mundo de teste.
+        const mundo = await edge.evaluate('game.world.id');
+        arquivo = path.join(foundry14.PASTA, 'Data', 'worlds', mundo, 'c81-teste', 'tiro.wav');
+        fs.mkdirSync(path.dirname(arquivo), { recursive: true });
+        fs.writeFileSync(arquivo, estampidoWav());
+        m = await edge.evaluate(`(async () => {
+          window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          const antes = { cena: canvas.scene?.id, ativa: game.scenes.find(s => s.active)?.id, sons: game.settings.get('${S}', 'efeitosSons') };
+          const cena = await Scene.implementation.create({ name: 'C81 Som', active: false, width: 2400, height: 1200, padding: 0, tokenVision: false, grid: { size: 100, distance: 2, units: 'm' } });
+          await cena.activate();
+          await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+          const usuario = game.users.getName('Jogador');
+          const ouvinte = await Actor.implementation.create({ name: '${OUVINTE}', type: 'personagem', ownership: { default: 0, [usuario.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+          const atirador = await Actor.implementation.create({ name: '${ATQ}', type: 'personagem', ownership: { default: 0 } });
+          await cena.createEmbeddedDocuments('Token', [(await ouvinte.getTokenDocument({ x: 500, y: 500 })).toObject(), (await atirador.getTokenDocument({ x: 1600, y: 500 })).toObject()]);
+          const tOuvinte = cena.tokens.find(t => t.actorId === ouvinte.id), tAtq = cena.tokens.find(t => t.actorId === atirador.id);
+          await window.__esperar(() => canvas.tokens.get(tOuvinte.id) && canvas.tokens.get(tAtq.id));
+          return { antes, cena: cena.id, tOuvinte: tOuvinte.id, tAtq: tAtq.id, src: 'worlds/' + game.world.id + '/c81-teste/tiro.wav' };
+        })()`);
+        // O banco de teste nos dois navegadores (o do sistema ainda não tem arquivos: o C103), só com o tiro da pistola.
+        const banco = JSON.stringify({ versao: 1, sons: { 'tiro.pistola': [m.src] } });
+        const usar = `(() => { window.__bancoC81 ??= game.system.api.efeitos.sons.banco; return game.system.api.efeitos.sons.usarBanco(${banco}); })()`;
+        const bancos = [await edge.evaluate(usar), await jogador.evaluate(usar)];
+        const pronto = await noJogador(`(async () => {
+          window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+          window.__volumeC81 = game.settings.get('${S}', 'efeitosVolume');
+          await window.__esperar(() => canvas.ready && canvas.scene?.id === '${m.cena}' && canvas.tokens.get('${m.tOuvinte}') && canvas.tokens.get('${m.tAtq}'));
+          canvas.tokens.get('${m.tOuvinte}').control({ releaseOthers: true });
+          await game.settings.set('${S}', 'efeitosIntensidade', 'completo');
+          return { ouvintes: canvas.sounds.getListenerPositions().length, travado: game.audio.locked, estado: game.audio.environment?.state ?? null, ativado: navigator.userActivation.hasBeenActive };
+        })()`);
+
+        // 2. Travado, nos dois navegadores: o tiro entra no diretor, e o som se descarta (o Foundry o seguraria até o clique).
+        // No G4 inteiro, uma tecla de um passo anterior já destravou o Foundry do jogador, sem a ativação: lá o contexto está
+        // suspenso desde antes, e o som se descarta do mesmo jeito; o mestre continua travado.
+        const travadoMestre = await disparar(edge);
+        const travadoJogador = await disparar(jogador);
+        // 3. O Shift do jogador destrava o Foundry, mas não dá a ativação da página: o contexto nasce suspenso, e o som se
+        // descarta (tocado nele, sairia junto com os outros quando o contexto voltasse).
+        await jogador.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        await jogador.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16 });
+        const suspenso = { ...(await noJogador('(async () => { await window.__esperar(() => !game.audio.locked, 50); return { travado: game.audio.locked, estado: game.audio.environment?.state, ativado: navigator.userActivation.hasBeenActive }; })()')), ...(await disparar(jogador)) };
+        // 4. Um clique de verdade (na beira da tela) dá a ativação: o motor retoma o contexto, e o tiro toca até o fim.
+        await jogador.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 3, y: 600, button: 'left', clickCount: 1 });
+        await jogador.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 3, y: 600, button: 'left', clickCount: 1 });
+        const destravou = await noJogador(`(async () => { await window.__esperar(() => navigator.userActivation.hasBeenActive, 50); canvas.tokens.get('${m.tOuvinte}').control({ releaseOthers: true }); return navigator.userActivation.hasBeenActive && !game.audio.locked; })()`);
+        const tocado = { ...(await disparar(jogador)), estado: await noJogador('game.audio.environment.state') };
+        // 4b. O contexto suspenso de novo, depois da ativação (o celular em segundo plano): o motor o retoma no tiro seguinte,
+        // que toca até o fim (o Edge retoma sozinho só o contexto que nasceu antes do gesto).
+        const voltou = { suspendeu: await noJogador('game.audio.environment.suspend().then(() => game.audio.environment.state)'), ...(await disparar(jogador)), estado: await noJogador('game.audio.environment.state') };
+        // 5. O volume deste navegador muda o barramento na hora; o tiro sem arquivo (o fuzil) e o volume no zero não tocam.
+        await noJogador(`game.settings.set('${S}', 'efeitosVolume', 0.4).then(() => true)`);
+        const volume = await noJogador('game.system.api.efeitos.sons.barramento');
+        const semArquivo = await disparar(jogador, 'fuzil');
+        await noJogador(`game.settings.set('${S}', 'efeitosVolume', 0).then(() => true)`);
+        const mudo = await disparar(jogador);
+        await noJogador(`game.settings.set('${S}', 'efeitosVolume', 0.7).then(() => true)`);
+        // 6. "Sons na mesa", do mestre: para todos (sem a distância) e nenhum.
+        const mesa = async valor => {
+          await edge.evaluate(`game.settings.set('${S}', 'efeitosSons', '${valor}').then(() => true)`);
+          await noJogador(`window.__esperar(() => game.settings.get('${S}', 'efeitosSons') === '${valor}')`);
+        };
+        await mesa('todos');
+        const todos = await disparar(jogador);
+        await mesa('nao');
+        const desligado = await disparar(jogador);
+        await mesa('posicional');
+
+        const so = (x, chave = 'tiro.pistola') => x.registro.filter(s => s.chave === chave);
+        const info = { bancos, pronto, travadoMestre, travadoJogador, suspenso, destravou, tocado, voltou, volume, semArquivo, mudo, todos, desligado };
+        const tiro = so(tocado)[0] ?? {};
+        const conferir = {
+          bancos: bancos.every(erros => Array.isArray(erros) && !erros.length),
+          pronto: pronto.ouvintes === 1 && pronto.ativado === false && (pronto.travado || pronto.estado === 'suspended'),
+          travado: travadoMestre.travado && (travadoJogador.travado || pronto.estado === 'suspended') && [travadoMestre, travadoJogador].every(x => x.tocou && so(x).length === 1 && so(x)[0].motivo === 'travado' && x.mudou.travado === 1 && !x.mudou.tocados && x.vozesLogo === 0),
+          suspenso: suspenso.estado === 'suspended' && suspenso.ativado === false && suspenso.tocou && so(suspenso).length === 1 && so(suspenso)[0].motivo === 'travado' && suspenso.mudou.travado === 1 && !suspenso.mudou.tocados && suspenso.vozesLogo === 0,
+          destravou,
+          tocado: tocado.tocou && so(tocado).length === 1 && tiro.src === m.src && !tiro.motivo && tiro.posicional === true && tiro.contexto === 'environment'
+            && tiro.volume > 0.4 && tiro.volume <= 0.55 * 1.19 && tiro.pan > 0.1 && tiro.pan < 0.2 && Math.abs(tiro.taxa - 1) <= 0.03 && tocado.mudou.tocados === 1
+            && tocado.vozesLogo === 1 && tocado.terminou && tocado.emCache && tocado.estado === 'running' && Math.abs(tocado.barramento?.volume - 0.7) < 1e-6,
+          voltou: voltou.suspendeu === 'suspended' && so(voltou).length === 1 && !so(voltou)[0].motivo && voltou.mudou.tocados === 1 && voltou.terminou && voltou.estado === 'running',
+          volume: Math.abs(volume?.volume - 0.4) < 1e-6,
+          semArquivo: semArquivo.tocou && so(semArquivo, 'tiro.fuzil').length === 1 && so(semArquivo, 'tiro.fuzil')[0].motivo === 'semArquivo' && !semArquivo.mudou.tocados && semArquivo.vozesLogo === 0,
+          mudo: so(mudo).length === 1 && so(mudo)[0].motivo === 'mudo' && !mudo.mudou.tocados && mudo.vozesLogo === 0,
+          todos: so(todos).length === 1 && !so(todos)[0].motivo && so(todos)[0].posicional === false && so(todos)[0].pan === 0 && so(todos)[0].volume > 0.45 && todos.terminou && todos.mudou.tocados === 1,
+          desligado: so(desligado).length === 1 && so(desligado)[0].motivo === 'desligado' && !desligado.mudou.tocados,
+          falhas: [travadoMestre, travadoJogador, suspenso, tocado, voltou, semArquivo, mudo, todos, desligado].every(x => x.falhas === '0,0,0')
+        };
+        const caidas = Object.keys(conferir).filter(chave => !conferir[chave]);
+        return [!caidas.length, JSON.stringify({ caidas, ...Object.fromEntries(caidas.map(chave => [chave, info[chave] ?? info]))})];
+      } finally {
+        const restaurar = '(() => { if (window.__bancoC81) game.system.api.efeitos.sons.usarBanco(window.__bancoC81); delete window.__bancoC81; return true; })()';
+        await jogador.evaluate(restaurar).catch(() => null);
+        await edge.evaluate(restaurar).catch(() => null);
+        await jogador.evaluate(`(async () => { await game.settings.set('${S}', 'efeitosIntensidade', 'auto'); if (window.__volumeC81 !== undefined) await game.settings.set('${S}', 'efeitosVolume', window.__volumeC81); return true; })()`).catch(() => null);
+        if (m) {
+          await edge.evaluate(`(async () => {
+            const esperar = window.__esperar, antes = ${JSON.stringify(m.antes)};
+            await game.settings.set('${S}', 'efeitosSons', antes.sons);
+            if (game.scenes.has(antes.ativa)) { await game.scenes.get(antes.ativa).activate(); await esperar(() => !canvas.loading); }
+            if (game.scenes.has(antes.cena)) { await game.scenes.get(antes.cena).view(); await esperar(() => canvas.ready && canvas.scene?.id === antes.cena); }
+            await game.scenes.get('${m.cena}')?.delete();
+            for (const ator of game.actors.filter(a => ['${OUVINTE}', '${ATQ}'].includes(a.name))) await ator.delete();
+            return true;
+          })()`);
+          await jogador.evaluate(`window.__esperar(() => canvas.ready && canvas.scene?.id !== '${m.cena}')`).catch(() => null);
+        }
+        if (arquivo) fs.rmSync(path.dirname(arquivo), { recursive: true, force: true });
       }
     });
 

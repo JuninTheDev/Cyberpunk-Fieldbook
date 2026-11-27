@@ -6,13 +6,14 @@
 // - o socket, só do mestre ativo (o caminho 2): o disparo antes da defesa (o C82) e o que o mestre manda à parte, com
 //   "recipients" para quem pode ver.
 // A regra pura (regras-coreografia.mjs) monta o roteiro; aqui ficam a cena, a visão, o nível deste navegador, a fila e
-// os tocadores: o texto em cima do token (efeitos.mjs) e, desde o C80, o desenho (o palco PIXI, tocador-pixi.mjs); o som
-// entra no C81. O efeito nunca segura o jogo: nada espera por ele, e a falha vira um contador, sem erro no console
+// os tocadores: o texto em cima do token (efeitos.mjs), desde o C80 o desenho (o palco PIXI, tocador-pixi.mjs) e, desde
+// o C81, o som (sons.mjs). O efeito nunca segura o jogo: nada espera por ele, e a falha vira um contador, sem erro no console
 // (só o erro de programação vai ao console, para o G4 pegar).
 import { SISTEMA } from './config.mjs';
 import { textoFlutuante } from './efeitos.mjs';
 import * as C from './regras-coreografia.mjs';
 import { PALCO, desenhar, registrarPalco } from './tocador-pixi.mjs';
+import { SONS, registrarSons, tocarSom } from './sons.mjs';
 import { destinatariosDoTexto, textoNaVisao } from './regras.mjs';
 
 const CANAL = `system.${SISTEMA}`;
@@ -63,10 +64,11 @@ function primeiraParede(de, ate) {
   return batida ? { x: batida.x, y: batida.y } : null;
 }
 
-// Os tocadores de cada passo: o texto aqui; o desenho vai inteiro para o palco (executar). O som (o C81) ainda não faz
-// nada.
+// Os tocadores de cada passo: o texto e o som (o C81, sons.mjs) aqui, cada um no tempo dele; o desenho vai inteiro para
+// o palco (executar).
 const TOCADORES = {
-  texto: (evento, passo) => textoFlutuante({ cena: evento.cena, token: passo.token, texto: passo.texto, estilo: passo.estilo })
+  texto: (evento, passo) => textoFlutuante({ cena: evento.cena, token: passo.token, texto: passo.texto, estilo: passo.estilo }),
+  som: (evento, passo) => tocarSom(evento, passo)
 };
 
 function tocarPasso(evento, passo) {
@@ -149,6 +151,7 @@ export function rever(mensagem) {
 
 export function registrarCoreografia() {
   registrarPalco();
+  registrarSons();
   // O caminho 1: o cartão do resultado, só o de um mestre, só para quem vê o cartão. O isContentVisible, e não o visible: o
   // cartão sussurrado que tem rolagem (o dano) é visible para todos, que veem a rolagem escondida, mas não o conteúdo.
   Hooks.on('createChatMessage', mensagem => {
@@ -165,7 +168,7 @@ export function registrarCoreografia() {
 // A API (game.system.api.efeitos), para as macros e o G4: tocar e emitir, o nível deste navegador, as falhas, e o
 // registro de cada evento tocado (só com o gravar ligado).
 export const API = {
-  tocar, emitir, rever, nivelDesteNavegador, palco: PALCO,
+  tocar, emitir, rever, nivelDesteNavegador, palco: PALCO, sons: SONS,
   gravar(ligado = true) { estado.registro = ligado ? [] : null; estado.maiorEspera = 0; return true; },
   get registro() { return estado.registro; },
   get falhas() { return estado.falhas; },

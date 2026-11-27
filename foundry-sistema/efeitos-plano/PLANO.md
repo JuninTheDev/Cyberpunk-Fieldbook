@@ -357,7 +357,7 @@ na versão `0.3.<ciclo>`.
     impactos da seção 5.3; o "Rever o efeito" no cartão.
   - Testa: o G4 com os passos reais, dez rajadas seguidas (o contêiner destruído, o número de filhos de volta), e o G4
     inteiro **duas vezes** (os passos antigos com `animacoes: 'auto'` passam a desenhar: uma instável nova pode aparecer).
-- [ ] **C81. O motor de som e o banco da fase 1:** **M**, mais 1 a 2 horas de audição com o usuário; depende do C79; risco
+- [x] **C81. O motor de som e o banco da fase 1:** o motor feito no ciclo 225; o banco passou para o C103 (os downloads e a audição); **M**, mais 1 a 2 horas de audição com o usuário; depende do C79; risco
   baixo.
   - o `sons.mjs` e o `regras-sons.mjs`; o barramento, as vozes, o pitch, o volume de cada aparelho; o áudio travado
     descartado; a pré-carga;

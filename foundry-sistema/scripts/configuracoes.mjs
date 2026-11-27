@@ -2,6 +2,8 @@
 import { SISTEMA } from './config.mjs';
 import { aplicarMarcadorDeTurno, MARCADORES_DE_TURNO } from './marcador-de-turno.mjs';
 import { aplicarTemaNoFoundry } from './tema-foundry.mjs';
+import { aplicarVolume } from './sons.mjs';
+import { VOLUME_PADRAO } from './regras-sons.mjs';
 
 export const config = chave => game.settings.get(SISTEMA, chave);
 
@@ -77,6 +79,15 @@ export function registrarConfiguracoes() {
   registrar('efeitosIntensidade', {
     name: 'Efeitos neste navegador', hint: 'Só neste navegador, e nunca acima do que o mestre escolheu em Efeitos na mesa. O Automático usa o Reduzido no celular, no Safari, no computador fraco e com o modo fotossensível do Foundry; senão, o da mesa.',
     scope: 'client', type: String, default: 'auto', choices: { auto: 'Automático', completo: 'Completo', reduzido: 'Reduzido', texto: 'Só o texto', nada: 'Nenhum' }
+  });
+  // O som dos efeitos (o C81, sons.mjs): o da mesa, do mestre, e o volume de cada navegador.
+  registrar('efeitosSons', {
+    name: 'Sons na mesa', hint: 'O som dos efeitos no combate (o tiro, o impacto, a explosão). Pela distância: mais baixo para quem está longe, e quem não tem token na cena ouve pela metade. Para todos: o mesmo volume para a mesa toda. O crítico e a morte soam para todos, sem a distância. Cada jogador ajusta o volume dele em Volume dos efeitos de combate.',
+    type: String, default: 'posicional', choices: { posicional: 'Pela distância', todos: 'Para todos, sem a distância', nao: 'Nenhum' }
+  });
+  registrar('efeitosVolume', {
+    name: 'Volume dos efeitos de combate', hint: 'Só neste navegador: o volume dos sons dos efeitos, por cima do volume Ambiente do Foundry. Zero desliga.',
+    scope: 'client', type: Number, default: VOLUME_PADRAO, range: { min: 0, max: 1, step: 0.05 }, onChange: valor => aplicarVolume(valor)
   });
   // As das armas de 2077 do cpr-2077 do Foundry 12 saíram com o Mission Kit: as do ataque Smart (o teste Smart e a arma
   // sem o Smart Link) no ciclo 110, e a da carga Tech que esfria uma rodada no ciclo 115.

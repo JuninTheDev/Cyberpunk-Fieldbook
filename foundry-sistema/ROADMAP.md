@@ -671,10 +671,13 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   "Sim": o clarão do cano acende uma luz de verdade por 0,1 s (2 m; 3 m no clarão grande), em cada navegador, que revela
   quem atira no escuro para quem tem a linha de visão até ele. Uma luz por vez, nunca um documento (nada se grava na
   cena); sem a luz no Reduzido, no modo fotossensível e no token que o mestre escondeu.
-- [~] **C81. O motor de som:** em andamento (sessão KouArt, 2026-11-27). O usuário disse "Comece". O motor (o
-  `sons.mjs` e o `regras-sons.mjs`, o barramento, o volume de cada aparelho, as vozes, o pitch, o posicional pela
-  distância, o áudio travado descartado, a pré-carga) neste item; o banco de sons fica no C103, porque pede os downloads
-  e a curadoria de ouvido do usuário.
+- [x] **C81. O motor de som:** feito no ciclo 225 (sessão KouArt, 2026-11-27). O usuário disse "Comece". O
+  `sons.mjs` toca o passo `som` do roteiro em cada navegador, sem módulo: o barramento "Efeitos de combate" (o volume
+  de cada aparelho e um limitador, antes do "Ambiente" do Foundry), o pitch e a variação pela semente do evento (o mesmo
+  tiro em todos), o volume pela distância e o pan (sem o `playAtPosition`, que dava o volume 1 ao mestre), o crítico e
+  a morte para todos, as vozes (16, 10 no celular), o áudio travado e o contexto suspenso descartados, a pré-carga. "Sons
+  na mesa" (do mestre) e "Volume dos efeitos de combate" (de cada um). O banco (`efeitos/sons/banco.json`) vai vazio:
+  os arquivos são o C103.
 - [ ] **C103. O banco de sons da fase 1:** os cerca de 120 arquivos do PLANO (o tiro de cada classe, a cauda, os impactos,
   o erro, o pente vazio, a recarga), só CC0, CC-BY e nossos, em Ogg Opus mono, com o `build/sons.mjs` (o ffmpeg no PC) e
   o `LICENCAS.csv`; depende do C81 e da audição com o usuário.
