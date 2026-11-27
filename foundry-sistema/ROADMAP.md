@@ -995,6 +995,10 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   "otimizar todos os testes para q sejam mais rápidos mas n percam a eficácia e eficiência". Medir onde vai o tempo (o G1,
   o G4, os cenários da wiki, os isolados) e cortar a espera que não confere nada (as pausas fixas, o que se repete), sem
   tirar nem afrouxar teste; as mutações de antes continuam morrendo.
+- [~] **C105. O contêiner não dá os atores novos aos jogadores:** em andamento (sessão KouArt, 2026-11-27). Achado pelo C104:
+  o contêiner criado sem permissão ganha o "dono: todos" pelo `updateSource` do `_preCreate` (o documentos.mjs), que
+  mudava o valor inicial do campo do Foundry; daí em diante, até recarregar a página, todo ator criado sem permissão (o
+  personagem, o capanga, o alvo do ataque) nascia com todos os jogadores como donos.
 
 ## Fora do plano: o que só existe no CORE 0.93
 
