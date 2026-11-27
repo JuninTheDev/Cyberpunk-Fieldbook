@@ -116,7 +116,13 @@ export class AtorCPR extends Actor {
     if (ATORES_DA_NET.includes(this.type) && !dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, bar1: { attribute: 'rez' } } });
     if (this.type === 'conteiner') {
       if (!dados.prototypeToken) this.updateSource({ prototypeToken: { actorLink: false, disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL } });
-      if (dados.ownership?.default === undefined) this.updateSource({ ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+      // O ator novo sem permissão traz o próprio objeto do valor inicial do campo do Foundry (o mesmo para todos), e o
+      // updateSource muda no lugar: o "default" ia para o valor inicial, e todo ator criado depois sem permissão, nesta
+      // página, nascia com todos os jogadores donos (o C105). Por isso, uma cópia antes.
+      if (dados.ownership?.default === undefined) {
+        this._source.ownership = { ...this._source.ownership };
+        this.updateSource({ ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+      }
       this.updateSource({ 'system.permissoes': permissoesDoTipo(this._source.system.tipo, this._source.system.permissoes) });
     }
   }

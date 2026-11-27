@@ -54,7 +54,10 @@ fs.mkdirSync(saida, { recursive: true });
       pulados += pulos.length;
       const contados = relatorio.itens.length - pulos.length;
       console.log(`\n${ruins.length ? '✗' : pulos.length ? '–' : '✓'} ${nome} (${contados - ruins.length}/${contados}${pulos.length ? `, ${pulos.length} parte(s) pulada(s)` : ''}, ${Math.round((Date.now() - inicio) / 1000)} s)`);
+      const foraDoFiltro = relatorio.itens.filter(item => item.pulado && item.detalhe === 'fora do SO_PASSOS').length;
+      if (foraDoFiltro) console.log(`  – PULADOS: ${foraDoFiltro} passo(s) fora do SO_PASSOS`);
       for (const item of relatorio.itens) {
+        if (item.pulado && item.detalhe === 'fora do SO_PASSOS') continue;
         if (item.pulado) { console.log(`  – PULADO: ${item.nome}${item.detalhe ? `: ${item.detalhe}` : ''}`); continue; }
         if (!item.ok || process.env.DETALHES) console.log(`  ${item.ok ? '✓' : '✗'} ${item.nome}${item.detalhe ? `: ${item.detalhe.slice(0, Number(process.env.LARGURA || 220))}` : ''}${process.env.DETALHES && item.ms > Number(process.env.LIMITE_MS || 2000) ? ` (${(item.ms / 1000).toFixed(1)} s)` : ''}`);
       }

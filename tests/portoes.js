@@ -5,7 +5,8 @@
 // Neste PC, o G4 usa o Foundry 14 e o Node 24 da pasta descartável (%LOCALAPPDATA%\FieldbookTeste\foundry14-app e
 // node24\node.exe), quando o FOUNDRY14_APP não vem de fora. Sai com 1 se algum portão falhou, e com 2 se o G4 pulou a
 // parte do Foundry (o C54: não vale como portão).
-const { spawnSync } = require('child_process');
+const { spawnSync, execFile } = require('child_process');
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
@@ -29,32 +30,51 @@ const bibliotecas = () => [
 const arquivosDoG1 = () => [...mjsDe(path.join(raiz, 'foundry-sistema')), ...mjsDe(path.join(raiz, 'tests', 'sistema')), ...bibliotecas()];
 
 const resultados = [];
-function portao(nome, fn) {
+async function portao(nome, fn) {
   const inicio = Date.now();
-  const { ok, detalhe, codigo = ok ? 0 : 1 } = fn();
+  const { ok, detalhe, codigo = ok ? 0 : 1 } = await fn();
   resultados.push({ nome, ok, codigo, detalhe, s: Math.round((Date.now() - inicio) / 1000) });
   console.log(`${ok ? '✓' : codigo === 2 ? '–' : '✗'} ${nome} (${Math.round((Date.now() - inicio) / 1000)} s): ${detalhe}`);
 }
 const rodar = (comando, args, opcoes = {}) => spawnSync(comando, args, { cwd: raiz, encoding: 'utf8', ...opcoes });
 const ultimas = (texto, n = 6) => String(texto || '').trim().split('\n').slice(-n).join(' | ');
 
-portao('G1, sintaxe', () => {
+// O node --check de cada arquivo, vários ao mesmo tempo (um por núcleo): o mesmo teste, sem esperar um de cada vez (o C104).
+function checarSintaxe(arquivos) {
+  const fila = [...arquivos];
+  const ruins = [];
+  const trabalhador = () => new Promise(fim => {
+    const proximo = () => {
+      const arquivo = fila.shift();
+      if (!arquivo) return fim();
+      execFile(process.execPath, ['--check', arquivo], { cwd: raiz }, erro => { if (erro) ruins.push(arquivo); proximo(); });
+    };
+    proximo();
+  });
+  const juntos = Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16));
+  return Promise.all(Array.from({ length: juntos }, trabalhador)).then(() => ruins.sort());
+}
+module.exports = { checarSintaxe, arquivosDoG1 };
+
+// Os portões rodam só pela linha de comando (o teste do G3 importa o checarSintaxe).
+if (require.main === module) (async () => {
+await portao('G1, sintaxe', async () => {
   const arquivos = arquivosDoG1();
-  const ruins = arquivos.filter(f => rodar(process.execPath, ['--check', f]).status !== 0).map(relativo);
+  const ruins = (await checarSintaxe(arquivos)).map(relativo);
   return { ok: !ruins.length, detalhe: ruins.length ? `com erro: ${ruins.join(', ')}` : `${arquivos.length} arquivos` };
 });
-portao('G2, lint', () => {
+await portao('G2, lint', () => {
   const alvos = ['foundry-sistema', 'tests/sistema', ...bibliotecas().map(relativo)];
   const r = rodar('npx', ['--yes', 'eslint@10.12.0', ...alvos], { shell: process.platform === 'win32' });
   return { ok: r.status === 0, detalhe: r.status === 0 ? 'sem erros' : ultimas(r.stdout + r.stderr) };
 });
-portao('G3, regras', () => {
+await portao('G3, regras', () => {
   const r = rodar(process.execPath, ['--test', 'tests/sistema/*.test.mjs']);
   const conta = chave => (String(r.stdout).match(new RegExp(`ℹ ${chave} (\\d+)`)) || [])[1];
   return { ok: r.status === 0, detalhe: `${conta('pass') ?? '?'}/${conta('tests') ?? '?'}${r.status === 0 ? '' : `: ${ultimas(r.stdout, 4)}`}` };
 });
 if (pedidos.has('--servidor')) {
-  portao('Servidor', () => {
+  await portao('Servidor', () => {
     const r = rodar(process.execPath, ['--test', 'tests/isolados/servidor-sistema.test.js']);
     const pulados = Number((String(r.stdout).match(/ℹ skipped (\d+)/) || [])[1] || 0);
     // Sem o bash, o teste pula: aqui, quando foi pedido, pular não vale.
@@ -62,7 +82,7 @@ if (pedidos.has('--servidor')) {
   });
 }
 if (pedidos.has('--g4')) {
-  portao('G4, Foundry 14', () => {
+  await portao('G4, Foundry 14', () => {
     const descartavel = path.join(process.env.LOCALAPPDATA || '', 'FieldbookTeste');
     const env = { ...process.env };
     if (!env.FOUNDRY14_APP && fs.existsSync(path.join(descartavel, 'foundry14-app'))) env.FOUNDRY14_APP = path.join(descartavel, 'foundry14-app');
@@ -77,3 +97,4 @@ const falhou = resultados.some(r => !r.ok && r.codigo !== 2);
 const pulou = resultados.some(r => r.codigo === 2);
 console.log(falhou ? '\nAlgum portão falhou.' : pulou ? '\nOs portões rodados passaram, mas houve parte pulada: não vale como portão.' : '\nOs portões passaram.');
 process.exit(falhou ? 1 : pulou ? 2 : 0);
+})().catch(erro => { console.error(erro); process.exit(1); });

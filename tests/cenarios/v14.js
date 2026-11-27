@@ -16535,6 +16535,28 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    // O C105: o updateSource do contêiner juntava o "default" no objeto do valor inicial do campo do Foundry, e todo ator
+    // criado depois sem permissão (nesta página) nascia com todos os jogadores donos.
+    await r.passo('C105: o contêiner criado sem permissão fica com todos os jogadores donos, e o personagem, o capanga e o item criados depois dele, sem permissão, não; o valor inicial da permissão do Foundry continua "nenhum"', async () => {
+      const info = await edge.evaluate(`(async () => {
+        const docs = [];
+        try {
+          const campo = Actor.implementation.schema.fields.ownership;
+          const conteiner = await Actor.implementation.create({ name: 'C105 Contêiner', type: 'conteiner' }); docs.push(conteiner);
+          const personagem = await Actor.implementation.create({ name: 'C105 Personagem', type: 'personagem' }); docs.push(personagem);
+          const capanga = await Actor.implementation.create({ name: 'C105 Capanga', type: 'capanga' }); docs.push(capanga);
+          const item = await Item.implementation.create({ name: 'C105 Item', type: 'equipamento' }); docs.push(item);
+          const jogador = game.users.getName('Jogador');
+          return { conteiner: conteiner.ownership.default, personagem: personagem.ownership.default, capanga: capanga.ownership.default, item: item.ownership.default,
+            doJogador: [conteiner, personagem, capanga].map(a => a.testUserPermission(jogador, 'OWNER')), inicial: campo.getInitialValue({}).default };
+        } finally {
+          for (const d of docs) await d.delete();
+        }
+      })()`);
+      const { OWNER, NONE } = { OWNER: 3, NONE: 0 };
+      return [info.conteiner === OWNER && info.personagem === NONE && info.capanga === NONE && info.item === NONE && info.doJogador.join() === 'true,false,false' && info.inicial === NONE, JSON.stringify(info)];
+    });
+
     await r.passo('contêiner (o C24, parte 1): o ator novo é uma loja de token solto e neutro, com os jogadores donos; o tipo liga as permissões do CORE (a loja mantém o estoque infinito); o dinheiro com o extrato; a ficha do mestre com as configurações de cada tipo; o item do compêndio entra em cópia e soma na pilha; o da ficha vai com o carregador instalado; o preço da lista; pegar uma parte, pegar tudo e o estoque infinito; o mestre arrasta do contêiner para a ficha e de uma ficha para outra, e o item vai', async () => {
       const info = await edge.evaluate(`(async () => {
         const esperar = async (condicao, vezes = 80) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
@@ -18762,7 +18784,9 @@ module.exports = async ({ edge, servidores, r }) => {
         const cena = await Scene.implementation.create({ name: 'C26 Fluxo', width: 1200, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
         salvo.criada = cena.id;
         await cena.activate();
-        await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        // O activate nem sempre leva a vista do mestre à cena nova (o C104: o passo esperava 10 s pela cena e mais 10 s pelos
+        // tokens dela, e seguia na cena de antes): sem ela em 2 s, o view.
+        if (!await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id, 20)) { await cena.view(); await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id); }
         for (const [a, x] of [[p, 100], [alvo, 300]]) await cena.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x, y: 100, actorLink: true })).toObject()]);
         await window.__esperar(() => canvas.tokens.placeables.length === 2);
         salvo.jogador = p.id; salvo.alvo = alvo.id;

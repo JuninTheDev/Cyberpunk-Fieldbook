@@ -145,12 +145,26 @@ async function avisosDoSistema(edge) {
   return [...new Set([...(daPagina || []), ...deTodas])];
 }
 
+// O Edge sem janela não solta o transitionend: cada janela que fechava esperava o 1 s inteiro do prazo do Foundry
+// (o _awaitTransition do ApplicationV2), centenas de vezes por rodada do G4. Nos navegadores do teste, as janelas fecham
+// sem a animação (o animate: false do próprio Foundry, que o sistema já usa em algumas): só o desenho muda; o resto do
+// fechamento é o mesmo (o C104). Vale a cada página que fica pronta (a entrada e o recarregar).
+const FECHAR_SEM_ANIMACAO = `(() => {
+  const App = foundry.applications.api.ApplicationV2;
+  if (!Object.hasOwn(App.prototype, '__fechaSemAnimacao')) {
+    const fechar = App.prototype.close;
+    App.prototype.close = function (opcoes = {}) { return fechar.call(this, { animate: false, ...opcoes }); };
+    App.prototype.__fechaSemAnimacao = true;
+  }
+  return true;
+})()`;
+
 async function esperarJogo(edge) {
   for (let i = 0; i < 120; i++) {
     await sleep(500);
-    if (await edge.evaluate('!!(window.game && game.ready)').catch(() => false)) return;
+    if (await edge.evaluate('!!(window.game && game.ready)').catch(() => false)) { await edge.evaluate(FECHAR_SEM_ANIMACAO); return; }
   }
   throw new Error('O mundo de teste não ficou pronto no navegador.');
 }
 
-module.exports = { disponivel, motivoIndisponivel, preparar, subir, entrarComo, entrarComoMestre, esperarJogo, capturarAvisos, avisosDoSistema, versao, PORTA, PASTA, SISTEMA };
+module.exports = { disponivel, motivoIndisponivel, preparar, subir, entrarComo, entrarComoMestre, esperarJogo, capturarAvisos, avisosDoSistema, versao, PORTA, PASTA, SISTEMA, FECHAR_SEM_ANIMACAO };

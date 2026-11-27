@@ -10750,6 +10750,61 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 e G2 limpos; G3 881/881; G4 352/352 e, na rodada seguinte, 350/352 com só as duas instáveis conhecidas do C26 ("A nonpersisted Document cannot be updated"). A primeira rodada achou o limite de "com som" do passo novo alto demais para o flatline (um tom puro, pico em -26 dBFS): ficou em -40 dBFS.
 - **Mutações:** G3: as 12 morreram (B1 a B8 na receita: a mistura entre os grupos, o limitador, a tomada do meio, o nome do arquivo, a origem na licença, a licença trocada, a explosão leve sem registro, a pistola que não é a escolhida; D1 a D4 nos dados: o banco sem um arquivo, um arquivo sem a linha da licença, o autor errado, um arquivo em estéreo). G4: as 3 morreram, só pelo passo do C103 (H1 um arquivo em estéreo, H2 um arquivo estourado, H3 o banco não lido no ready). Os arquivos voltaram iguais (md5).
 
+### Ciclo 227 (2026-11-27): C104, os testes mais rápidos, sem perder o que conferem (sessão KouArt)
+
+- **Pedido do usuário (2026-11-27):** "otimizar todos os testes para q sejam mais rápidos mas n percam a eficácia e
+  eficiência".
+- **A medida:** o perfil de cada passo (`DETALHES=1 LIMITE_MS=0`) e uma sonda do tempo (`SONDA_TEMPOS`: cada passo, cada
+  `evaluate` longo e as marcas da página). Os passos somavam 771 s dos 836 s do G4. As pausas fixas e as esperas que se
+  esgotam davam cerca de 60 s; o resto era o trabalho do Foundry, e três coisas que não conferiam nada:
+  - **o fechar das janelas:** o Edge sem janela não solta o `transitionend`, e o Foundry espera 1 s (o
+    `_awaitTransition`) a cada janela fechada: a ficha fechava em 1006 ms, e em 2 ms com o `animate: false`;
+  - **o C55 (60 s):** o alvo do supressivo nascia com o jogador dono (o C105, no ciclo 228), e o supressivo esperava os 60 s
+    da resposta dele; sozinho, o passo leva 0,8 s;
+  - **o C26, as chaves do Fluxo (21 s):** o `activate` não levou a vista do mestre à cena nova, e o passo esperou 10 s pela
+    cena e mais 10 s pelos tokens, e seguiu na cena de antes.
+- **Entrega (só os testes):**
+  - `tests/lib/foundry14.js`: o `esperarJogo` faz as janelas fecharem sem a animação (o `FECHAR_SEM_ANIMACAO`: o
+    `animate: false` como padrão do `close`, e quem pede a animação ainda a tem), a cada página pronta;
+  - `tests/cenarios/v14.js`: no C26, sem a cena nova em 2 s, o `view` (como outros passos do G4 já faziam);
+  - `tests/lib/relatorio.js` e `tests/rodar.js`: o `SO_PASSOS` (os passos de fora, pulados: a rodada não vale como portão)
+    e o começo de cada passo na sonda; `tests/lib/edge.js`: o `SONDA_TEMPOS`;
+  - `tests/portoes.js`: o G1 com o `node --check` de vários arquivos ao mesmo tempo (o `checarSintaxe`), e os portões só
+    pela linha de comando (o teste importa o `checarSintaxe`);
+  - a versão `0.3.227`.
+- **Resultado:** o G4 de 836 s para 654 s (353/353, com o C105), o C55 de 60,8 s para 0,8 s, o C26 das chaves de 21 s para
+  5,5 s; o G1 de 13 s para 3 s. Nenhum passo saiu nem afrouxou.
+- **Testes de referência (G3):** o `g4-rapido.test.mjs` (novo): o G1 em paralelo acha cada arquivo com erro (e só eles) e
+  usa a lista de antes; o `SO_PASSOS` roda só os pedidos e pula os outros (o código 2); o fechar sem a animação é o padrão,
+  quem pede a animação a tem, e a segunda página não embrulha de novo.
+- **Portões:** G1 (291 arquivos, 3 s), G2 e G3 (884/884) passam; o G4 353/353 em 654 s (com o C105 na mesma árvore). Com a mutação do C105 (o vazamento de volta), o G4 voltou a 718 s.
+- **Mutações:** G3: P1 a P7 morreram (o SO_PASSOS ignorado e sem o pulado; o fechar sem a animação por cima de quem pede a animação, embrulhado de novo a cada página e fora do esperarJogo; o G1 em paralelo sem anotar o erro e pulando arquivos). O P6 sobrevivia: o teste passou a conferir que a segunda página não troca o close. G4, as de antes: o C101 F2 (a janela sem o "Onde nasce") e o F3 (a janela sem o destino) morreram no G4 mais rápido; na rodada do F2, as duas instáveis conhecidas do C26 caíram também (o view do C26 não as tirou).
+- **Fica de fora:** os isolados (86 s, a maior parte nos scripts do servidor, que rodam o Git Bash de verdade) e os
+  cenários da wiki, que não mudaram. Na rodada de todos os cenários juntos (`node tests/rodar.js`, sem nome), o `criador`,
+  os `jogadores`, a `base`, o `fluxo`, a `reversao` e o `sistema` tiveram falhas no master sem mudança (o `criador` caiu em
+  cadeia no código do jogador), e o v14 depois deles, 17; cada um sozinho não foi conferido aqui. As esperas que o passo
+  confere de propósito (o prazo do jogador na NET, de 25 s; os 8 s do "jogador demora"; os 10 s da janela fechada no X)
+  ficaram.
+
+### Ciclo 228 (2026-11-27): C105, o contêiner não dá os atores novos aos jogadores (sessão KouArt)
+
+- **Achado pelo C104 (ciclo 227):** o C55 levava 60 s na rodada inteira do G4 e 0,8 s sozinho. O alvo dele nascia com
+  o "default: OWNER": depois que um passo do C17 criou um contêiner sem permissão, todo ator criado sem permissão (o
+  personagem, o capanga, o alvo do ataque) nascia com todos os jogadores donos, até recarregar a página. Na mesa, os
+  jogadores ficariam donos de tudo o que o mestre criasse depois de um contêiner, e o ataque esperaria a defesa de um
+  jogador que nem sabe do alvo.
+- **A causa:** o `_preCreate` do ator (o `documentos.mjs`) dava ao contêiner novo o "dono: todos" com o
+  `updateSource({ ownership: { default: OWNER } })`. O ator sem permissão nos dados traz o próprio objeto do valor inicial
+  do campo do Foundry (o `{ default: 0 }`, o mesmo para todos), e o `updateSource` muda no lugar: o valor inicial virava
+  `{ default: 3 }`. O `ForcedReplacement` não resolve (o `_updateCommit` também junta no lugar).
+- **Entrega:**
+  - `documentos.mjs`: o contêiner ganha uma cópia da permissão antes do `updateSource`;
+  - a versão `0.3.228`.
+- **Teste de referência (G4):** um passo novo, antes do C24: o contêiner criado sem permissão fica com todos os jogadores
+  donos, e o personagem, o capanga e o item criados depois dele, sem permissão, não; o valor inicial da permissão continua
+  "nenhum".
+- **Portões:** G1, G2 e G3 (884/884) passam; o G4 353/353 em 654 s (junto com o C104). O C55, que levava 60,8 s, leva 0,8 s.
+- **Mutações:** G4: o K1 (o contêiner sem a cópia da permissão) morreu no passo do C105 (e o G4 voltou a 718 s, com o C55 lento de novo).
 ### Ciclo 229 (2026-11-27): C103, a explosão leve na 2ª rodada da audição (sessão KouArt)
 
 - **Pedido do usuário:** a explosão leve ficou sem som no ciclo 226 ("Nenhum serve" na audição); perguntado o que fazer,
