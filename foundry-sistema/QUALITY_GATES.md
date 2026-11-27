@@ -525,6 +525,14 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O ângulo dá a volta no 180°** (ciclo 217): a faixa do fogo supressivo ia do menor ao maior ângulo dos alvos, e dois
   alvos atrás do atirador, a 170° e a −170°, viravam uma varredura de 340° em vez de 20°. Meça os ângulos em volta de uma
   referência (o primeiro alvo, de −180° a +180° dele), e o teste com a direção do token em 90° e em 200° achou o caso.
+- **A visão do token se confere de dois jeitos, e numa cena sem margem** (ciclo 223): o `Token#isVisible` é o teste
+  de visão feito na hora, e o `visible` é o que a tela mostra (o token redesenhado no quadro seguinte); a luz que revela
+  sem refazer a visão passa no primeiro e falha no segundo, e o G4 confere os dois. E a cena de teste vai com o
+  `padding: 0`: com a margem padrão, o token posto em (500, 500) fica fora do retângulo da cena, e o Foundry não usa a
+  visão de quem está na margem para ver dentro dela (o `testVisibility` do `CanvasVisibility`). O primeiro G4 do C102
+  caiu por isso, com a luz certa. A visão também se refaz só no quadro seguinte: o token novo aparece até lá, e a parede
+  nova ainda não corta a visão. Espere a cena assentar antes de medir (o token fora da vista; o `los` da visão sem o
+  ponto do outro lado da parede), e não só o documento existir.
 - **O desenho do efeito se confere pelo palco, não pela tela** (ciclo 219): o Edge sem janela do G4 roda o ticker do
   PIXI, mas um quadro a mais ou a menos não diz nada. O palco conta as peças que desenhou, as partículas (o pico) e os
   contêineres nossos na cena (o maior visto enquanto toca e o que sobra no fim); o passo espera o palco esvaziar e

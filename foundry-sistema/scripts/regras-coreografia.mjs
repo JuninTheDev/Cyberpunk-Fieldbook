@@ -16,11 +16,13 @@ export const FASES = ['disparo', 'desfecho'];
 export const MODOS_DO_EFEITO = ['tiro', 'autofogo', 'supressivo', 'cartucho', 'explosivo', 'corpo', 'ricochete', 'doisCanos', 'arremesso'];
 export const RESULTADOS_DO_EFEITO = ['acertou', 'errou', 'esquivou', 'fora', 'semDv', 'suprimido', 'firme', 'semDestino', 'semRepeticao'];
 export const PASSOS = ['clarao', 'som', 'tracante', 'projetil', 'arco', 'impacto', 'sangue', 'faisca', 'esquiva', 'golpe', 'avanco', 'explosao',
-  'onda', 'tremor', 'nuvem', 'texto', 'anel', 'tomba', 'glitch', 'feixe', 'tela', 'chamas', 'hud', 'marca'];
+  'onda', 'tremor', 'nuvem', 'texto', 'anel', 'tomba', 'glitch', 'feixe', 'tela', 'chamas', 'hud', 'marca', 'luz'];
 // O desfecho de um alvo atingido (o plano, seção 5.3: o primeiro que vale), que decide o desenho do impacto.
 export const DESFECHOS = ['morte', 'critico', 'veiculo', 'carne', 'escudo', 'estase', 'armadura', 'acerto'];
 // A marca no chão e na parede (o buraco da bala) some em 4 s (a decisão 11 do plano, a recomendação).
 export const MARCA_DURA = 4000;
+// A luz do clarão (o C102, a decisão 12 do plano: "Sim"): uma luz de verdade por 0,1 s, de 2 m (3 m no clarão grande).
+export const LUZ = Object.freeze({ duracao: 100, raio: 2, raioGrande: 3 });
 export const ESTILOS_DO_TEXTO = ['acerto', 'erro', 'defesa'];
 // Os limites da validação: o supressivo de 25 m numa cena cheia passa de 20 alvos; o texto de hoje tem menos de 30
 // caracteres ("−12 HP · crítico!").
@@ -345,6 +347,10 @@ function disparo(passos, evento, perfil, som = perfil.som, forte = false) {
   const mira = evento.area ?? evento.queda ?? evento.alvos[0] ?? null;
   const direcao = Math.round(noMapa(mira) && distancia(origem, mira) > 0 ? angulo(origem, mira) : direcaoDoToken(origem.rotacao));
   if (perfil.clarao) passos.push(novo(0, 'clarao', { para: ponto(origem), token: origem.token, chave: `clarao.${perfil.clarao}`, duracao: 80, intensidade: forte || perfil.clarao === 'grande' ? 'forte' : 'normal', direcao }));
+  // A luz do clarão (o C102): no centro de quem atira, sem o token no passo (o "fonte" é só para a altura): quem não via o
+  // atirador não vê o clarão desenhado, mas a luz acende para ele também, e o Foundry decide quem a enxerga (a linha de
+  // visão, as paredes) e, por ela, quem passa a ver o atirador.
+  if (perfil.clarao) passos.push(novo(0, 'luz', { para: ponto(origem), fonte: origem.token, raio: perfil.clarao === 'grande' ? LUZ.raioGrande : LUZ.raio, duracao: LUZ.duracao }));
   if (som) passos.push(novo(0, 'som', { para: ponto(origem), token: origem.token, chave: som }));
 }
 
@@ -634,6 +640,8 @@ export function filtrarPeloNivel(passos, { nivel = 'completo', sangue = true, tr
   const saida = [];
   for (const passo of passos) {
     if (passo.passo === 'tremor' && (reduzido || !tremor || fotossensivel)) continue;
+    // A luz do clarão pisca a cena: sai no reduzido e no fotossensível (o C102).
+    if (passo.passo === 'luz' && (reduzido || fotossensivel)) continue;
     if (fotossensivel && (passo.passo === 'tela' || (passo.passo === 'clarao' && passo.intensidade === 'forte'))) continue;
     if (passo.passo === 'tracante' && reduzido && tracantes++ > 0) continue;
     const trocado = passo.passo === 'sangue' && (reduzido || !sangue) ? { passo: 'faisca', chave: 'faisca.armadura' } : {};
@@ -682,16 +690,19 @@ export function nivelDoNavegador(mundo, escolha = 'auto', aparelho = {}) {
 
 // O que este navegador vê do roteiro: sai o passo num token que ele não vê (o escondido, o fora da visão) e, com o token
 // de quem atacou fora da vista, tudo o que sai dele (o clarão, o som no cano, o traçante): o jogador vê o impacto no
-// alvo, mas não descobre de onde veio o tiro. visivel(id): o teste de visão do Foundry neste cliente.
-export function passosVisiveis(passos, { visivel = () => true, origem = null } = {}) {
+// alvo, mas não descobre de onde veio o tiro. visivel(id): o teste de visão do Foundry neste cliente. A luz do clarão (o
+// C102) fica mesmo sem ver quem atirou: no escuro, é ela que o revela, para quem tem a linha de visão até ali; mas sai
+// quando o mestre escondeu o token (oculto(id): o hidden, neste cliente de jogador), que nenhuma luz revela.
+export function passosVisiveis(passos, { visivel = () => true, origem = null, oculto = () => false } = {}) {
   const veOrigem = !origem || Boolean(visivel(origem));
   const vistos = new Map();
   const ve = token => {
     if (!vistos.has(token)) vistos.set(token, Boolean(visivel(token)));
     return vistos.get(token);
   };
+  const escondida = passo => passo.passo === 'luz' && Boolean(passo.fonte) && Boolean(oculto(passo.fonte));
   // Sem ver quem atirou, a direção do tiro também sai (o sangue e a faísca não apontam de onde veio).
-  return passos.filter(passo => (!passo.token || ve(passo.token)) && (veOrigem || (!passo.de && passo.token !== origem)))
+  return passos.filter(passo => (!passo.token || ve(passo.token)) && (veOrigem || (!passo.de && passo.token !== origem)) && !escondida(passo))
     .map(passo => (veOrigem || passo.direcao == null ? passo : { ...passo, direcao: null }));
 }
 

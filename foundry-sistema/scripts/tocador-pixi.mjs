@@ -11,11 +11,13 @@
 //   e um temporizador de segurança encerra o roteiro que o ticker não andou.
 // - Nunca mexe num documento nem na imagem do token: o eco e o glitch são cópias da textura dele, no nosso contêiner.
 // - O sorteio (o espalhamento das faíscas) sai do id do evento: o mesmo desenho em todos os navegadores.
+// - A luz do clarão (o C102, a decisão 12): uma fonte de luz do Foundry por 0,1 s, só neste navegador e fora de qualquer
+//   documento, que acende a cena e revela quem atirou no escuro para quem tem a linha de visão até ali.
 import { SISTEMA } from './config.mjs';
 
 // O orçamento de partículas vivas (o plano, seção 4.6): 300 no completo, 120 no reduzido.
 export const ORCAMENTO = Object.freeze({ completo: 300, reduzido: 120 });
-const estado = { vivos: new Set(), criados: 0, destruidos: 0, particulas: 0, maiorParticulas: 0, pecas: {}, falhas: 0 };
+const estado = { vivos: new Set(), criados: 0, destruidos: 0, particulas: 0, maiorParticulas: 0, pecas: {}, falhas: 0, luz: null, luzes: 0 };
 
 // As cores (o tema e o anexo do fx-visual, seção 3).
 const COR = {
@@ -119,6 +121,35 @@ function copiaDoToken(camada, objeto, cor) {
   return copia;
 }
 
+// A luz de verdade do clarão (o C102): uma fonte de luz do Foundry, fora de qualquer documento (só neste navegador, como
+// o resto do palco). Uma acesa por vez (o plano, seção 4.6): a nova apaga a de antes. Apagar avisa a percepção, para a
+// cena e a visão dos tokens voltarem ao escuro.
+const ID_DA_LUZ = `${SISTEMA}.clarao`;
+// O mesmo que o canvas.perception.update: a luz e a visão se refazem no próximo quadro (a cena aberta).
+const perceber = () => { if (canvas.ready) canvas.perception?.renderFlags.set({ refreshLighting: true, refreshVision: true }); };
+function apagarLuz() {
+  const luz = estado.luz;
+  if (!luz) return;
+  estado.luz = null;
+  try { luz.remove(); luz.destroy(); } finally { perceber(); }
+}
+
+function acenderLuz(passo, tech) {
+  const Classe = CONFIG.Canvas?.lightSourceClass;
+  if (!Classe || !canvas.effects?.lightSources || !Number.isFinite(passo.para?.x) || !Number.isFinite(passo.para?.y)) return null;
+  apagarLuz();
+  const dono = objetoDo(passo.fonte)?.document;
+  const metro = canvas.dimensions?.distancePixels ?? casa() / 2;
+  const raio = (passo.raio ?? 2) * metro;
+  const luz = new Classe({ sourceId: ID_DA_LUZ, object: null });
+  luz.initialize({ x: passo.para.x, y: passo.para.y, elevation: dono?.elevation ?? 0, level: dono?.level ?? null, dim: raio, bright: raio / 2, color: tech ? 0x7af3ff : 0xffc27a, alpha: 0.5, vision: false, walls: true });
+  luz.add();
+  estado.luz = luz;
+  estado.luzes++;
+  perceber();
+  return luz;
+}
+
 // ---------------- As peças ----------------
 // Cada peça recebe o passo e o roteiro e devolve { duracao, atualizar(p, ms), destruir() }, ou null (nada a desenhar).
 const PECAS = {
@@ -145,6 +176,19 @@ const PECAS = {
     // O chão aceso: de 2 a 3 m (a classe), por 120 ms, só para quem enxerga ali (fica sob a névoa); não no reduzido.
     const luz = passo.particulas === false ? null : brilho(r.baixo, { x, y, raio: casa() * (tamanho / casa() > 0.5 ? 1.5 : 1), cor: tech ? 0x7af3ff : 0xffcf80, duracao: 120, alpha: 0.35, cresce: 0.1 });
     return juntas(estrela, luz);
+  },
+
+  // P14 de verdade (o C102, a decisão 12): a luz de 0,1 s no centro de quem atirou. Acende a cena para quem tem a linha de
+  // visão até ali e revela o atirador no escuro; atrás da parede, nada (o Foundry decide). O diretor já a tirou do
+  // reduzido e do fotossensível.
+  luz(passo, r) {
+    const luz = acenderLuz(passo, r.evento.arma?.classe2077 === 'tech');
+    if (!luz) return null;
+    return {
+      duracao: Math.max(50, passo.duracao),
+      atualizar() {},
+      destruir() { if (estado.luz === luz) apagarLuz(); }
+    };
   },
 
   // P2: a cabeça brilhante e a cauda, do cano ao fim, no tempo do voo; a curva da Smart; o crítico congela um instante
@@ -528,6 +572,7 @@ export function desenhar(evento, passos, opcoes = {}) {
 // Encerra tudo o que está no palco (a cena que fecha).
 export function limpar() {
   for (const roteiro of [...estado.vivos]) roteiro.encerrar();
+  try { apagarLuz(); } catch (erro) { falhou(erro); }
 }
 
 export function registrarPalco() {
@@ -544,6 +589,9 @@ export const PALCO = {
   get maiorParticulas() { return estado.maiorParticulas; },
   get pecas() { return { ...estado.pecas }; },
   get falhas() { return estado.falhas; },
+  // A luz do clarão: quantas acenderam e se há uma acesa agora (na coleção de luzes da cena).
+  get luzes() { return estado.luzes; },
+  get luzAcesa() { return Boolean(estado.luz) || Boolean(canvas.effects?.lightSources?.has(ID_DA_LUZ)); },
   get conteineres() {
     const nossos = filho => String(filho.name ?? '').startsWith(`${SISTEMA}-efeitos-`);
     return (canvas.primary?.children.filter(nossos).length ?? 0) + (canvas.interface?.children.filter(nossos).length ?? 0);
