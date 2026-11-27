@@ -5,11 +5,15 @@
 
 // prazoMs: o tempo de um passo (o C60, da auditoria de 2026-11-16). O passo que não termina (uma janela que espera para
 // sempre, um evaluate preso) vira falha, e a rodada segue, em vez de parar sem relatório. 0: sem prazo.
+// soPassos: uma expressão regular (SO_PASSOS) com os passos que rodam; os outros ficam pulados, e a rodada não vale como
+// portão (o C104). É para quem mexe num passo do G4 não esperar a rodada inteira; o passo que dependa de um pulado falha.
 class Relatorio {
-  constructor({ prazoMs = 0 } = {}) { this.itens = []; this.prazoMs = prazoMs; }
+  constructor({ prazoMs = 0, soPassos = process.env.SO_PASSOS || '' } = {}) { this.itens = []; this.prazoMs = prazoMs; this.soPassos = soPassos ? new RegExp(soPassos, 'i') : null; }
   // fn devolve [ok, detalhe]; um erro conta como falha, com a mensagem.
   async passo(nome, fn) {
+    if (this.soPassos && !this.soPassos.test(nome)) return this.pular(nome, 'fora do SO_PASSOS');
     const inicio = Date.now();
+    if (process.env.SONDA_TEMPOS) require('fs').appendFileSync(process.env.SONDA_TEMPOS, JSON.stringify({ t: inicio, passo: nome.slice(0, 90) }) + '\n');
     let relogio = null;
     try {
       const prazo = this.prazoMs > 0 ? new Promise((_, rejeitar) => {

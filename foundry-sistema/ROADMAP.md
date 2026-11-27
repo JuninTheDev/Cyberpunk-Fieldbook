@@ -991,7 +991,8 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
 - [x] Ícones próprios no lugar dos genéricos do Foundry: o C49 (os estados e as imagens padrão no ciclo 191, os botões no 192).
 - [ ] Conveniências do CORE: (→ C26) a régua que mostra o DV da arma pela distância e o DV no HUD do token (feitos no ciclo 144; o ataque já calcula
   o DV sozinho); falta só o "Hardened" (Danger Gal Dossier p. 150, fora da wiki: só se a mesa quiser).
-- [~] **C104. Os testes mais rápidos, sem perder o que conferem:** em andamento (sessão KouArt, 2026-11-27). O usuário pediu
+- [x] **C104. Os testes mais rápidos, sem perder o que conferem:** feito no ciclo 227 (sessão KouArt, 2026-11-27): o G4 de
+  836 s para 654 s e o G1 de 13 s para 3 s, com os mesmos passos; achou o C105. O usuário pediu
   "otimizar todos os testes para q sejam mais rápidos mas n percam a eficácia e eficiência". Medir onde vai o tempo (o G1,
   o G4, os cenários da wiki, os isolados) e cortar a espera que não confere nada (as pausas fixas, o que se repete), sem
   tirar nem afrouxar teste; as mutações de antes continuam morrendo.

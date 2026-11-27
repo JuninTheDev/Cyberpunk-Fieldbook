@@ -68,6 +68,10 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
     const message = JSON.parse(event.data);
     if (message.id && pending[message.id]) { pending[message.id](message); delete pending[message.id]; }
     if (message.method === 'Runtime.exceptionThrown') erros.push(message.params.exceptionDetails.exception?.description || message.params.exceptionDetails.text);
+    if (process.env.SONDA_TEMPOS && message.method === 'Runtime.consoleAPICalled' && message.params.type === 'debug' && message.params.args[0]?.value === '__sonda') {
+      fs.appendFileSync(process.env.SONDA_TEMPOS, JSON.stringify({ t: Date.now(), porta, ...JSON.parse(message.params.args[1].value) }) + '\n');
+      return;
+    }
     if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') erros.push(`console: ${message.params.args.map(arg => arg.value ?? arg.description ?? '').join(' ')}`);
     if (message.method === 'Runtime.consoleAPICalled' && ['warning', 'error'].includes(message.params.type)) {
       avisos.push({ nivel: message.params.type === 'warning' ? 'warn' : 'error', texto: message.params.args.map(arg => arg.value ?? arg.description ?? '').join(' ').slice(0, 1500),
@@ -83,8 +87,12 @@ async function abrirEdge({ porta, saida, prefixo = '', largura = 1400, altura = 
   const send = (method, params = {}) => new Promise(resolve => { const i = ++id; pending[i] = resolve; ws.send(JSON.stringify({ id: i, method, params })); });
 
   // Avalia uma expressão na página. Um erro de JS vira exceção aqui (e a checagem falha com a mensagem).
+  // SONDA_TEMPOS=<arquivo> (o C104): uma linha JSON por evaluate de 1 s ou mais, pelo começo de cada passo (o relatório) e
+  // pelas marcas da página (console.debug('__sonda', JSON)): onde vai o tempo de uma rodada.
   const evaluate = async expression => {
+    const t0 = Date.now();
     const response = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+    if (process.env.SONDA_TEMPOS && Date.now() - t0 >= 1000) fs.appendFileSync(process.env.SONDA_TEMPOS, JSON.stringify({ t: Date.now(), porta, eval: true, ms: Date.now() - t0, pilha: expression.replace(/\s+/g, ' ').slice(0, 200) }) + '\n');
     const details = response.result?.exceptionDetails;
     if (details) throw new Error(details.exception?.description?.split('\n')[0] || details.text);
     return response.result?.result?.value;

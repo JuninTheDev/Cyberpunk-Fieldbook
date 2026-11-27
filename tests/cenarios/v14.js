@@ -18761,7 +18761,9 @@ module.exports = async ({ edge, servidores, r }) => {
         const cena = await Scene.implementation.create({ name: 'C26 Fluxo', width: 1200, height: 800, grid: { size: 100, distance: 2, units: 'm' } });
         salvo.criada = cena.id;
         await cena.activate();
-        await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id);
+        // O activate nem sempre leva a vista do mestre à cena nova (o C104: o passo esperava 10 s pela cena e mais 10 s pelos
+        // tokens dela, e seguia na cena de antes): sem ela em 2 s, o view.
+        if (!await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id, 20)) { await cena.view(); await window.__esperar(() => canvas.ready && canvas.scene?.id === cena.id); }
         for (const [a, x] of [[p, 100], [alvo, 300]]) await cena.createEmbeddedDocuments('Token', [(await a.getTokenDocument({ x, y: 100, actorLink: true })).toObject()]);
         await window.__esperar(() => canvas.tokens.placeables.length === 2);
         salvo.jogador = p.id; salvo.alvo = alvo.id;

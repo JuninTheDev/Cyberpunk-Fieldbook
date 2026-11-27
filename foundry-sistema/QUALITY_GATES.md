@@ -39,6 +39,17 @@ deixam passar nenhum 403 nem 409 (o padrão da suíte da wiki deixa os dois). Os
 navegador contam (o `edge.avisos`), e não só os da página de agora. A versão do `system.json` é `0.3.<ciclo>`: suba
 junto com o registro do ciclo (o G3 confere).
 
+**O ciclo 227 (o C104), para quem mexe no G4:**
+- `SO_PASSOS=<expressão regular>` roda só os passos cujo nome casa (o `Foundry 14 abre` e os passos de que o seu
+  depende vão junto); os outros ficam pulados, e a rodada sai com o código 2: não vale como portão. Uma rodada de um
+  passo leva cerca de 1 minuto, em vez de 11.
+- `SONDA_TEMPOS=<arquivo>` grava uma linha JSON no começo de cada passo e em cada `evaluate` de 1 s ou mais (com o
+  começo do código), e as marcas da página (`console.debug('__sonda', JSON.stringify({ ... }))`): é como se acha onde
+  vai o tempo. Com `DETALHES=1 LIMITE_MS=0`, o relatório mostra o tempo de cada passo.
+- Nos navegadores do G4, as janelas fecham sem a animação (o `animate: false` do Foundry, pelo `esperarJogo`): o Edge
+  sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
+- O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
+
 **A lição do ciclo 214:** o que o jogador vê no mapa depende da visão do token que ele controla. Os tokens dos passos
 nascem com a visão ligada e o alcance 0, e as cenas do G4 não têm luz: o jogador está no escuro. Um passo que confere o
 que o jogador vê (o marcador da NET, desde o ciclo 214) dá alcance à visão do token dele e o seleciona antes de ler,
@@ -585,6 +596,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   inteiro ao navegador do jogador (o `game.items`, o `fromUuid`, a descrição): a permissão só esconde da barra lateral.
   O segredo do mestre fica fora do Foundry do jogador (o servidor da wiki, como o defeito escondido do C71) ou nasce só
   na entrega; e o passo do G4 confere no navegador do jogador, não pela `testUserPermission`.
+- **Medir antes de cortar** (ciclo 227): as pausas fixas e as esperas que se esgotam davam só cerca de 60 s do G4. O
+  tempo estava no Foundry (o 1 s da animação de cada janela fechada, que o Edge sem janela nunca termina), num estado que
+  vazava de um passo para os seguintes (o C105: o alvo do C55 nascia com o jogador dono, e o supressivo esperava os 60 s
+  da resposta dele) e numa cena que não abria (o C26 esperava 10 s pela cena e 10 s pelos tokens). O passo lento de
+  repente é um sinal: confira o estado que ele herdou antes de mexer na espera.
 
 ## Build
 
