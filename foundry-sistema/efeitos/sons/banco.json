@@ -1,4 +1,179 @@
 {
   "versao": 1,
-  "sons": {}
+  "sons": {
+    "tiro.pistola-leve": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/pistola-leve-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/pistola-leve-2.ogg"
+    ],
+    "tiro.pistola": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/pistola-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/pistola-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/pistola-3.ogg"
+    ],
+    "tiro.pistola-pesada": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/pistola-pesada-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/pistola-pesada-2.ogg"
+    ],
+    "tiro.submetralhadora": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/submetralhadora-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/submetralhadora-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/submetralhadora-3.ogg"
+    ],
+    "tiro.fuzil": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/fuzil-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/fuzil-2.ogg"
+    ],
+    "tiro.fuzil-de-precisao": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/fuzil-de-precisao-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/fuzil-de-precisao-2.ogg"
+    ],
+    "tiro.espingarda": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/espingarda-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/espingarda-2.ogg"
+    ],
+    "tiro.arco": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/arco-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/arco-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/arco-3.ogg"
+    ],
+    "tiro.lanca-granadas": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-granadas-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-granadas-2.ogg"
+    ],
+    "tiro.lanca-foguetes": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-foguetes-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-foguetes-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-foguetes-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-foguetes-4.ogg"
+    ],
+    "tiro.lanca-chamas": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-chamas-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-chamas-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-chamas-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/lanca-chamas-4.ogg"
+    ],
+    "tiro.tech": [
+      "systems/cpr-fieldbook/efeitos/sons/tiro/tech-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/tech-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/tech-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/tiro/tech-4.ogg"
+    ],
+    "rajada.padrao": [
+      "systems/cpr-fieldbook/efeitos/sons/rajada/padrao-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/rajada/padrao-2.ogg"
+    ],
+    "rajada.submetralhadora": [
+      "systems/cpr-fieldbook/efeitos/sons/rajada/submetralhadora-1.ogg"
+    ],
+    "rajada.fuzil": [
+      "systems/cpr-fieldbook/efeitos/sons/rajada/fuzil-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/rajada/fuzil-2.ogg"
+    ],
+    "arremesso.lancar": [
+      "systems/cpr-fieldbook/efeitos/sons/arremesso/lancar-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/arremesso/lancar-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/arremesso/lancar-3.ogg"
+    ],
+    "golpe.corte": [
+      "systems/cpr-fieldbook/efeitos/sons/golpe/corte-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/corte-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/corte-3.ogg"
+    ],
+    "golpe.contundente": [
+      "systems/cpr-fieldbook/efeitos/sons/golpe/contundente-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/contundente-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/contundente-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/contundente-4.ogg"
+    ],
+    "golpe.soco": [
+      "systems/cpr-fieldbook/efeitos/sons/golpe/soco-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/soco-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/soco-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/soco-4.ogg"
+    ],
+    "golpe.chute": [
+      "systems/cpr-fieldbook/efeitos/sons/golpe/chute-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/chute-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/chute-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/chute-4.ogg"
+    ],
+    "golpe.garra": [
+      "systems/cpr-fieldbook/efeitos/sons/golpe/garra-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/garra-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/garra-3.ogg"
+    ],
+    "golpe.chicote": [
+      "systems/cpr-fieldbook/efeitos/sons/golpe/chicote-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/chicote-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/golpe/chicote-3.ogg"
+    ],
+    "impacto.carne": [
+      "systems/cpr-fieldbook/efeitos/sons/impacto/carne-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/carne-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/carne-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/carne-4.ogg"
+    ],
+    "impacto.contundente": [
+      "systems/cpr-fieldbook/efeitos/sons/impacto/contundente-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/contundente-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/contundente-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/contundente-4.ogg"
+    ],
+    "impacto.estrutura": [
+      "systems/cpr-fieldbook/efeitos/sons/impacto/estrutura-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/estrutura-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/estrutura-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/estrutura-4.ogg"
+    ],
+    "impacto.critico": [
+      "systems/cpr-fieldbook/efeitos/sons/impacto/critico-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/critico-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/critico-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/impacto/critico-4.ogg"
+    ],
+    "explosao.frag": [
+      "systems/cpr-fieldbook/efeitos/sons/explosao/frag-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/frag-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/frag-3.ogg"
+    ],
+    "explosao.fogo": [
+      "systems/cpr-fieldbook/efeitos/sons/explosao/fogo-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/fogo-2.ogg"
+    ],
+    "explosao.emp": [
+      "systems/cpr-fieldbook/efeitos/sons/explosao/emp-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/emp-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/emp-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/emp-4.ogg"
+    ],
+    "corpo.flatline": [
+      "systems/cpr-fieldbook/efeitos/sons/corpo/flatline-1.ogg"
+    ],
+    "corpo.batimento": [
+      "systems/cpr-fieldbook/efeitos/sons/corpo/batimento-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/corpo/batimento-2.ogg"
+    ],
+    "glitch.padrao": [
+      "systems/cpr-fieldbook/efeitos/sons/glitch/padrao-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/glitch/padrao-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/glitch/padrao-3.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/glitch/padrao-4.ogg"
+    ],
+    "recarga.pistola": [
+      "systems/cpr-fieldbook/efeitos/sons/recarga/pistola-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/recarga/pistola-2.ogg"
+    ],
+    "recarga.fuzil": [
+      "systems/cpr-fieldbook/efeitos/sons/recarga/fuzil-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/recarga/fuzil-2.ogg"
+    ],
+    "recarga.espingarda": [
+      "systems/cpr-fieldbook/efeitos/sons/recarga/espingarda-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/recarga/espingarda-2.ogg"
+    ],
+    "recarga.padrao": [
+      "systems/cpr-fieldbook/efeitos/sons/recarga/padrao-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/recarga/padrao-2.ogg"
+    ]
+  }
 }

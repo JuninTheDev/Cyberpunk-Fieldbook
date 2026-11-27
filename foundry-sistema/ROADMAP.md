@@ -679,10 +679,11 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   a morte para todos, as vozes (16, 10 no celular), o áudio travado e o contexto suspenso descartados, a pré-carga. "Sons
   na mesa" (do mestre) e "Volume dos efeitos de combate" (de cada um). O banco (`efeitos/sons/banco.json`) vai vazio:
   os arquivos são o C103.
-- [~] **C103. O banco de sons da fase 1:** em andamento (sessão KouArt, 2026-11-27). O usuário disse "Sim pode baixar todos, vamos
-  fazer a sessão de audição assim q vc baixar tudo" (o ffmpeg, os pacotes da Kenney e a Free Firearm Sound Library). Os cerca de 120 arquivos do PLANO (o tiro de cada classe, a cauda, os impactos,
-  o erro, o pente vazio, a recarga), só CC0, CC-BY e nossos, em Ogg Opus mono, com o `build/sons.mjs` (o ffmpeg no PC) e
-  o `LICENCAS.csv`; depende do C81 e da audição com o usuário.
+- [x] **C103. O banco de sons da fase 1:** feito no ciclo 226 (sessão KouArt, 2026-11-27). O usuário disse "Sim pode baixar
+  todos, vamos fazer a sessão de audição assim q vc baixar tudo" e marcou na página da audição um conjunto para cada som
+  (100 conjuntos para os 37 sons do motor). O banco tem 36 sons e 102 arquivos (586 KB), em Ogg Opus mono, da Free Firearm
+  Sound Library e da Kenney (CC0) e gerados por nós, pela receita `build/sons-receita.mjs` e pelo `build/sons.mjs` (o
+  ffmpeg no PC); o `LICENCAS.csv` diz de onde saiu cada tomada. A explosão leve ficou sem som: nenhum candidato serviu.
 - [ ] **C82 a C97:** os itens do plano (o disparo antes da defesa; a rajada e as armas de 2077; os explosivos; as granadas que duram; o corpo a corpo; o
   agarrão; o corpo e a morte; a NET, da sessão KouArt; o cyberware e a recarga; os veículos; quem ouve; os perfis do
   mestre; o Sequencer como opção; as folhas de sprite; o polimento; o VFX experimental do 14).

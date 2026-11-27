@@ -13467,6 +13467,63 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('o banco de sons do sistema (o C103): o navegador do jogador lê o efeitos/sons/banco.json no ready, com os 36 sons da audição e sem a explosão leve; pré-carrega 12 depois do clique; cada um dos arquivos se decodifica no Edge, em mono, com som e sem passar do pico; o crítico e o flatline do banco tocam até o fim, para todos; nada falha', async () => {
+      if (!jogador) return [false, 'sem o navegador do jogador'];
+      const banco = JSON.parse(fs.readFileSync(path.join(servidores.raiz, 'foundry-sistema', 'efeitos', 'sons', 'banco.json'), 'utf8'));
+      // Um clique de verdade dá a ativação (sozinho, o passo começa travado; no G4 inteiro, o do C81 já deu).
+      await jogador.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 3, y: 600, button: 'left', clickCount: 1 });
+      await jogador.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 3, y: 600, button: 'left', clickCount: 1 });
+      const lido = await jogador.evaluate(`(async () => {
+        window.__esperar ??= async (condicao, vezes = 100) => { for (let i = 0; i < vezes && !condicao(); i++) await new Promise(r => setTimeout(r, 100)); return condicao(); };
+        const api = game.system.api.efeitos, sons = api.sons;
+        await window.__esperar(() => navigator.userActivation.hasBeenActive && !game.audio.locked && sons.preCarregados >= 12, 100);
+        const falhasAntes = [api.falhas, api.palco.falhas, sons.falhas];
+        // Cada arquivo do banco, decodificado pelo contexto do Foundry: os canais, a duração e o pico das amostras.
+        const arquivos = [];
+        for (const [chave, lista] of Object.entries(sons.banco.sons)) for (const src of lista) {
+          try {
+            const buffer = await game.audio.environment.decodeAudioData(await (await fetch(foundry.utils.getRoute(src))).arrayBuffer());
+            const amostras = buffer.getChannelData(0);
+            let pico = 0;
+            for (let i = 0; i < amostras.length; i++) pico = Math.max(pico, Math.abs(amostras[i]));
+            arquivos.push({ chave, src, canais: buffer.numberOfChannels, duracao: buffer.duration, pico });
+          } catch (erro) { arquivos.push({ chave, src, erro: String(erro?.message ?? erro) }); }
+        }
+        // O crítico e o flatline, do banco do sistema: para todos, sem a distância, na interface, até o fim.
+        const tocar = async chave => {
+          await window.__esperar(() => !sons.vozes, 50);
+          const antes = sons.contagem;
+          sons.gravar(true);
+          sons.tocar({ id: foundry.utils.randomID() }, { tipo: 'som', chave, t: 0 });
+          const vozesLogo = sons.vozes;
+          const terminou = await window.__esperar(() => !sons.vozes, 60);
+          const registro = (sons.registro ?? []).map(s => ({ ...s }));
+          sons.gravar(false);
+          return { registro, vozesLogo, terminou, tocados: sons.contagem.tocados - antes.tocados };
+        };
+        const critico = await tocar('impacto.critico');
+        const flatline = await tocar('corpo.flatline');
+        return { banco: sons.banco, preCarregados: sons.preCarregados, arquivos, critico, flatline,
+          falhas: [api.falhas - falhasAntes[0], api.palco.falhas - falhasAntes[1], sons.falhas - falhasAntes[2]].join() };
+      })()`);
+      const PASTA = 'systems/cpr-fieldbook/efeitos/sons/';
+      // Com som: o pico acima de -40 dBFS (o flatline, um tom puro a -29,5 LUFS-M, tem o pico em -26 dBFS); sem passar do
+      // pico: abaixo de 0,95.
+      const ruins = lido.arquivos.filter(a => a.erro || a.canais !== 1 || !(a.duracao > 0.05 && a.duracao < 3.4) || !(a.pico > 0.01 && a.pico < 0.95));
+      const tocou = (x, chave) => x.terminou && x.tocados === 1 && x.vozesLogo === 1 && x.registro.length === 1 && x.registro[0].chave === chave && !x.registro[0].motivo
+        && x.registro[0].src.startsWith(`${PASTA}${chave.split('.')[0]}/${chave.split('.')[1]}-`) && x.registro[0].posicional === false && x.registro[0].contexto === 'interface';
+      const conferir = {
+        banco: JSON.stringify(lido.banco) === JSON.stringify(banco) && Object.keys(banco.sons).length === 36 && !('explosao.leve' in banco.sons),
+        preCarregados: lido.preCarregados === 12,
+        arquivos: lido.arquivos.length === Object.values(banco.sons).flat().length && lido.arquivos.length > 90 && !ruins.length,
+        critico: tocou(lido.critico, 'impacto.critico'),
+        flatline: tocou(lido.flatline, 'corpo.flatline'),
+        falhas: lido.falhas === '0,0,0'
+      };
+      const caidas = Object.keys(conferir).filter(chave => !conferir[chave]);
+      return [!caidas.length, JSON.stringify({ caidas, ruins, preCarregados: lido.preCarregados, critico: lido.critico, flatline: lido.flatline, falhas: lido.falhas, arquivos: lido.arquivos.length })];
+    });
+
     await r.passo('Ações NET em combate e a desconexão insegura (wiki: "Conectar / Desconectar (1 Ação NET...)" e as Ações NET pelo Rank): em combate, a janela conta as que sobram (o texto e os losangos acesos); no andar mais fundo, o Virus que o mestre põe em 2 Ações NET e um Cloak gastam as 3 do Rank 4, e o Cloak seguinte é recusado, como o desconectar seguro; na rodada seguinte, no turno do netrunner, elas voltam; a desconexão insegura sai na hora, sem Ação NET', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const NOME = 'Teste Netrunner Combate NET';

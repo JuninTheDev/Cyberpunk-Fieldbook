@@ -525,6 +525,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
 - **O ângulo dá a volta no 180°** (ciclo 217): a faixa do fogo supressivo ia do menor ao maior ângulo dos alvos, e dois
   alvos atrás do atirador, a 170° e a −170°, viravam uma varredura de 340° em vez de 20°. Meça os ângulos em volta de uma
   referência (o primeiro alvo, de −180° a +180° dele), e o teste com a direção do token em 90° e em 200° achou o caso.
+- **Um build de mídia se confere pelo md5 de duas rodadas** (ciclo 226): o ruído do ffmpeg (o `anoisesrc`) muda a
+  cada rodada sem a `seed`, e o Ogg leva o título e o caminho da fonte sem o `-map_metadata -1 -fflags +bitexact`. Rode
+  o build duas vezes e compare o md5 de todos os arquivos; o G3 lê o cabeçalho do Opus sem o ffmpeg (os canais, a taxa e
+  os comentários) e o G4 decodifica cada arquivo no Edge (os canais, a duração e o pico das amostras), que pega o arquivo
+  estourado, que o cabeçalho não mostra.
 - **O áudio do G4 só toca depois de um gesto de verdade, e o Shift não serve** (ciclo 225): o Foundry destrava o áudio
   no primeiro `keydown`, `pointerdown` ou `contextmenu` da página, sem olhar se o navegador deu a ativação; o Shift
   (uma tecla modificadora) não a dá, e o contexto nasce suspenso: o som "toca" sem avançar e nunca chega ao fim. No G4,

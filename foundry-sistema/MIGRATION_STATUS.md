@@ -10713,6 +10713,43 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 e G2 limpos; G3 868/868; G4 350/350 duas vezes seguidas (843 s e 845 s). A primeira dupla de rodadas caiu no passo novo (o Foundry do jogador já destravado por um passo anterior, que o passo sozinho não mostrava) e, na primeira, nas instáveis conhecidas (o C45 e o C52 dos tokens dinâmicos); o passo passou a conferir o estado, ganhou o contexto suspenso de novo (o H8 tinha sobrevivido), e as duas rodadas seguintes passaram inteiras.
 - **Mutações:** 13 do G3 (N1 a N13: o crítico com a distância, o banco fora da pasta, o vídeo como som, a variação repetida, o pitch igual, a distância linear, o pan sem limite, sem ouvinte no volume inteiro, a ordem do mudo e da trava, a categoria sem teto, a voz fraca no teto cheio, o repetido com o igual, o som fora do barramento) e 8 do G4 (H1 a trava que não descarta, H2 o volume que não muda o barramento, H3 sem os ouvintes, H4 o diretor sem o som, H5 o som que nunca termina, H6 o Para todos pela distância, H7 o contexto suspenso sem o gesto que toca, H8 o contexto suspenso que não volta), todas mortas; o N6 sobreviveu primeiro (o teste ganhou o quarto e os três quartos do raio), e o H8 também (o Edge retoma sozinho o contexto que nasceu antes do gesto: o passo ganhou o contexto suspenso depois do gesto); os arquivos voltaram iguais (o md5).
 
+### Ciclo 226 (2026-11-27): C103, o banco de sons dos efeitos (sessão KouArt)
+
+- **Pedido do usuário:** "Sim pode baixar todos, vamos fazer a sessão de audição assim q vc baixar tudo. Ninguém joga no
+  iphone ou safari" (os downloads, a audição e a decisão 8 do PLANO: sem a cópia AAC); reservado em 2654ed03. Depois,
+  "Marquei": as escolhas da página da audição (uma por som, com "Nenhum serve" na explosão leve).
+- **A fonte:** o PLANO (seção 4.4 e a decisão 7, só CC0, CC-BY e nossos) e o anexo `equipe/fx-audio.md` (seções 7.1 e
+  7.2: o mono, o Opus a 64 kbps, o quadro de 10 ms no tiro, o pico de loudness momentânea de cada categoria, o pico de
+  verdade); as licenças conferidas no pacote (a Free Firearm Sound Library, "CC0 NO RIGHTS RESERVED"; o `License.txt` CC0
+  de cada pacote da Kenney).
+- **Entrega:**
+  - `build/sons-receita.mjs` (novo, puro): as fontes e as licenças, o alvo de cada grupo (o LUFS-M, a duração máxima, o
+    limitador), a receita de cada som escolhido (a gravação, as famílias ou as expressões geradas, o tom), os sons sem som
+    (a explosão leve), o nome de cada arquivo, a linha da licença e o nível dos grupos (todo som de um grupo no mesmo nível,
+    e a mistura do anexo entre os grupos: se um não chega ao alvo sem passar do pico, todos descem o mesmo tanto);
+  - `build/sons.mjs` (novo, o build no PC com o ffmpeg): as tomadas entre os silêncios da biblioteca de armas, o mono a
+    48 kHz, o passa-alta, o corte do silêncio, os fades, o ganho com o limitador (até três rodadas medindo depois dele), o
+    Ogg Opus sem metadados; o `banco.json` e as linhas dos sons no `LICENCAS.csv`; o `--medir`;
+  - `efeitos/sons/`: 36 sons, 102 arquivos, 586 KB; o tiro e a rajada a −17,5 LUFS-M, a explosão a −15,5, o golpe, o
+    impacto e o arremesso a −21,5, a recarga, o corpo e o glitch a −29,5 (a pistola Walther, com 9 dB de limitador, puxa
+    todos 5,5 dB abaixo do alvo do anexo); o pico de verdade até −0,8 dBTP;
+  - `efeitos/CREDITOS.md` e `efeitos/LICENCAS.csv` (uma linha por arquivo, com a gravação e o ponto da tomada);
+  - a versão `0.3.226`.
+- **As decisões:** a 8 do PLANO, respondida ("Ninguém joga no iphone ou safari"): sem a cópia AAC, só o Ogg Opus.
+- **Fora deste item:** o som da explosão leve (nenhum candidato serviu; fica sem tocar até o usuário escolher outro); a
+  cauda separada do tiro, o pente vazio e o silenciador (o C92); o volume de cada categoria no motor (`CATEGORIAS` do
+  `regras-sons.mjs`), que a mesa pode pedir para mexer depois de ouvir.
+- **Testes de referência:**
+  - **G3:** `tests/sistema/sons-banco.test.mjs` (novo, 5 testes): a receita cobre os sons do motor menos os sem som, com
+    fontes permitidas e os escolhidos; o nome do arquivo, a linha da licença e o nível dos grupos; o banco.json com os
+    nomes do build e de 1 a 4 variações; cada arquivo na pasta com a linha certa no LICENCAS.csv e nenhum .ogg sobrando;
+    cada arquivo em Ogg Opus mono de 48 kHz, sem os metadados da fonte, pequeno, e a pasta abaixo de 10 MB.
+  - **G4:** um passo novo: o jogador lê o banco do sistema no ready (os 36 sons, sem a explosão leve), pré-carrega 12
+    depois do clique, decodifica no Edge cada um dos 102 arquivos (mono, com som, sem passar do pico) e toca o crítico e
+    o flatline do banco até o fim, para todos; nada falha.
+- **Portões:** G1 e G2 limpos; G3 881/881; G4 352/352 e, na rodada seguinte, 350/352 com só as duas instáveis conhecidas do C26 ("A nonpersisted Document cannot be updated"). A primeira rodada achou o limite de "com som" do passo novo alto demais para o flatline (um tom puro, pico em -26 dBFS): ficou em -40 dBFS.
+- **Mutações:** G3: as 12 morreram (B1 a B8 na receita: a mistura entre os grupos, o limitador, a tomada do meio, o nome do arquivo, a origem na licença, a licença trocada, a explosão leve sem registro, a pistola que não é a escolhida; D1 a D4 nos dados: o banco sem um arquivo, um arquivo sem a linha da licença, o autor errado, um arquivo em estéreo). G4: as 3 morreram, só pelo passo do C103 (H1 um arquivo em estéreo, H2 um arquivo estourado, H3 o banco não lido no ready). Os arquivos voltaram iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
