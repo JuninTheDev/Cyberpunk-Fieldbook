@@ -51,11 +51,19 @@ function lerFormulario(form) {
   return { nome: f.nome.value, raridade: f.raridade.value, tipo: f.tipo.value, tamanho: f.tamanho.value, serve: f.serve.value, classe: f.classe.value, dv: f.dv.value, texto: f.texto.value, efeitos };
 }
 
+// Os personagens que podem receber a modificação nova (o "Onde nasce" da janela): os que têm um jogador dono.
+const personagensDosJogadores = () => game.actors.filter(ator => ator.type === 'personagem' && ator.hasPlayerOwner).sort((a, b) => a.name.localeCompare(b.name));
+
 // A janela da oficina (só o mestre). item: o upgrade da oficina para mudar (a janela vem com o que ele tem); ator: onde
-// criar (sem ele, no mundo, na pasta "Arsenal do mestre"). Devolve o item criado ou mudado; fechada, null.
+// criar. Sem os dois, a janela pergunta onde ela nasce: no mundo, na pasta "Arsenal do mestre", ou na ficha de um
+// personagem (a lendária só na ficha: o C101). Devolve o item criado ou mudado; fechada, null.
 export async function abrir({ item = null, ator = null } = {}) {
   if (!game.user.isGM) { ui.notifications.warn('Só o mestre usa a oficina.'); return null; }
   let dados = item?.getFlag(SISTEMA, 'oficina') ?? { tipo: 'tatica', tamanho: 1, serve: 'distancia', raridade: 'rara', efeitos: [] };
+  const escolheOnde = !item && !ator;
+  let onde = '';
+  const campoOnde = () => (escolheOnde ? `<div class="form-group"><label>Onde nasce <select name="onde"><option value="">No mundo (Arsenal do mestre)</option>${personagensDosJogadores().map(a => `<option value="${esc(a.id)}"${a.id === onde ? ' selected' : ''}>Na ficha de ${esc(a.name)}</option>`).join('')}</select></label></div>
+        <p class="nota" data-aviso-do-mundo>${esc(R.AVISO_DO_MUNDO)}</p>` : '');
   for (;;) {
     const lido = await DialogV2.wait({
       window: { title: item ? `Oficina do mestre: ${item.name}` : 'Oficina do mestre', icon: 'fa-solid fa-screwdriver-wrench' },
@@ -71,9 +79,10 @@ export async function abrir({ item = null, ator = null } = {}) {
           <label>Classe <select name="classe"><option value="">qualquer</option>${opcoes(CLASSES, dados.classe ?? '')}</select></label>
           <label>DV da instalação <select name="dv">${DIFICULDADES.map(({ dv, nome }) => `<option value="${dv}"${dv === R.dvDaOficina(dados.dv) ? ' selected' : ''}>${dv} (${esc(nome)})</option>`).join('')}</select></label></div>
         <div class="form-group"><label>O que ela é <textarea name="texto" rows="3" maxlength="600" placeholder="O que a mesa vê, e o que o efeito não cobre (o mestre resolve).">${esc(dados.texto)}</textarea></label></div>
-        ${campoDoEfeito(0, dados.efeitos?.[0])}${campoDoEfeito(1, dados.efeitos?.[1])}`,
+        ${campoDoEfeito(0, dados.efeitos?.[0])}${campoDoEfeito(1, dados.efeitos?.[1])}
+        ${campoOnde()}`,
       buttons: [
-        { action: 'salvar', label: item ? 'Salvar' : 'Criar', icon: 'fa-solid fa-hammer', default: true, callback: (evento, botao) => lerFormulario(botao.form) },
+        { action: 'salvar', label: item ? 'Salvar' : 'Criar', icon: 'fa-solid fa-hammer', default: true, callback: (evento, botao) => ({ ...lerFormulario(botao.form), onde: botao.form.elements.onde?.value ?? '' }) },
         { action: 'cancelar', label: 'Cancelar', icon: 'fa-solid fa-xmark' }
       ],
       render: (evento, janela) => {
@@ -92,10 +101,12 @@ export async function abrir({ item = null, ator = null } = {}) {
       }
     });
     if (!lido || typeof lido !== 'object') return null;
-    dados = lido;
-    const { erro } = R.modDoFormulario(dados);
-    if (!erro) return criar(dados, { item, ator });
-    ui.notifications.warn(`A oficina não fez a modificação: ${erro}.`);
+    ({ onde, ...dados } = lido);
+    const destino = (onde && game.actors.get(onde)) || ator;
+    const { raridade, erro } = R.modDoFormulario(dados);
+    const motivo = erro ?? R.ondeNasce(raridade, Boolean(destino ?? item?.parent)).erro;
+    if (!motivo) return criar(dados, { item, ator: destino });
+    ui.notifications.warn(`A oficina não fez a modificação: ${motivo}.`);
   }
 }
 
@@ -106,6 +117,8 @@ export async function criar(dados, { item = null, ator = null } = {}) {
   const id = item?.getFlag(SISTEMA, 'mod')?.id ?? R.idDaOficina(dados?.nome, foundry.utils.randomID(6));
   const { mod, raridade, texto, erro } = R.modDoFormulario(dados, id);
   if (erro) throw new Error(`A oficina não fez a modificação: ${erro}.`);
+  const onde = R.ondeNasce(raridade, Boolean(ator ?? item?.parent));
+  if (onde.erro) throw new Error(`A oficina não fez a modificação: ${onde.erro}.`);
   const guardado = foundry.utils.deepClone(dados);
   const flags = { [SISTEMA]: { mod, raridade, oficina: guardado, origem: { fonte: 'oficina', livro: 'Oficina do mestre' } } };
   const system = { descricao: R.descricaoDaMod(mod, { raridade, texto }), alvo: 'arma', tamanho: mod.tamanho };

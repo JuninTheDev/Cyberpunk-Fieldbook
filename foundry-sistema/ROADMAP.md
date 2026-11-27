@@ -626,8 +626,9 @@ As decisões do usuário de 2026-11-26 sobre as dúvidas do C68 ao C75 ("Aplique
   mestre na ficha da arma (o EMP, a história); o custo do conserto sai do dinheiro do personagem quando o mestre aprova; o campo da DV da instalação na oficina (21 de padrão).
 - [x] **C100. A loja da wiki:** feito no ciclo 222 (sessão KouArt, 2026-11-26). A loja de criação sem as
   modificações Caras; o presente do mestre entregue na hora; o aviso do teto também nos "Pedidos da campanha"; o prazo da vitrine pelo relógio do servidor.
-- [ ] **C101. A modificação da oficina não chega antes da hora:** um passo do G4 confere se o navegador do jogador
-  recebe os dados da modificação criada na oficina (o item do mundo sem permissão); se recebe, o sistema conserta.
+- [x] **C101. A modificação da oficina não chega antes da hora:** feito no ciclo 224 (sessão KouArt, 2026-11-26):
+  chegava (o Foundry manda os itens do mundo a todos os navegadores); a lendária passou a nascer na ficha de quem a recebe.
+  Um passo do G4 confere se o navegador do jogador recebe os dados da modificação criada na oficina (o item do mundo sem permissão); se recebe, o sistema conserta.
 
 **Pronto, para cada item:**
 - G1 a G4 passando, com teste de referência da regra (G3) e passo novo no cenário (G4);

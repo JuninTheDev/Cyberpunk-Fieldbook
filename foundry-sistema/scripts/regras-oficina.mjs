@@ -117,6 +117,14 @@ export function modDoFormulario(dados = {}, id = idDaOficina(dados.nome, '0')) {
   return { mod, raridade: RARIDADES[dados.raridade] ? dados.raridade : 'catalogo', texto: texto(dados.texto, 600), dv: dvDaOficina(dados.dv) };
 }
 
+// Onde a modificação da oficina nasce (o C101). O item do mundo chega ao navegador de todos: o Foundry manda os itens do
+// mundo a cada cliente, sem olhar a permissão (o G4 conferiu). A lendária, o segredo do mestre até a entrega, nasce na
+// ficha de quem a recebe (a decisão do usuário de 2026-11-26). naFicha: a modificação está (ou fica) num ator.
+export const AVISO_DO_MUNDO = 'No mundo, a modificação chega ao navegador de todos (o Foundry manda os itens do mundo a cada um); a lendária nasce na ficha de quem a recebe.';
+export function ondeNasce(raridade, naFicha) {
+  return raridade === 'lendaria' && !naFicha ? { erro: 'a lendária nasce na ficha de quem a recebe (no mundo, ela chega ao navegador de todos)' } : {};
+}
+
 // Onde a modificação serve, em palavras (como o serveEm da wiki).
 export function serveEm(mod) {
   const { aDistancia, tipos, classe, autofogo } = mod.encaixe ?? {};

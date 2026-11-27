@@ -96,3 +96,17 @@ test('C71: a descrição do item da oficina e o sorteio do defeito (1d6, de novo
   assert.equal(O.chaveDoDefeito({ uuid: 'Actor.a1.Item.b2' }), 'Actor.a1.Item.b2');
   assert.ok(O.CHAVE_DO_DEFEITO.test('Actor.a1.Item.b2') && !O.CHAVE_DO_DEFEITO.test('../mesa'));
 });
+
+test('C101: a lendária da oficina nasce na ficha de quem a recebe (no mundo, o Foundry a manda ao navegador de todos)', () => {
+  const erro = 'a lendária nasce na ficha de quem a recebe (no mundo, ela chega ao navegador de todos)';
+  assert.deepEqual(O.ondeNasce('lendaria', false), { erro });
+  assert.deepEqual(O.ondeNasce('lendaria', true), {});
+  for (const raridade of ['catalogo', 'rara', undefined]) assert.deepEqual(O.ondeNasce(raridade, false), {});
+  assert.match(O.AVISO_DO_MUNDO, /chega ao navegador de todos/);
+  // O criar recusa a lendária no mundo (também a que muda para lendária no mundo), e a janela pergunta onde nasce.
+  const oficina = ler('foundry-sistema/scripts/oficina.mjs');
+  assert.match(oficina, /const onde = R\.ondeNasce\(raridade, Boolean\(ator \?\? item\?\.parent\)\);\r?\n  if \(onde\.erro\) throw new Error/);
+  assert.match(oficina, /const motivo = erro \?\? R\.ondeNasce\(raridade, Boolean\(destino \?\? item\?\.parent\)\)\.erro;/);
+  assert.match(oficina, /const escolheOnde = !item && !ator;/);
+  assert.match(oficina, /<select name="onde"><option value="">No mundo \(Arsenal do mestre\)<\/option>/);
+});

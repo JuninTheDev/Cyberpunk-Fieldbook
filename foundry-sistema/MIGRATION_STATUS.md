@@ -10648,6 +10648,29 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
     apaga, e nada falha. Os passos do C78 e do C79 ganharam o `luz` na lista do Completo.
 - **Portões:** G1 sem erros; G2 sem erros; G3 855/855; G4 348/348 duas vezes seguidas (808 s e 803 s). Antes, o passo novo caiu três vezes pelo teste, não pela luz: a cena com a margem padrão (o Vigia na margem, sem a visão valer dentro da cena), o token novo à vista até a visão se refazer e a parede nova que ainda não cortava a visão; o passo agora cria a cena com o `padding: 0` e espera a cena assentar, sem tirar nem afrouxar nenhuma checagem. Numa das rodadas caíram também as instáveis conhecidas (os estados do C26, as chaves do Fluxo e os tokens dinâmicos).
 - **Mutações:** oito no G3 (o disparo sem a luz, o clarão grande com a luz de 2 m, a luz presa ao token, o Reduzido com a luz, o fotossensível com a luz, a luz de quem o mestre escondeu, a luz nova que não apaga a de antes, o diretor sem o oculto) e cinco no G4 (a luz que não se apaga, a luz sem raio, o palco sem refazer a percepção, o diretor sem o oculto, o Reduzido com a luz): todas caíram, e os arquivos voltaram iguais (md5). As do G4 rodaram antes dos dois últimos acertos de tempo do passo; a sem refazer a percepção rodou de novo depois do primeiro, e caiu. Sem mutação: a luz que não bate nas paredes (o `walls`), porque a parede já corta a visão de quem olha.
+### Ciclo 224 (2026-11-26): C101, a modificação da oficina não chega antes da hora (sessão KouArt)
+
+- **Decisão do usuário (2026-11-26),** sobre a dúvida 13 do C68 ao C75: "Faça o teste", com a sugestão aceita ("Se
+  vazar, a lendária secreta passa a ser criada direto na ficha"; "Aplique todas as sugestões").
+- **O que o teste achou:** vazava. A modificação criada na oficina, no mundo (a pasta "Arsenal do mestre", a permissão
+  padrão NONE), chegava inteira ao navegador do jogador: o item no `game.items`, pelo uuid, e a nota do mestre na
+  descrição. O Foundry manda os itens do mundo a cada cliente; a permissão só os esconde da barra lateral.
+- **Entrega:**
+  - `regras-oficina.mjs`: o `ondeNasce` (a lendária só na ficha) e o `AVISO_DO_MUNDO`;
+  - `oficina.mjs`: o `criar` recusa a lendária no mundo (também a do mundo que muda para lendária); a janela nova
+    pergunta onde ela nasce (no mundo ou na ficha de um personagem dos jogadores), avisa que o item do mundo chega a todos
+    e recusa a lendária no mundo com o motivo;
+  - o passo do C71 do G4 cria a dele rara (no mundo) e confere o "Onde nasce" e o aviso;
+  - a versão `0.3.224`.
+- **Testes de referência:**
+  - **G3:** no `oficina.test.mjs`, o `ondeNasce` em cada raridade e o código da recusa e da janela.
+  - **G4:** o passo do C101, antes do C75: a rara do mundo chega ao navegador do jogador (com a nota: o fato que pede a
+    regra); a lendária no mundo e a rara que muda para lendária são recusadas; a janela cria a lendária na ficha do
+    personagem escolhido (sem o "Onde nasce" na flag), e o jogador a recebe ali, com a nota, e nada dela no mundo.
+- **Portões:** G1, G2 e G3 passam; o G4 348/349 (só o C45, das instáveis conhecidas). A primeira rodada do passo novo estourou os 300 s: a janela da oficina do C99 ainda fechava na tela, e o passo preencheu a dela; agora ele acha a dele pelo conteúdo (a opção do C101 Vex) e, se a janela não devolver nada em 20 s, falha com o que viu (os avisos, as janelas abertas, as opções).
+- **Mutações:** G3, N1 a N4 morreram; G4, F1 a F5 morreram (o F1 e o F4 estouraram o tempo na primeira rodada, esperando a trava de um teste de outra sessão, e morreram na segunda).
+- **Aberto (para o usuário):** a rara e a do catálogo continuam no mundo, e chegam ao navegador de todos (a janela avisa).
+  Para guardar todas até a entrega, elas teriam de ficar fora do mundo (um compêndio só do mestre, ou o servidor da wiki).
 
 ### Ciclo 225 (2026-11-27): C81, o motor de som dos efeitos (sessão KouArt)
 

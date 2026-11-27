@@ -22235,7 +22235,8 @@ module.exports = async ({ edge, servidores, r }) => {
         await esperar(() => document.querySelector('.oficina-do-mestre form'));
         const form = document.querySelector('.oficina-do-mestre form');
         form.elements.nome.value = 'C71 Mira Kiroshi';
-        form.elements.raridade.value = 'lendaria';
+        // A rara, no mundo (a lendária nasce na ficha de quem a recebe: o C101).
+        form.elements.raridade.value = 'rara';
         form.elements.tamanho.value = '1';
         form.elements.serve.value = 'distancia';
         form.elements.texto.value = 'Feita sob medida por um ripperdoc de Kabuki.';
@@ -22245,6 +22246,7 @@ module.exports = async ({ edge, servidores, r }) => {
         form.elements.e0situacao.value = 'mirado';
         form.elements.e0situacao.dispatchEvent(new Event('change', { bubbles: true }));
         resultado.campos = [...form.querySelectorAll('[data-efeito="0"] [data-campo]')].filter(c => c.style.display !== 'none').map(c => c.dataset.campo).join();
+        resultado.onde = { valor: form.elements.onde?.value ?? null, primeira: form.elements.onde?.options[0]?.textContent ?? null, aviso: textoDe(form.querySelector('[data-aviso-do-mundo]')) };
         form.closest('.application').querySelector('button[data-action="salvar"]').click();
         const mod = await janela;
         resultado.mod = { nome: mod?.name, pasta: mod?.folder?.name, dono: mod?.ownership?.default, raridade: mod?.getFlag('${S}', 'raridade'), regra: mod?.getFlag('${S}', 'mod'), descricao: mod?.system.descricao ?? '' };
@@ -22331,10 +22333,11 @@ module.exports = async ({ edge, servidores, r }) => {
       const botaoDoJogador = jogador ? await jogador.evaluate(`(async () => { await ui.items.render({ force: true }); await new Promise(r => setTimeout(r, 300)); return Boolean(ui.items.element?.querySelector('[data-oficina-do-mestre]')); })()`) : false;
       try {
         const m = info.mod;
-        const oficinaOk = info.campos === 'valor,situacao,rotulo' && m.nome === 'C71 Mira Kiroshi' && m.pasta === 'Arsenal do mestre' && m.dono === 0 && m.raridade === 'lendaria'
+        const oficinaOk = info.campos === 'valor,situacao,rotulo' && m.nome === 'C71 Mira Kiroshi' && m.pasta === 'Arsenal do mestre' && m.dono === 0 && m.raridade === 'rara'
           && m.regra?.efeitos?.[0]?.entao?.[0]?.valor === 1 && JSON.stringify(m.regra.efeitos[0].quando) === '{"mirado":true}' && JSON.stringify(m.regra.encaixe) === '{"aDistancia":true}'
-          && /Lendária/.test(m.descricao) && /Kabuki/.test(m.descricao) && /ataque sempre é só negativo/.test(info.recusa) && info.noAtaque.join() === '1:true'
-          && info.raridadeNaWiki === 'lendaria';
+          && /Rara/.test(m.descricao) && /Kabuki/.test(m.descricao) && /ataque sempre é só negativo/.test(info.recusa) && info.noAtaque.join() === '1:true'
+          && info.raridadeNaWiki === 'rara'
+          && info.onde.valor === '' && info.onde.primeira === 'No mundo (Arsenal do mestre)' && /chega ao navegador de todos/.test(info.onde.aviso);
         const escondidoOk = info.escondido === 'gatilho-sensivel' && info.deNovo === null && info.avisoDeNovo === 'Very Heavy Pistol já tem um defeito escondido.' && info.semMudar.slots === 2 && info.semMudar.defeitos === 0 && !info.semMudar.flags
           && /Gatilho sensível/.test(info.naFicha) && info.tirado === true && Object.keys(noServidor).join() === info.uuid && noServidor[info.uuid]?.mod === 'gatilho-sensivel'
           && (!jogador || (doJogador.ve && !doJogador.vazou && doJogador.api === null));
@@ -22929,6 +22932,83 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(c99)];
     });
 
+    await r.passo('C101: a modificação da oficina no mundo chega ao navegador do jogador (o Foundry manda os itens do mundo a todos); por isso a oficina recusa a lendária no mundo, e a janela a cria na ficha de quem a recebe', async () => {
+      const criada = await edge.evaluate(`(async () => {
+        const esperar = async teste => { for (let i = 0; i < 80 && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const oficina = game.system.api.oficina;
+        const motivo = promessa => promessa.then(() => '', erro => erro.message);
+        const dono = game.users.getName('Jogador');
+        const ator = await Actor.implementation.create({ name: 'C101 Vex', type: 'personagem', ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE, [dono.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } });
+        const efeitos = [{ tipo: 'situacao', valor: 1, situacao: 'mirado' }];
+        // A rara no mundo (a pasta do mestre, a permissão padrão NONE), com a nota.
+        const rara = await oficina.criar({ nome: 'C101 Rara', raridade: 'rara', tamanho: 1, serve: 'distancia', texto: 'A nota da rara.', efeitos });
+        // A lendária no mundo: recusa. A rara do mundo que vira lendária: recusa (e fica rara).
+        const recusa = await motivo(oficina.criar({ nome: 'C101 Segredo', raridade: 'lendaria', tamanho: 1, serve: 'distancia', texto: 'A nota secreta do mestre.', efeitos }));
+        const mudar = await motivo(oficina.criar({ nome: 'C101 Rara', raridade: 'lendaria', tamanho: 1, serve: 'distancia', texto: 'A nota da rara.', efeitos }, { item: rara }));
+        // A janela: a lendária na ficha do C101 Vex (o "Onde nasce").
+        const janela = oficina.abrir();
+        // A janela desta (a que tem o C101 Vex): a do passo anterior pode ainda estar fechando na tela.
+        const minha = () => [...document.querySelectorAll('.oficina-do-mestre form')].find(f => [...(f.elements.onde?.options ?? [])].some(o => o.value === ator.id));
+        await esperar(minha);
+        const form = minha();
+        form.elements.nome.value = 'C101 Segredo';
+        form.elements.raridade.value = 'lendaria';
+        form.elements.texto.value = 'A nota secreta do mestre.';
+        form.elements.e0tipo.value = 'situacao';
+        form.elements.e0tipo.dispatchEvent(new Event('change', { bubbles: true }));
+        form.elements.e0valor.value = '1';
+        form.elements.e0situacao.value = 'mirado';
+        const opcoes = [...form.elements.onde.options].map(opcao => opcao.textContent);
+        form.elements.onde.value = ator.id;
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let lendaria;
+        try {
+          form.closest('.application').querySelector('button[data-action="salvar"]').click();
+          // Recusada, a janela abre de novo: o passo não espera para sempre.
+          lendaria = await Promise.race([janela, new Promise(r => setTimeout(() => r('tempo'), 20000))]);
+        } finally { ui.notifications.warn = avisar; }
+        if (lendaria === 'tempo') {
+          const abertas = [...document.querySelectorAll('.oficina-do-mestre')];
+          const diag = { avisos, abertas: abertas.length, onde: ator.id, opcoes, hasPlayerOwner: ator.hasPlayerOwner };
+          for (const el of abertas) el.querySelector('button[data-action="cancelar"]')?.click();
+          await game.items.get(rara.id)?.delete();
+          await ator.delete();
+          throw new Error('a janela não devolveu a modificação: ' + JSON.stringify(diag));
+        }
+        return {
+          rara: { id: rara.id, pasta: rara.folder?.name ?? null, padrao: rara.ownership.default, raridade: rara.getFlag('${S}', 'raridade'), doJogador: rara.testUserPermission(dono, 'LIMITED') },
+          recusa, mudar, opcoes, ator: ator.id,
+          lendaria: { id: lendaria?.id ?? null, ator: lendaria?.parent?.id ?? null, raridade: lendaria?.getFlag('${S}', 'raridade') ?? null, oficina: lendaria?.getFlag('${S}', 'oficina') ?? null },
+          noMundo: game.items.filter(i => /^C101 /.test(i.name)).map(i => i.name)
+        };
+      })()`);
+      try {
+        // O jogador: a rara do mundo chega (com a nota); a lendária, só na ficha dele.
+        const doJogador = await jogador.evaluate(`(async () => {
+          for (let i = 0; i < 80 && !game.actors.get(${JSON.stringify(criada.ator)})?.items.get(${JSON.stringify(criada.lendaria.id)}); i++) await new Promise(r => setTimeout(r, 100));
+          const lendaria = game.actors.get(${JSON.stringify(criada.ator)})?.items.get(${JSON.stringify(criada.lendaria.id)});
+          const rara = game.items.get(${JSON.stringify(criada.rara.id)});
+          return { rara: Boolean(rara), notaDaRara: JSON.stringify(rara?.toObject() ?? {}).includes('A nota da rara'), segredoNoMundo: game.items.some(i => i.name === 'C101 Segredo'),
+            lendaria: lendaria?.name ?? null, nota: JSON.stringify(lendaria?.toObject() ?? {}).includes('A nota secreta') };
+        })()`);
+        const recusou = texto => /A oficina não fez a modificação: a lendária nasce na ficha de quem a recebe \(no mundo, ela chega ao navegador de todos\)\./.test(texto);
+        const ok = criada.rara.pasta === 'Arsenal do mestre' && criada.rara.padrao === 0 && criada.rara.raridade === 'rara' && criada.rara.doJogador === false
+          && recusou(criada.recusa) && recusou(criada.mudar)
+          && criada.opcoes[0] === 'No mundo (Arsenal do mestre)' && criada.opcoes.includes('Na ficha de C101 Vex')
+          && criada.lendaria.ator === criada.ator && criada.lendaria.raridade === 'lendaria' && criada.lendaria.oficina && !('onde' in criada.lendaria.oficina)
+          && criada.noMundo.join() === 'C101 Rara'
+          && doJogador.rara && doJogador.notaDaRara && !doJogador.segredoNoMundo && doJogador.lendaria === 'C101 Segredo' && doJogador.nota;
+        return [ok, JSON.stringify({ criada, doJogador })];
+      } finally {
+        await edge.evaluate(`(async () => {
+          await game.items.get(${JSON.stringify(criada.rara.id)})?.delete();
+          for (const ator of game.actors.filter(a => a.name === 'C101 Vex')) await ator.delete();
+          return true;
+        })()`);
+      }
+    });
     await r.passo('C75: o upgrade arrasta do inventário para a bancada (no navegador do jogador); o "Escolher do inventário" da bancada lista o que cabe (e o motivo do que não cabe); o "Instalar em…" do inventário escolhe a arma (a modificação pede ao mestre); o "Bancada" abre a arma na aba dela', async () => {
       const c75 = await edge.evaluate(`(async () => {
         const cat = await game.system.api.wiki.carregarCatalogo();
