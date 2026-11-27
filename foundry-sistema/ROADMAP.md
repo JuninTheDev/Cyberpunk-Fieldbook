@@ -622,8 +622,8 @@ As decisões do usuário de 2026-11-26 sobre as dúvidas do C68 ao C75 ("Aplique
   (os programas e o hardware) arrastam da ficha (o cyberware e as lesões não); o acessório no Foundry cabe só onde a
   Montagem da wiki deixa (a classe no nome, o de baixo do cano só em arma de duas mãos, a exótica sem acessório); o
   Compensador só em arma com autofogo; o cabo balanceado dá +1 no arremesso (situacional, no teto de +3).
-- [ ] **C99. A quebra, o conserto e a oficina:** o "Quebrar" do mestre na ficha da arma (o EMP, a história); o custo do
-  conserto sai do dinheiro do personagem quando o mestre aprova; o campo da DV da instalação na oficina (21 de padrão).
+- [x] **C99. A quebra, o conserto e a oficina:** feito no ciclo 221 (sessão KouArt, 2026-11-26). O "Quebrar" do
+  mestre na ficha da arma (o EMP, a história); o custo do conserto sai do dinheiro do personagem quando o mestre aprova; o campo da DV da instalação na oficina (21 de padrão).
 - [ ] **C100. A loja da wiki:** a loja de criação sem as modificações Caras; o presente do mestre entregue na hora; o
   aviso do teto também nos "Pedidos da campanha"; o prazo da vitrine pelo relógio do servidor.
 - [ ] **C101. A modificação da oficina não chega antes da hora:** um passo do G4 confere se o navegador do jogador

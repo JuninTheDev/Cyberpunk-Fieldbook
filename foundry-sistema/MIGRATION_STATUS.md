@@ -10565,8 +10565,33 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   - **G4:** dois passos: o cabo balanceado na faca arremessada (o ataque 20 em vez de 19, e fora do arremesso nada); e o
     arrasto da armadura, do cyberdeck e do programa, o encaixe de cada caso pela API da bancada e as recusas de verdade, com
     o aviso de cada uma.
-- **Portões:** G1 a G3 limpos (o G3 com o `montagem-da-wiki.test.mjs` novo); G4 346/346, de novo depois do merge do ciclo 219; os cenários `arsenal` (8/8) e `conta` (20/20) da wiki.
+- **Portões:** G1 a G3 limpos (o G3 com o `montagem-da-wiki.test.mjs` novo); G4 346/346, e 347/347 de novo depois do merge do ciclo 219; os cenários `arsenal` (8/8) e `conta` (20/20) da wiki.
 - **Mutações:** 12 no G3 (N1 a N12: as marcações do arrasto, cada recusa do encaixe, a Heavy SMG, a exótica pela descrição, o Compensador, o arremesso no avaliar e no combate, a bancada e a loja da wiki sem o autofogo) e 8 no G4 (F1 a F8: o `_preUpdate` e a bancada sem o encaixe, o combate e os situacionais sem o arremesso, a armadura e o cyberdeck sem o arrasto, a exótica sem a descrição, a arma sem o autofogo): todas morreram, os arquivos de volta pelo md5.
+
+### Ciclo 221 (2026-11-26): C99, a quebra à mão, o conserto pago e a DV da oficina (sessão KouArt)
+
+- **Decisões do usuário (2026-11-26),** sobre as dúvidas do C68 ao C75: "5. B" (um botão "Quebrar" do mestre na ficha da
+  arma), "6. B" (o custo do conserto sai do dinheiro do dono quando o mestre aprova), "7. B" (um campo "DV" na oficina, com
+  21 de padrão); "Aplique todas as sugestões".
+- **Entrega:**
+  - `regras-quebra.quebraAMao` (o estado da regra e o motivo, até 120 letras) e `cobrancaDoConserto` (cobra só com o
+    bastante; o saldo não fica negativo);
+  - `quebra.quebrar` e `abrirQuebrar` (a janela: o estado e o motivo; o cartão e o diário); o `consertar` com o
+    `cobrar` (o `mudarComExtrato` do dinheiro, ou o aviso ao mestre); a caixa "Cobrar" na janela do conserto, que vai na
+    ação do pedido de teste até o resultado;
+  - a ficha da arma: o QUEBRAR do mestre (a arma inteira, num ator);
+  - `regras-oficina.DV_DA_INSTALACAO` e `dvDaOficina` (a escala da wiki, `regras-pedido-teste.DIFICULDADES`); a janela
+    da oficina com a "DV da instalação"; `regras-modificacoes.instalacaoDaMod` com a DV da oficina no lugar da do preço, e
+    o `instalacaoDe` lê a DV guardada no formulário (a flag `oficina`);
+  - a versão `0.3.221`.
+- **Testes de referência:**
+  - **G3:** o `quebra-e-conserto.test.mjs` (novo, 4 testes): a quebra à mão, a cobrança (o bastante, o pouco, o sem custo),
+    o QUEBRAR e o "Cobrar" no caminho do teste, a DV da oficina na escala e na instalação.
+  - **G4:** um passo: o QUEBRAR da ficha e a janela (o EMP; o cartão e o diário; o botão some); o CONSERTAR com o "Cobrar"
+    marcado (50eb dos 60, a linha no extrato, o cartão); de novo com 10eb (sem cobrar, o aviso); a oficina com a DV 21 de
+    padrão e a 13 escolhida, que a instalação usa.
+- **Portões:** G1 a G3 limpos; G4 348/348. A primeira rodada do G4 deu 346/348: o passo do C99 pegou o aviso do C73 (que clica no CONSERTAR com a caixa marcada sem o dono ter o bastante), e por isso a caixa agora só vem marcada quando o dinheiro basta; a outra falha, o Neuroport (o Jack In longe demais), passou na rodada seguinte sem mudança.
+- **Mutações:** 10 no G3 (N1 a N10) e 9 no G4 (F1 a F9), todas mortas; os arquivos voltaram pelo md5.
 
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 

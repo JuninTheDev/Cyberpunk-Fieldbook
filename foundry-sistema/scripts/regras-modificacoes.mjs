@@ -274,8 +274,10 @@ export function parteDoTeto(valores) {
 export const DVS_DA_INSTALACAO = [{ ate: 50, dv: 13, categoria: 'Oneroso' }, { ate: 100, dv: 17, categoria: 'Premium' }, { ate: Infinity, dv: 21, categoria: 'Caro' }];
 export const TESTE_DA_INSTALACAO = { tipo: 'role', id: 'upgrade', pericia: 'weaponstech' };
 export const TEMPO_DA_INSTALACAO = '1 hora';
-export function instalacaoDaMod(mod, preco = 0) {
+// dvDaOficina: a DV que o mestre escolheu na oficina (o C99), no lugar da do preço.
+export function instalacaoDaMod(mod, preco = 0, dvDaOficina = null) {
   if (!mod || mod.tipo === 'defeito') return null;
+  if (Number.isInteger(dvDaOficina) && dvDaOficina > 0) return { dv: dvDaOficina, categoria: 'a da oficina do mestre', tempo: TEMPO_DA_INSTALACAO, teste: { ...TESTE_DA_INSTALACAO } };
   const eb = Math.max(0, Number(preco) || 0);
   const faixa = eb ? DVS_DA_INSTALACAO.find(entrada => eb <= entrada.ate) : DVS_DA_INSTALACAO.at(-1);
   return { dv: faixa.dv, categoria: eb ? faixa.categoria : 'sem preço, a do Caro', tempo: TEMPO_DA_INSTALACAO, teste: { ...TESTE_DA_INSTALACAO } };
