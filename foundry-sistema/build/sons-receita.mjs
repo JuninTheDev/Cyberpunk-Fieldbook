@@ -35,6 +35,9 @@ export const VARIACOES = 4;
 const bip = (f, d) => `aevalsrc='0.6*sin(2*PI*${f}*t)*if(lt(t,${d}),1,0)':d=${d + 0.05}:s=48000`;
 const coracao = (f, a) => `aevalsrc='${a}*(exp(-t*28)*sin(2*PI*${f}*t)+0.7*exp(-(t-0.2)*28)*sin(2*PI*${f}*(t-0.2))*gte(t,0.2))':d=0.6:s=48000`;
 const sopro = (f, d) => `anoisesrc=d=${d}:c=pink:a=0.6:s=48000:seed=${f},bandpass=f=${f}:width_type=h:w=${Math.round(f * 0.8)},afade=t=in:d=${(d * 0.45).toFixed(2)},afade=t=out:st=${(d * 0.45).toFixed(2)}:d=${(d * 0.55).toFixed(2)}`;
+// O pop e o chiado (a explosão leve): o baque curto que cai de tom e o chiado da fumaça, num grafo do lavfi só.
+const baquezinho = f => `0.9*exp(-t*35)*sin(2*PI*(${f}+200*exp(-t*60))*t)+0.5*exp(-t*120)*(random(0)*2-1)`;
+const popChiado = (f, hp, d, seed) => `aevalsrc='${baquezinho(f)}':d=${d}:s=48000[p];anoisesrc=d=${d}:c=white:a=0.3:s=48000:seed=${seed},highpass=f=${hp},lowpass=f=8000,afade=t=in:st=0.02:d=0.1,afade=t=out:st=0.5:d=${(d - 0.6).toFixed(2)}[h];[p][h]amix=inputs=2:normalize=0[out0]`;
 const estrondo = (lp, d) => `anoisesrc=d=${d}:c=brown:a=0.9:s=48000:seed=${lp},lowpass=f=${lp},afade=t=out:st=0.05:d=${d - 0.1}:curve=exp`;
 
 // Cada som: o conjunto escolhido na audição (o id dele na página), a origem e o que tirar dela (os arquivos da biblioteca
@@ -72,6 +75,7 @@ export const RECEITA = Object.freeze({
   'impacto.critico': kenney('erro', 'Erro de interface (Kenney Interface)', 'interface-sounds', ['error']),
   'explosao.frag': gerado('estrondo', 'Estrondo (gerado)', [estrondo(500, 2.2), estrondo(420, 2.4), estrondo(600, 2.0)]),
   'explosao.fogo': gerado('estrondo-longo', 'Estrondo longo (gerado)', [estrondo(300, 2.6), estrondo(350, 2.5)]),
+  'explosao.leve': gerado('pop-chiado', 'O pop e o chiado da fumaça (gerado)', [popChiado(70, 1800, 2.5, 11), popChiado(80, 2200, 2.3, 12), popChiado(65, 1600, 2.6, 13)]),
   'explosao.emp': kenney('campo-de-forca', 'Campo de força (Kenney Sci-fi)', 'sci-fi-sounds', ['forceField']),
   'corpo.flatline': gerado('monitor-1000', 'O monitor parado, 1 kHz (gerado)', [bip(1000, 1.5)]),
   'corpo.batimento': gerado('coracao', 'O coração, tum-tum (gerado)', [coracao(55, 0.9), coracao(60, 0.9)]),
@@ -82,7 +86,8 @@ export const RECEITA = Object.freeze({
   'recarga.padrao': kenney('clique', 'Clique de metal (Kenney RPG)', 'rpg-audio', ['metalClick', 'metalLatch'])
 });
 // Os sons de que nenhum candidato serviu na audição: ficam fora do banco (não tocam) até o usuário escolher outro.
-export const SEM_SOM = Object.freeze({ 'explosao.leve': 'nenhum candidato serviu na audição de 2026-11-27' });
+// (A explosão leve ficou sem som na 1ª rodada, em 2026-11-27, e ganhou o pop e o chiado na 2ª.)
+export const SEM_SOM = Object.freeze({});
 
 // O nome do arquivo de uma variação, dentro de efeitos/: sons/<grupo>/<nome>-<n>.ogg ("tiro.pistola-leve" e 1:
 // sons/tiro/pistola-leve-1.ogg).

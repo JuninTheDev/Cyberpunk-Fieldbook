@@ -13467,7 +13467,7 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
-    await r.passo('o banco de sons do sistema (o C103): o navegador do jogador lê o efeitos/sons/banco.json no ready, com os 36 sons da audição e sem a explosão leve; pré-carrega 12 depois do clique; cada um dos arquivos se decodifica no Edge, em mono, com som e sem passar do pico; o crítico e o flatline do banco tocam até o fim, para todos; nada falha', async () => {
+    await r.passo('o banco de sons do sistema (o C103): o navegador do jogador lê o efeitos/sons/banco.json no ready, com os 37 sons da audição (a explosão leve, da 2ª rodada, com as 3 variações do pop e chiado); pré-carrega 12 depois do clique; cada um dos arquivos se decodifica no Edge, em mono, com som e sem passar do pico; o crítico e o flatline do banco tocam até o fim, para todos; nada falha', async () => {
       if (!jogador) return [false, 'sem o navegador do jogador'];
       const banco = JSON.parse(fs.readFileSync(path.join(servidores.raiz, 'foundry-sistema', 'efeitos', 'sons', 'banco.json'), 'utf8'));
       // Um clique de verdade dá a ativação (sozinho, o passo começa travado; no G4 inteiro, o do C81 já deu).
@@ -13513,7 +13513,8 @@ module.exports = async ({ edge, servidores, r }) => {
       const tocou = (x, chave) => x.terminou && x.tocados === 1 && x.vozesLogo === 1 && x.registro.length === 1 && x.registro[0].chave === chave && !x.registro[0].motivo
         && x.registro[0].src.startsWith(`${PASTA}${chave.split('.')[0]}/${chave.split('.')[1]}-`) && x.registro[0].posicional === false && x.registro[0].contexto === 'interface';
       const conferir = {
-        banco: JSON.stringify(lido.banco) === JSON.stringify(banco) && Object.keys(banco.sons).length === 36 && !('explosao.leve' in banco.sons),
+        banco: JSON.stringify(lido.banco) === JSON.stringify(banco) && Object.keys(banco.sons).length === 37
+          && JSON.stringify(banco.sons['explosao.leve']) === JSON.stringify([1, 2, 3].map(n => `${PASTA}explosao/leve-${n}.ogg`)),
         preCarregados: lido.preCarregados === 12,
         arquivos: lido.arquivos.length === Object.values(banco.sons).flat().length && lido.arquivos.length > 90 && !ruins.length,
         critico: tocou(lido.critico, 'impacto.critico'),

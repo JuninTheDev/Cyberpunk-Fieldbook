@@ -20,7 +20,7 @@ const oggs = (pasta = path.join(efeitos, 'sons')) => fs.readdirSync(pasta, { wit
 
 test('C103: a receita tem cada som do motor, menos os que ficaram sem som na audição, de uma fonte que pode ir no repositório', () => {
   assert.deepEqual([...Object.keys(RECEITA), ...Object.keys(SEM_SOM)].sort(), chavesDeSom().sort());
-  assert.deepEqual(Object.keys(SEM_SOM), ['explosao.leve']);
+  assert.deepEqual(Object.keys(SEM_SOM), []);
   for (const [chave, r] of Object.entries(RECEITA)) {
     assert.ok(FONTES[r.origem], `${chave}: a origem ${r.origem}`);
     assert.ok(LICENCAS_PERMITIDAS.includes(FONTES[r.origem].licenca), chave);
@@ -34,6 +34,11 @@ test('C103: a receita tem cada som do motor, menos os que ficaram sem som na aud
   assert.equal(RECEITA['tiro.pistola-pesada'].tom, 0.9);
   assert.equal(RECEITA['rajada.fuzil'].rel, 'AK-47/C_27P.wav');
   assert.equal(RECEITA['corpo.flatline'].origem, 'gerado');
+  // A explosão leve, da 2ª rodada (nenhum dos estouros da 1ª serviu): o pop e o chiado, gerado, em 3 variações.
+  assert.equal(RECEITA['explosao.leve'].conjunto, 'pop-chiado');
+  assert.equal(RECEITA['explosao.leve'].origem, 'gerado');
+  assert.equal(RECEITA['explosao.leve'].expressoes.length, 3);
+  assert.ok(RECEITA['explosao.leve'].expressoes.every(x => /seed=\d+/.test(x) && x.endsWith('[out0]')));
   assert.deepEqual(RECEITA['recarga.padrao'].familias, ['metalClick', 'metalLatch']);
 });
 
@@ -73,7 +78,7 @@ test('C103: o banco.json do sistema tem os sons da receita, de 1 a 4 variações
   assert.equal(banco.sons['corpo.flatline'].length, 1);
   assert.equal(banco.sons['corpo.batimento'].length, 2);
   assert.equal(banco.sons['explosao.frag'].length, 3);
-  assert.equal(Object.values(banco.sons).flat().length, 102);
+  assert.equal(Object.values(banco.sons).flat().length, 105);
 });
 
 test('C103: cada arquivo do banco está na pasta e tem a linha dele no LICENCAS.csv, com a licença, o autor e o link da fonte da receita; nenhum .ogg sobra', () => {

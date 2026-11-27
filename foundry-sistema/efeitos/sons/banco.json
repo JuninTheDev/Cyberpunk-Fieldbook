@@ -140,6 +140,11 @@
       "systems/cpr-fieldbook/efeitos/sons/explosao/fogo-1.ogg",
       "systems/cpr-fieldbook/efeitos/sons/explosao/fogo-2.ogg"
     ],
+    "explosao.leve": [
+      "systems/cpr-fieldbook/efeitos/sons/explosao/leve-1.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/leve-2.ogg",
+      "systems/cpr-fieldbook/efeitos/sons/explosao/leve-3.ogg"
+    ],
     "explosao.emp": [
       "systems/cpr-fieldbook/efeitos/sons/explosao/emp-1.ogg",
       "systems/cpr-fieldbook/efeitos/sons/explosao/emp-2.ogg",

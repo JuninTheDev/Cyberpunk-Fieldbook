@@ -10750,6 +10750,34 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 e G2 limpos; G3 881/881; G4 352/352 e, na rodada seguinte, 350/352 com só as duas instáveis conhecidas do C26 ("A nonpersisted Document cannot be updated"). A primeira rodada achou o limite de "com som" do passo novo alto demais para o flatline (um tom puro, pico em -26 dBFS): ficou em -40 dBFS.
 - **Mutações:** G3: as 12 morreram (B1 a B8 na receita: a mistura entre os grupos, o limitador, a tomada do meio, o nome do arquivo, a origem na licença, a licença trocada, a explosão leve sem registro, a pistola que não é a escolhida; D1 a D4 nos dados: o banco sem um arquivo, um arquivo sem a linha da licença, o autor errado, um arquivo em estéreo). G4: as 3 morreram, só pelo passo do C103 (H1 um arquivo em estéreo, H2 um arquivo estourado, H3 o banco não lido no ready). Os arquivos voltaram iguais (md5).
 
+### Ciclo 229 (2026-11-27): C103, a explosão leve na 2ª rodada da audição (sessão KouArt)
+
+- **Pedido do usuário:** a explosão leve ficou sem som no ciclo 226 ("Nenhum serve" na audição); perguntado o que fazer,
+  ele respondeu "Gere candidatos novos" e, depois de ouvir, "Pronto selecionei".
+- **A 2ª rodada:** na mesma página da audição, 4 conjuntos novos, todos gerados pelo ffmpeg (o pop e o chiado da fumaça,
+  o chiado do gás, o estalo seco do flashbang, o puf curto), no mesmo nível entre si. A escolha: o **pop e o chiado**. A
+  explosão leve serve a todas as granadas sem dano (o `MUNICAO_SEM_DANO` menos o EMP: a fumaça, o gás, o flashbang, a
+  sonífera, a teia), e o roteiro toca o mesmo som para todas.
+- **Entrega:**
+  - `build/sons-receita.mjs`: o gerador `popChiado` (o baque curto que cai de tom, o estalo de ruído e o chiado em
+    passa-alta, num grafo do lavfi só, com a seed do ruído) e a receita da explosão leve, com 3 variações; o `SEM_SOM`
+    ficou vazio;
+  - `efeitos/sons/explosao/leve-1.ogg` a `leve-3.ogg` (no nível do grupo, −15,5 LUFS-M; o pop e o chiado alcançam
+    −12,2 sem passar do pico, então a mistura dos outros grupos não mudou e os outros 102 arquivos saíram iguais), o
+    `banco.json` (37 sons, 105 arquivos, 640 KB) e as 3 linhas no `LICENCAS.csv`;
+  - `efeitos/CREDITOS.md` e o README;
+  - a versão `0.3.229`.
+- **Fora deste item:** um som próprio para cada granada sem dano (o `explosao.fumaca`, o `explosao.gas` e o
+  `explosao.flashbang` do anexo fx-audio), que pede chaves novas no motor; o volume da explosão leve abaixo da de
+  fragmentação (o grupo tem um nível só), se a mesa pedir depois de ouvir.
+- **Testes de referência:**
+  - **G3:** `sons-banco.test.mjs`: a receita cobre todos os sons do motor (nenhum sem som), a explosão leve é o pop e o
+    chiado, gerado, com 3 variações e a seed do ruído em cada uma; o banco com 105 arquivos.
+  - **G4:** o passo do C103 confere os 37 sons e as 3 variações da explosão leve no banco lido pelo jogador, e decodifica
+    cada arquivo no Edge (mono, com som, sem passar do pico).
+- **Portões:** G1 0; G2 limpo; G3 881/881; G4 352/352 (849 s); o build duas vezes, com o md5 igual (e os 102 arquivos de antes, iguais).
+- **Mutações:** 6 de 6 morreram: no G3, L1 (a explosão leve de volta para sem som), L2 (outro conjunto), L3 (sem a seed do ruído), L4 (o banco sem uma variação), L5 (uma variação sem a linha da licença); no G4, M1 (o banco do sistema sem a explosão leve) caiu no passo do C103 (com as instáveis conhecidas do C45, parte 2, e do C52 junto). Os arquivos voltaram iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha
