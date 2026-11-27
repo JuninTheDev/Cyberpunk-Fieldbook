@@ -10786,6 +10786,26 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   confere de propósito (o prazo do jogador na NET, de 25 s; os 8 s do "jogador demora"; os 10 s da janela fechada no X)
   ficaram.
 
+### Ciclo 228 (2026-11-27): C105, o contêiner não dá os atores novos aos jogadores (sessão KouArt)
+
+- **Achado pelo C104 (ciclo 227):** o C55 levava 60 s na rodada inteira do G4 e 0,8 s sozinho. O alvo dele nascia com
+  o "default: OWNER": depois que um passo do C17 criou um contêiner sem permissão, todo ator criado sem permissão (o
+  personagem, o capanga, o alvo do ataque) nascia com todos os jogadores donos, até recarregar a página. Na mesa, os
+  jogadores ficariam donos de tudo o que o mestre criasse depois de um contêiner, e o ataque esperaria a defesa de um
+  jogador que nem sabe do alvo.
+- **A causa:** o `_preCreate` do ator (o `documentos.mjs`) dava ao contêiner novo o "dono: todos" com o
+  `updateSource({ ownership: { default: OWNER } })`. O ator sem permissão nos dados traz o próprio objeto do valor inicial
+  do campo do Foundry (o `{ default: 0 }`, o mesmo para todos), e o `updateSource` muda no lugar: o valor inicial virava
+  `{ default: 3 }`. O `ForcedReplacement` não resolve (o `_updateCommit` também junta no lugar).
+- **Entrega:**
+  - `documentos.mjs`: o contêiner ganha uma cópia da permissão antes do `updateSource`;
+  - a versão `0.3.228`.
+- **Teste de referência (G4):** um passo novo, antes do C24: o contêiner criado sem permissão fica com todos os jogadores
+  donos, e o personagem, o capanga e o item criados depois dele, sem permissão, não; o valor inicial da permissão continua
+  "nenhum".
+- **Portões:** G1, G2 e G3 (884/884) passam; o G4 353/353 em 654 s (junto com o C104). O C55, que levava 60,8 s, leva 0,8 s.
+- **Mutações:** G4: o K1 (o contêiner sem a cópia da permissão) morreu no passo do C105 (e o G4 voltou a 718 s, com o C55 lento de novo).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -601,6 +601,10 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   vazava de um passo para os seguintes (o C105: o alvo do C55 nascia com o jogador dono, e o supressivo esperava os 60 s
   da resposta dele) e numa cena que não abria (o C26 esperava 10 s pela cena e 10 s pelos tokens). O passo lento de
   repente é um sinal: confira o estado que ele herdou antes de mexer na espera.
+- **O updateSource muda no lugar** (ciclo 228): o documento novo traz, no campo que não veio nos dados, o próprio objeto
+  do valor inicial do campo do Foundry (o mesmo para todos os documentos). O `updateSource` de um pedaço dele (o
+  `{ ownership: { default } }` do contêiner) mudava o valor inicial, e todo ator criado depois na página herdava. Antes de
+  mudar um objeto que não veio nos dados, dê ao documento uma cópia; e o passo do G4 cria o documento seguinte e confere.
 
 ## Build
 
