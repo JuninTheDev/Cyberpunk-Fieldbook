@@ -546,9 +546,9 @@ Cada uma vem com a recomendação da equipe. Responda "aceito as recomendações
 
 ### 9.1 Antes de começar (seguram a fase 1)
 
-**Decididas em 2026-11-26:** o usuário aceitou as oito recomendações ("Aceito todas"). Fica aberto só o que a decisão 8
-pergunta: se alguém joga no Safari (o iPhone, o iPad ou o Mac). Até a resposta, não se gera a cópia AAC; a pergunta volta
-no C92.
+**Decididas em 2026-11-26:** o usuário aceitou as oito recomendações ("Aceito todas"). A decisão 8 foi respondida em
+2026-11-27: "Ninguém joga no iphone ou safari". A cópia AAC não se gera, e o Ogg Opus basta; a curadoria de ouvido é do
+usuário (a audição do C103).
 
 | # | A pergunta | A recomendação |
 | --- | --- | --- |
