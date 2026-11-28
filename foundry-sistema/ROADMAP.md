@@ -1029,7 +1029,7 @@ pede, por uma fila no servidor; no conflito, a mesa ganha; nada some ("Para orga
 - [x] **C111. Da wiki para o Foundry:** feito no ciclo 236 (sessão KouArt, 2026-11-28; o usuário disse "Yes, go ahead"): o `api-inventario.js` (a fila de operações, a conferência no servidor, o SSE); o
   Foundry aplica, confirma ou recusa.
 - [x] **C112. A grade que se mexe na wiki:** feito no ciclo 237 (sessão KouArt, 2026-11-28; o usuário disse "Continue"): o estado projetado, o "pendente", a recusa com o motivo, o celular e o teclado.
-- [ ] **C113. O Foundry fechado e a importação:** a fila que esvazia ao abrir o mundo, a grade da montagem que vai na
+- [~] **C113. O Foundry fechado e a importação:** em andamento (sessão KouArt, 2026-11-28; o usuário disse "Pode prosseguir"). a fila que esvazia ao abrir o mundo, a grade da montagem que vai na
   importação, o pedido da loja que chega em "Para organizar".
 - [ ] **C114. Sem o mestre e em combate:** o jogador dono aplica sem o mestre; a trava das mudanças de uso em combate e a do
   esconderijo durante a sessão.
