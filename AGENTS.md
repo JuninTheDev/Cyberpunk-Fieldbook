@@ -108,6 +108,13 @@ Rode da raiz do clone.
   - o Foundry com `--dataPath=...FieldbookTeste...`;
   - os Edge com o perfil `wiki-testes-edge-*` (apague também esse perfil temporário).
 
+## Criar sessões e NPCs
+
+Para criar uma sessão, um NPC, um nome ou um handout de qualquer campanha, siga o
+`documentos/night-city/guia-de-sessoes.md`: os três níveis de NPC, os nomes pela origem e pelo bairro, os apelidos com
+história, o registro de nomes já usados, o formato do roteiro para a aba Narrar, o tom e os números para a mesa. A trama
+(o roteiro e os NPCs que os jogadores ainda não viram) fica no servidor, nunca no repositório.
+
 ## Nunca
 
 - **A campanha real e o Foundry 12 da mesa.** Os módulos `foundry-fluxo-de-combate`, `foundry-net-architect`,

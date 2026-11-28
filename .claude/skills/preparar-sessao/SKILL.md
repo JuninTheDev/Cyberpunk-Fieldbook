@@ -23,6 +23,9 @@ Sou o roteirista da campanha. **O mestre decide; eu proponho.** As regras do rot
 
 ## 2. Propor (o rascunho)
 
+Siga o guia `documentos/night-city/guia-de-sessoes.md` (os NPCs, os nomes e os apelidos, o registro de nomes, o formato
+do roteiro para a aba Narrar, o tom e os números) e confira a lista do fim dele antes de entregar.
+
 Escreva em `rascunhos-do-roteirista/sessao-NN-preparo.md`, fora do git. O rascunho tem:
 
 1. **A abertura:** o ramo que o diário pede, e por quê.
