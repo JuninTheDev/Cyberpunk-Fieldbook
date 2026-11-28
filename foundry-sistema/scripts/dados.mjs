@@ -258,7 +258,9 @@ export class DadosConteiner extends foundry.abstract.TypeDataModel {
       compra: new fields.SchemaField(Object.fromEntries(TIPOS_QUE_A_LOJA_COMPRA.map(tipo => [tipo, new fields.SchemaField({
         compra: new fields.BooleanField({ initial: true }), porcentagem: inteiro(100, { min: 0 })
       })]))),
-      notas: new fields.HTMLField({ required: true, blank: true, initial: '' })
+      notas: new fields.HTMLField({ required: true, blank: true, initial: '' }),
+      // O tamanho da grade (o C109, parte 2; regras-grade.lugaresDoConteiner): de 1 a 20 quadrados de cada lado.
+      grade: new fields.SchemaField({ l: inteiro(10, { min: 1, max: 20 }), a: inteiro(8, { min: 1, max: 20 }) })
     };
   }
 }

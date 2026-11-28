@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import { destinoDoPonto, htmlDaGrade, modeloDaGrade, moverCursor } from '../../foundry-sistema/scripts/compartilhado/grade-ui.mjs';
-import { lugaresDoPersonagem } from '../../foundry-sistema/scripts/compartilhado/regras-grade.mjs';
+import { lugaresDoConteiner, lugaresDoPersonagem } from '../../foundry-sistema/scripts/compartilhado/regras-grade.mjs';
 
 const catalogo = JSON.parse(fs.readFileSync(new URL('../../foundry-sistema/dados/catalogo.json', import.meta.url), 'utf8')).itens;
 const doCatalogo = (id, extra = {}) => ({ id, catalogo: id, ...structuredClone(catalogo[id]), ...extra });
@@ -68,6 +68,12 @@ test('C109: o HTML da tela: cada lugar com o data-lugar, o item na grade pela co
   assert.match(html, /<span class="par" data-item-id="rifle">Rifle<\/span>/);
   assert.match(html, /class="grade-organizar com-itens"/);
   assert.match(html, /class="grade-inventario editavel"/);
+  // O contêiner (só o Conteúdo): sem a coluna do corpo, numa coluna só.
+  const doConteiner = htmlDaGrade(modeloDaGrade(lugaresDoConteiner({ l: 4, a: 3 }), []), { editavel: true });
+  assert.match(doConteiner, /class="grade-inventario editavel sem-corpo"/);
+  assert.doesNotMatch(doConteiner, /grade-corpo/);
+  assert.match(doConteiner, /data-lugar="conteudo" style="--l: 4; --a: 3"/);
+  assert.doesNotMatch(html, /sem-corpo/);
   const soLer = htmlDaGrade(modeloDaGrade(LUGARES, itens), { editavel: false });
   assert.match(soLer, /class="grade-inventario"/);
   assert.match(soLer, /aria-disabled="true"/);

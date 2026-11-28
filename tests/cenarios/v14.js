@@ -23451,7 +23451,7 @@ module.exports = async ({ edge, servidores, r }) => {
         facaAntes: ['coldre', 0, 0, 1], facaNaMao: { ok: false, motivo: true }, facaDepois: [['coldre', 0, 0, 1], false],
         tirar: true, semMochila: [['organizar', 0, 0, 3], 'carregando', 'guardado'],
         noPortaMalas: true, agentGuardado: ['veiculo:' + 'moto', 'guardado'], semMoto: ['organizar', 'guardado', 'guardado'],
-        semGrade: 0, migracao: { versao: 11, mudados: ['C108 Grade'] }, erros: []
+        semGrade: 0, migracao: { versao: 12, mudados: ['C108 Grade'] }, erros: []
       };
       // O porta-malas leva o id da moto, que muda a cada rodada: confere o começo.
       const info = { ...c108, agentGuardado: [String(c108.agentGuardado?.[0]).startsWith('veiculo:') ? 'veiculo:moto' : c108.agentGuardado?.[0], c108.agentGuardado?.[1]] };
@@ -23566,6 +23566,97 @@ module.exports = async ({ edge, servidores, r }) => {
         avisos: ['Computer passa da borda de Cinto.', 'Retire os upgrades antes de dividir a pilha.']
       };
       return [JSON.stringify(c109) === JSON.stringify(esperado), JSON.stringify(c109)];
+    });
+
+    await r.passo('C109 (parte 2): o saque tem a grade do Conteúdo (10×8); com a ficha do personagem ao lado, arrastar do saque para os bolsos pega o item e o põe no quadrado; de volta, ele entra no Conteúdo onde foi solto; onde não serve, recusa e nada sai do saque; o saque menor manda o que não cabe para "Para organizar"; a migração 12 devolve o lugar a quem não tem', async () => {
+      const c109b = await edge.evaluate(`(async () => {
+        const S = game.system.id;
+        const esperar = async (teste, vezes = 80) => { for (let i = 0; i < vezes && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = id => foundry.utils.deepClone(cat[id]);
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let saque, rato, mensagem;
+        try {
+          saque = await Actor.implementation.create({ name: 'C109 Saque', type: 'conteiner', ownership: { default: 0 }, system: { tipo: 'saque' }, items: [pegar('core_armor:flak-body'), pegar('core_gear:computer'), pegar('core_gear:agent')] });
+          rato = await Actor.implementation.create({ name: 'C109 Rato', type: 'personagem', ownership: { default: 0 } });
+          const deQuem = (ator, id) => ator.items.find(item => item.getFlag(S, 'catalogo') === id);
+          const lugar = (ator, id) => { const g = deQuem(ator, id)?.getFlag(S, 'grade'); return g ? [g.lugar, g.x, g.y] : null; };
+          const naCriacao = ['core_armor:flak-body', 'core_gear:computer', 'core_gear:agent'].map(id => lugar(saque, id));
+          // As duas fichas lado a lado, por cima das outras janelas.
+          await saque.sheet.render({ force: true });
+          await rato.sheet.render({ force: true });
+          await esperar(() => saque.sheet.rendered && rato.sheet.rendered);
+          // A tela de teste tem 1374×873 px. As fichas cabem nela (o ponto de soltar fora da tela não acha nada) e ficam largas o
+          // bastante para não empilhar as colunas (até 700 px, a grade iria para baixo, fora da vista); uma cobre um pedaço da
+          // outra, e cada arraste solta na que está na frente.
+          saque.sheet.setPosition({ left: 0, top: 0, width: 760, height: 840 });
+          rato.sheet.setPosition({ left: 614, top: 0, width: 760, height: 840 });
+          rato.sheet.changeTab('inventario', 'primary');
+          saque.sheet.bringToFront();
+          rato.sheet.bringToFront();
+          const raizDe = ficha => ficha.element.querySelector('.grade-montagem');
+          await esperar(() => raizDe(saque.sheet)?.querySelector('.grade-inventario') && raizDe(rato.sheet)?.querySelector('.grade-inventario'));
+          const doLugar = (ficha, id) => [...raizDe(ficha).querySelectorAll('[data-lugar]')].find(el => el.dataset.lugar === id);
+          const botao = (ficha, ator, id) => raizDe(ficha).querySelector('.grade-item[data-item-id="' + deQuem(ator, id)?.id + '"]');
+          const desenho = { conteudo: doLugar(saque.sheet, 'conteudo')?.getAttribute('style') ?? null, lugares: raizDe(saque.sheet).querySelectorAll('[data-lugar]').length, arrumar: Boolean(saque.sheet.element.querySelector('[data-action="arrumarInventario"]')) };
+          const centro = (el, cx = 0.5, cy = 0.5) => { el.scrollIntoView({ block: 'center', inline: 'center' }); const c = el.getBoundingClientRect(); return { clientX: c.left + c.width * cx, clientY: c.top + c.height * cy }; };
+          const ponteiro = (alvo, tipo, ponto) => alvo.dispatchEvent(new PointerEvent(tipo, { bubbles: true, cancelable: true, pointerId: 1, isPrimary: true, button: 0, ...ponto }));
+          const arrastar = async (de, para, cx, cy, raizAlvo) => {
+            ponteiro(de, 'pointerdown', centro(de));
+            const ponto = centro(para, cx, cy);
+            ponteiro(window, 'pointermove', ponto);
+            const sombra = raizAlvo.querySelector('.grade-sombra')?.className ?? (para.classList.contains('alvo-ok') ? 'alvo-ok' : para.classList.contains('alvo-nao') ? 'alvo-nao' : null);
+            ponteiro(window, 'pointerup', ponto);
+            return sombra;
+          };
+          // Onde não serve: o Agent no coldre do Rato. Nada sai do saque.
+          const sombraNoColdre = await arrastar(botao(saque.sheet, saque, 'core_gear:agent'), doLugar(rato.sheet, 'coldre'), 0.5, 0.5, raizDe(rato.sheet));
+          await new Promise(r => setTimeout(r, 400));
+          const recusado = { noSaque: Boolean(deQuem(saque, 'core_gear:agent')), comORato: Boolean(deQuem(rato, 'core_gear:agent')) };
+          // Do saque para os bolsos do Rato (o computador 2×2, pego no meio: o ponteiro no quadrado 1,1 dos bolsos).
+          const sombraNosBolsos = await arrastar(botao(saque.sheet, saque, 'core_gear:computer'), doLugar(rato.sheet, 'bolsos'), 1.5 / 4, 1.5 / 2, raizDe(rato.sheet));
+          await esperar(() => !deQuem(saque, 'core_gear:computer') && lugar(rato, 'core_gear:computer')?.[0] === 'bolsos');
+          const pegou = { saiu: !deQuem(saque, 'core_gear:computer'), noRato: lugar(rato, 'core_gear:computer'), uso: deQuem(rato, 'core_gear:computer')?.system.uso ?? null };
+          // De volta, para a linha de baixo do Conteúdo (o quadrado 3,7, com a pega 1,1: o computador em 2,6). Apertar o
+          // ponteiro na ficha do Rato a traz para a frente (o Foundry), e ela cobre a direita do saque: solta-se no que se vê.
+          await esperar(() => botao(rato.sheet, rato, 'core_gear:computer') && raizDe(saque.sheet)?.querySelector('.grade-inventario'));
+          await arrastar(botao(rato.sheet, rato, 'core_gear:computer'), doLugar(saque.sheet, 'conteudo'), 3.5 / 10, 7.5 / 8, raizDe(saque.sheet));
+          await esperar(() => !deQuem(rato, 'core_gear:computer') && lugar(saque, 'core_gear:computer')?.[0] === 'conteudo');
+          const devolveu = { saiuDoRato: !deQuem(rato, 'core_gear:computer'), noSaque: lugar(saque, 'core_gear:computer'), uso: deQuem(saque, 'core_gear:computer')?.system.uso ?? null };
+          // O saque menor (4×4): a Flak fica; o computador e o Agent vão para "Para organizar".
+          await saque.update({ 'system.grade': { l: 4, a: 4 } });
+          await esperar(() => lugar(saque, 'core_gear:computer')?.[0] === 'organizar' && lugar(saque, 'core_gear:agent')?.[0] === 'organizar');
+          const menor = ['core_armor:flak-body', 'core_gear:computer', 'core_gear:agent'].map(id => lugar(saque, id)?.[0] ?? null);
+          await saque.sheet.close();
+          await rato.sheet.close();
+          // A migração 12 no mundo: o saque sem as grades as ganha de novo (da versão 11 para a 12); só ele muda.
+          await saque.updateEmbeddedDocuments('Item', saque.items.map(item => ({ _id: item.id, flags: { [S]: { grade: _del } } })));
+          const semGrade = saque.items.filter(item => item.getFlag(S, 'grade')).length;
+          const migracao = await game.system.api.migracao.migrarMundo({ desde: 11, perguntar: false });
+          mensagem = game.messages.contents.findLast(m => m.getFlag(S, 'migracao'));
+          const migrado = ['core_armor:flak-body', 'core_gear:computer', 'core_gear:agent'].map(id => lugar(saque, id));
+          return { naCriacao, desenho, sombraNoColdre, recusado, sombraNosBolsos, pegou, devolveu, menor, semGrade, migracao: { versao: migracao.versao, mudados: mensagem?.getFlag(S, 'migracao')?.mudados ?? null }, migrado, avisos };
+        } finally {
+          ui.notifications.warn = avisar;
+          if (mensagem) await mensagem.delete();
+          for (const ator of [saque, rato]) if (ator) await ator.delete();
+        }
+      })()`);
+      const esperado = {
+        naCriacao: [['conteudo', 0, 0], ['conteudo', 4, 0], ['conteudo', 6, 0]],
+        desenho: { conteudo: '--l: 10; --a: 8', lugares: 2, arrumar: true },
+        sombraNoColdre: 'alvo-nao', recusado: { noSaque: true, comORato: false },
+        sombraNosBolsos: 'grade-sombra ok', pegou: { saiu: true, noRato: ['bolsos', 0, 0], uso: 'carregando' },
+        devolveu: { saiuDoRato: true, noSaque: ['conteudo', 2, 6], uso: 'guardado' },
+        menor: ['conteudo', 'organizar', 'organizar'],
+        semGrade: 0, migracao: { versao: 12, mudados: ['C109 Saque'] },
+        // Na migração, a grade do saque é a de 4×4: a Flak no canto; o computador e o Agent não cabem do lado.
+        migrado: [['conteudo', 0, 0], ['organizar', 0, 0], ['organizar', 0, 0]],
+        avisos: ['Coldre: não serve para Agent.']
+      };
+      return [JSON.stringify(c109b) === JSON.stringify(esperado), JSON.stringify(c109b)];
     });
 
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {

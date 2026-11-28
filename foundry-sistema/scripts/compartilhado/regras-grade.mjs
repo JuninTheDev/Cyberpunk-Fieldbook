@@ -210,11 +210,25 @@ export function lugaresDoPersonagem({ moradia = {}, veiculos = [], mochila = nul
   return lugares;
 }
 
+// O contêiner (o C109, parte 2): o saque, o esconderijo e o personalizado têm uma grade só, o "Conteúdo", com o tamanho
+// que o mestre escolhe (de 1 a 20 quadrados de cada lado; sem escolha, 10×8); o que está nele está guardado. A loja não
+// tem grade: é uma vitrine, com estoque que pode ser infinito.
+export const TAMANHO_DO_CONTEINER = { l: 10, a: 8 };
+export const LADO_DO_CONTEINER = { min: 1, max: 20 };
+const ladoDoConteiner = (valor, padrao) => Math.max(LADO_DO_CONTEINER.min, Math.min(LADO_DO_CONTEINER.max, Math.floor(Number(valor)) || padrao));
+export const conteinerTemGrade = tipo => tipo !== 'loja';
+export function lugaresDoConteiner({ l, a } = {}) {
+  return [
+    { id: 'conteudo', nome: 'Conteúdo', tipo: 'grade', uso: 'guardado', l: ladoDoConteiner(l, TAMANHO_DO_CONTEINER.l), a: ladoDoConteiner(a, TAMANHO_DO_CONTEINER.a) },
+    { id: 'organizar', nome: LISTAS.organizar, tipo: 'lista', uso: null }
+  ];
+}
+
 // O uso que o lugar dá (o USOS do config.mjs). "Para organizar" fica com o que o item já tinha.
 export function usoDoLugar(lugar, usoAtual = null) {
   if (lugar === 'organizar') return usoAtual;
   if (String(lugar).startsWith('corpo:')) return 'equipado';
-  if (lugar === 'esconderijo' || String(lugar).startsWith('veiculo:')) return 'guardado';
+  if (lugar === 'esconderijo' || lugar === 'conteudo' || String(lugar).startsWith('veiculo:')) return 'guardado';
   return 'carregando';
 }
 
@@ -323,7 +337,7 @@ export function arrumar(itens, lugares, { body = 0, fixos = [] } = {}) {
       const encaixes = lista ? [lista] : ['corpo:maoPrincipal', 'corpo:maoSecundaria', 'corpo:cabeca', 'corpo:tronco', 'corpo:deck', 'corpo:mochila'];
       feito = encaixes.some(lugar => tentar({ lugar, x: 0, y: 0, girado: false }));
     } else if (uso === 'guardado') {
-      feito = grades(['esconderijo', ...lugares.filter(lugar => lugar.id.startsWith('veiculo:')).map(lugar => lugar.id)]).some(naGrade);
+      feito = grades(['esconderijo', 'conteudo', ...lugares.filter(lugar => lugar.id.startsWith('veiculo:')).map(lugar => lugar.id)]).some(naGrade);
     } else {
       feito = ['coldre', 'costas'].some(lugar => tentar({ lugar, x: 0, y: 0, girado: false })) || grades(['bolsos', 'cinto', 'mochila']).some(naGrade);
     }

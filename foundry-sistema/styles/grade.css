@@ -7,6 +7,7 @@
   --grade-item: var(--cp-painel, #14141c); --grade-ok: #3ddc84;
   display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 12px; color: var(--grade-texto);
 }
+.grade-inventario.sem-corpo { grid-template-columns: minmax(0, 1fr); }
 .grade-inventario .rotulo { display: block; font-family: var(--cp-dados, monospace); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grade-fraco); margin-bottom: 4px; }
 .grade-inventario .rotulo small { color: var(--grade-fraco); opacity: 0.7; }
 .grade-inventario .vazio { color: var(--grade-fraco); opacity: 0.5; }
@@ -48,3 +49,6 @@
 @media (max-width: 640px) {
   .grade-inventario { grid-template-columns: 1fr; --grade-celula: var(--grade-celula-tamanho, 30px); }
 }
+/* O tamanho da grade nas configurações do contêiner: os dois números e o × na mesma linha. */
+.cpr-fieldbook.ficha-conteiner .tamanho-da-grade { display: flex; align-items: center; gap: 6px; }
+.cpr-fieldbook.ficha-conteiner .tamanho-da-grade input { width: 4.5em; flex: none; }

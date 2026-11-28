@@ -21,7 +21,7 @@ import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
 import { ligarGrade } from './compartilhado/grade-ui.mjs';
 import { conferirLugar } from './compartilhado/regras-grade.mjs';
-import { arrumarAtor, lugaresDe, moverNaGrade } from './inventario-grade.mjs';
+import { arrumarAtor, lugaresDe, moverNaGrade, receberNaGrade } from './inventario-grade.mjs';
 import { bodyDoAtor, estadoDe, itemNaRegra } from './regras-grade-ator.mjs';
 import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem, podeEditarParaApagar } from './exclusao-item.mjs';
 import { alternarRecolhida, apagarComInstalados, descarregaAoApagar, divisaoDaPilha, marcarRecolhidas, passaNaBusca } from './regras-inventario.mjs';
@@ -265,7 +265,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     const raiz = this.element?.querySelector('.tab.inventario .grade-montagem');
     if (!raiz) return;
     const ator = this.actor;
-    const itens = ator.items.map(item => ({ ...itemNaRegra(item), img: item.img, qtd: item.system.quantidade ?? 1 }));
+    const itens = ator.items.map(item => ({ ...itemNaRegra(item), uuid: item.uuid, img: item.img, qtd: item.system.quantidade ?? 1 }));
     const lugares = lugaresDe(ator);
     const body = bodyDoAtor(ator);
     const documento = item => ator.items.get(item?.id);
@@ -275,7 +275,9 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       aoMover: (item, destino) => (documento(item) ? moverNaGrade(documento(item), destino) : null),
       aoDividir: item => perguntarDivisao(documento(item)),
       aoAbrir: item => documento(item)?.sheet.render(true),
-      aoSelecionar: id => { this.#escolhidoNaGrade = id; }
+      aoSelecionar: id => { this.#escolhidoNaGrade = id; },
+      // O item de outra grade aberta (o saque, outro personagem) solto nesta (o C109, parte 2).
+      receber: this.isEditable ? (item, destino) => receberNaGrade(ator, fromUuidSync(item.uuid), destino) : null
     });
   }
 

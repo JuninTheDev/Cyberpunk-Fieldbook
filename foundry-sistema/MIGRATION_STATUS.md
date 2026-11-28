@@ -11008,6 +11008,52 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   toque que não põe, o Shift que não divide, o teclado que não pega, os dois cliques que não abrem, o ARRUMAR parado, a
   pega sempre no canto, o arraste que não começa. Os arquivos voltaram iguais (md5).
 
+### Ciclo 234 (2026-11-28): C109, parte 2, o contêiner em grade e o arraste entre fichas (sessão KouArt)
+
+- **Pedido do usuário (2026-11-28):** "Sim, siga", depois da parte 1 (o ciclo 233). O C109 fica `[x]`.
+- **Entrega:**
+  - a regra (`compartilhado/regras-grade.mjs`): o contêiner que não é loja (o saque, o esconderijo, o personalizado) tem
+    uma grade só, o "Conteúdo" (`lugaresDoConteiner`; de 1 a 20 quadrados de cada lado; sem escolha, 10×8), onde tudo
+    está guardado; a loja fica como lista (uma vitrine, com estoque que pode ser infinito);
+  - `regras-grade-ator.mjs`: `temGrade` (o personagem e o contêiner que não é loja), `usoNoAtor` (no contêiner, tudo
+    guardado), os lugares do contêiner pelo tamanho dele, e as migrações separadas: a 11 (`arrumarPersonagem`) e a 12
+    (`arrumarConteiner`);
+  - o modelo do contêiner ganha `system.grade` ({ l, a }, de 1 a 20; 10×8), e a ficha dele, o campo "Grade" nas
+    configurações do mestre;
+  - `inventario-grade.mjs`: os ganchos valem para o contêiner; mexer na grade dele é do mestre ou do jogador com "Mudar
+    os itens"; o contêiner de outro tamanho reconcilia, e o que deixa de ser loja arruma o que não tem lugar;
+    `receberNaGrade`: o item que chega de outra grade confere o quadrado antes e vai pelo caminho de sempre (do contêiner
+    para o personagem, o "Pegar", que cobra o que for de cobrar; para o contêiner, com "Criar e pôr itens"; entre
+    personagens, o `levarItem`); o item novo vai para o quadrado, e o que somou numa pilha que já estava lá fica nela;
+  - `compartilhado/grade-ui.mjs`: as grades abertas ficam num registro, e o arraste que começa numa termina noutra (a
+    sombra verde ou vermelha na de destino, com a regra dela); sem corpo (o contêiner), a tela tem uma coluna só;
+  - a ficha do contêiner: a grade "Em quadrados" antes das categorias (a lista, com o Pegar, o preço e o apagar, fica),
+    com o ARRUMAR.
+- **Achados no G4 (o passo novo):**
+  - a coluna do corpo, vazia no contêiner, ocupava 240 px e cortava a grade (o ponto de soltar caía fora dela): saiu;
+  - apertar o ponteiro numa ficha a traz para a frente (o Foundry), e ela cobre a outra: solta-se no que se vê;
+  - até 700 px de conteúdo, as fichas empilham as colunas, e a grade vai para baixo, fora da vista (a janela não rola).
+- **Visto na foto do saque (`tests/.saida`, passo temporário):** o campo "Grade" foi para uma linha só. Na lista de
+  munição, o preço se espreme numa coluna estreita: já era assim antes, e fica para depois.
+- **Fora desta parte:** o arraste para a ficha de outro jogador pela grade segue as permissões de sempre (é dono quem
+  recebe); o G4 confere o saque de graça pelo mestre, e a loja paga continua pelo "Comprar" da lista.
+- **Testes de referência:**
+  - **G3:** `grade-ator.test.mjs` (13): o Conteúdo e os limites, quem tem grade, o guardado, os lugares do contêiner, a
+    migração 12 (e a 11 sem o contêiner); `grade-ui.test.mjs`: o contêiner sem a coluna do corpo.
+  - **G4:** o passo do C109 (parte 2): o saque com a grade; com a ficha do personagem ao lado, do saque para os bolsos
+    (o Pegar), de volta para o Conteúdo no quadrado solto, a recusa no coldre (nada sai do saque), o saque menor e a
+    migração 12 no mundo (só ele muda). O passo do C108 espera agora a versão 12 dos dados.
+- **Portões:** G1 0; G2 limpo; G3 924/924; G4 357/357 (649 s). Antes: uma rodada pulada (a wiki online não respondeu a
+  tempo, e não deu para saber se a mesa estava vazia) e uma com 355/357, só as duas instáveis conhecidas (`estados (C26)` e
+  `C26: chaves do Fluxo`, "A nonpersisted Document cannot be updated"); a seguinte passou inteira.
+- **Mutações:** 18 de 18 morreram (`scratchpad/mutacoes-c109b.mjs`). No G3, 11: o padrão 8×8, sem o máximo, a loja com
+  grade, o Conteúdo que carrega, o guardado sem o Conteúdo, todo contêiner com grade, o contêiner com o uso do item, o
+  contêiner com os lugares do personagem, o passo 12 no personagem, sem a migração 12, sempre com o corpo. No G4 focado,
+  7: o personagem que não recebe, levar antes de conferir, o contêiner menor que não reconcilia, soltar só na própria
+  grade, a sombra só na própria grade, o contêiner sem a grade na ficha, o contêiner que nasce sem lugares. Fica sem
+  mutação: o "Pegar" no lugar do levarItem (o saque de graça pelo mestre dá o mesmo; a diferença é a loja paga e o
+  jogador, fora deste passo). Os arquivos voltaram iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

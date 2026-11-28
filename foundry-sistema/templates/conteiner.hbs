@@ -40,6 +40,13 @@ botões. --}}
       <label class="campo-conteiner">Tipo
         <select name="system.tipo">{{selectOptions tipos selected=sistema.tipo}}</select>
       </label>
+      {{#if comGrade}}
+      <div class="campo-conteiner tamanho-da-grade">Grade
+        <input type="number" name="system.grade.l" value="{{sistema.grade.l}}" min="{{lado.min}}" max="{{lado.max}}" step="1" aria-label="Largura da grade" data-tooltip="Quadrados de largura">
+        ×
+        <input type="number" name="system.grade.a" value="{{sistema.grade.a}}" min="{{lado.min}}" max="{{lado.max}}" step="1" aria-label="Altura da grade" data-tooltip="Quadrados de altura">
+      </div>
+      {{/if}}
       {{#each gerais}}
       <label class="permissao"><input type="checkbox" name="system.permissoes.{{chave}}" {{checked ligada}}> {{rotulo}}</label>
       {{/each}}
@@ -55,6 +62,15 @@ botões. --}}
   </aside>
 
   <div class="coluna-principal">
+    {{#if comGrade}}
+    {{!-- A grade (o C109, parte 2): arrastar daqui para a grade de um personagem aberta ao lado é o "Pegar". --}}
+    <section class="painel corte grade-do-conteiner">
+      <div class="titulo">EM QUADRADOS<span>ARRASTE PARA A FICHA DE QUEM PEGA</span>
+        {{#if mexeNaGrade}}<button type="button" class="acao" data-action="arrumarInventario" data-tooltip="Arrumar tudo de novo, do maior para o menor">ARRUMAR</button>{{/if}}
+      </div>
+      <div class="grade-montagem"></div>
+    </section>
+    {{/if}}
     {{#each categorias}}
     <section class="painel corte categoria-conteiner" data-categoria="{{tipo}}">
       <div class="titulo">{{rotulo}}<span>{{#if (eq itens.length 1)}}1 ITEM{{else}}{{itens.length}} ITENS{{/if}}</span>

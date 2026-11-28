@@ -10,6 +10,10 @@ import { perguntarDivisao } from './pilhas.mjs';
 import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem } from './exclusao-item.mjs';
 import { apagarComInstalados, divisaoDaPilha } from './regras-inventario.mjs';
 import { config } from './configuracoes.mjs';
+import { ligarGrade } from './compartilhado/grade-ui.mjs';
+import { conferirLugar, conteinerTemGrade, LADO_DO_CONTEINER } from './compartilhado/regras-grade.mjs';
+import { arrumarAtor, lugaresDe, moverNaGrade, receberNaGrade } from './inventario-grade.mjs';
+import { estadoDe, itemNaRegra } from './regras-grade-ator.mjs';
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -33,7 +37,8 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       pegarParte: FichaConteiner.#pegarParte,
       abrirExtrato: FichaConteiner.#abrirExtrato,
       configurarCompra: FichaConteiner.#configurarCompra,
-      dividirPilha: FichaConteiner.#dividirPilha
+      dividirPilha: FichaConteiner.#dividirPilha,
+      arrumarInventario: FichaConteiner.#arrumarInventario
     }
   };
 
@@ -82,6 +87,8 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       // A loja que compra dos jogadores: a dica para o jogador e, para o mestre, o "Configurar a compra" (o "Configurar a
       // loja" do CORE, na loja e no personalizado que compra).
       compraDosJogadores: s.permissoes.vender, configuraCompra: mestre && s.permissoes.vender,
+      // A grade (o C109, parte 2): o saque, o esconderijo e o personalizado; mexer nela, o mestre ou "Mudar os itens".
+      comGrade: conteinerTemGrade(s.tipo), mexeNaGrade: mestre || s.permissoes.mudar, lado: LADO_DO_CONTEINER,
       notasRicas: await foundry.applications.ux.TextEditor.implementation.enrichHTML(s.notas, { relativeTo: ator, secrets: ator.isOwner })
     });
   }
@@ -93,7 +100,41 @@ export class FichaConteiner extends HandlebarsApplicationMixin(ActorSheetV2) {
       evento.stopPropagation();
       this.parceiro = evento.currentTarget.value;
     });
+    this.#montarGrade();
   }
+
+  // A grade do contêiner (scripts/compartilhado/grade-ui.mjs), como a da ficha do personagem: arrastar dentro dela, ou dela
+  // para a grade de um personagem aberta ao lado (o "Pegar", que cobra o que for de cobrar), e de lá para cá.
+  #escolhidoNaGrade = '';
+  #desligarGrade = null;
+  #montarGrade() {
+    this.#desligarGrade?.();
+    this.#desligarGrade = null;
+    const raiz = this.element?.querySelector('.grade-montagem');
+    if (!raiz) return;
+    const ator = this.actor;
+    const editavel = ator.isOwner && (game.user.isGM || ator.system.permissoes.mudar);
+    const itens = ator.items.map(item => ({ ...itemNaRegra(item), uuid: item.uuid, img: item.img, qtd: item.system.quantidade ?? 1 }));
+    const lugares = lugaresDe(ator);
+    const documento = item => ator.items.get(item?.id);
+    this.#desligarGrade = ligarGrade(raiz, {
+      lugares, itens, editavel, selecionado: this.#escolhidoNaGrade,
+      conferir: (item, destino) => conferirLugar(lugares, estadoDe(itens, item.id), item, destino),
+      aoMover: (item, destino) => (documento(item) ? moverNaGrade(documento(item), destino) : null),
+      aoDividir: item => perguntarDivisao(documento(item)),
+      aoAbrir: item => documento(item)?.sheet.render(true),
+      aoSelecionar: id => { this.#escolhidoNaGrade = id; },
+      receber: ator.isOwner ? (item, destino) => receberNaGrade(ator, fromUuidSync(item.uuid), destino) : null
+    });
+  }
+
+  _onClose(opcoes) {
+    super._onClose(opcoes);
+    this.#desligarGrade?.();
+    this.#desligarGrade = null;
+  }
+
+  static #arrumarInventario() { return arrumarAtor(this.actor); }
 
   // Arrastar um item para o contêiner: o mestre, ou o jogador com "Criar e pôr itens" (o players-create do CORE). Da
   // ficha de outro ator, o item sai de lá (levarItem); do diretório ou de um compêndio, entra uma cópia. Reordenar na

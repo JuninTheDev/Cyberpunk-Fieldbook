@@ -1021,8 +1021,8 @@ pede, por uma fila no servidor; no conflito, a mesa ganha; nada some ("Para orga
   lugar, as pilhas e o arrumar. Ninguém chama ainda.
 - [x] **C108. A grade no ator:** feito no ciclo 232 (sessão KouArt, 2026-11-28; o usuário disse "Sim, siga"): a flag `grade` com o `rev`, o uso que segue o lugar, "Para organizar" e a migração que
   arruma os atores de hoje sem mudar o uso.
-- [~] **C109. A aba Inventário no Foundry:** a parte 1 (a aba e a tela) feita no ciclo 233 (sessão KouArt, 2026-11-28; "Sim,
-  siga"); falta a parte 2 (o contêiner e o saque com a grade, o arrastar entre fichas com a posição). o `grade-ui.mjs` (arrastar, girar, dividir, teclado), o contêiner e o saque com
+- [x] **C109. A aba Inventário no Foundry:** feito nos ciclos 233 (a aba e a tela) e 234 (o contêiner em grade e o arraste
+  entre fichas) (sessão KouArt, 2026-11-28; "Sim, siga"). o `grade-ui.mjs` (arrastar, girar, dividir, teclado), o contêiner e o saque com
   a grade.
 - [ ] **C110. A volta rápida para a wiki:** o inventário em menos de 2 s, a grade e os lugares no "Na mesa", e a grade só de
   leitura na wiki.

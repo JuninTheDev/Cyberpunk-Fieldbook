@@ -55,6 +55,11 @@ junto com o registro do ciclo (o G3 confere).
   sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
 - O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
 
+**A lição do ciclo 234:** no G4, o ponteiro de mentira acha o que está desenhado naquele ponto da tela de teste
+(1374×873), como o de verdade. Três vezes o passo novo soltou "no nada": o ponto abaixo da tela (a ficha mais alta que a
+tela), a coluna vazia que cortava a grade e a outra ficha que veio para a frente no pointerdown (o Foundry). Antes de
+mudar o código, uma sonda do `document.elementsFromPoint` no ponto de soltar diz qual dos três é.
+
 **A lição do ciclo 233:** a tela nova se confere também de olho. O G4 passou de primeira, mas a foto da aba (o `edge.shot`,
 num passo temporário que sai antes do commit) mostrou o item 2×2 com uma linha só (o botão do Foundry tem altura fixa) e
 a barra de abas rolando com a nona. Os testes conferem o lugar e o estilo, não a altura que o navegador desenha.

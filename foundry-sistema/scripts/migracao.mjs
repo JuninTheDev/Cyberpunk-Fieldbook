@@ -16,7 +16,7 @@ import { SISTEMA } from './config.mjs';
 import { cabeNaFundacao, pedeFundacao } from './regras.mjs';
 import { QUADROS_EXTERNOS } from './regras-black-chrome.mjs';
 import { iconeDoEstado, iconeNeon, imagemNova } from './regras-icones.mjs';
-import { arrumarDadosDoAtor } from './regras-grade-ator.mjs';
+import { arrumarConteiner, arrumarPersonagem } from './regras-grade-ator.mjs';
 
 const doCatalogo = dados => dados.flags?.[SISTEMA]?.catalogo ?? '';
 
@@ -159,7 +159,12 @@ export const PASSOS = [
   {
     versao: 11,
     nome: 'O inventário em grade (C108): cada item do personagem ganha um lugar do uso que já tem (o corpo, o coldre, as costas, os bolsos, o cinto, a mochila, o esconderijo, o porta-malas), do maior para o menor; o que não cabe vai para "Para organizar", e nenhum item muda de uso',
-    ator: arrumarDadosDoAtor
+    ator: arrumarPersonagem
+  },
+  {
+    versao: 12,
+    nome: 'O contêiner em grade (C109, parte 2): o saque, o esconderijo e o personalizado ganham o "Conteúdo" (10×8, ou o tamanho que o mestre escolher), e cada item dele ganha um lugar; o que não cabe vai para "Para organizar". A loja fica como lista',
+    ator: arrumarConteiner
   }
 ];
 export const VERSAO_DOS_DADOS = PASSOS.at(-1)?.versao ?? 0;

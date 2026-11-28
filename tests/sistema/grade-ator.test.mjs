@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import {
-  arrumar, conferirLugar, gradeParaUso, lugaresDoPersonagem, mudancasDoUso, reconciliar, usoDoItem, usoDoLugar
+  arrumar, conferirLugar, conteinerTemGrade, gradeParaUso, LADO_DO_CONTEINER, lugaresDoConteiner, lugaresDoPersonagem, mudancasDoUso, reconciliar, TAMANHO_DO_CONTEINER,
+  usoDoItem, usoDoLugar
 } from '../../foundry-sistema/scripts/compartilhado/regras-grade.mjs';
-import { arrumarDadosDoAtor, bodyDoAtor, estadoDe, itemNaRegra, lugaresDoAtor } from '../../foundry-sistema/scripts/regras-grade-ator.mjs';
+import {
+  arrumarConteiner, arrumarDadosDoAtor, arrumarPersonagem, bodyDoAtor, estadoDe, itemNaRegra, lugaresDoAtor, temGrade, usoNoAtor
+} from '../../foundry-sistema/scripts/regras-grade-ator.mjs';
 import { migrarDados, PASSOS, VERSAO_DOS_DADOS } from '../../foundry-sistema/scripts/migracao.mjs';
 
 const catalogo = JSON.parse(fs.readFileSync(new URL('../../foundry-sistema/dados/catalogo.json', import.meta.url), 'utf8')).itens;
@@ -194,13 +197,70 @@ test('C108: o ator criado com os itens dentro, ainda sem _id, arruma pela posiç
   assert.deepEqual(dados.items[5].flags['cpr-fieldbook'].grade, { ...noLugar('bolsos', 2, 0), rev: 1 });
 });
 
-test('C108: a migração 11 está nos passos, e o mundo vai à versão 11 dos dados', () => {
+test('C108: a migração 11 está nos passos (só o personagem; o contêiner é a 12, do C109)', () => {
   const passo = PASSOS.find(outro => outro.versao === 11);
-  assert.ok(passo && passo.ator === arrumarDadosDoAtor && !passo.item);
-  assert.equal(VERSAO_DOS_DADOS, 11);
+  assert.ok(passo && passo.ator === arrumarPersonagem && !passo.item);
+  assert.equal(VERSAO_DOS_DADOS, 12);
   const depois = migrarDados(personagemDeHoje(), { documento: 'Actor', passos: [passo], catalogo });
   assert.deepEqual(depois.items.find(item => item._id === 'arma2').flags['cpr-fieldbook'].grade, { ...noLugar('coldre'), rev: 1 });
   // O item do mundo, sozinho, não passa pelo passo (não é de um personagem).
   const solto = dado('solto', 'core_gear:agent');
   assert.deepEqual(migrarDados(solto, { documento: 'Item', passos: [passo], catalogo }), solto);
+});
+
+// ---------------- O contêiner (o C109, parte 2) ----------------
+const conteiner = (tipo, grade = {}, itens = []) => ({ _id: 'cont', name: 'Saque', type: 'conteiner', system: { tipo, grade }, effects: [], flags: {}, items: itens });
+
+test('C109: o contêiner que não é loja tem o "Conteúdo", do tamanho que o mestre escolheu (de 1 a 20 de cada lado; sem escolha, 10×8)', () => {
+  assert.deepEqual(TAMANHO_DO_CONTEINER, { l: 10, a: 8 });
+  assert.deepEqual(LADO_DO_CONTEINER, { min: 1, max: 20 });
+  assert.deepEqual(lugaresDoConteiner(), [{ id: 'conteudo', nome: 'Conteúdo', tipo: 'grade', uso: 'guardado', l: 10, a: 8 }, { id: 'organizar', nome: 'Para organizar', tipo: 'lista', uso: null }]);
+  const lado = grade => { const [c] = lugaresDoConteiner(grade); return [c.l, c.a]; };
+  assert.deepEqual(lado({ l: 6, a: 4 }), [6, 4]);
+  assert.deepEqual(lado({ l: 0, a: 99 }), [10, 20], 'o zero vale o padrão; o 99, o máximo');
+  assert.deepEqual(lado({ l: -3, a: 1 }), [1, 1]);
+  assert.deepEqual(lado({ l: 5.7, a: '3' }), [5, 3]);
+  assert.equal(conteinerTemGrade('loja'), false);
+  for (const tipo of ['saque', 'esconderijo', 'personalizado']) assert.equal(conteinerTemGrade(tipo), true, tipo);
+  assert.equal(usoDoLugar('conteudo'), 'guardado');
+});
+
+test('C109: quem tem grade (o personagem e o contêiner que não é loja), o uso dentro do contêiner (guardado) e os lugares dele', () => {
+  assert.equal(temGrade({ type: 'personagem', system: {} }), true);
+  assert.equal(temGrade(conteiner('saque')), true);
+  assert.equal(temGrade({ _source: conteiner('esconderijo') }), true);
+  assert.equal(temGrade(conteiner('loja')), false);
+  assert.equal(temGrade({ type: 'conteiner', system: {} }), false, 'sem tipo, a loja (o padrão do modelo)');
+  assert.equal(temGrade({ type: 'capanga', system: {} }), false);
+  const rifle = { ...itemNaRegra(dado('r', 'core_weapons:assault-rifle', { system: { equipada: true } })) };
+  assert.equal(usoNoAtor(conteiner('saque'), rifle), 'guardado');
+  assert.equal(usoNoAtor({ type: 'personagem' }, rifle), 'equipado');
+  assert.deepEqual(lugaresDoAtor(conteiner('saque', { l: 4, a: 3 }), []).map(lugar => [lugar.id, lugar.l ?? null, lugar.a ?? null]), [['conteudo', 4, 3], ['organizar', null, null]]);
+  // O arrumar guardado vai ao Conteúdo.
+  const caixa = doCatalogo('core_gear:computer', { id: 'pc', name: 'PC', uso: 'guardado' });
+  assert.deepEqual(arrumar([caixa], lugaresDoConteiner({ l: 4, a: 3 })).pc, noLugar('conteudo'));
+});
+
+test('C109: a migração 12 arruma o contêiner (tudo guardado, no Conteúdo) e a 11 não o toca; a loja fica como lista', () => {
+  const itens = () => [dado('a1', 'core_weapons:assault-rifle', { system: { equipada: true } }), dado('a2', 'core_gear:computer'), dado('a3', 'core_gear:tent-and-camping-equipment'), dado('a4', 'core_armor:flak-body')];
+  const saque = conteiner('saque', { l: 6, a: 4 }, itens());
+  assert.equal(arrumarPersonagem(structuredClone(saque)), false);
+  assert.equal(arrumarConteiner(saque), true);
+  const grade = id => saque.items.find(item => item._id === id).flags['cpr-fieldbook'].grade;
+  // Do maior para o menor: a Flak (4×4) no canto; o rifle (5×2) não cabe ao lado nem embaixo e vai para organizar,
+  // guardado; a barraca (3×3) também; o computador (2×2) ao lado da Flak.
+  assert.deepEqual(grade('a4'), { ...noLugar('conteudo'), rev: 1 });
+  assert.deepEqual(grade('a1'), { ...noLugar('organizar'), uso: 'guardado', rev: 1 });
+  assert.deepEqual(grade('a3'), { ...noLugar('organizar'), uso: 'guardado', rev: 1 });
+  assert.deepEqual(grade('a2'), { ...noLugar('conteudo', 4, 0), rev: 1 });
+  assert.equal(arrumarConteiner(saque), false, 'de novo, nada');
+  const loja = conteiner('loja', {}, itens());
+  assert.equal(arrumarConteiner(loja), false);
+  assert.deepEqual(loja, conteiner('loja', {}, itens()));
+  const passo = PASSOS.find(outro => outro.versao === 12);
+  assert.ok(passo && passo.ator === arrumarConteiner && !passo.item);
+  const depois = migrarDados(conteiner('esconderijo', {}, itens()), { documento: 'Actor', passos: [passo], catalogo });
+  assert.deepEqual(depois.items.find(item => item._id === 'a1').flags['cpr-fieldbook'].grade, { ...noLugar('conteudo', 4, 0), rev: 1 });
+  // O personagem não passa pelo passo 12.
+  assert.deepEqual(migrarDados(personagemDeHoje(), { documento: 'Actor', passos: [passo], catalogo }), personagemDeHoje());
 });
