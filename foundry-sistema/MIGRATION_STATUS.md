@@ -10833,6 +10833,37 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 0; G2 limpo; G3 881/881; G4 352/352 (849 s); o build duas vezes, com o md5 igual (e os 102 arquivos de antes, iguais).
 - **Mutações:** 6 de 6 morreram: no G3, L1 (a explosão leve de volta para sem som), L2 (outro conjunto), L3 (sem a seed do ruído), L4 (o banco sem uma variação), L5 (uma variação sem a linha da licença); no G4, M1 (o banco do sistema sem a explosão leve) caiu no passo do C103 (com as instáveis conhecidas do C45, parte 2, e do C52 junto). Os arquivos voltaram iguais (md5).
 
+### Ciclo 230 (2026-11-27): C106, a suíte inteira da wiki sem as falhas que um cenário deixa para o outro (sessão KouArt)
+
+- **Pedido do usuário (2026-11-27):** "Pode investigar", sobre as falhas da rodada de todos os cenários juntos que o C104
+  achou (`node tests/rodar.js`, sem nome).
+- **O que caía:** o `criador` (61 de 65, em cadeia desde a entrada do jogador), os `jogadores` (7), a `base` (1), a
+  `reversao` (2) e 17 passos do v14. Sozinhos, a `base`, os `jogadores` e o `criador` passavam; a `reversao` caía
+  também sozinha. O `fluxo` e o `sistema` são as falhas conhecidas deste PC (o QUALITY_GATES).
+- **As causas (todas nos testes; o server.js, o revertidos.js e o sistema não mudaram):**
+  - **o `contas`:** o passo "limite: 10 códigos errados seguidos do mesmo IP dão 429" mandava os 11 pela rede com um
+    CF-Connecting-IP de mentira. Desde a auditoria, o servidor ignora o cabeçalho de quem chega direto (certo: quem chega
+    direto o escreve), e as 11 contavam no endereço de rede deste PC, que ficava 10 minutos sem entrar: o `criador` e os
+    `jogadores`, depois, entravam por ele e levavam 429. Agora o passo vai pelo túnel (a conexão desta
+    máquina com o cabeçalho), e confere o mesmo limite no endereço do cabeçalho;
+  - **o v14 depois dos outros:** os cenários dividem a pasta de dados da wiki, e os de antes criam campanhas; o mundo de
+    teste só se liga sozinho à campanha quando a wiki tem uma (o `resolverCampanha`, certo para a mesa), e os passos da
+    loja, da ficha da mesa e do defeito escondido diziam "Este mundo não está ligado a nenhuma campanha da wiki". Agora o
+    v14 pede a wiki só dele (o `dadosProprios`), e o `rodar.js` sobe os servidores de novo, numa pasta vazia, antes dele:
+    na suíte inteira, igual ao G4 sozinho (e o `subir` espera a porta soltar);
+  - **a `reversao`:** o repositório deste PC é raso (o histórico começa no 03d94e52, de 2026-10-20). O clone local do
+    cenário não leva a marca (o `.git/shallow`), e o `git log --all` do clone procurava o pai que não veio, falhava, e o
+    servidor não achava o revertido. Agora a marca vai junto (o `--no-local` também resolve, mas leva 74 s em vez de 16);
+    e o commit confere pelo hash inteiro, porque a abreviação muda com o repositório (a6ab001 ou a6ab0010).
+- **Sem causa achada:** a `base` ("Conferência da base, no Estado da campanha", 24,7 s) caiu uma vez, na primeira rodada
+  inteira, e passou sozinha e nas rodadas inteiras seguintes; ela roda antes do `contas`, então não foi o limite.
+- **Testes de referência:**
+  - **G3:** o `suite-inteira.test.mjs` (novo): o v14 pede a wiki só dele e o `rodar.js` sobe os servidores de novo (só
+    ele pede); o limite do `contas` pelo túnel; a marca do repositório raso e o hash inteiro na `reversao`.
+  - **Os cenários:** a suíte inteira, e a `reversao` sozinha.
+- **Portões:** G1, G2 e G3 (887/887) passam. A suíte inteira (`node tests/rodar.js`): só as duas falhas conhecidas deste PC (o `fluxo` e o `sistema`); o `criador` 65/65, os `jogadores` 25/25, a `base` 24/24, a `reversao` 7/7 e o v14 353/353 (666 s), com os servidores de novo antes dele.
+- **Mutações:** G3: S1 a S4 morreram (o rodar.js sem subir os servidores de novo; o v14 sem pedir a wiki só dele; o limite do contas pela rede; a reversao sem a marca). Os cenários: o W1 (a reversao sem a marca) morreu na reversao sozinha; o W2 (o limite pela rede) derrubou o criador depois do contas (4 de 65); o W3 (o v14 sem a wiki só dele) derrubou 17 passos do v14 na suíte inteira, com o "Este mundo não está ligado" de volta. Antes, o W3 sobreviveu com só o `campanhas` ou só o `agenda` antes do v14: a campanha a mais vem de uma combinação dos cenários, que não ficou isolada; a rodada inteira é a conferência. Uma rodada do W3 passou dos 25 min do mutador e deixou o rodar.js rodando até sair sozinho (nada ficou).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

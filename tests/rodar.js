@@ -23,15 +23,21 @@ fs.mkdirSync(saida, { recursive: true });
 
   // Um teste com navegador por vez neste PC (as sessões dividem o Foundry de teste e as portas).
   await travar();
-  const servidores = await subirServidores();
+  let servidores = await subirServidores();
   if (!servidores.rede) console.log('Sem IP de rede: os testes que simulam um jogador em outro aparelho serão pulados.');
   let falhas = 0;
   let pulados = 0;
   let porta = 9340;
+  let usados = false;
   try {
     for (const file of escolhidos) {
       const cenario = require(path.join(pastaCenarios, file));
       const nome = path.basename(file, '.js');
+      // O cenário com os dados da wiki só dele (o dadosProprios: o v14, o G4) roda com os servidores de novo, numa pasta
+      // vazia: na suíte inteira, igual a sozinho. Os cenários dividem os dados; o v14 espera a wiki com uma campanha só
+      // (o mundo de teste se liga a ela sozinho), e os de antes criam outras.
+      if (cenario.dadosProprios && usados) { await servidores.parar(); servidores = await subirServidores(); }
+      usados = true;
       // O prazo de cada passo: 5 minutos (PASSO_MS muda; 0, sem prazo).
       const relatorio = new Relatorio({ prazoMs: Number(process.env.PASSO_MS ?? 300000) });
       // O cenário diz os códigos HTTP que espera (o httpPermitido dele; sem ele, o padrão da suíte da wiki).

@@ -22,6 +22,9 @@ function ipDaRede() {
 }
 
 async function subir(porta, env, pasta = raiz) {
+  // A porta do servidor que acabou de parar (o rodar.js sobe os servidores de novo para o cenário com os dados dele) pode
+  // levar um instante para soltar.
+  for (let i = 0; i < 20 && !(await portaLivre(porta)); i++) await sleep(250);
   if (!(await portaLivre(porta))) throw new Error(`A porta ${porta} está em uso. Feche o que estiver nela e rode os testes de novo.`);
   const proc = spawn(process.execPath, ['server.js'], { cwd: pasta, env: { ...process.env, ...env, PORT: String(porta) }, stdio: 'ignore' });
   for (let i = 0; i < 40; i++) {

@@ -374,9 +374,12 @@ module.exports = async ({ servidores, r }) => {
     return [apagar.status === 200 && lixeira.some(nome => nome.startsWith(ficha.id)), lixeira.join(', ')];
   });
   await r.passo('limite: 10 códigos errados seguidos do mesmo IP dão 429', async () => {
+    // Pelo túnel (a conexão desta máquina, com o CF-Connecting-IP), o endereço é o do cabeçalho. Pela rede, o servidor
+    // ignora o cabeçalho (quem chega direto o escreve), e as 11 contavam no endereço de rede deste PC: ele ficava 10
+    // minutos sem entrar, e o criador e os jogadores, que rodam depois e entram por ele, caíam.
     const ip = { 'CF-Connecting-IP': '203.0.113.9' };
     const status = [];
-    for (let i = 0; i < 11; i++) status.push((await api(rede, '/api/entrar', { method: 'POST', body: { codigo: `NC-ERRO-${i}` }, headers: ip })).status);
+    for (let i = 0; i < 11; i++) status.push((await api(gm, '/api/entrar', { method: 'POST', body: { codigo: `NC-ERRO-${i}` }, headers: ip })).status);
     return [status.slice(0, 10).every(s => s === 403) && status[10] === 429, status.join(',')];
   });
 };

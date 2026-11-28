@@ -21,6 +21,11 @@ module.exports = async ({ edge, servidores, r }) => {
   let servidor = null;
   try {
     git(['clone', '--quiet', servidores.raiz, pasta]);
+    // O repositório deste PC pode ser raso (o histórico começa num commit: o .git/shallow). O clone local não leva a
+    // marca, e o git log --all do clone procurava o pai que não veio, falhava, e o servidor não achava o revertido. A
+    // marca vai junto.
+    const raso = path.join(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], servidores.raiz).trim(), 'shallow');
+    if (fs.existsSync(raso)) fs.copyFileSync(raso, path.join(pasta, '.git', 'shallow'));
     // O clone recebe as mudanças ainda sem commit e os arquivos novos do projeto (o que está sendo testado).
     const pendentes = [...git(['diff', '--name-only', 'HEAD'], servidores.raiz).split('\n'), ...git(['ls-files', '--others', '--exclude-standard'], servidores.raiz).split('\n')].filter(Boolean);
     for (const arquivo of pendentes) {
@@ -34,7 +39,9 @@ module.exports = async ({ edge, servidores, r }) => {
     await r.passo('clone com campaign-map.js antigo: o servidor acusa a6ab001', async () => {
       const saude = await (await fetch('http://127.0.0.1:8767/api/saude')).json();
       const item = saude.revertidos.find(x => x.arquivo === 'campaign-map.js');
-      return [saude.revertidos.length === 1 && item && item.commit === 'a6ab001', JSON.stringify(saude.revertidos)];
+      // O commit pelo hash inteiro: a abreviação do git muda com o tamanho do repositório (a6ab001 ou a6ab0010).
+      const inteiro = commit => git(['rev-parse', `${commit}^{commit}`], pasta).trim();
+      return [saude.revertidos.length === 1 && item && inteiro(item.commit) === inteiro('a6ab001'), JSON.stringify(saude.revertidos)];
     });
     await r.passo('wiki do mestre mostra a faixa de alerta', async () => {
       await edge.ir('http://127.0.0.1:8767/', 2500);

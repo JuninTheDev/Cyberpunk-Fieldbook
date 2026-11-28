@@ -21,6 +21,11 @@ tirando teste: ou se corrige a causa, ou a tarefa fica aberta com a falha regist
   PC com o Foundry 12 e o CORE instalados.
 - **`sistema`, "sem erros de JS na página":** dois 404 dos PDFs dos livros, que ficam fora do git (`*.pdf`).
 
+Os cenários da suíte dividem os dois servidores de teste e a pasta de dados (o `tests/lib/servidores.js`): o que um
+deixa (as campanhas, as tentativas erradas de um endereço) o seguinte encontra. O cenário que precisa da wiki vazia
+pede os dados só dele (`module.exports.dadosProprios = true`, o v14), e o `rodar.js` sobe os servidores de novo antes
+dele (o C106). A conferência: `node tests/rodar.js` inteira, além de cada cenário sozinho.
+
 ## Instáveis conhecidas do G4 (desde 2026-11-17, a auditoria)
 
 Caem às vezes no master 4ee2b608 sem mudança nenhuma (três rodadas na auditoria e no ciclo 200). Não se tiram nem se
@@ -601,6 +606,11 @@ ROADMAP, e os testes não se tiram nem se mudam para passar:
   vazava de um passo para os seguintes (o C105: o alvo do C55 nascia com o jogador dono, e o supressivo esperava os 60 s
   da resposta dele) e numa cena que não abria (o C26 esperava 10 s pela cena e 10 s pelos tokens). O passo lento de
   repente é um sinal: confira o estado que ele herdou antes de mexer na espera.
+- **O cenário que passa sozinho e cai na suíte** (ciclo 230): três causas, nenhuma no código da wiki. O passo do
+  limite de tentativas gastava o endereço de rede deste PC (o servidor ignora o CF-Connecting-IP de quem chega direto,
+  desde a auditoria), e o criador e os jogadores, que entram por ele, levavam 429; o v14 esperava a wiki com uma campanha
+  só; e o clone local de um repositório raso não leva a marca (o `.git/shallow`), e o `git log --all` do clone falhava.
+  Um teste que gasta um recurso dividido (um endereço, a lista de campanhas) gasta o dele, não o da suíte.
 - **O updateSource muda no lugar** (ciclo 228): o documento novo traz, no campo que não veio nos dados, o próprio objeto
   do valor inicial do campo do Foundry (o mesmo para todos os documentos). O `updateSource` de um pedaço dele (o
   `{ ownership: { default } }` do contêiner) mudava o valor inicial, e todo ator criado depois na página herdava. Antes de

@@ -23312,5 +23312,8 @@ module.exports = async ({ edge, servidores, r }) => {
   }
 };
 
+// A wiki de teste só deste cenário (o C106): na suíte inteira, os de antes criam campanhas, e o mundo de teste só se liga
+// sozinho à campanha quando a wiki tem uma (o rodar.js sobe os servidores de novo, numa pasta vazia).
+module.exports.dadosProprios = true;
 // O navegador do mestre (o que o tests/rodar.js abre), também sem 403 nem 409 (o C60).
 module.exports.httpPermitido = [];
