@@ -1448,7 +1448,7 @@ module.exports = async ({ edge, servidores, r }) => {
         `10+3: ${alto.total} (${alto.formula}) · 1−4: ${baixo.total} · 5: ${normal.total} · cartão ${JSON.stringify(cartao)}`];
     });
 
-    await r.passo('ficha: abre no tema escuro, com as fontes do modelo, as 8 abas, os 10 atributos e só as perícias com nível (o botão mostra todas); rola pelo atributo', async () => {
+    await r.passo('ficha: abre no tema escuro, com as fontes do modelo, as 9 abas (o Inventário desde o C109), os 10 atributos e só as perícias com nível (o botão mostra todas); rola pelo atributo', async () => {
       await edge.evaluate(`game.actors.getName('Atiradora').sheet.render({ force: true })`);
       const olhar = () => edge.evaluate(`(() => { const f = document.querySelector('.cpr-fieldbook.ficha-personagem'); return f && {
         abas: f.querySelectorAll('nav.tabs [data-tab]').length, atributos: f.querySelectorAll('.atributo').length, pericias: f.querySelectorAll('.pericia').length,
@@ -1466,7 +1466,7 @@ module.exports = async ({ edge, servidores, r }) => {
       await edge.sleep(800);
       const depois = await edge.evaluate('game.messages.size');
       await edge.shot('ficha');
-      return [ficha && ficha.abas === 8 && ficha.atributos === 10 && ficha.pericias === 3 && ficha.escuro && ficha.hp === '/45' && ficha.botao === 'VER TODAS' && fontes === 3
+      return [ficha && ficha.abas === 9 && ficha.atributos === 10 && ficha.pericias === 3 && ficha.escuro && ficha.hp === '/45' && ficha.botao === 'VER TODAS' && fontes === 3
         && todas?.pericias >= 61 && todas.botao === 'SÓ COM NÍVEL' && depois === antes + 1, `${JSON.stringify({ ficha, todas, fontes })} · mensagens ${antes} → ${depois}`];
     });
 
@@ -23458,6 +23458,114 @@ module.exports = async ({ edge, servidores, r }) => {
       const { avisos, ...semAvisos } = info;
       const avisosCertos = avisos.length === 2 && avisos[0] === 'Mão principal: já tem Heavy Pistol.' && /não tem mãos livres para equipar/.test(avisos[1]);
       return [JSON.stringify(semAvisos) === JSON.stringify(esperado) && avisosCertos, JSON.stringify(c108)];
+    });
+
+    await r.passo('C109: a aba Inventário da ficha desenha o corpo e os quadrados (o fuzil nas duas mãos, a pistola no coldre, o computador nos bolsos); arrastar com o ponteiro move (a sombra verde) e recusa onde não cabe (a sombra vermelha e o motivo); tocar no item e no lugar guarda; o teclado (Enter, PageDown, Enter) move; o ARRUMAR arruma; Shift + clique divide a pilha; dois cliques abrem o item', async () => {
+      const c109 = await edge.evaluate(`(async () => {
+        const S = game.system.id;
+        const esperar = async (teste, vezes = 80) => { for (let i = 0; i < vezes && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = (id, mudar = {}) => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), mudar);
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let ator;
+        try {
+          ator = await Actor.implementation.create({ name: 'C109 Inventário', type: 'personagem', ownership: { default: 0 }, items: [
+            pegar('core_weapons:assault-rifle', { system: { equipada: true } }), pegar('core_weapons:heavy-pistol'), pegar('core_gear:computer'), pegar('core_gear:agent'),
+            pegar('core_gear:carryall', { system: { uso: 'equipado' } }), pegar('core_ammo:heavy-pistol-basic', { system: { quantidade: 20 } })] });
+          const por = id => ator.items.find(item => item.getFlag(S, 'catalogo') === id);
+          const lugar = id => { const g = por(id)?.getFlag(S, 'grade'); return g ? [g.lugar, g.x, g.y] : null; };
+          const ficha = ator.sheet;
+          await ficha.render({ force: true });
+          await esperar(() => ficha.rendered);
+          // Os pontos do ponteiro são da tela: a ficha no canto e por cima das outras janelas.
+          ficha.setPosition({ left: 0, top: 0 });
+          ficha.bringToFront();
+          ficha.changeTab('inventario', 'primary');
+          const raiz = () => ficha.element.querySelector('.tab.inventario .grade-montagem');
+          await esperar(() => raiz()?.querySelector('.grade-inventario'));
+          const doLugar = id => [...raiz().querySelectorAll('[data-lugar]')].find(el => el.dataset.lugar === id);
+          const botao = id => raiz().querySelector('.grade-item[data-item-id="' + por(id).id + '"]');
+          const desenho = {
+            aba: Boolean(ficha.element.querySelector('nav [data-tab="inventario"]')),
+            lugares: raiz().querySelectorAll('[data-lugar]').length,
+            maos: [doLugar('corpo:maoPrincipal')?.querySelector('.grade-item')?.dataset.itemId === por('core_weapons:assault-rifle').id, doLugar('corpo:maoSecundaria')?.querySelector('.par')?.dataset.itemId === por('core_weapons:assault-rifle').id],
+            coldre: doLugar('coldre')?.querySelector('.grade-item')?.dataset.itemId === por('core_weapons:heavy-pistol').id,
+            pc: botao('core_gear:computer')?.getAttribute('style'), mochila: doLugar('mochila')?.getAttribute('style')
+          };
+          const centro = (el, cx = 0.5, cy = 0.5) => { el.scrollIntoView({ block: 'center', inline: 'center' }); const c = el.getBoundingClientRect(); return { clientX: c.left + c.width * cx, clientY: c.top + c.height * cy }; };
+          const ponteiro = (alvo, tipo, ponto) => alvo.dispatchEvent(new PointerEvent(tipo, { bubbles: true, cancelable: true, pointerId: 1, isPrimary: true, button: 0, ...ponto }));
+          // Arrastar o computador (2×2, pego no meio: o quadrado 1,1 dele) para a mochila: o ponteiro no quadrado 1,1 dela.
+          const arrastar = async (de, para, cx, cy) => {
+            ponteiro(de, 'pointerdown', centro(de));
+            const ponto = centro(para, cx, cy);
+            ponteiro(window, 'pointermove', ponto);
+            const sombra = raiz().querySelector('.grade-sombra')?.className ?? (para.classList.contains('alvo-ok') ? 'alvo-ok' : para.classList.contains('alvo-nao') ? 'alvo-nao' : null);
+            ponteiro(window, 'pointerup', ponto);
+            return sombra;
+          };
+          const sombraNoCinto = await arrastar(botao('core_gear:computer'), doLugar('cinto'), 0.5, 0.5);
+          await new Promise(r => setTimeout(r, 300));
+          const recusado = { lugar: lugar('core_gear:computer'), aviso: avisos.at(-1) ?? null };
+          const sombraNaMochila = await arrastar(botao('core_gear:computer'), doLugar('mochila'), 1.5 / 4, 1.5 / 4);
+          await esperar(() => lugar('core_gear:computer')?.[0] === 'mochila');
+          const arrastado = lugar('core_gear:computer');
+          // Tocar e tocar: o Agent no esconderijo, no quadrado do canto.
+          await esperar(() => botao('core_gear:agent'));
+          const agent = botao('core_gear:agent');
+          const pontoDoAgent = centro(agent);
+          ponteiro(agent, 'pointerdown', pontoDoAgent);
+          ponteiro(window, 'pointerup', pontoDoAgent);
+          const escolhido = botao('core_gear:agent').classList.contains('selecionado');
+          const esconderijo = doLugar('esconderijo');
+          esconderijo.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...centro(esconderijo, 0.5 / 10, 0.5 / 6) }));
+          await esperar(() => lugar('core_gear:agent')?.[0] === 'esconderijo');
+          const tocado = [lugar('core_gear:agent'), por('core_gear:agent').system.uso];
+          // O teclado: a pistola do coldre aos bolsos (do coldre, 4 lugares adiante), no quadrado 0,0 (livre desde o computador).
+          await esperar(() => botao('core_weapons:heavy-pistol'));
+          const tecla = (alvo, key) => alvo.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+          const pistola = botao('core_weapons:heavy-pistol');
+          tecla(pistola, 'Enter');
+          for (let i = 0; i < 4; i++) tecla(pistola, 'PageDown');
+          const sombraDoTeclado = raiz().querySelector('[data-lugar="bolsos"] .grade-sombra')?.className ?? null;
+          tecla(pistola, 'Enter');
+          await esperar(() => lugar('core_weapons:heavy-pistol')?.[0] === 'bolsos');
+          const peloTeclado = lugar('core_weapons:heavy-pistol');
+          // O ARRUMAR: a pistola volta ao coldre (a arma carregada vai primeiro ao coldre).
+          ficha.element.querySelector('[data-action="arrumarInventario"]').click();
+          await esperar(() => lugar('core_weapons:heavy-pistol')?.[0] === 'coldre');
+          const arrumado = lugar('core_weapons:heavy-pistol');
+          // Shift + clique na pilha de balas: a janela de dividir.
+          await esperar(() => botao('core_ammo:heavy-pistol-basic'));
+          const balas = botao('core_ammo:heavy-pistol-basic');
+          const qtd = balas.querySelector('.qtd')?.textContent ?? null;
+          ponteiro(balas, 'pointerdown', centro(balas));
+          ponteiro(window, 'pointerup', { ...centro(balas), shiftKey: true });
+          await esperar(() => document.querySelector('.application.dividir-pilha'));
+          const dividir = Boolean(document.querySelector('.application.dividir-pilha'));
+          for (const janela of foundry.applications.instances.values()) if (janela.element?.classList.contains('dividir-pilha')) await janela.close();
+          // Dois cliques abrem o item.
+          botao('core_gear:agent').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+          await esperar(() => por('core_gear:agent').sheet.rendered);
+          const abriu = por('core_gear:agent').sheet.rendered;
+          await por('core_gear:agent').sheet.close();
+          await ficha.close();
+          return { desenho, sombraNoCinto, recusado, sombraNaMochila, arrastado, escolhido, tocado, sombraDoTeclado, peloTeclado, arrumado, qtd, dividir, abriu, avisos };
+        } finally {
+          ui.notifications.warn = avisar;
+          if (ator) await ator.delete();
+        }
+      })()`);
+      const esperado = {
+        desenho: { aba: true, lugares: 15, maos: [true, true], coldre: true, pc: 'grid-column: 1 / span 2; grid-row: 1 / span 2', mochila: '--l: 4; --a: 4' },
+        sombraNoCinto: 'grade-sombra nao', recusado: { lugar: ['bolsos', 0, 0], aviso: 'Computer passa da borda de Cinto.' },
+        sombraNaMochila: 'grade-sombra ok', arrastado: ['mochila', 0, 0], escolhido: true, tocado: [['esconderijo', 0, 0], 'guardado'],
+        sombraDoTeclado: 'grade-sombra ok', peloTeclado: ['bolsos', 0, 0], arrumado: ['coldre', 0, 0], qtd: '20', dividir: true, abriu: true,
+        // O aviso do dividir na munição é o do CORE (o _splitItem avisa dos upgrades, sem interromper, fora do equipamento e da roupa).
+        avisos: ['Computer passa da borda de Cinto.', 'Retire os upgrades antes de dividir a pilha.']
+      };
+      return [JSON.stringify(c109) === JSON.stringify(esperado), JSON.stringify(c109)];
     });
 
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {

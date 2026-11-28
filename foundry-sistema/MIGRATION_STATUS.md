@@ -10970,6 +10970,44 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   ator com os itens dentro, o rev que não sobe, o id provisório, o "Para organizar" sem o uso. Os arquivos voltaram
   iguais (md5).
 
+### Ciclo 233 (2026-11-28): C109, parte 1, a aba Inventário na ficha (sessão KouArt)
+
+- **Pedido do usuário (2026-11-28):** "Sim, siga", depois do C108. O C109 ficou em duas partes: esta, a aba e a tela; a
+  parte 2, o contêiner e o saque com a grade e o arrastar entre as fichas com a posição.
+- **Entrega:**
+  - `scripts/compartilhado/grade-ui.mjs`, a tela, sem o Foundry (a página da wiki vai usar o mesmo arquivo; o G3 confere
+    que ele só importa a regra): `modeloDaGrade` (os encaixes com quem os ocupa, o par de mãos e a armadura inteira
+    inclusive, as listas e as grades com o tamanho girado), `htmlDaGrade` (o nome escapado, a coluna e a linha de cada
+    item, a quantidade, o selecionado, o só de ler), `destinoDoPonto` (o quadrado sob o ponteiro menos o quadrado do item
+    onde ele foi pego), `moverCursor` (o teclado) e `ligarGrade` (os gestos: arrastar com a sombra verde ou vermelha, R
+    gira no meio do arraste; tocar no item e no lugar; Enter, as setas, PageUp e PageDown, R, Enter e Esc; Shift + clique
+    divide a pilha; dois cliques abrem o item);
+  - a aba **Inventário** na ficha do personagem (`templates/personagem/inventario.hbs`), entre o Equipamento e o
+    Cyberware, com o ARRUMAR; soltar vai ao `moverNaGrade` (o C108), que confere de novo e avisa o motivo da recusa; as
+    listas das outras abas ficam como estavam;
+  - `styles/grade.css`, pelas variáveis da paleta (a wiki dá as dela pelas `--grade-*`);
+  - as abas da ficha: com a nona, a barra rolava na largura padrão (1060 px); o recuo de cada aba passou de 18 para 10
+    px, o espaço entre as letras de 0,15 para 0,08em e a letra de 15 para 14 px, e as 9 cabem (visto na foto do G4).
+- **Visto na tela (a foto do G4, `tests/.saida`, com um passo temporário que saiu antes do commit):** o botão do Foundry
+  tem altura fixa e não esticava na grade (o item 2×2 ficava com uma linha); agora estica, e o item de dois quadrados de
+  largura ou mais mostra o nome.
+- **Fora desta parte:** o contêiner e o saque com a grade e o arrastar entre fichas com a posição (a parte 2); a imagem
+  do item fica pequena no item grande (24 px).
+- **Testes de referência:**
+  - **G3:** `grade-ui.test.mjs` (5): o modelo, o HTML, o ponto do ponteiro, o cursor e a aba, o estilo e o template.
+  - **G4:** o passo do C109: a aba desenha o corpo e os quadrados; arrastar com o ponteiro move (a sombra verde) e recusa
+    onde não cabe (a vermelha, e o motivo); tocar e tocar guarda; o teclado move; o ARRUMAR; Shift + clique abre o
+    dividir; dois cliques abrem o item.
+- **Portões:** G1 0; G2 limpo; G3 921/921; G4 356/356 (649 s). A primeira rodada inteira deu 355/356: o passo antigo da
+  ficha conferia "as 8 abas"; agora confere as 9 (a mudança pedida, sem afrouxar).
+- **Mutações:** 27 de 27 morreram (`scratchpad/mutacoes-c109.mjs`). No G3, 16: o par das mãos, o encaixe sem o par, o nome
+  sem escapar, a coluna a partir do 0, o tamanho sem girar, o sem tamanho na tela, o ponto que arredonda, sem a pega, o
+  cursor que passa da borda, o PageUp que não volta ao fim, o R que não gira, o cursor que anda na lista, o largo de um
+  quadrado, sem a quantidade, o só de ler editável, a aba que some. No G4 focado (a abertura e o passo, pelo
+  `SO_PASSOS`), 11: a grade que não monta, soltar que não move, a sombra sem a recusa, o toque que não escolhe, o segundo
+  toque que não põe, o Shift que não divide, o teclado que não pega, os dois cliques que não abrem, o ARRUMAR parado, a
+  pega sempre no canto, o arraste que não começa. Os arquivos voltaram iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

@@ -1,0 +1,50 @@
+/* O inventário em grade (o C109; a tela de scripts/compartilhado/grade-ui.mjs). As cores vêm das variáveis da paleta (as
+   --cp-* do tema.css na ficha do Foundry); a página da wiki dá as dela pelas --grade-*. */
+.grade-inventario {
+  --grade-celula: var(--grade-celula-tamanho, 34px);
+  --grade-fundo: var(--cp-poco, #0d0d14); --grade-linha: var(--cp-linha, #23232f); --grade-texto: var(--cp-texto, #e8e6d9);
+  --grade-fraco: var(--cp-fraco, #8a8d99); --grade-destaque: var(--cp-ciano, #02d7f2); --grade-alerta: var(--cp-vermelho, #ff2a4a);
+  --grade-item: var(--cp-painel, #14141c); --grade-ok: #3ddc84;
+  display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 12px; color: var(--grade-texto);
+}
+.grade-inventario .rotulo { display: block; font-family: var(--cp-dados, monospace); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grade-fraco); margin-bottom: 4px; }
+.grade-inventario .rotulo small { color: var(--grade-fraco); opacity: 0.7; }
+.grade-inventario .vazio { color: var(--grade-fraco); opacity: 0.5; }
+.grade-corpo { display: flex; flex-direction: column; gap: 6px; }
+.grade-encaixe, .grade-lista { background: var(--grade-fundo); border: 1px solid var(--grade-linha); padding: 4px 6px; min-height: 40px; }
+.grade-encaixe .par { display: inline-block; color: var(--grade-fraco); font-style: italic; }
+.grade-lista .itens { display: flex; flex-wrap: wrap; gap: 4px; }
+.grade-grades { display: flex; flex-wrap: wrap; gap: 12px; align-content: flex-start; }
+.grade-bloco { max-width: 100%; overflow-x: auto; }
+.grade-lugar {
+  position: relative; display: grid; grid-template-columns: repeat(var(--l), var(--grade-celula)); grid-template-rows: repeat(var(--a), var(--grade-celula));
+  width: calc(var(--l) * var(--grade-celula)); height: calc(var(--a) * var(--grade-celula));
+  background-color: var(--grade-fundo); border: 1px solid var(--grade-linha);
+  background-image: linear-gradient(to right, var(--grade-linha) 1px, transparent 1px), linear-gradient(to bottom, var(--grade-linha) 1px, transparent 1px);
+  background-size: var(--grade-celula) var(--grade-celula);
+}
+.grade-organizar { grid-column: 1 / -1; }
+.grade-organizar.com-itens .grade-lista { border-color: var(--grade-alerta); }
+.grade-item {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; min-height: 30px; margin: 1px;
+  padding: 2px 4px; background: var(--grade-item); border: 1px solid var(--grade-destaque); border-radius: 0; color: var(--grade-texto);
+  font-size: 11px; line-height: 1.1; overflow: hidden; cursor: grab; touch-action: none; user-select: none;
+}
+/* Na grade, o item ocupa os quadrados dele inteiros (o botão do Foundry tem altura fixa). */
+.grade-lugar .grade-item { margin: 1px; height: auto; min-height: 0; width: auto; align-self: stretch; justify-self: stretch; flex-direction: column; }
+.grade-item img { max-width: 24px; max-height: 24px; object-fit: contain; border: 0; pointer-events: none; }
+.grade-item .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* O nome aparece no item de dois quadrados de largura ou mais; no menor, só a imagem (o nome fica na dica). */
+.grade-lugar .grade-item .nome { display: none; max-width: 100%; font-size: 10px; }
+.grade-lugar .grade-item.largo .nome { display: block; }
+.grade-item .qtd { position: absolute; right: 2px; bottom: 1px; font-family: var(--cp-dados, monospace); font-size: 10px; color: var(--grade-destaque); }
+.grade-item.selecionado { outline: 2px solid var(--grade-destaque); outline-offset: -2px; background: color-mix(in srgb, var(--grade-destaque) 18%, var(--grade-item)); }
+.grade-item.arrastando { opacity: 0.4; pointer-events: none; }
+.grade-inventario:not(.editavel) .grade-item { cursor: default; }
+.grade-sombra { pointer-events: none; z-index: 2; border: 2px dashed var(--grade-ok); background: color-mix(in srgb, var(--grade-ok) 20%, transparent); }
+.grade-sombra.nao { border-color: var(--grade-alerta); background: color-mix(in srgb, var(--grade-alerta) 20%, transparent); }
+.grade-encaixe.alvo-ok, .grade-lista.alvo-ok { border-color: var(--grade-ok); }
+.grade-encaixe.alvo-nao, .grade-lista.alvo-nao { border-color: var(--grade-alerta); }
+@media (max-width: 640px) {
+  .grade-inventario { grid-template-columns: 1fr; --grade-celula: var(--grade-celula-tamanho, 30px); }
+}

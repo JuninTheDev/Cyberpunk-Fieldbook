@@ -903,7 +903,11 @@ E a do navegador de cada um:
   a mochila tirada, o veículo que sai e a moradia nova mandam o que não cabe mais para "Para organizar". A migração 11 dá
   um lugar a cada item dos personagens de antes, sem mudar o uso. Mover pela grade (`game.system.api.inventario.moverNaGrade`)
   confere o lugar, recusa com o motivo e muda o uso pelo lugar (o corpo equipa, com a conferência das mãos de sempre; o
-  esconderijo e o porta-malas guardam). Até o C109, só pela API. O `scripts/compartilhado/regras-grade.mjs`, sem import (o
+  esconderijo e o porta-malas guardam). A aba **Inventário** da ficha (ciclo 233) desenha o corpo e os quadrados:
+  arrastar com o mouse ou o dedo (a sombra verde onde cabe, vermelha onde não; R gira no meio do arraste), tocar no item
+  e depois no lugar, ou pelo teclado (Enter pega, as setas andam, PageUp e PageDown trocam de lugar, R gira, Enter solta,
+  Esc desiste); Shift + clique divide a pilha; dois cliques abrem o item; o ARRUMAR arruma tudo. A tela é a de
+  `scripts/compartilhado/grade-ui.mjs`, que a wiki vai usar também. O `scripts/compartilhado/regras-grade.mjs`, sem import (o
   Foundry, o servidor e a página da wiki vão usar o mesmo arquivo), dá o tamanho de cada item (as armas pelo tipo, a
   munição e a pilha por tipo, a armadura guardada pelo peso, o equipamento pelo catálogo), os lugares do personagem (as
   mãos, a cabeça, o tronco, o deck e a mochila no corpo, o coldre, as costas, os bolsos 4×2, o cinto 6×1, a mochila P/M/G,

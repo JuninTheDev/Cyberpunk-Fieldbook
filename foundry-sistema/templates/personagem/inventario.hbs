@@ -1,0 +1,17 @@
+{{!-- A aba Inventário (o C109; o plano em inventario-plano/PLANO.md): o corpo (as mãos, a cabeça, o tronco, o deck, a
+mochila nas costas, o coldre, as costas, a roupa e o que está em uso) e os lugares em quadrados (os bolsos, o cinto, a
+mochila, o esconderijo, os porta-malas), com "Para organizar" embaixo. A tela é a de scripts/compartilhado/grade-ui.mjs,
+que a ficha liga no _onRender; as listas das outras abas ficam como estavam. --}}
+<section class="tab inventario {{tab.cssClass}}" data-group="primary" data-tab="inventario">
+  <div class="aba-colunas">
+    <aside class="coluna-resumo">
+      <section class="painel corte ciano">
+        <div class="titulo">INVENTÁRIO<span>NA GRADE</span></div>
+        {{#if editavel}}<div class="botoes-resumo"><button type="button" class="acao" data-action="arrumarInventario" data-tooltip="Arrumar tudo de novo, do maior para o menor, sem mudar o uso de nenhum item">ARRUMAR</button></div>{{/if}}
+        <p class="dica">Arraste o item para outro lugar (R gira no meio do arraste), ou toque no item e depois no lugar. Pelo teclado: Enter pega, as setas andam, PageUp e PageDown trocam de lugar, R gira, Enter solta e Esc desiste. Shift + clique divide uma pilha; dois cliques abrem o item.</p>
+        <p class="dica">O corpo equipa; o coldre, as costas, os bolsos, o cinto e a mochila carregam; o esconderijo e o porta-malas guardam. O que não cabe fica em "Para organizar", com o uso que tinha.</p>
+      </section>
+    </aside>
+    <div class="coluna-principal grade-montagem"></div>
+  </div>
+</section>

@@ -159,9 +159,11 @@ do capanga é um botão do mesmo jeito, que rola. */
   display: flex; flex: none; gap: 4px; margin: 0; padding: 0; overflow-x: auto; justify-content: flex-start;
   border: none; border-bottom: 2px solid var(--cp-amarelo);
 }
+/* As 9 abas (o Inventário, desde o C109) cabem na largura padrão da ficha (1060 px): o recuo e o espaço entre as letras
+   e a letra são um pouco menores que os do modelo (18 px, 0,15em e 15 px); mais estreita, a barra rola. */
 .cpr-fieldbook.ficha-personagem nav.sheet-tabs > a {
-  display: flex; align-items: center; gap: 8px; flex: none; padding: 10px 18px; border: none; background: var(--cp-painel); color: #c9c7bb;
-  font: 700 15px var(--cp-titulo); letter-spacing: 0.15em; text-transform: uppercase; text-shadow: none;
+  display: flex; align-items: center; gap: 8px; flex: none; padding: 10px; border: none; background: var(--cp-painel); color: #c9c7bb;
+  font: 700 14px var(--cp-titulo); letter-spacing: 0.08em; text-transform: uppercase; text-shadow: none;
 }
 .cpr-fieldbook.ficha-personagem nav.sheet-tabs > a:hover { color: var(--cp-amarelo); }
 .cpr-fieldbook.ficha-personagem nav.sheet-tabs > a.active { background: var(--cp-amarelo); color: var(--cp-fundo); }

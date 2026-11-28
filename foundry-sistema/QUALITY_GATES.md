@@ -55,6 +55,10 @@ junto com o registro do ciclo (o G3 confere).
   sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
 - O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
 
+**A lição do ciclo 233:** a tela nova se confere também de olho. O G4 passou de primeira, mas a foto da aba (o `edge.shot`,
+num passo temporário que sai antes do commit) mostrou o item 2×2 com uma linha só (o botão do Foundry tem altura fixa) e
+a barra de abas rolando com a nona. Os testes conferem o lugar e o estilo, não a altura que o navegador desenha.
+
 **A lição do ciclo 232:** o item no `preCreateItem` ainda não tem id. Quem compara itens pelo id (o `conferirLugar`, que
 não colide o item com ele mesmo) vê todos os que nascem juntos como o mesmo: no G4, três Agents criados de uma vez
 caíram no mesmo quadrado. Os que nascem juntos ganham um id provisório; o passo do G4 cria vários de uma vez.

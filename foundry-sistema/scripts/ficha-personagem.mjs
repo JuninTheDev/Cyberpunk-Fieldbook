@@ -19,6 +19,10 @@ import { contextoDaCura, descansar, estabilizar } from './estabilizar.mjs';
 import { contextoDaEstase, porEmEstase, sairDaEstase } from './cryo.mjs';
 import { levarItem } from './conteiner.mjs';
 import { perguntarDivisao } from './pilhas.mjs';
+import { ligarGrade } from './compartilhado/grade-ui.mjs';
+import { conferirLugar } from './compartilhado/regras-grade.mjs';
+import { arrumarAtor, lugaresDe, moverNaGrade } from './inventario-grade.mjs';
+import { bodyDoAtor, estadoDe, itemNaRegra } from './regras-grade-ator.mjs';
 import { lugaresDaInstalacao, pedeConfirmacaoAoApagar, podeApagarItem, podeEditarParaApagar } from './exclusao-item.mjs';
 import { alternarRecolhida, apagarComInstalados, descarregaAoApagar, divisaoDaPilha, marcarRecolhidas, passaNaBusca } from './regras-inventario.mjs';
 import { controlesDoEfeito, estadoDoEfeito, resumoDasMudancas, usoQueLiga } from './regras-efeitos.mjs';
@@ -172,6 +176,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       portaDoDeck: FichaPersonagem.#portaDoDeck,
       mudarQuantidade: FichaPersonagem.#mudarQuantidade,
       dividirPilha: FichaPersonagem.#dividirPilha,
+      arrumarInventario: FichaPersonagem.#arrumarInventario,
       ablarArmadura: FichaPersonagem.#ablarArmadura,
       escolherArmaduraMonitorada: FichaPersonagem.#escolherArmaduraMonitorada,
       mostrarSPNoToken: FichaPersonagem.#mostrarSPNoToken,
@@ -198,6 +203,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     pericias: { ...aba('pericias'), templates: [bloco('geral'), bloco('lesoes'), bloco('recolher')] },
     combate: { ...aba('combate'), templates: [bloco('armas'), bloco('agarrao'), bloco('artes-marciais'), bloco('armadura'), bloco('lesoes')] },
     equipamento: { ...aba('equipamento'), templates: [bloco('recolher')] },
+    inventario: aba('inventario'),
     cyberware: aba('cyberware'),
     role: aba('role'),
     net: aba('net'),
@@ -210,7 +216,8 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     primary: {
       tabs: [
         { id: 'pericias', label: 'Perícias', icon: 'fa-solid fa-list-check' }, { id: 'combate', label: 'Combate', icon: 'fa-solid fa-crosshairs' },
-        { id: 'equipamento', label: 'Equipamento', icon: 'fa-solid fa-briefcase' }, { id: 'cyberware', label: 'Cyberware', icon: 'fa-solid fa-microchip' },
+        { id: 'equipamento', label: 'Equipamento', icon: 'fa-solid fa-briefcase' }, { id: 'inventario', label: 'Inventário', icon: 'fa-solid fa-table-cells' },
+        { id: 'cyberware', label: 'Cyberware', icon: 'fa-solid fa-microchip' },
         { id: 'role', label: 'Role', icon: 'fa-solid fa-id-badge' }, { id: 'net', label: 'NET', icon: 'fa-solid fa-network-wired' },
         { id: 'vida', label: 'Vida', icon: 'fa-solid fa-book-open' }, { id: 'efeitos', label: 'Efeitos', icon: 'fa-solid fa-bolt' }
       ],
@@ -224,9 +231,14 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
   // fica nesta janela, e não no ator, e vale de novo a cada desenho (o ApplicationV2 redesenha a cada mudança do ator).
   #busca = '';
 
+  // A aba Inventário (o C109): o item escolhido pelo toque fica entre um desenho e outro; o que desliga os gestos da janela.
+  #escolhidoNaGrade = '';
+  #desligarGrade = null;
+
   async _onRender(contexto, opcoes) {
     await super._onRender(contexto, opcoes);
     prepararAcessibilidade(this.element);
+    this.#montarGrade();
     const campo = this.element.querySelector('input.busca-da-ficha');
     if (campo) {
       campo.value = this.#busca;
@@ -243,6 +255,34 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
       if (campo === document.activeElement) campo.setSelectionRange(campo.value.length, campo.value.length);
     }
     this.#filtrar();
+  }
+
+  // A grade da aba Inventário (scripts/compartilhado/grade-ui.mjs), desenhada de novo a cada desenho da ficha. Soltar vai ao
+  // moverNaGrade, que confere de novo e diz o motivo da recusa; a sombra só avisa antes.
+  #montarGrade() {
+    this.#desligarGrade?.();
+    this.#desligarGrade = null;
+    const raiz = this.element?.querySelector('.tab.inventario .grade-montagem');
+    if (!raiz) return;
+    const ator = this.actor;
+    const itens = ator.items.map(item => ({ ...itemNaRegra(item), img: item.img, qtd: item.system.quantidade ?? 1 }));
+    const lugares = lugaresDe(ator);
+    const body = bodyDoAtor(ator);
+    const documento = item => ator.items.get(item?.id);
+    this.#desligarGrade = ligarGrade(raiz, {
+      lugares, itens, body, editavel: this.isEditable, selecionado: this.#escolhidoNaGrade,
+      conferir: (item, destino) => conferirLugar(lugares, estadoDe(itens, item.id), item, destino, { body }),
+      aoMover: (item, destino) => (documento(item) ? moverNaGrade(documento(item), destino) : null),
+      aoDividir: item => perguntarDivisao(documento(item)),
+      aoAbrir: item => documento(item)?.sheet.render(true),
+      aoSelecionar: id => { this.#escolhidoNaGrade = id; }
+    });
+  }
+
+  _onClose(opcoes) {
+    super._onClose(opcoes);
+    this.#desligarGrade?.();
+    this.#desligarGrade = null;
   }
 
   // Esconde as linhas que não passam na busca (regras-inventario.passaNaBusca), pelo nome: as perícias e os itens das
@@ -830,6 +870,7 @@ export class FichaPersonagem extends HandlebarsApplicationMixin(ActorSheetV2) {
     return item.update({ 'system.quantidade': item.system.quantidade + Number(alvo.dataset.delta) });
   }
   static #dividirPilha(evento, alvo) { return perguntarDivisao(this.#item(alvo)); }
+  static #arrumarInventario() { return this.isEditable ? arrumarAtor(this.actor) : null; }
   static #ablarArmadura(evento, alvo) { return this.isEditable ? this.actor.ablarArmaduras(alvo.dataset.local) : null; }
   static #mostrarSPNoToken(evento, alvo) { return this.isEditable ? this.actor.mostrarSPNoToken(alvo.dataset.local) : null; }
   static async #escolherArmaduraMonitorada(evento, alvo) {
