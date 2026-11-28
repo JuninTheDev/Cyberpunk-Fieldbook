@@ -89,10 +89,10 @@ Cada lista tem nomes masculinos, femininos e neutros, e sobrenomes. São nomes c
 
 | | |
 |---|---|
-| **Masculinos** | Alejandro, Andrés, Armando, César, Diego, Eduardo, Emiliano, Esteban, Fausto, Gerardo, Héctor, Ignacio, Joaquín, Julio, Leonel, Lisandro, Mauricio, Néstor, Octavio, Ramiro, Rodrigo, Rubén, Santiago, Tomás, Valentín, Yahir |
-| **Femininos** | Adriana, Alondra, Araceli, Beatriz, Carmen, Catalina, Dolores, Esmeralda, Fernanda, Graciela, Inés, Itzel, Jimena, Lorena, Lucía, Marisol, Nayeli, Paloma, Rocío, Ximena, Yesenia, Zoraida |
+| **Masculinos** | Alejandro, Andrés, Armando, César, Diego, Eduardo, Esteban, Fausto, Héctor, Ignacio, Julio, Leonel, Mauricio, Octavio, Ramiro, Rodrigo, Rubén, Santiago, Tomás, Valentín, Yahir |
+| **Femininos** | Adriana, Alondra, Araceli, Beatriz, Carmen, Catalina, Dolores, Esmeralda, Fernanda, Graciela, Inés, Jimena, Lorena, Lucía, Marisol, Nayeli, Paloma, Rocío, Ximena, Zoraida |
 | **Neutros** | Cruz, Guadalupe, Reyes, Ariel, Trinidad |
-| **Sobrenomes** | Aguilar, Barrios, Cabrera, Castañeda, Cisneros, Delgado, Escobedo, Fuentes, Galindo, Guerrero, Ibarra, Lozano, Maldonado, Montoya, Navarro, Ochoa, Paredes, Quintana, Rentería, Salazar, Serrano, Trujillo, Valdez, Villanueva, Zamora, Zúñiga |
+| **Sobrenomes** | Aguilar, Barrios, Cabrera, Castañeda, Delgado, Escobedo, Galindo, Guerrero, Ibarra, Lozano, Maldonado, Montoya, Quintana, Rentería, Salazar, Serrano, Villanueva, Zúñiga |
 
 #### Brasileiro e português
 
@@ -107,26 +107,26 @@ Cada lista tem nomes masculinos, femininos e neutros, e sobrenomes. São nomes c
 
 | | |
 |---|---|
-| **Masculinos** | Austin, Brady, Calvin, Clint, Dale, Dwight, Eli, Garrett, Hank, Jarrod, Keith, Lyle, Mitch, Nolan, Owen, Preston, Rhett, Russell, Shane, Travis, Wade, Wyatt |
+| **Masculinos** | Austin, Brady, Calvin, Clint, Dale, Dwight, Eli, Garrett, Jarrod, Keith, Lyle, Mitch, Nolan, Owen, Preston, Rhett, Russell, Travis, Wyatt |
 | **Femininos** | Abigail, Brooke, Candace, Darlene, Erin, Faith, Gwen, Heather, Jolene, Kelsey, Lacey, Madison, Meredith, Paige, Reba, Shelby, Tammy, Whitney |
 | **Neutros** | Casey, Jordan, Morgan, Riley, Quinn, Sawyer |
-| **Sobrenomes** | Abernathy, Bishop, Callahan, Crowley, Dalton, Everett, Fletcher, Gallagher, Harlan, Hollister, Kincaid, Lockhart, McAllister, Pruitt, Ransom, Sloane, Thornton, Underwood, Vance, Whitaker, Yates |
+| **Sobrenomes** | Abernathy, Bishop, Callahan, Everett, Fletcher, Gallagher, Harlan, Lockhart, McAllister, Ransom, Sloane, Thornton, Underwood, Vance, Whitaker, Yates |
 
 #### Afro-americano
 
 | | |
 |---|---|
-| **Masculinos** | Andre, Cedric, Darnell, DeShawn, Desmond, Elijah, Isaiah, Jamal, Jerome, Lamar, Malcolm, Marcus, Marquis, Reggie, Roland, Terrence, Tyrell, Xavier |
-| **Femininos** | Aaliyah, Bernice, Ebony, Imani, Jasmine, Keisha, Latoya, Monique, Nia, Rochelle, Shanice, Tamika, Tiana, Yolanda, Zora |
+| **Masculinos** | Andre, Cedric, Darnell, Desmond, Elijah, Isaiah, Jamal, Jerome, Lamar, Malcolm, Marcus, Marquis, Reggie, Roland, Terrence, Tyrell, Xavier |
+| **Femininos** | Aaliyah, Bernice, Ebony, Imani, Jasmine, Keisha, Latoya, Monique, Nia, Rochelle, Shanice, Tiana, Yolanda, Zora |
 | **Neutros** | Jaylen, Kendall, Sage, Ellis |
-| **Sobrenomes** | Banks, Booker, Brooks, Carver, Coleman, Dawkins, Freeman, Gaines, Hairston, Jefferson, Mayfield, McNeal, Merriweather, Pettaway, Roundtree, Sims, Strickland, Toussaint, Washington, Whitfield |
+| **Sobrenomes** | Booker, Brooks, Carver, Coleman, Dawkins, Freeman, Hairston, Jefferson, Mayfield, McNeal, Merriweather, Roundtree, Sims, Strickland, Toussaint, Washington, Whitfield |
 
 #### Japonês
 
 | | |
 |---|---|
 | **Masculinos** | Akira, Daichi, Haruto, Hiroshi, Ichiro, Isamu, Jun, Kaito, Kazuki, Kenta, Masato, Noboru, Ryota, Satoshi, Shun, Sora, Takumi, Tetsuya, Yuto |
-| **Femininos** | Ai, Asuka, Chiyo, Emi, Fumiko, Haruka, Hina, Kaori, Keiko, Mai, Misaki, Nanami, Noriko, Rin, Sakura, Sayuri, Tomoe, Yui |
+| **Femininos** | Ai, Asuka, Chiyo, Emi, Fumiko, Haruka, Hina, Kaori, Keiko, Misaki, Nanami, Noriko, Rin, Sakura, Sayuri, Tomoe, Yui |
 | **Neutros** | Hikaru, Kaoru, Makoto, Tsubasa, Chihiro |
 | **Sobrenomes** | Aoki, Fujita, Hasegawa, Inoue, Kanda, Kimura, Kobayashi, Matsuda, Murakami, Nakagawa, Nishimura, Ogawa, Saito, Sakamoto, Shimizu, Takeda, Ueda, Yamaguchi, Yoshida |
 
@@ -134,7 +134,7 @@ Cada lista tem nomes masculinos, femininos e neutros, e sobrenomes. São nomes c
 
 | | |
 |---|---|
-| **Masculinos** | Bao, Chen, Dong, Feng, Gang, Hao, Jian, Jun, Lei, Ming, Peng, Qiang, Tao, Wei, Xiang, Yong, Zhen, Zihan |
+| **Masculinos** | Chen, Dong, Feng, Gang, Hao, Jian, Jun, Lei, Ming, Peng, Qiang, Tao, Wei, Xiang, Yong, Zhen, Zihan |
 | **Femininos** | Fang, Hui, Jing, Lan, Li Na, Mei, Qing, Shu, Ting, Xiu, Yan, Ying, Yue, Zhi |
 | **Neutros** | An, Lin, Xin, Yu |
 | **Sobrenomes** | Chan, Cheng, Fong, Guo, He, Hu, Kwan, Lau, Liang, Lo, Ma, Song, Tang, Tsang, Wong, Xu, Yeung, Zhao, Zhou |
@@ -154,9 +154,9 @@ Em chinês, o sobrenome vem antes do nome ("Lau Mei"). Quem é de segunda geraç
 
 | | |
 |---|---|
-| **Masculinos** | Anh, Bao, Duc, Hung, Khoa, Minh, Phong, Thanh (vietnamitas); Bayani, Emilio, Jomar, Rodel, Rommel (filipinos); Anan, Kiet, Somchai (tailandeses) |
-| **Femininos** | Hoa, Lan, Linh, Mai, Ngoc, Thuy, Trang (vietnamitas); Analyn, Josie, Liezel, Maricel, Rowena (filipinas); Malee, Nim, Ploy (tailandesas) |
-| **Sobrenomes** | Bui, Dang, Do, Ho, Huynh, Le, Nguyen, Pham, Phan, Tran, Vo (vietnamitas); Bautista, Dimaculangan, Macaraeg, Pangilinan, Villareal (filipinos); Chaiyaporn, Srisuk, Wongsa (tailandeses) |
+| **Masculinos** | Anh, Duc, Hung, Khoa, Minh, Phong, Thanh (vietnamitas); Bayani, Emilio, Jomar, Rommel (filipinos); Anan, Kiet, Somchai (tailandeses) |
+| **Femininos** | Hoa, Lan, Linh, Ngoc, Thuy, Trang (vietnamitas); Analyn, Josie, Liezel, Maricel, Rowena (filipinas); Malee, Nim, Ploy (tailandesas) |
+| **Sobrenomes** | Bui, Dang, Do, Ho, Le, Nguyen, Pham, Phan, Vo (vietnamitas); Dimaculangan, Macaraeg, Pangilinan, Villareal (filipinos); Chaiyaporn, Srisuk, Wongsa (tailandeses) |
 
 #### Haitiano e caribenho francófono
 
@@ -171,10 +171,10 @@ Em chinês, o sobrenome vem antes do nome ("Lau Mei"). Quem é de segunda geraç
 
 | | |
 |---|---|
-| **Masculinos** | Aleksei, Bogdan, Dmitri, Goran, Igor, Jakub, Kirill, Miroslav, Oleg, Pavel, Radek, Stanislav, Taras, Vadim, Yaroslav, Zoran |
-| **Femininos** | Agnieszka, Daria, Galina, Irina, Jelena, Katarzyna, Lyudmila, Milena, Nadia, Oksana, Svetlana, Tatiana, Vesna, Zofia |
+| **Masculinos** | Aleksei, Dmitri, Goran, Igor, Jakub, Kirill, Miroslav, Oleg, Pavel, Radek, Stanislav, Vadim, Yaroslav, Zoran |
+| **Femininos** | Agnieszka, Daria, Irina, Jelena, Katarzyna, Lyudmila, Milena, Nadia, Svetlana, Tatiana, Vesna, Zofia |
 | **Neutros** | Sasha, Zhenya, Valya |
-| **Sobrenomes** | Babić, Bondarenko, Dvořák, Fedorov, Horvat, Ivanenko, Jankowski, Kovalenko, Kowalczyk, Lebedev, Marković, Nowak, Orlov, Petrović, Sokolov, Tkachenko, Volkov, Zielinski |
+| **Sobrenomes** | Babić, Dvořák, Fedorov, Horvat, Ivanenko, Jankowski, Kovalenko, Lebedev, Marković, Nowak, Petrović, Volkov, Zielinski |
 
 #### Europeu ocidental (alemão, francês, italiano, irlandês, nórdico)
 
@@ -207,10 +207,10 @@ Em chinês, o sobrenome vem antes do nome ("Lau Mei"). Quem é de segunda geraç
 
 | | |
 |---|---|
-| **Masculinos** | Abebe, Chidi, Dapo, Emeka, Femi, Kwame, Kofi, Mamadou, Obinna, Ousmane, Tunde, Yaw |
+| **Masculinos** | Chidi, Dapo, Emeka, Femi, Kwame, Mamadou, Obinna, Ousmane, Tunde |
 | **Femininos** | Abena, Adaeze, Amara, Chiamaka, Efua, Fatou, Folake, Makeda, Ngozi, Wanjiru, Yetunde |
 | **Neutros** | Ayo, Chidera, Tobi |
-| **Sobrenomes** | Adeyemi, Asante, Bekele, Diallo, Eze, Kamau, Mensah, Ndiaye, Nwosu, Okonkwo, Oyelaran, Tesfaye |
+| **Sobrenomes** | Adeyemi, Diallo, Eze, Kamau, Ndiaye, Nwosu, Okonkwo, Oyelaran, Tesfaye |
 
 #### Indígena norte-americano
 
@@ -218,7 +218,7 @@ Use nomes de hoje, como as pessoas usam: o nome em inglês ou espanhol com o sob
 
 | | |
 |---|---|
-| **Masculinos** | Cody, Darrell, Ernest, Harlan, Jerome, Leland, Marvin, Ray, Tyler, Wendell |
+| **Masculinos** | Cody, Darrell, Ernest, Harlan, Jerome, Leland, Marvin, Ray, Tyler |
 | **Femininos** | Arlene, Bernadette, Charlene, Darlene, Juanita, Loretta, Marlene, Shandiin, Winona |
 | **Sobrenomes** | Begay, Benally, Bitsui, Chee, Etsitty, Harjo, Lente, Manuelito, Nez, Redhouse, Silversmith, Tsosie, Yazzie |
 
@@ -244,14 +244,14 @@ O apelido conta a história do NPC em uma palavra. Ele nasce de algo que acontec
 | De onde vem | Exemplos |
 |---|---|
 | **O ofício** | Solda, Rebite, Alicate, Pólvora, Forno, Balança, Carimbo, Agulha, Torque, Fusível, Chave-Inglesa, Caneta, Prumo, Esquadro |
-| **O corpo** | Varapau, Tampinha, Pescoço, Orelha, Canhoto, Dentinho, Careca, Cotoco, Ruivo, Sardento, Bochecha, Narigão, Pé-de-Pato, Meia-Cara |
+| **O corpo** | Varapau, Tampinha, Pescoço, Orelha, Canhoto, Dentinho, Careca, Ruivo, Sardento, Bochecha, Narigão, Pé-de-Pato, Meia-Cara |
 | **O cromo** | Lente, Mandíbula, Dedo-de-Aço, Olho-Morto, Zumbido, Pistão, Estática, Sola-Quente, Retina, Cromado |
-| **Um acontecimento** | Sete Vidas, Ricochete, Meia-Noite, Três Dedos, Bala-Perdida, Dezembro, Afogado, Sorte, Queimado, Volta-e-Meia |
+| **Um acontecimento** | Sete Vidas, Ricochete, Meia-Noite, Três Dedos, Bala-Perdida, Afogado, Sorte, Queimado, Volta-e-Meia |
 | **Um hábito ou vício** | Cinzeiro, Café, Chiclete, Soneca, Pastel, Cachaça, Picolé, Fofoca, Calendário, Relógio |
 | **A ironia** | Anjo (o mais violento), Gigante (o menor), Sorriso (que nunca ri), Sossego (que nunca para), Professor (que nunca estudou), Santo |
 | **Bicho ou coisa** | Mosca, Tatu, Grilo, Marimbondo, Lagartixa, Bagre, Tijolo, Fivela, Cadeado |
 | **Da rua, em inglês** | Patch, Dime, Lucky, Tick, Buckshot, Slim, Static, Mouse, Smokes, Tinman, Rivet, Deacon |
-| **Da rua, em espanhol** | Flaco, Güero, Chispa, Chato, Gordo, Chamaco, Tuerto, Calaca, Chueco, Pelón, Morro |
+| **Da rua, em espanhol** | Flaco, Güero, Chispa, Chato, Gordo, Tuerto, Calaca, Chueco, Pelón, Morro |
 | **Da família, em japonês** | Hebi (cobra), Kuma (urso), Tora (tigre), Kage (sombra: só com motivo), Tetsu (ferro), Neko (gato), Sabi (ferrugem) |
 
 ## O registro de nomes
@@ -278,7 +278,7 @@ Todo nome, sobrenome e apelido que já existe nas campanhas. A IA confere aqui a
 
 | Quem | Nome | Apelido |
 |---|---|---|
-| NPC | Abílio Quaresma | |
+| NPC | Jorge Tadashi Nakandakare | Ponteiro |
 
 ### Night City (todas as campanhas)
 
