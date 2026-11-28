@@ -1026,7 +1026,7 @@ pede, por uma fila no servidor; no conflito, a mesa ganha; nada some ("Para orga
   a grade.
 - [x] **C110. A volta rápida para a wiki:** feito no ciclo 235 (sessão KouArt, 2026-11-28; o usuário disse "Pode"): o
   inventário em menos de 2 s, a grade e os lugares no "Na mesa", e a grade só de leitura na wiki.
-- [ ] **C111. Da wiki para o Foundry:** o `api-inventario.js` (a fila de operações, a conferência no servidor, o SSE); o
+- [~] **C111. Da wiki para o Foundry:** em andamento (sessão KouArt, 2026-11-28; o usuário disse "Sim, pode"). o `api-inventario.js` (a fila de operações, a conferência no servidor, o SSE); o
   Foundry aplica, confirma ou recusa.
 - [ ] **C112. A grade que se mexe na wiki:** o estado projetado, o "pendente", a recusa com o motivo, o celular e o teclado.
 - [ ] **C113. O Foundry fechado e a importação:** a fila que esvazia ao abrir o mundo, a grade da montagem que vai na
