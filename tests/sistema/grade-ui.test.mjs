@@ -63,6 +63,12 @@ test('C109: o HTML da tela: cada lugar com o data-lugar, o item na grade pela co
   assert.match(html, /class="grade-item selecionado" data-item-id="balas"/);
   assert.match(html, /aria-label="Balas \(20\)"/);
   assert.match(html, /<span class="qtd">20<\/span>/);
+  // O pendente (a wiki, o C112): só os itens pedidos.
+  assert.doesNotMatch(html, /pendente/);
+  const comPendente = htmlDaGrade(modeloDaGrade(LUGARES, itens), { editavel: true, pendentes: new Set(['balas', 'sumiu']) });
+  assert.match(comPendente, /class="grade-item pendente" data-item-id="balas"/);
+  assert.equal(comPendente.match(/ pendente"/g).length, 1);
+  assert.match(htmlDaGrade(modeloDaGrade(LUGARES, itens), { pendentes: ['pc'] }), /class="grade-item largo pendente" data-item-id="pc"/);
   // A dica do navegador só a pedido (a wiki, o C110; o Foundry tem a dele).
   assert.doesNotMatch(html, / title=/);
   assert.match(htmlDaGrade(modeloDaGrade(LUGARES, itens), { editavel: false, titulo: true }), /data-item-id="balas"[^>]* title="Balas \(20\)"/);
@@ -142,9 +148,10 @@ test('C110: a wiki serve ao jogador a tela e a regra da grade (o módulo e o que
   assert.deepEqual(modulos, ['foundry-sistema/scripts/compartilhado/grade-ui.mjs', 'foundry-sistema/scripts/compartilhado/regras-grade.mjs']);
   for (const arquivo of [...modulos, 'foundry-sistema/styles/grade.css']) assert.ok(publicos.guardados.includes(`/${arquivo}`), arquivo);
   assert.match(fs.readFileSync(new URL('server.js', raiz), 'utf8'), /'\.mjs': 'text\/javascript; charset=utf-8'/);
-  // A ficha da wiki carrega o mesmo módulo e o CSS, e tem a aba.
+  // A ficha da wiki carrega os mesmos módulos (a tela e, desde o C112, a regra, para mexer) e o CSS, e tem a aba.
   const criador = fs.readFileSync(new URL('criador.js', raiz), 'utf8');
-  assert.match(criador, /import\(new URL\('foundry-sistema\/scripts\/compartilhado\/grade-ui\.mjs'/);
+  assert.match(criador, /const pasta = new URL\('foundry-sistema\/scripts\/compartilhado\/', document\.baseURI\)\.href;/);
+  assert.match(criador, /Promise\.all\(\[import\(`\$\{pasta\}grade-ui\.mjs`\), import\(`\$\{pasta\}regras-grade\.mjs`\)\]\)/);
   assert.match(criador, /href: 'foundry-sistema\/styles\/grade\.css'/);
   assert.match(criador, /\['inventario', 'Inventário'\]/);
 });

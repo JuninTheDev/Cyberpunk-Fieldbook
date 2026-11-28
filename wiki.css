@@ -2145,3 +2145,14 @@ body.map-immersive.sidebar-open aside .side-status { justify-items: stretch; mar
 .cc-inventario { --cp-poco: var(--w); --cp-linha: var(--l); --cp-texto: var(--tx); --cp-fraco: var(--mu); --cp-ciano: var(--c); --cp-vermelho: var(--r); --cp-painel: var(--p); --cp-dados: var(--lbl); overflow-x: auto; }
 /* Na wiki, o item não tem a imagem do Foundry: o nome aparece em todos (cortado no de um quadrado; inteiro na dica). */
 .cc-inventario .grade-lugar .grade-item .nome { display: block; font-size: 9px; }
+/* A grade que se mexe (o C112): o selo, as recusas e, no celular, um grupo de lugares por vez (as abas). */
+.cc-grade-selo:empty, .cc-grade-recusas:empty { display: none; }
+.cc-grade-recusas { margin: 8px 0 0; padding-left: 18px; color: var(--r); font-size: 13px; }
+.cc-grade-abas { display: none; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+@media (max-width: 640px) {
+  .cc-grade-abas { display: flex; }
+  .cc-inventario[data-grupo] .grade-corpo, .cc-inventario[data-grupo] .grade-bloco { display: none; }
+  .cc-inventario[data-grupo="corpo"] .grade-corpo { display: flex; }
+  .cc-inventario[data-grupo="bolsos"] .grade-bloco[data-grupo="bolsos"], .cc-inventario[data-grupo="mochila"] .grade-bloco[data-grupo="mochila"],
+  .cc-inventario[data-grupo="esconderijo"] .grade-bloco[data-grupo="esconderijo"], .cc-inventario[data-grupo="veiculos"] .grade-bloco[data-grupo="veiculos"] { display: block; }
+}

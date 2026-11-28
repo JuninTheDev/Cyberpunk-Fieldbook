@@ -476,7 +476,8 @@ test('C111: a fila do inventário da wiki: o dono e o mestre pedem (conferido co
   const lugares = regras.lugaresDoPersonagem({ moradia: { descricao: 'Quitinete' }, mochila: 'P' });
   const ficha = { ator: 'ator14', geracao: 14, quando: new Date().toISOString(), stats: { BODY: 6 }, lugares, itens: [
     linha('agent', 'core_gear:agent', { lugar: 'bolsos', x: 0, y: 0 }), linha('pc', 'core_gear:computer', { lugar: 'mochila', x: 0, y: 0 }),
-    linha('balas', 'core_ammo:heavy-pistol-basic', { lugar: 'cinto', x: 0, y: 0 }, 20), { id: 'velho', nome: 'Sem regra', qtd: 1 }
+    linha('balas', 'core_ammo:heavy-pistol-basic', { lugar: 'cinto', x: 0, y: 0 }, 20), linha('balas2', 'core_ammo:heavy-pistol-basic', { lugar: 'cinto', x: 2, y: 0 }, 3),
+    { id: 'velho', nome: 'Sem regra', qtd: 1 }
   ] };
   assert.equal((await servidor.pedir(`${url}/mesa`, { method: 'PUT', cookie: mestre, body: ficha })).status, 200);
   // Outro jogador da campanha não mexe; o visitante nem fica sabendo.
@@ -499,12 +500,18 @@ test('C111: a fila do inventário da wiki: o dono e o mestre pedem (conferido co
   r = await pedir({ tipo: 'dividir', item: 'balas', qtd: 5, para: { lugar: 'cinto', x: 1, y: 0 } }, mestre);
   assert.deepEqual([r.status, r.json.op.seq, r.json.op.autor, r.json.op.qtd], [201, 2, 'mestre', 5]);
   const divisao = r.json.op;
-  r = await pedir({ tipo: 'juntar', item: divisao.id, alvo: 'balas' });
+  // A pilha nova ainda só existe na wiki: nada com ela até a mesa a criar.
+  for (const corpo of [{ tipo: 'juntar', item: divisao.id, alvo: 'balas' }, { tipo: 'juntar', item: 'balas', alvo: divisao.id }, { tipo: 'mover', item: divisao.id, para: { lugar: 'bolsos', x: 3, y: 1 } }]) {
+    r = await pedir(corpo);
+    assert.deepEqual([r.status, r.json.erro], [409, 'Espere a mesa criar a pilha nova.']);
+  }
+  // Juntar duas pilhas de verdade.
+  r = await pedir({ tipo: 'juntar', item: 'balas2', alvo: 'balas' });
   assert.equal(r.status, 201, r.text);
   // O dono lê a fila e o estado projetado.
   r = await servidor.pedir(ops, { cookie: jogador.cookie });
   const projetado = Object.fromEntries(r.json.projetado.map(item => [item.id, [item.grade && item.grade.lugar, item.qtd]]));
-  assert.deepEqual([r.json.seq, r.json.ops.map(op => op.estado), projetado.agent, projetado.balas, projetado[divisao.id], projetado.velho], [3, ['pendente', 'pendente', 'pendente'], ['esconderijo', 1], ['cinto', 20], undefined, undefined]);
+  assert.deepEqual([r.json.seq, r.json.ops.map(op => op.estado), projetado.agent, projetado.balas, projetado[divisao.id], projetado.balas2, projetado.velho], [3, ['pendente', 'pendente', 'pendente'], ['esconderijo', 1], ['cinto', 18], ['cinto', 5], undefined, undefined]);
   // O Foundry do mestre: as pendentes da campanha (com o vínculo); o jogador não lê; a campanha que não existe, 404.
   r = await servidor.pedir('/api/inventario/pendentes', { cookie: mestre });
   assert.equal(r.status, 200);

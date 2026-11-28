@@ -55,6 +55,11 @@ junto com o registro do ciclo (o G3 confere).
   sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
 - O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
 
+**A lição do ciclo 237:** a tela que se desenha de novo no mesmo elemento acumula os ouvintes que pôs nele, se eles
+não saem com ela: a ficha do Foundry não mostrava (cada render troca o elemento), a wiki sim (um Enter, três pedidos). O
+passo do G4 só achou porque a foto mostrou dois avisos de recusa que ninguém pediu; agora ele confere a lista inteira dos
+avisos da página. Um teste de gesto confere também o que não devia acontecer.
+
 **A lição do ciclo 236:** numa fila com estado projetado, a wiki já conta o que está pendente: o quadrado que um pedido
 esvazia está livre para o pedido seguinte antes de a mesa aplicar. O teste que monta uma recusa (a mesa diferente da wiki)
 tem de mexer na mesa sabendo disso; e as duas mutações que viveram no G3 (a ficha do Foundry 12, a campanha de outro

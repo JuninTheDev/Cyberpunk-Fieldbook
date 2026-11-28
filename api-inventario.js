@@ -72,6 +72,8 @@ module.exports.createInventory = function createInventory({ charactersDir, write
       const body = bodyOf(doc.mesa);
       const estado = r.projetar(itemsOf(doc.mesa), waiting, lugares, { body });
       const op = { id: newId(), seq: data.seq + 1, autor: texto(autor, 80), quando: new Date(now).toISOString(), ...cleanRequest(input), estado: 'pendente' };
+      // A pilha nova de uma divisão que ainda espera a mesa só existe na wiki: o Foundry não a conhece pelo id da operação.
+      if (waiting.some(outra => outra.tipo === 'dividir' && (outra.id === op.item || outra.id === op.alvo))) return { status: 409, data: { erro: 'Espere a mesa criar a pilha nova.' } };
       const motivo = r.conferirOperacao(estado, lugares, op, { body });
       if (motivo) return { status: 409, data: { erro: motivo } };
       // base: o rev do item como a wiki o via. O Foundry compara para dizer, na recusa, que o item mudou na mesa.

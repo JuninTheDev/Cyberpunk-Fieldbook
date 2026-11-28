@@ -23659,7 +23659,7 @@ module.exports = async ({ edge, servidores, r }) => {
       return [JSON.stringify(c109b) === JSON.stringify(esperado), JSON.stringify(c109b)];
     });
 
-    await r.passo('C110: a volta rápida para a wiki: com a ficha do Nomad aberta na wiki (a aba Inventário, só de leitura), mexer na grade do Foundry aparece nela em menos de 2 s, e o combate também; a ficha da mesa leva o lugar, o tamanho e os encaixes de cada item, e os lugares do personagem (os porta-malas dos veículos)', async () => {
+    await r.passo('C110: a volta rápida para a wiki: com a ficha do Nomad aberta na wiki (a aba Inventário; desde o C112, o mestre mexe nela), mexer na grade do Foundry aparece nela em menos de 2 s, e o combate também; a ficha da mesa leva o lugar, o tamanho e os encaixes de cada item, e os lugares do personagem (os porta-malas dos veículos)', async () => {
       // O Nomad importado de novo (o passo da importação apaga o ator dele), com a ficha inteira de agora (com os lugares), e o
       // que a grade do Foundry tem: os lugares e os itens com lugar e tamanho.
       const atorId = await edge.evaluate(`(async () => (await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '')).ator.id)()`);
@@ -23691,7 +23691,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const esperarNaPagina = async (expressao, ms = 10000) => { const fim = Date.now() + ms; let valor; while (Date.now() < fim && !(valor = await cliente.evaluate(expressao))) await cliente.sleep(50); return valor; };
         await esperarNaPagina(`!!document.querySelector('[data-cc-tab="inventario"]')`);
         await cliente.evaluate(`document.querySelector('[data-cc-tab="inventario"]').click(), true`);
-        await esperarNaPagina(`!!document.querySelector('[data-cc-grade] .grade-inventario')`);
+        await esperarNaPagina(`!!document.querySelector('[data-cc-grade] .grade-inventario.editavel')`);
         const pagina = await cliente.evaluate(`(() => {
           const raiz = document.querySelector('[data-cc-grade] .grade-inventario');
           return { editavel: raiz.classList.contains('editavel'), lugares: [...raiz.querySelectorAll('[data-lugar]')].map(l => l.dataset.lugar).sort().join(),
@@ -23762,7 +23762,7 @@ module.exports = async ({ edge, servidores, r }) => {
         const erros = [...cliente.erros];
         const ok = daFicha.lugares && daFicha.portaMalas >= 1 && daFicha.itens && foundry.naGrade.length > 3 && daFicha.emCombate === false
           && (!daFicha.arma || (daFicha.arma.ocupa === (daFicha.arma.maos >= 2 ? 2 : 1) && daFicha.arma.tamanho))
-          && pagina.visivel && !pagina.editavel && pagina.soLeitura && pagina.itens === foundry.naGrade.length && pagina.lugares.split(',').length === foundry.lugares.length
+          && pagina.visivel && pagina.editavel && !pagina.soLeitura && pagina.itens === foundry.naGrade.length && pagina.lugares.split(',').length === foundry.lugares.length
           && foraAinda === true && Object.values(tempos).every(ms => ms !== null && ms < 2000) && voltou && !erros.length;
         return [ok, JSON.stringify({ daFicha, pagina, foraAinda, tempos, voltou, erros })];
       } finally {
@@ -23895,6 +23895,187 @@ module.exports = async ({ edge, servidores, r }) => {
         return [JSON.stringify(resultado) === JSON.stringify(esperado), JSON.stringify({ resultado, tempoMover })];
       } finally {
         await edge.evaluate(`(async () => { await game.actors.get(${JSON.stringify(atorId)})?.delete(); return true; })()`);
+      }
+    });
+
+    await r.passo('C112: a grade que se mexe na wiki: na ficha do Nomad, arrastar, o teclado, dividir (Shift + clique), juntar (soltar uma pilha na outra) e, no celular, tocar no item e no lugar (com as abas dos lugares) pedem à mesa; enquanto ela não aplica, o item fica "pendente" no lugar novo e o selo conta; aplicadas, a grade fica como a mesa, e a recusa aparece com o motivo', async () => {
+      const regra = await import(pathToFileURL(path.join(servidores.raiz, 'foundry-sistema', 'scripts', 'compartilhado', 'regras-grade.mjs')).href);
+      const atorId = await edge.evaluate(`(async () => (await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '')).ator.id)()`);
+      let cliente;
+      try {
+        // Três pilhas pequenas da mesma munição (10, 5 e 3; sem lugar nos bolsos e no cinto, em "Para organizar"), e a mesa que
+        // ainda não aplica (o "Mandar a ficha para a wiki" desligado), para ver o pendente.
+        const pilhas = await edge.evaluate(`(async () => {
+          const ator = game.actors.get(${JSON.stringify(atorId)});
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const balas = qtd => { const d = foundry.utils.deepClone(cat['core_ammo:medium-pistol-basic']); d.system.quantidade = qtd; return d; };
+          const [dez, cinco, tres] = await ator.createEmbeddedDocuments('Item', [balas(10), balas(5), balas(3)]);
+          await game.system.api.wiki.mandarFicha(ator);
+          await game.settings.set('${S}', 'wikiMesa', false);
+          return { dez: dez.id, cinco: cinco.id, tres: tres.id };
+        })()`);
+        const ops = `/api/personagens/${nomad.id}/inventario/ops`;
+        const fila = () => api(ops);
+        const esperar = async (teste, ms = 8000) => { const fim = Date.now() + ms; let valor; while (Date.now() < fim && !(valor = await teste())) await edge.sleep(100); return valor; };
+        const { projetado } = await fila();
+        const mesa = (await api(`/api/personagens/${nomad.id}`)).personagem.mesa;
+        const livre = (item, lugar, x, y) => !regra.conferirOperacao(projetado, mesa.lugares, { tipo: 'mover', item, para: { lugar, x, y, girado: false } }, { body: Number(mesa.stats.BODY) || 0 });
+        // Os itens: dois de 1×1 numa grade (o de arrastar e o do celular) e um terceiro (o que a mesa põe no caminho).
+        const pequenos = projetado.filter(i => i.grade && ['bolsos', 'cinto'].includes(i.grade.lugar) && regra.tamanhoDoItem(i)?.l === 1 && regra.tamanhoDoItem(i)?.a === 1);
+        const [arrastado, tocado] = pequenos;
+        const atravessa = projetado.find(i => i.grade && i.id !== arrastado?.id && i.id !== tocado?.id && i.grade.lugar !== 'organizar' && regra.tamanhoDoItem(i)?.l === 1 && regra.tamanhoDoItem(i)?.a === 1);
+        // No esconderijo, dois quadrados livres lado a lado (o arraste e o teclado) e um terceiro (o celular).
+        const esc = mesa.lugares.find(l => l.id === 'esconderijo');
+        let par = null;
+        for (let y = 0; y < esc.a && !par; y++) for (let x = 0; x + 2 < esc.l && !par; x++) if (livre(arrastado.id, 'esconderijo', x, y) && livre(arrastado.id, 'esconderijo', x + 1, y) && livre(arrastado.id, 'esconderijo', x + 2, y)) par = { x, y };
+        cliente = await abrirEdge({ porta: 9475, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-c112-' });
+        await cliente.ir(`${wiki}/#ficha/${nomad.id}`, 1500);
+        const naPagina = async (expressao, ms = 10000) => { const fim = Date.now() + ms; let valor; while (Date.now() < fim && !(valor = await cliente.evaluate(expressao))) await cliente.sleep(50); return valor; };
+        await naPagina(`!!document.querySelector('[data-cc-tab="inventario"]')`);
+        await cliente.evaluate(`document.querySelector('[data-cc-tab="inventario"]').click(), true`);
+        await naPagina(`!!document.querySelector('[data-cc-grade] .grade-inventario.editavel')`);
+        // Os gestos de mentira (o ponteiro e o teclado), o pedido de quantos e os avisos guardados.
+        await cliente.evaluate(`(() => {
+          const g = window.__c112 = { avisos: [] };
+          g.fire = (el, tipo, x, y, extra = {}) => el.dispatchEvent(new PointerEvent(tipo, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 1, isPrimary: true, ...extra }));
+          g.item = id => document.querySelector('[data-cc-grade] [data-item-id="' + id + '"]');
+          g.centro = el => { el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+          g.celula = (lugar, x, y) => { const el = document.querySelector('[data-cc-grade] .grade-lugar[data-lugar="' + lugar + '"]'); el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + (x + 0.5) * r.width / Number(el.style.getPropertyValue('--l')), y: r.top + (y + 0.5) * r.height / Number(el.style.getPropertyValue('--a')) }; };
+          g.arrastar = (id, alvo) => { const el = g.item(id); const r = el.getBoundingClientRect(); const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 }; g.fire(el, 'pointerdown', c.x, c.y); g.fire(window, 'pointermove', c.x + 8, c.y + 8); g.fire(window, 'pointermove', alvo.x, alvo.y); g.fire(window, 'pointerup', alvo.x, alvo.y); };
+          g.tocar = (id, extra = {}) => { const el = g.item(id); const c = g.centro(el); g.fire(el, 'pointerdown', c.x, c.y, extra); g.fire(window, 'pointerup', c.x, c.y, extra); };
+          window.wikiPopup.prompt = async () => '4';
+          const toast = window.wikiPopup.toast;
+          window.wikiPopup.toast = (texto, opcoes) => { g.avisos.push(String(texto)); return toast(texto, opcoes); };
+          return true;
+        })()`);
+        const pendentesNaFila = async () => (await fila()).ops.filter(op => op.estado === 'pendente');
+        const pedidoNovo = async antes => esperar(async () => { const agora = await pendentesNaFila(); return agora.length > antes ? agora[agora.length - 1] : null; });
+        // 1. Arrastar para o esconderijo.
+        await cliente.evaluate(`(() => { const g = window.__c112; const alvo = g.celula('esconderijo', ${par.x}, ${par.y}); g.arrastar(${JSON.stringify(arrastado.id)}, alvo); return true; })()`);
+        const arraste = await pedidoNovo(0);
+        const naGrade = await naPagina(`(() => { const b = document.querySelector('[data-cc-grade] .grade-lugar[data-lugar="esconderijo"] [data-item-id=${JSON.stringify(arrastado.id)}]'); return b && b.classList.contains('pendente') && /Pendente \\(1\\)/.test((document.querySelector('[data-cc-grade-selo]') || {}).textContent || ''); })()`);
+        // Soltar no próprio lugar não pede nada (nem avisa).
+        await cliente.evaluate(`(() => { const g = window.__c112; g.arrastar(${JSON.stringify(arrastado.id)}, g.celula('esconderijo', ${par.x}, ${par.y})); return true; })()`);
+        await cliente.sleep(300);
+        // 2. O teclado: Enter pega, a seta anda um quadrado, Enter solta.
+        await cliente.evaluate(`(() => { const el = window.__c112.item(${JSON.stringify(arrastado.id)}); el.focus(); for (const key of ['Enter', 'ArrowRight', 'Enter']) el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })); return true; })()`);
+        const teclado = await pedidoNovo(1);
+        // 3. Dividir: Shift + clique na pilha de 10, 4 na nova.
+        await naPagina(`!!window.__c112.item(${JSON.stringify(pilhas.dez)})`);
+        await cliente.evaluate(`window.__c112.tocar(${JSON.stringify(pilhas.dez)}, { shiftKey: true }), true`);
+        const divisao = await pedidoNovo(2);
+        const novaNaPagina = await naPagina(`(() => { const b = window.__c112.item(${JSON.stringify(divisao?.id ?? '')}); return Boolean(b) && b.classList.contains('pendente') && b.textContent.includes('4'); })()`);
+        // 4. Juntar: a pilha de 5 solta na de 10 (agora 6).
+        await naPagina(`!!window.__c112.item(${JSON.stringify(pilhas.cinco)})`);
+        await cliente.evaluate(`(() => { const g = window.__c112; const alvo = g.centro(g.item(${JSON.stringify(pilhas.dez)})); g.arrastar(${JSON.stringify(pilhas.cinco)}, alvo); return true; })()`);
+        const juntar = await pedidoNovo(3);
+        // 5. O celular: as abas dos lugares (um grupo por vez); tocar no item nos bolsos e depois no quadrado do esconderijo.
+        await naPagina(`/Pendente \\(4\\)/.test((document.querySelector('[data-cc-grade-selo]') || {}).textContent || '')`);
+        await cliente.celular(true);
+        await naPagina(`getComputedStyle(document.querySelector('.cc-grade-abas')).display !== 'none'`);
+        const grupoDo = lugar => (lugar === 'cinto' ? 'bolsos' : lugar);
+        const abas = await cliente.evaluate(`(() => {
+          const aba = grupo => { document.querySelector('[data-cc-grade-grupo="' + grupo + '"]').click(); };
+          const visivel = seletor => { const el = document.querySelector('[data-cc-grade] ' + seletor); return Boolean(el) && getComputedStyle(el).display !== 'none'; };
+          aba('esconderijo');
+          const noEsconderijo = { corpo: visivel('.grade-corpo'), esconderijo: visivel('.grade-bloco[data-grupo="esconderijo"]'), bolsos: visivel('.grade-bloco[data-grupo="bolsos"]'), organizar: visivel('.grade-organizar') };
+          // Juntar tocando: a pilha de 3 e depois a de 10.
+          window.__c112.tocar(${JSON.stringify(pilhas.tres)});
+          window.__c112.tocar(${JSON.stringify(pilhas.dez)});
+          return noEsconderijo;
+        })()`);
+        const juntarTocando = await pedidoNovo(4);
+        await naPagina(`/Pendente \\(5\\)/.test((document.querySelector('[data-cc-grade-selo]') || {}).textContent || '')`);
+        // Tocar no item; a grade se redesenha (a ficha da mesa que chega), e ele continua escolhido; depois, o lugar.
+        await cliente.evaluate(`(() => {
+          document.querySelector('[data-cc-grade-grupo="' + ${JSON.stringify(grupoDo(tocado.grade.lugar))} + '"]').click();
+          window.__c112.tocar(${JSON.stringify(tocado.id)});
+          document.querySelector('[data-cc-grade] .grade-inventario').dataset.velha = '1';
+          return true;
+        })()`);
+        await edge.evaluate(`(async () => { await game.system.api.wiki.mandarFicha(game.actors.get(${JSON.stringify(atorId)})); return true; })()`);
+        const redesenhou = await naPagina(`!document.querySelector('[data-cc-grade] .grade-inventario[data-velha]') && !!document.querySelector('[data-cc-grade] .grade-inventario.editavel')`);
+        const escolhido = await cliente.evaluate(`document.querySelector('[data-cc-grade] .grade-item.selecionado')?.dataset.itemId || ''`);
+        await cliente.evaluate(`(() => {
+          document.querySelector('[data-cc-grade-grupo="esconderijo"]').click();
+          const alvo = window.__c112.celula('esconderijo', ${par.x + 2}, ${par.y});
+          // O clique vai direto na grade (o modo celular ligado sem recarregar deixa o menu da wiki por cima; no celular de
+          // verdade a página já abre estreita).
+          document.querySelector('[data-cc-grade] .grade-lugar[data-lugar="esconderijo"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: alvo.x, clientY: alvo.y }));
+          return true;
+        })()`);
+        const toque = await pedidoNovo(5);
+        await cliente.celular(false);
+        const selo = await naPagina(`/Pendente \\(6\\)/.test((document.querySelector('[data-cc-grade-selo]') || {}).textContent || '') ? '6' : ''`);
+        // 6. A mesa: no quadrado do toque, outro item (pela mesa, sem a wiki saber); ligada de novo, aplica tudo e recusa o toque.
+        const ocupou = await edge.evaluate(`(async () => { const a = game.actors.get(${JSON.stringify(atorId)}); return (await game.system.api.inventario.moverNaGrade(a.items.get(${JSON.stringify(atravessa.id)}), ${JSON.stringify({ lugar: 'esconderijo', x: par.x + 2, y: par.y, girado: false })}, { avisar: false })).ok; })()`);
+        await edge.evaluate(`game.settings.set('${S}', 'wikiMesa', true).then(() => game.system.api.inventario.aplicarDaWiki()).then(() => true)`);
+        await esperar(async () => !(await pendentesNaFila()).length);
+        const respondeu = Date.now();
+        const recusaNaPagina = await naPagina(`document.querySelector('[data-cc-grade-recusas] li') ? Date.now() : 0`);
+        const tempoDaRecusa = recusaNaPagina ? recusaNaPagina - respondeu : null;
+        const respostas = Object.fromEntries((await fila()).ops.map(op => [op.id, op.estado]));
+        const motivo = (await fila()).ops.find(op => op.id === toque?.id)?.motivo;
+        const naMesa = await edge.evaluate(`(() => {
+          const a = game.actors.get(${JSON.stringify(atorId)});
+          const g = id => a.items.get(id)?.getFlag('${S}', 'grade');
+          const medias = a.items.filter(i => i.name === 'Medium Pistol (Basic)').map(i => i.system.quantidade).sort((x, y) => x - y);
+          return { arrastado: [g(${JSON.stringify(arrastado.id)})?.lugar, g(${JSON.stringify(arrastado.id)})?.x, g(${JSON.stringify(arrastado.id)})?.y], medias, tocado: g(${JSON.stringify(tocado.id)})?.lugar };
+        })()`);
+        // A página: sem pendentes, a recusa com o motivo (e o aviso), e o item no lugar da mesa.
+        const depois = await naPagina(`(() => {
+          const recusa = document.querySelector('[data-cc-grade-recusas] li');
+          const sel = (document.querySelector('[data-cc-grade-selo]') || {}).textContent || '';
+          return recusa && !/Pendente/.test(sel) && !document.querySelector('[data-cc-grade] .pendente') ? { recusa: recusa.textContent, avisos: [...window.__c112.avisos] } : null;
+        })()`);
+        // 7. Só uma recusa, sem nada mudar na mesa (a ficha da mesa fica igual): a página a mostra em menos de 2 s, pelo aviso do
+        // servidor, relendo a fila. O que esperava ir para a wiki vai antes, e a mesa para de aplicar de novo.
+        await cliente.evaluate("(document.querySelector('[data-cc-grade] .grade-inventario').dataset.velha = '1', true)");
+        await edge.evaluate(`game.system.api.wiki.mandarPendentes().then(() => game.settings.set('${S}', 'wikiMesa', false)).then(() => true)`);
+        // A ficha que foi redesenha a página (a grade só de leitura, por um instante, e de novo a que se mexe).
+        await naPagina(`!document.querySelector('[data-cc-grade] .grade-inventario[data-velha]')`, 3000);
+        await naPagina(`!!document.querySelector('[data-cc-grade] .grade-inventario.editavel:not([data-velha])')`);
+        const agora = (await fila()).projetado;
+        let livre2 = null;
+        for (let y = 0; y < esc.a && !livre2; y++) for (let x = 0; x < esc.l && !livre2; x++)
+          if (!regra.conferirOperacao(agora, mesa.lugares, { tipo: 'mover', item: tocado.id, para: { lugar: 'esconderijo', x, y, girado: false } }, { body: Number(mesa.stats.BODY) || 0 })) livre2 = { x, y };
+        // Os avisos que ainda estão na tela (no canto de baixo) não ficam por cima do quadrado.
+        await cliente.evaluate(`(() => { document.querySelectorAll('.toast').forEach(aviso => aviso.remove()); const g = window.__c112; g.arrastar(${JSON.stringify(tocado.id)}, g.celula('esconderijo', ${livre2.x}, ${livre2.y})); return true; })()`);
+        const segundo = await pedidoNovo(0);
+        const ocupou2 = await edge.evaluate(`(async () => { const a = game.actors.get(${JSON.stringify(atorId)}); return (await game.system.api.inventario.moverNaGrade(a.items.get(${JSON.stringify(atravessa.id)}), ${JSON.stringify({ lugar: 'esconderijo', ...livre2, girado: false })}, { avisar: false })).ok; })()`);
+        await edge.evaluate(`game.settings.set('${S}', 'wikiMesa', true).then(() => game.system.api.inventario.aplicarDaWiki()).then(() => true)`);
+        await esperar(async () => !(await pendentesNaFila()).length);
+        const respondeu2 = Date.now();
+        const recusa2 = await naPagina(`document.querySelectorAll('[data-cc-grade-recusas] li').length >= 2 ? Date.now() : 0`, 6000);
+        const segunda = { pedido: segundo?.item === tocado.id, ocupou: ocupou2, estado: (await fila()).ops.find(op => op.id === segundo?.id)?.estado, rapida: Boolean(recusa2) && recusa2 - respondeu2 < 2000, avisos: await cliente.evaluate('window.__c112.avisos.length') };
+        // 8. Um lugar novo na mesa (o Carryall nas costas dá a mochila): a aba dele aparece na página, sem recarregar.
+        const semMochila = await cliente.evaluate(`!document.querySelector('[data-cc-grade-grupo="mochila"]')`);
+        await edge.evaluate(`(async () => {
+          const a = game.actors.get(${JSON.stringify(atorId)});
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const [carryall] = await a.createEmbeddedDocuments('Item', [foundry.utils.deepClone(cat['core_gear:carryall'])]);
+          return (await game.system.api.inventario.moverNaGrade(carryall, { lugar: 'corpo:mochila', x: 0, y: 0, girado: false }, { avisar: false })).ok;
+        })()`);
+        const abaDaMochila = Boolean(await naPagina(`!!document.querySelector('[data-cc-grade-grupo="mochila"]') && !!document.querySelector('[data-cc-grade] .grade-bloco[data-grupo="mochila"]')`, 6000));
+        segunda.mochila = semMochila && abaDaMochila;
+        const resultado = {
+          pedidos: [arraste, teclado, divisao, juntar, juntarTocando, toque].map(op => op && [op.tipo, op.item, op.para?.lugar ?? null, op.para?.x ?? null, op.qtd ?? null, op.alvo ?? null]),
+          naGrade: Boolean(naGrade), novaNaPagina: Boolean(novaNaPagina), abas, redesenhou: Boolean(redesenhou), escolhido: escolhido === tocado.id, selo, ocupou,
+          respostas: [arraste, teclado, divisao, juntar, juntarTocando, toque].map(op => respostas[op?.id]), naMesa, recusaRapida: tempoDaRecusa !== null && tempoDaRecusa < 2000,
+          // Os avisos da página: só a recusa da mesa (os gestos não pediram nada a mais).
+          recusa: depois && depois.recusa.includes(motivo || '-'), avisos: depois && depois.avisos, segunda
+        };
+        const esperado = {
+          pedidos: [['mover', arrastado.id, 'esconderijo', par.x, null, null], ['mover', arrastado.id, 'esconderijo', par.x + 1, null, null], ['dividir', pilhas.dez, divisao?.para?.lugar ?? null, divisao?.para?.x ?? null, 4, null], ['juntar', pilhas.cinco, null, null, null, pilhas.dez], ['juntar', pilhas.tres, null, null, null, pilhas.dez], ['mover', tocado.id, 'esconderijo', par.x + 2, null, null]],
+          naGrade: true, novaNaPagina: true, abas: { corpo: false, esconderijo: true, bolsos: false, organizar: true }, redesenhou: true, escolhido: true, selo: '6', ocupou: true,
+          respostas: ['aplicada', 'aplicada', 'aplicada', 'aplicada', 'aplicada', 'recusada'],
+          naMesa: { arrastado: ['esconderijo', par.x + 1, par.y], medias: [4, 14], tocado: tocado.grade.lugar }, recusaRapida: true,
+          recusa: true, avisos: [`A mesa recusou: ${motivo}`], segunda: { pedido: true, ocupou: true, estado: 'recusada', rapida: true, avisos: 2, mochila: true }
+        };
+        return [JSON.stringify(resultado) === JSON.stringify(esperado) && /já está ali/.test(motivo || ''), JSON.stringify({ resultado, motivo, tempoDaRecusa })];
+      } finally {
+        await cliente?.fechar();
+        await edge.evaluate(`(async () => { await game.settings.set('${S}', 'wikiMesa', true); await game.actors.get(${JSON.stringify(atorId)})?.delete(); return true; })()`);
       }
     });
 

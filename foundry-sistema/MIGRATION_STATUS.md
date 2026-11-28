@@ -11155,6 +11155,49 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1 0; G2 limpo; G3 930/930; G4 359/359 (659 s). Antes, uma rodada com 357/359, só as duas instáveis conhecidas (`estados (C26)` e `C26: chaves do Fluxo`, "A nonpersisted Document cannot be updated"); a seguinte passou inteira. As regressões da wiki (`node tests/validar.js`) e o teste dos scripts do servidor (`servidor-sistema.test.js`, 10/10) passaram.
 - **Mutações:** 37 de 37 morreram (`scratchpad/mutacoes-c111.mjs g3|sh|g4 [filtro]`). No G3 e nas regressões da wiki, 26: o resumo sem o escudo, sem o corpo e sem os upgrades; o juntar sem a condição dos upgrades; qualquer operação; mover para o mesmo lugar; dividir tudo; juntar com upgrades e na pilha cheia; dividir sem tirar da origem; juntar sem tirar a origem vazia; projetar fora da ordem e com a que não cabe; aplicar mexendo na entrada; no servidor, sem a mesa do 14, sem o teto, contra a mesa sem as pendentes, as decididas que ficam, decidir de novo, o pedido com o que vier, sem a base, a fila de qualquer jogador, o jogador que responde, a resposta de qualquer ator, as pendentes para o jogador e as de toda campanha. No script do servidor, 1: a regra que não reinicia a wiki. No G4 focado, 10: sem o aviso na hora, aplicar com a configuração desligada, sem a conferência antes, sem a marca no ator, sem a resposta guardada, sem dizer que mudou, a pilha nova onde nasceu, juntar sem apagar a vazia e sem encher o destino, fora da ordem. Viveram na primeira rodada e pediram teste: a ficha do Foundry 12 e a campanha de outro mundo (as regressões da wiki); a pilha nova onde nasceu (o passo pedia o primeiro quadrado livre, onde o Foundry já põe o item que chega: agora, o fim do esconderijo). A "marca no ator" pareceu viver porque o executor contava o passo que não rodou como vivo: agora ele exige o ✓ ou o ✗ do passo. Os arquivos voltaram iguais (md5).
 
+### Ciclo 237 (2026-11-28): C112, a grade que se mexe na wiki (sessão KouArt)
+
+- **Pedido do usuário (2026-11-28):** "Continue", perguntado se podia mexer na página da wiki para o C112. O C112 fica
+  `[x]`.
+- **Entrega:**
+  - **a página (`criador.js`, `wiki.css`):** a aba Inventário da ficha, para o dono e o mestre, mexe no estado projetado
+    (a ficha da mesa com o que espera a mesa por cima, que o servidor calcula): arrastar, tocar no item e depois no lugar,
+    o teclado (Enter, as setas, PageUp e PageDown, R, Enter), Shift + clique divide (pergunta quantos; a pilha nova vai
+    para o primeiro lugar livre do uso dela, como no Foundry) e soltar uma pilha na outra (ou tocar numa e depois na
+    outra) junta. Cada gesto vira uma operação da fila do C111, conferida antes com a mesma regra (a sombra verde ou
+    vermelha). O item com uma mudança esperando fica "pendente" (tracejado); o selo diz "Na mesa agora" ou "A mesa está
+    fechada" (quando a wiki sabe da mesa) e "Pendente (n)"; a recusa da mesa aparece embaixo da grade, com o motivo (as das
+    últimas 24 h), e a nova também num aviso. No celular, os lugares viram abas (Corpo, Bolsos e cinto, Mochila,
+    Esconderijo, Veículos), e "Para organizar" fica sempre. O item escolhido continua escolhido quando a grade se
+    redesenha (o aviso do servidor chega a qualquer hora). A ficha aberta relê a fila a cada aviso;
+  - **a tela (`compartilhado/grade-ui.mjs`):** o `pendentes` (a marca) e o `podeJuntar`/`aoJuntar` (soltar na pilha
+    ou tocar nela junta); o Foundry não passa esses e fica igual. **Corrigido:** os ouvintes que a grade punha no elemento
+    (o ponteiro, o clique, o teclado) não saíam com ela; a wiki redesenha no mesmo elemento, e um Enter era respondido pelas
+    grades velhas também (três pedidos por um). Agora saem juntos (o `AbortController`);
+  - **o servidor (`api-inventario.js`):** nada com a pilha nova de uma divisão que ainda espera a mesa ("Espere a mesa
+    criar a pilha nova."): ela só existe na wiki, com o id da operação, e o Foundry não a conhece.
+- **Teste mudado de propósito:** o passo do C110 no G4 conferia a grade só de leitura; agora o mestre mexe nela (o pedido
+  do C112), e o passo confere a grade editável. O `grade-ui.test.mjs` confere que a página carrega também a regra.
+- **Fotos (passo temporário, `tests/.saida/v14-c112-computador.png` e `v14-c112-celular.png`):** o pendente tracejado,
+  o selo, as abas no celular. Com o modo celular ligado sem recarregar a página, o menu da wiki fica por cima do conteúdo
+  (no celular de verdade, a página já abre estreita): o teste clica direto na grade.
+- **Fora deste ciclo:** as travas do combate e do esconderijo durante a sessão (o C114) e a importação que divide a pilha
+  acima do teto (o C113).
+- **Testes de referência:**
+  - **G3:** `grade-ui.test.mjs`: o pendente só nos itens pedidos; a página carrega a tela e a regra da mesma pasta.
+  - **As regressões da wiki:** `api.test.js`: a pilha nova da divisão pendente não junta, não recebe e não se move; duas
+    pilhas de verdade juntam.
+  - **G4:** o passo do C112: com a mesa sem aplicar, na ficha do Nomad aberta noutro navegador, arrastar para o
+    esconderijo (o item no lugar novo, pendente, e o selo), soltar no próprio lugar (nada), o teclado (um quadrado à
+    direita), Shift + clique (4 na pilha nova, pendente), soltar a pilha de 5 na de 10, e no celular as abas (o
+    esconderijo sem o corpo e os bolsos), tocar na de 3 e na de 10 (junta) e tocar num item, a grade que se redesenha
+    (ele continua escolhido) e o quadrado; o selo com 6. Na mesa, outro item no quadrado do último; ligada, as 5 primeiras
+    aplicadas e a última recusada; a mesa com o item no lugar e as pilhas 4 e 14; a página sem pendentes, com a recusa (em
+    menos de 2 s) e um aviso só, o da recusa. Depois, uma recusa sozinha (nada muda na ficha da mesa) aparece em menos de
+    2 s, e o Carryall posto nas costas na mesa dá a aba da mochila na página.
+- **Portões:** G1 0; G2 limpo; G3 930/930; G4 360/360 (671 s). Antes, numa rodada com o mesmo código, 360/360; e, depois de reforçar o passo, uma com 357/360: as duas instáveis conhecidas do C26 e, com o mesmo erro ("A nonpersisted Document cannot be updated"), o `veículo ator (C46.3)`, que ainda não estava na lista das instáveis e roda bem antes dos passos do inventário; a seguinte passou inteira. As regressões da wiki (`node tests/validar.js`) passaram.
+- **Mutações:** 15 de 15 morreram (`scratchpad/mutacoes-c112.mjs g3|g4 [filtro]`). No G3 e nas regressões da wiki, 2: sem o pendente; a pilha nova da divisão pendente que vale. No G4 focado, 13: soltar e tocar na pilha que não juntam, os gestos que ficam no elemento, a escolha que some no redesenho, o aviso que não relê a fila, sem o aviso da recusa, sem os grupos, dividir um só, soltar no lugar que pede, sem o selo do pendente, a página que não junta, o redesenho que passa pela só de leitura e as abas que não acompanham os lugares. Viveram na primeira rodada e pediram teste: o aviso que não relê a fila (a recusa vinha junto com o que a mesa aplicou, que muda a ficha da mesa: agora há uma rodada só com a recusa, em menos de 2 s) e as abas que não acompanham (agora o Carryall nas costas dá a aba da mochila). O desligar automático da grade, que nenhum teste distinguia (a página já desliga antes de desenhar de novo), saiu. Os arquivos voltaram iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

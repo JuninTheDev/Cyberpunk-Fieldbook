@@ -41,6 +41,9 @@
 .grade-item .qtd { position: absolute; right: 2px; bottom: 1px; font-family: var(--cp-dados, monospace); font-size: 10px; color: var(--grade-destaque); }
 .grade-item.selecionado { outline: 2px solid var(--grade-destaque); outline-offset: -2px; background: color-mix(in srgb, var(--grade-destaque) 18%, var(--grade-item)); }
 .grade-item.arrastando { opacity: 0.4; pointer-events: none; }
+/* A mudança esperando a mesa (a wiki, o C112) e a pilha onde soltar junta. */
+.grade-item.pendente { border-style: dashed; opacity: 0.7; }
+.grade-item.alvo-ok { border-color: var(--grade-ok); box-shadow: inset 0 0 0 2px var(--grade-ok); }
 .grade-inventario:not(.editavel) .grade-item { cursor: default; }
 .grade-sombra { pointer-events: none; z-index: 2; border: 2px dashed var(--grade-ok); background: color-mix(in srgb, var(--grade-ok) 20%, transparent); }
 .grade-sombra.nao { border-color: var(--grade-alerta); background: color-mix(in srgb, var(--grade-alerta) 20%, transparent); }

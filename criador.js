@@ -1862,9 +1862,9 @@
   }
 
   // A grade do inventário (o C110): a mesma tela do Foundry 14 (foundry-sistema/scripts/compartilhado/grade-ui.mjs, com a
-  // regra de regras-grade.mjs) e o CSS dela, carregados na primeira ficha aberta. Aqui, só de leitura: mexer pela wiki é o
-  // C112.
+  // regra de regras-grade.mjs) e o CSS dela, carregados na primeira ficha aberta. O dono e o mestre mexem nela (o C112).
   let gradeUi = null;
+  let regrasGrade = null;
   let gradeCarregando = null;
   function loadGrade() {
     if (!document.querySelector('link[data-cc-grade-css]')) {
@@ -1873,12 +1873,24 @@
       document.head.append(link);
     }
     if (!gradeCarregando) {
-      gradeCarregando = import(new URL('foundry-sistema/scripts/compartilhado/grade-ui.mjs', document.baseURI).href)
-        .then(mod => { gradeUi = mod; return mod; }, () => { gradeCarregando = null; return null; });
+      const pasta = new URL('foundry-sistema/scripts/compartilhado/', document.baseURI).href;
+      gradeCarregando = Promise.all([import(`${pasta}grade-ui.mjs`), import(`${pasta}regras-grade.mjs`)])
+        .then(([tela, regra]) => { gradeUi = tela; regrasGrade = regra; return tela; }, () => { gradeCarregando = null; return null; });
     }
     return gradeCarregando;
   }
-  // A aba Inventário: a grade como está na mesa do Foundry 14 (o que ele mandou por último).
+  // No celular, um grupo de lugares por vez (as abas; o plano, 7). O escolhido fica lembrado nesta página.
+  const GRADE_GROUPS = [['corpo', 'Corpo'], ['bolsos', 'Bolsos e cinto'], ['mochila', 'Mochila'], ['esconderijo', 'Esconderijo'], ['veiculos', 'Veículos']];
+  const groupOfPlace = id => (id === 'bolsos' || id === 'cinto' ? 'bolsos' : String(id).startsWith('veiculo:') ? 'veiculos' : id);
+  let gradeGroup = 'corpo';
+  const groupTabs = lugares => {
+    const existentes = new Set(['corpo', ...lugares.filter(lugar => lugar.tipo === 'grade').map(lugar => groupOfPlace(lugar.id))]);
+    return `<div class="cc-grade-abas" role="tablist" aria-label="Lugares do inventário">${GRADE_GROUPS.filter(([key]) => existentes.has(key)).map(([key, label]) => `<button type="button" class="map-filter${key === gradeGroup ? ' active' : ''}" role="tab" aria-selected="${key === gradeGroup}" data-cc-grade-grupo="${key}">${label}</button>`).join('')}</div>`;
+  };
+  // Cada grade da tela ganha o grupo dela (a tela se redesenha inteira a cada mudança).
+  const markGroups = holder => { for (const bloco of holder.querySelectorAll('.grade-bloco')) bloco.dataset.grupo = groupOfPlace((bloco.querySelector('[data-lugar]') || {}).dataset?.lugar || ''); };
+  // A aba Inventário: a grade como está na mesa do Foundry 14 (o que ele mandou por último). Para o dono e o mestre, o
+  // drawInventory a troca, logo depois, pela grade que se mexe.
   function inventoryBox(doc) {
     const grade = gradeUi && doc.mesa ? gradeUi.gradeDaMesa(doc.mesa) : null;
     if (!grade) {
@@ -1887,8 +1899,75 @@
         : 'A grade aparece aqui quando o personagem estiver na mesa do Foundry 14 (depois de o mestre importar). Até lá, o equipamento fica na aba Equipamento.';
       return box('Inventário', `<p class="note-status">${why}</p>`, ' data-toc="Inventário"');
     }
-    const status = `Como está na mesa do Foundry${doc.mesa.recebido ? `, atualizada em ${when(doc.mesa.recebido)}` : ''}. Para mexer, use a ficha do Foundry: mexer por aqui vem depois.${grade.emCombate ? ' <b class="cc-bad">Em combate na mesa.</b>' : ''}${grade.organizar ? ` <b class="cc-bad">${grade.organizar} para organizar.</b>` : ''}`;
-    return box('Inventário', `<p class="note-status" data-cc-grade-status>${status}</p><div class="cc-inventario" data-cc-grade>${gradeUi.htmlDaGrade(gradeUi.modeloDaGrade(grade.lugares, grade.itens), { editavel: false, organizar: grade.organizar, titulo: true })}</div>`, ' data-toc="Inventário"');
+    const status = `Como está na mesa do Foundry${doc.mesa.recebido ? `, atualizada em ${when(doc.mesa.recebido)}` : ''}.${grade.emCombate ? ' <b class="cc-bad">Em combate na mesa.</b>' : ''}${grade.organizar ? ` <b class="cc-bad">${grade.organizar} para organizar.</b>` : ''}`;
+    return box('Inventário', `<p class="note-status" data-cc-grade-status>${status}</p><p class="note-status cc-grade-selo" data-cc-grade-selo></p>${groupTabs(grade.lugares)}<div class="cc-inventario" data-cc-grade data-grupo="${gradeGroup}">${gradeUi.htmlDaGrade(gradeUi.modeloDaGrade(grade.lugares, grade.itens), { editavel: false, organizar: grade.organizar, titulo: true })}</div><ul class="cc-grade-recusas" data-cc-grade-recusas></ul>`, ' data-toc="Inventário"');
+  }
+
+  // A grade que se mexe (o C112). O dono e o mestre (a ficha inteira só abre para eles) mexem no estado projetado: a ficha
+  // da mesa com o que ainda espera a mesa por cima, que o servidor calcula. Cada mudança vai para a fila
+  // (api/personagens/<id>/inventario/ops), conferida com a mesma regra do Foundry; o item com uma mudança esperando fica
+  // "pendente", e a recusa da mesa aparece com o motivo (a nova, também num aviso). Sem a ficha da mesa do Foundry 14 (ou
+  // sem rede), a grade fica só de leitura.
+  const seenRefusals = new Map();
+  // O item escolhido (o toque) fica escolhido quando a grade se redesenha (o aviso do servidor chega a qualquer hora).
+  let gradeSelected = '';
+  const samePlace = (a, b) => Boolean(a && b) && a.lugar === b.lugar && a.x === b.x && a.y === b.y && Boolean(a.girado) === Boolean(b.girado);
+  async function drawInventory(root, doc, id) {
+    const holder = root.querySelector('[data-cc-grade]');
+    if (!holder || !gradeUi || !regrasGrade || !doc.mesa) return;
+    const [answer, estado] = await Promise.all([api(`api/personagens/${id}/inventario/ops`), api('api/estado')]);
+    if (!holder.isConnected || answer.status !== 200 || !answer.data.projetado) return;
+    const { ops = [], projetado } = answer.data;
+    const lugares = doc.mesa.lugares;
+    const body = Number((doc.mesa.stats || {}).BODY) || 0;
+    const pendentes = ops.filter(op => op.estado === 'pendente');
+    const pedir = async corpo => {
+      const resposta = await api(`api/personagens/${id}/inventario/ops`, { method: 'POST', body: corpo });
+      if (resposta.status !== 201) window.wikiPopup.toast(resposta.data.erro || 'Não consegui pedir a mudança.', { tone: 'bad' });
+      return drawInventory(root, doc, id);
+    };
+    if (holder.ccDesligar) holder.ccDesligar();
+    holder.ccDesligar = gradeUi.ligarGrade(holder, {
+      lugares, itens: projetado.filter(item => item.grade), body, editavel: true, titulo: true,
+      selecionado: projetado.some(item => item.id === gradeSelected) ? gradeSelected : '', aoSelecionar: escolhido => { gradeSelected = escolhido; },
+      pendentes: pendentes.flatMap(op => [op.item, op.alvo, op.tipo === 'dividir' ? op.id : ''].filter(Boolean)),
+      conferir: (item, destino) => (samePlace(item.grade, destino) ? null : regrasGrade.conferirOperacao(projetado, lugares, { tipo: 'mover', item: item.id, para: destino }, { body })),
+      aoMover: (item, destino) => (samePlace(item.grade, destino) ? null : pedir({ tipo: 'mover', item: item.id, para: destino })),
+      aoDividir: item => splitStack(item, projetado, lugares, body, pedir),
+      podeJuntar: (item, alvo) => regrasGrade.podeJuntar(item, alvo),
+      aoJuntar: (item, alvo) => pedir({ tipo: 'juntar', item: item.id, alvo: alvo.id })
+    });
+    markGroups(holder);
+    // As abas dos lugares acompanham os lugares (o veículo novo, a mochila).
+    const tabs = root.querySelector('.cc-grade-abas');
+    if (tabs) tabs.outerHTML = groupTabs(lugares);
+    const grade = gradeUi.gradeDaMesa(doc.mesa) || {};
+    const status = root.querySelector('[data-cc-grade-status]');
+    if (status) status.innerHTML = `Arraste para mudar de lugar (ou toque no item e depois no lugar; no teclado, Enter pega, as setas andam e Enter solta); R gira; Shift + clique divide a pilha; soltar uma pilha na outra junta. Apagar, dar, usar e recarregar são na mesa.${grade.emCombate ? ' <b class="cc-bad">Em combate na mesa.</b>' : ''}`;
+    // O selo: a mesa aberta ou fechada (quando a wiki sabe) e o que espera a mesa.
+    const mesa = estado.status === 200 ? estado.data.mesa : null;
+    const selo = [mesa && mesa.aberta ? '<b class="cc-ok">Na mesa agora</b>: o mestre aplica em instantes.' : mesa ? '<b>A mesa está fechada</b>: o que você mexer entra quando o mundo abrir.' : '', pendentes.length ? `<b class="cc-bad" data-cc-grade-pendentes>Pendente (${pendentes.length})</b>` : ''].filter(Boolean).join(' · ');
+    const seloEl = root.querySelector('[data-cc-grade-selo]');
+    if (seloEl) seloEl.innerHTML = selo;
+    // As recusas das últimas 24 h, da mais nova; a que chegou com a página aberta, também num aviso.
+    const recusadas = ops.filter(op => op.estado === 'recusada').sort((x, y) => String(y.decidido).localeCompare(String(x.decidido)));
+    const lista = root.querySelector('[data-cc-grade-recusas]');
+    if (lista) lista.innerHTML = recusadas.slice(0, 5).map(op => `<li data-cc-grade-recusa="${esc(op.id)}">A mesa recusou${op.decidido ? ` (${when(op.decidido)})` : ''}: ${esc(op.motivo || '')}</li>`).join('');
+    const vistas = seenRefusals.get(id);
+    if (vistas) { for (const op of recusadas.filter(item => !vistas.has(item.id))) window.wikiPopup.toast(`A mesa recusou: ${op.motivo || ''}`, { tone: 'bad' }); }
+    seenRefusals.set(id, new Set(recusadas.map(op => op.id)));
+  }
+  // Dividir: quantos na pilha nova; ela vai para o primeiro lugar livre do uso da pilha (como no Foundry), ou para "Para
+  // organizar".
+  async function splitStack(item, projetado, lugares, body, pedir) {
+    const total = Number(item.qtd) || 1;
+    const texto = await window.wikiPopup.prompt({ title: 'Dividir pilha', message: `Quantos ${item.name} na pilha nova? (de 1 a ${total - 1})`, value: String(Math.ceil(total / 2)), ok: 'Dividir' });
+    if (texto === null || texto === undefined || String(texto).trim() === '') return null;
+    const qtd = Number(String(texto).trim());
+    const fixos = projetado.filter(outro => outro.grade && regrasGrade.tamanhoDoItem(outro)).map(outro => ({ item: outro, grade: outro.grade }));
+    const lugar = regrasGrade.arrumar([{ ...item, id: '#nova', qtd, grade: null, uso: regrasGrade.usoDoItem(item) }], lugares, { body, fixos })['#nova'];
+    const para = lugar ? { lugar: lugar.lugar, x: lugar.x || 0, y: lugar.y || 0, girado: Boolean(lugar.girado) } : { lugar: 'organizar', x: 0, y: 0, girado: false };
+    return pedir({ tipo: 'dividir', item: item.id, qtd, para });
   }
 
   // As abas da coluna principal da ficha (a última escolhida fica lembrada neste aparelho).
@@ -1960,6 +2039,7 @@
         </div>
       </div>`;
     wireCyber(root);
+    drawInventory(root, doc, id);
     if (papel === 'mestre') drawHistory(root, id);
     // Anotações: salvam sozinhas (um instante depois de parar de digitar), sem mudar a versão do personagem.
     const notes = root.querySelector('[data-cc-notes]');
@@ -1984,28 +2064,41 @@
       let seen = stamp(doc);
       let events = null;
       const refresh = async () => {
-        if (token !== renderToken || !document.body.contains(root)) { clearInterval(timer); if (events) events.close(); return; }
+        if (token !== renderToken || !document.body.contains(root)) { clearInterval(timer); if (events) events.close(); return false; }
         const fresh = await api(`api/personagens/${id}`);
         const next = fresh.status === 200 && fresh.data.personagem;
-        if (!next || stamp(next) === seen) return;
+        if (!next || stamp(next) === seen) return false;
         seen = stamp(next);
         Object.assign(doc, next);
         // Só as partes que a mesa muda: as anotações (que alguém pode estar escrevendo) e a aba aberta ficam.
         const redrawn = sheetHtml(doc);
-        for (const key of ['lado', 'resumo', 'pericias', 'equipamento', 'inventario', 'arsenal', 'cyberware']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
+        // A grade que se mexe se redesenha no lugar (o drawInventory, logo abaixo), sem passar pela só de leitura: um arraste
+        // naquele instante não se perde.
+        const live = Boolean((root.querySelector('[data-cc-grade]') || {}).ccDesligar);
+        for (const key of ['lado', 'resumo', 'pericias', 'equipamento', 'inventario', 'arsenal', 'cyberware']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part && !(key === 'inventario' && live)) part.innerHTML = redrawn[key]; }
         wireCyber(root);
         const buying = root.querySelector('[data-cc-panel="compras"]');
         if (buying) buying.innerHTML = purchasesBox(doc);
         const top = content.querySelector('.lede');
         if (top) top.innerHTML = redrawn.lede;
+        drawInventory(root, doc, id);
+        return true;
       };
       const timer = setInterval(refresh, 30000);
       if (window.EventSource) {
         events = new EventSource(`api/personagens/${encodeURIComponent(id)}/eventos`);
-        events.addEventListener('mesa', refresh);
+        events.addEventListener('mesa', async () => { if (!(await refresh()) && token === renderToken) drawInventory(root, doc, id); });
       }
     }
     root.onclick = async event => {
+      const group = event.target.closest('[data-cc-grade-grupo]');
+      if (group) {
+        gradeGroup = group.dataset.ccGradeGrupo;
+        root.querySelectorAll('[data-cc-grade-grupo]').forEach(button => { const on = button === group; button.classList.toggle('active', on); button.setAttribute('aria-selected', String(on)); });
+        const holder = root.querySelector('[data-cc-grade]');
+        if (holder) holder.dataset.grupo = gradeGroup;
+        return;
+      }
       const tab = event.target.closest('[data-cc-tab]');
       if (tab) {
         root.querySelectorAll('[data-cc-tab]').forEach(button => { const on = button === tab; button.classList.toggle('active', on); button.setAttribute('aria-selected', String(on)); });

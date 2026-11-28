@@ -42,12 +42,13 @@ export function gradeDaMesa(mesa) {
 }
 
 const rotuloDoItem = item => `${item.name}${Number(item.qtd) > 1 ? ` (${item.qtd})` : ''}`;
-// titulo: a dica do navegador (a wiki; o Foundry tem a dele, pelo data-tooltip).
-const botaoDoItem = (item, { editavel, selecionado, titulo }, estilo = '') => `<button type="button" class="grade-item${item.l >= 2 ? ' largo' : ''}${item.id === selecionado ? ' selecionado' : ''}" data-item-id="${esc(item.id)}"${estilo ? ` style="${estilo}"` : ''} aria-label="${esc(rotuloDoItem(item))}" aria-pressed="${item.id === selecionado}"${editavel ? '' : ' aria-disabled="true"'} data-tooltip="${esc(rotuloDoItem(item))}"${titulo ? ` title="${esc(rotuloDoItem(item))}"` : ''}>${item.img ? `<img src="${esc(item.img)}" alt="" draggable="false">` : ''}<span class="nome">${esc(item.name)}</span>${Number(item.qtd) > 1 ? `<span class="qtd">${esc(item.qtd)}</span>` : ''}</button>`;
+// titulo: a dica do navegador (a wiki; o Foundry tem a dele, pelo data-tooltip). pendentes: os ids dos itens com uma mudança
+// esperando a mesa (a wiki, o C112).
+const botaoDoItem = (item, { editavel, selecionado, titulo, pendentes }, estilo = '') => `<button type="button" class="grade-item${item.l >= 2 ? ' largo' : ''}${item.id === selecionado ? ' selecionado' : ''}${pendentes.has(item.id) ? ' pendente' : ''}" data-item-id="${esc(item.id)}"${estilo ? ` style="${estilo}"` : ''} aria-label="${esc(rotuloDoItem(item))}" aria-pressed="${item.id === selecionado}"${editavel ? '' : ' aria-disabled="true"'} data-tooltip="${esc(rotuloDoItem(item))}"${titulo ? ` title="${esc(rotuloDoItem(item))}"` : ''}>${item.img ? `<img src="${esc(item.img)}" alt="" draggable="false">` : ''}<span class="nome">${esc(item.name)}</span>${Number(item.qtd) > 1 ? `<span class="qtd">${esc(item.qtd)}</span>` : ''}</button>`;
 
 // O HTML da tela, a partir do modelo. Os nomes e as imagens são escapados (o nome vem do jogador).
-export function htmlDaGrade(modelo, { editavel = true, selecionado = '', organizar = 0, titulo = false } = {}) {
-  const opcoes = { editavel, selecionado, titulo };
+export function htmlDaGrade(modelo, { editavel = true, selecionado = '', organizar = 0, titulo = false, pendentes = [] } = {}) {
+  const opcoes = { editavel, selecionado, titulo, pendentes: new Set(pendentes) };
   const encaixes = modelo.filter(lugar => lugar.tipo === 'encaixe');
   const listas = modelo.filter(lugar => lugar.tipo === 'lista' && lugar.id !== 'organizar');
   const grades = modelo.filter(lugar => lugar.tipo === 'grade');
@@ -101,14 +102,21 @@ const GRADES = new Map();
 export const gradesAbertas = () => GRADES.size;
 
 // Desenha em raiz e liga os gestos. opcoes: { lugares, itens, body, editavel, selecionado, conferir(item, destino) =>
-// motivo ou null, aoMover(item, destino), aoDividir(item), aoAbrir(item), aoSelecionar(id), receber(item, destino) }.
-// receber: o item de outra grade solto nesta (sem ele, esta não recebe). Devolve o que desliga os gestos da janela (o
+// motivo ou null, aoMover(item, destino), aoDividir(item), aoAbrir(item), aoSelecionar(id), receber(item, destino), titulo,
+// pendentes, podeJuntar(item, alvo), aoJuntar(item, alvo) }. receber: o item de outra grade solto nesta (sem ele, esta não
+// recebe). podeJuntar e aoJuntar (a wiki, o C112): soltar o item em cima de outro (ou tocar num e depois no outro) com que
+// ele junta pede para juntar as pilhas, no lugar de mover. Devolve o que desliga os gestos da janela (o
 // window recebe o arraste) e tira a grade do registro.
 export function ligarGrade(raiz, opcoes) {
   const { lugares, itens, body = 0, editavel = true, conferir = () => null, aoMover = () => {}, aoDividir = () => {}, aoAbrir = () => {}, aoSelecionar = () => {}, receber = null } = opcoes;
+  const { titulo = false, pendentes = [], podeJuntar = () => false, aoJuntar = () => {} } = opcoes;
   let selecionado = opcoes.selecionado ?? '';
+  // Os gestos no elemento saem com o desligar (o C112: a wiki redesenha no mesmo elemento, e um Enter era respondido pelas
+  // grades velhas também).
+  const gestos = new globalThis.AbortController();
+  const naRaiz = { signal: gestos.signal };
   const modelo = modeloDaGrade(lugares, itens, { body });
-  raiz.innerHTML = htmlDaGrade(modelo, { editavel, selecionado, organizar: modelo.find(lugar => lugar.id === 'organizar')?.itens.length ?? 0 });
+  raiz.innerHTML = htmlDaGrade(modelo, { editavel, selecionado, titulo, pendentes, organizar: modelo.find(lugar => lugar.id === 'organizar')?.itens.length ?? 0 });
   const doc = raiz.ownerDocument;
   const janela = doc.defaultView;
   const itemDe = id => itens.find(item => item.id === id);
@@ -160,15 +168,21 @@ export function ligarGrade(raiz, opcoes) {
     if (!arraste.ativo && Math.hypot(ponto.x - arraste.inicio.x, ponto.y - arraste.inicio.y) < 5) return;
     if (!arraste.ativo) { arraste.ativo = true; arraste.el.classList.add('arrastando'); }
     arraste.ponto = ponto;
+    // Em cima de outro item desta grade com que ele junta: a pilha acende, e soltar junta.
+    const sobre = doc.elementFromPoint(ponto.x, ponto.y)?.closest?.('.grade-item');
+    const junta = sobre && raiz.contains(sobre) && sobre.dataset.itemId !== arraste.item.id ? itemDe(sobre.dataset.itemId) : null;
+    arraste.junta = junta && podeJuntar(arraste.item, junta) ? junta : null;
+    if (arraste.junta) { limparSombra(); sobre.classList.add('alvo-ok'); arraste.alvo = null; return; }
     arraste.alvo = destinoNoPonto(ponto, arraste.pega, arraste.girado);
     if (arraste.alvo) sombra(arraste.item, arraste.alvo.destino, arraste.alvo.grade); else limparSombra();
   };
   const terminar = evento => {
     if (!arraste) return;
-    const { ativo, item, alvo, el } = arraste;
+    const { ativo, item, alvo, el, junta } = arraste;
     arraste = null;
     el.classList.remove('arrastando');
     if (!ativo) return tocar(item.id, evento);
+    if (junta) { limparSombra(); return aoJuntar(item, junta); }
     if (alvo?.grade && alvo.grade !== propria) { limparSombra(); return alvo.grade.receber(item, alvo.destino); }
     soltarEm(item, alvo?.destino ?? null);
   };
@@ -186,6 +200,13 @@ export function ligarGrade(raiz, opcoes) {
   const tocar = (id, evento) => {
     if (!editavel) return;
     if (evento?.shiftKey && Number(itemDe(id)?.qtd) > 1) return aoDividir(itemDe(id));
+    // O segundo toque numa pilha com que o escolhido junta: junta.
+    const escolhido = selecionado && selecionado !== id ? itemDe(selecionado) : null;
+    if (escolhido && podeJuntar(escolhido, itemDe(id))) {
+      selecionado = '';
+      aoSelecionar('');
+      return aoJuntar(escolhido, itemDe(id));
+    }
     selecionado = selecionado === id ? '' : id;
     aoSelecionar(selecionado);
     for (const el of raiz.querySelectorAll('.grade-item')) { el.classList.toggle('selecionado', el.dataset.itemId === selecionado); el.setAttribute('aria-pressed', String(el.dataset.itemId === selecionado)); }
@@ -200,7 +221,7 @@ export function ligarGrade(raiz, opcoes) {
     const t = item.grade?.lugar && lugarDe(item.grade.lugar)?.tipo === 'grade' ? dimensoes(tamanhoDoItem(item), item.grade.girado) : { l: 1, a: 1 };
     const pega = { x: Math.min(t.l - 1, Math.floor(((evento.clientX - caixa.left) / Math.max(1, caixa.width)) * t.l)), y: Math.min(t.a - 1, Math.floor(((evento.clientY - caixa.top) / Math.max(1, caixa.height)) * t.a)) };
     arraste = { item, el, inicio: { x: evento.clientX, y: evento.clientY }, pega: t.l > 1 || t.a > 1 ? pega : { x: 0, y: 0 }, girado: Boolean(item.grade?.girado), ativo: false, alvo: null };
-  });
+  }, naRaiz);
   // O segundo toque num lugar vazio (a grade, o encaixe ou a lista) com um item escolhido.
   raiz.addEventListener('click', evento => {
     if (!editavel || !selecionado || evento.target.closest('.grade-item')) return;
@@ -212,11 +233,11 @@ export function ligarGrade(raiz, opcoes) {
     selecionado = '';
     aoSelecionar('');
     soltarEm(item, destino);
-  });
+  }, naRaiz);
   raiz.addEventListener('dblclick', evento => {
     const el = evento.target.closest('.grade-item, .par');
     if (el) aoAbrir(itemDe(el.dataset.itemId));
-  });
+  }, naRaiz);
 
   // O teclado: Enter pega; com o item pego, o cursor anda (moverCursor) e Enter solta.
   let cursor = null;
@@ -239,13 +260,14 @@ export function ligarGrade(raiz, opcoes) {
     if (!item?.grade) return;
     cursor = { item, lugar: item.grade.lugar, x: item.grade.x ?? 0, y: item.grade.y ?? 0, girado: Boolean(item.grade.girado) };
     sombra(item, cursor);
-  });
+  }, naRaiz);
 
   janela.addEventListener('pointermove', mover);
   janela.addEventListener('pointerup', terminar);
   janela.addEventListener('keydown', teclaDoArraste);
   return () => {
     if (GRADES.get(raiz) === propria) GRADES.delete(raiz);
+    gestos.abort();
     janela.removeEventListener('pointermove', mover);
     janela.removeEventListener('pointerup', terminar);
     janela.removeEventListener('keydown', teclaDoArraste);
