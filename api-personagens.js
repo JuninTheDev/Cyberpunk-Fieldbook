@@ -15,6 +15,7 @@ const path = require('path');
 const { createCampaigns } = require('./api-campanhas');
 const { createAccountStores } = require('./api-contas');
 const { createNetwire } = require('./api-netwire');
+const { createInventory } = require('./api-inventario');
 const characterRoles = require('./personagem-roles');
 const characterCyberware = require('./personagem-cyberware');
 const characterGame = require('./personagem-jogo');
@@ -244,6 +245,8 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   // NetWire (api-netwire.js): as mensagens dentro do jogo, pela mesma fila por arquivo.
   // A IA que rascunha (ia: a chave, o modelo e o limite, do server.js) lê os documentos do mestre como contexto.
   const netwire = createNetwire({ dataDir, campaigns, writeJsonAtomic, lockOn, ia, docsDir });
+  // O inventário mexido na wiki, na fila para o Foundry 14 (o C111, api-inventario.js).
+  const inventory = createInventory({ charactersDir, writeJsonAtomic, lockOn, newId, isGameMaster: request => who(request).papel === 'mestre' });
   // O nome com que o jogador assina a resposta: o do personagem dele nesta campanha (o apelido, se tiver).
   const characterName = (identity, id, campaign) => {
     const doc = validId(id) ? readCharacter(id) : null;
@@ -810,6 +813,22 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       return json(response, 200, { ok: true, atualizado: await campaigns.writeNews(noticias) });
     }
 
+    // O Foundry do mestre e a fila do inventário (o C111, api-inventario.js): as operações pendentes dos personagens da
+    // campanha do mundo (?campanha=; sem ela, de todas), com o vínculo de cada um, e o aviso na hora (SSE).
+    if (pathname === '/api/inventario/pendentes' || pathname === '/api/inventario/eventos') {
+      const headers = cors(request, response);
+      if (method === 'OPTIONS') { response.writeHead(204, headers); return response.end(); }
+      if (identity.papel !== 'mestre') return json(response, 403, { erro: 'Só o mestre.' }, headers);
+      if (method !== 'GET') return json(response, 405, { erro: 'Use GET.' }, headers);
+      const wanted = realId(query.get('campanha'));
+      if (wanted === '-') return json(response, 404, { erro: 'Campanha não encontrada.' }, headers);
+      if (pathname.endsWith('/eventos')) return inventory.openStream(request, response, wanted, headers);
+      const personagens = inventory.allPending().map(({ id, ops }) => ({ doc: readCharacter(id), ops }))
+        .filter(({ doc }) => doc && (!wanted || campaignOf(doc) === wanted))
+        .map(({ doc, ops }) => ({ id: doc.id, nome: doc.nome || '', foundry14: doc.foundry14 || null, foundry: doc.foundry || null, ops }));
+      return json(response, 200, { personagens }, headers);
+    }
+
     if (pathname === '/api/personagens' || pathname.startsWith('/api/personagens/')) {
       const headers = cors(request, response);
       if (method === 'OPTIONS') { response.writeHead(204, headers); return response.end(); }
@@ -1075,7 +1094,30 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
       // depois de mexer no Foundry 14. Entra por cima da ficha da mesa que já está aqui, a do mesmo Foundry e do mesmo ator;
       // sem ela, não grava (a inteira vem 4 s depois). O que chega atrasado, mais velho que a ficha guardada, também não.
       if (extra === 'inventario') {
-        const [, , sub] = pathname.slice('/api/personagens/'.length).split('/');
+        const [, , sub, opId, action, ...more] = pathname.slice('/api/personagens/'.length).split('/');
+        // O inventário mexido na wiki (o C111): GET, as operações (as pendentes e as das últimas 24 h) e o estado projetado;
+        // POST, uma operação nova (o dono e o mestre), conferida com a regra do sistema contra o estado projetado (409 com o
+        // motivo); POST .../ops/<id>/aplicada ou /recusada, a resposta do Foundry (o mestre, do ator ligado).
+        if (sub === 'ops') {
+          if (!opId) {
+            if (!canEdit(identity, stored)) return reply(403, { erro: 'Este personagem é de outro jogador.' });
+            if (method === 'GET') return reply(200, await inventory.view(id, readCharacter(id) || stored));
+            if (method !== 'POST') return reply(405, { erro: 'Use GET ou POST.' });
+            const input = cleanValue(await readJson(request, 16 * 1024));
+            const done = await inventory.add(id, readCharacter(id) || stored, input, identity.papel === 'mestre' ? 'mestre' : identity.conta.nome);
+            if (done.status === 201) { inventory.notify(campaignOf(stored), id); notifySheet(id, done.data.op.quando); }
+            return reply(done.status, done.data);
+          }
+          if (!['aplicada', 'recusada'].includes(action) || more.length) return reply(404, { erro: 'Rota desconhecida.' });
+          if (method !== 'POST') return reply(405, { erro: 'Use POST.' });
+          if (identity.papel !== 'mestre') return gmOnly();
+          const input = cleanValue(await readJson(request).catch(() => ({})));
+          const stale = staleActor(readCharacter(id) || stored, input.ator);
+          if (stale) return reply(stale.status, stale.data);
+          const done = await inventory.decide(id, opId, action, input.motivo);
+          if (done.status === 200) notifySheet(id, new Date().toISOString());
+          return reply(done.status, done.data);
+        }
         if (sub !== 'estado') return reply(404, { erro: 'Rota desconhecida.' });
         if (method !== 'PUT') return reply(405, { erro: 'Use PUT.' });
         if (identity.papel !== 'mestre') return gmOnly();
@@ -1310,7 +1352,7 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
   };
   return handle;
 };
-const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city|agenda|netwire)(\/|$)/;
+const ROUTES = /^\/api\/(eu|entrar|sair|sair-de-todos|contas|personagens|loja|campanhas|visao|night-city|agenda|netwire|inventario)(\/|$)/;
 module.exports.ROUTES = ROUTES;
 module.exports.ipDoCliente = ipDoCliente;
 module.exports.limiteDeTentativas = limiteDeTentativas;

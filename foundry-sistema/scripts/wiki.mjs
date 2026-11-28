@@ -21,6 +21,7 @@ import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { ehBaseNatural, ladoValido, linhaDoExtrato, moradiaDaMesa, moradiaDaWiki, moradiaParaAWiki, periciaPropria } from './regras.mjs';
 import { mudouDeCampanha, pertenceACampanha, prepararAtorTransferido, resolverCampanha, vinculoDaGeracao14 } from './wiki-campanha.mjs';
 import { umaEntregaPorVez } from './wiki-pedidos.mjs';
+import { upgradesDaPilha } from './pilhas.mjs';
 import { bodyDoAtor, gradeParaAWiki, itemNaRegra, lugaresDoAtor } from './regras-grade-ator.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
@@ -37,7 +38,7 @@ const nomeDaRole = nome => roleDaWiki(nome)?.nome ?? String(nome ?? '');
 // O Lifepath que o criador da wiki manda pronto, em texto (resultado.lifepath, com os nomes do CORE).
 const lifepathDaWiki = lifepath => Object.fromEntries(LIFEPATH.map(({ chave, wiki }) => [chave, String(lifepath?.[wiki] ?? '')]));
 
-export { carregarCatalogo, enderecoPadraoDaWiki, wikiFetch };
+export { atorLigado, carregarCatalogo, enderecoPadraoDaWiki, wikiFetch, wikiUrl as enderecoDaWiki };
 
 export function registrarWiki() {
   game.settings.register(SISTEMA, 'wikiUrl', {
@@ -52,7 +53,7 @@ export function registrarWiki() {
   });
   game.settings.register(SISTEMA, 'wikiMesa', {
     name: 'Mandar a ficha para a wiki',
-    hint: 'Para o mestre: a cada mudança num personagem que veio da wiki (HP, dinheiro, itens, munição…), manda a ficha para a wiki, que mostra em "Na mesa".',
+    hint: 'Para o mestre: a cada mudança num personagem que veio da wiki (HP, dinheiro, itens, munição…), manda a ficha para a wiki, que mostra em "Na mesa". E aplica no inventário o que o jogador mexeu pela wiki.',
     scope: 'client', config: true, type: Boolean, default: true
   });
   registrarVoltaParaWiki();
@@ -557,7 +558,7 @@ function itensParaAWiki(ator) {
     if (catalogo) linha.catalogo = catalogo;
     // Vazio também é informação: uma cópia solta não deve ser instalada pelo fallback de nomes do Foundry 12.
     if ('instaladoEm' in x) linha.instaladoEm = x.instaladoEm || '';
-    const naGrade = gradeParaAWiki(itemNaRegra(item), body);
+    const naGrade = gradeParaAWiki(itemNaRegra(item), body, { upgrades: upgradesDaPilha(item) });
     if (naGrade) Object.assign(linha, naGrade);
     if (item.type === 'arma') {
       Object.assign(linha, {

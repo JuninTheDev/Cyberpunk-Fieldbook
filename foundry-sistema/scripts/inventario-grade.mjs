@@ -8,10 +8,11 @@
 // onde tudo está guardado; mexer nela é do mestre, ou do jogador com "Mudar os itens". De uma grade para a de outro ator,
 // o item vai pelo caminho de sempre (o levarItem, o "Pegar" do contêiner) e chega no quadrado escolhido (receberNaGrade).
 import { SISTEMA } from './config.mjs';
-import { arrumar, conferirLugar, gradeParaUso, mudancasDoUso, reconciliar, tamanhoDoItem, usoDoLugar } from './compartilhado/regras-grade.mjs';
+import { arrumar, conferirLugar, gradeParaUso, juntarPilhas, limiteDaPilha, mudancasDoUso, reconciliar, tamanhoDoItem, usoDoLugar } from './compartilhado/regras-grade.mjs';
 import { arrumarDadosDoAtor, bodyDoAtor, estadoDe, FLAG_DA_GRADE, FLAG_DA_MOCHILA, itemNaRegra, lugaresDoAtor, temGrade, usoNoAtor } from './regras-grade-ator.mjs';
 import { levarItem, pegarDoConteiner } from './conteiner.mjs';
-import { naFilaDoInventario } from './pilhas.mjs';
+import { naFilaDoInventario, upgradesDaPilha } from './pilhas.mjs';
+import { mesmaPilha } from './regras-inventario.mjs';
 
 const CAMINHO = `flags.${SISTEMA}.${FLAG_DA_GRADE}`;
 const comGrade = ator => ator?.documentName === 'Actor' && temGrade(ator);
@@ -124,8 +125,9 @@ function depoisDoItem(item, mudancas, usuario) {
 }
 
 // Mover pela grade: destino { lugar, x, y, girado }. Confere o lugar, muda o uso pelo lugar (o corpo equipa; o resto do
-// sistema ainda confere as mãos) e sobe o rev. Devolve { ok, motivo }.
-export function moverNaGrade(item, destino) {
+// sistema ainda confere as mãos) e sobe o rev. Devolve { ok, motivo }. avisar: false, sem o aviso na tela (o pedido da wiki,
+// que volta para o jogador com o motivo; o C111).
+export function moverNaGrade(item, destino, { avisar = true } = {}) {
   const ator = item.parent;
   return naFilaDoInventario([ator], async () => {
     if (!comGrade(ator) || !podeMexer(ator) || !ator.items.has(item.id)) return { ok: false, motivo: 'Sem permissão para mexer neste inventário.' };
@@ -134,7 +136,7 @@ export function moverNaGrade(item, destino) {
     const itens = itensDe(ator);
     const pedido = { lugar: destino?.lugar, x: Number(destino?.x) || 0, y: Number(destino?.y) || 0, girado: Boolean(destino?.girado) };
     const motivo = conferirLugar(lugaresDoAtor(ator, itens), estadoDe(itens, item.id), atual, pedido, { body: bodyDoAtor(ator) });
-    if (motivo) { ui.notifications.warn(motivo); return { ok: false, motivo }; }
+    if (motivo) { if (avisar) ui.notifications.warn(motivo); return { ok: false, motivo }; }
     const uso = usoDoLugar(pedido.lugar, usoNoAtor(ator, atual));
     const grade = { ...pedido, ...(pedido.lugar === 'organizar' ? { uso } : {}), rev: revDe(documento) + 1 };
     await documento.update({ ...mudancasDoUso(atual, uso), [CAMINHO]: grade });
@@ -187,7 +189,28 @@ export async function receberNaGrade(alvo, documento, destino) {
   return moverNaGrade(criado, pedido);
 }
 
-export const API = { moverNaGrade, arrumarAtor, arrumarOsSemLugar, receberNaGrade, reconciliarAtor, lugaresDe, itemNaRegra };
+// Juntar uma pilha na outra (o C111, o pedido da wiki; o CORE junta pelo mesmaPilha): o destino enche até o teto da grade,
+// e o resto fica na origem; sem resto, a origem sai. A pilha com upgrades não sai (eles ficariam soltos). Devolve
+// { ok, motivo }.
+export function juntarNaGrade(origem, destino, { avisar = true } = {}) {
+  const ator = origem?.parent;
+  return naFilaDoInventario([ator], async () => {
+    const recusar = motivo => { if (avisar) ui.notifications.warn(motivo); return { ok: false, motivo }; };
+    if (!comGrade(ator) || !podeMexer(ator)) return recusar('Sem permissão para mexer neste inventário.');
+    const de = ator.items.get(origem.id), para = ator.items.get(destino?.id);
+    if (!de || !para || de.id === para.id) return recusar('Juntar com qual pilha?');
+    if (upgradesDaPilha(de)) return recusar(`Retire os upgrades de ${de.name} antes de juntar.`);
+    if (!mesmaPilha(de, { type: para.type, name: para.name, upgrades: upgradesDaPilha(para) })) return recusar(`${de.name} não junta com ${para.name}.`);
+    const juntou = juntarPilhas(Number(de.system.quantidade) || 1, Number(para.system.quantidade) || 1, limiteDaPilha(itemNaRegra(para)));
+    if (!juntou) return recusar(`${para.name} já está cheia.`);
+    await para.update({ 'system.quantidade': juntou.destino });
+    if (juntou.origem) await de.update({ 'system.quantidade': juntou.origem });
+    else await de.delete();
+    return { ok: true, motivo: '' };
+  });
+}
+
+export const API = { moverNaGrade, juntarNaGrade, arrumarAtor, arrumarOsSemLugar, receberNaGrade, reconciliarAtor, lugaresDe, itemNaRegra };
 
 export function registrarInventarioGrade() {
   Hooks.on('preCreateItem', aoCriar);

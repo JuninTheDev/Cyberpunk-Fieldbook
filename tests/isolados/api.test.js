@@ -445,3 +445,99 @@ test('C110: a volta rápida do inventário entra por cima da ficha da mesa do me
   assert.equal((await servidor.pedir(`/api/personagens/${id}/eventos`, { method: 'POST', cookie: jogador.cookie, body: {} })).status, 405);
   assert.notEqual((await servidor.pedir(`/api/personagens/${id}/eventos`)).status, 200);
 });
+
+test('C111: a fila do inventário da wiki: o dono e o mestre pedem (conferido com a regra do sistema contra o estado projetado), o Foundry do mestre lê as pendentes da campanha e responde; o teto de 200 e as decididas que saem depois de 24 h', async t => {
+  const { pathToFileURL } = require('node:url');
+  const regras = await import(pathToFileURL(path.join(__dirname, '..', '..', 'foundry-sistema', 'scripts', 'compartilhado', 'regras-grade.mjs')).href);
+  const catalogo = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'foundry-sistema', 'dados', 'catalogo.json'), 'utf8')).itens;
+  const servidor = criarServidorIsolado(t);
+  const mestre = await servidor.entrarComoMestre();
+  const jogador = await criarJogador(servidor, mestre, 'Ana');
+  const outro = await criarJogador(servidor, mestre, 'Bia');
+  const criado = await servidor.pedir('/api/personagens', { method: 'POST', cookie: jogador.cookie, body: { nome: 'Ricky' } });
+  const id = criado.json.personagem.id;
+  const url = `/api/personagens/${id}`;
+  const ops = `${url}/inventario/ops`;
+  const pedir = (body, cookie = jogador.cookie) => servidor.pedir(ops, { method: 'POST', cookie, body });
+  // Antes de a ficha da mesa do Foundry 14 chegar, não há grade para mexer.
+  let r = await pedir({ tipo: 'mover', item: 'agent', para: { lugar: 'bolsos', x: 2, y: 0 } });
+  assert.equal(r.status, 409);
+  assert.match(r.json.erro, /ainda não está na mesa do Foundry 14/);
+  // A ficha da mesa do Foundry 12 (sem os lugares nem a regra dos itens) também não.
+  assert.equal((await servidor.pedir(`${url}/mesa`, { method: 'PUT', cookie: mestre, body: { ator: 'ator12', hp: { atual: 10, max: 40 }, itens: [{ id: 'agent', nome: 'Agent', tipo: 'gear' }] } })).status, 200);
+  r = await pedir({ tipo: 'mover', item: 'agent', para: { lugar: 'bolsos', x: 2, y: 0 } });
+  assert.deepEqual([r.status, /ainda não está na mesa do Foundry 14/.test(r.json.erro)], [409, true]);
+  // O vínculo do Foundry 14 e a ficha da mesa com a regra de cada item (o C111).
+  assert.equal((await servidor.pedir(`${url}/foundry`, { method: 'PUT', cookie: mestre, body: { ator: 'ator14', nomeAtor: 'Ricky', geracao: 14 } })).status, 200);
+  const linha = (idDoItem, cat, grade, qtd = 1) => {
+    const item = { catalogo: cat, ...catalogo[cat] };
+    return { id: idDoItem, nome: item.name, qtd, grade: { ...grade, rev: 3 }, tamanho: regras.tamanhoDoItem(item), regra: regras.regraDoItem(item) };
+  };
+  const lugares = regras.lugaresDoPersonagem({ moradia: { descricao: 'Quitinete' }, mochila: 'P' });
+  const ficha = { ator: 'ator14', geracao: 14, quando: new Date().toISOString(), stats: { BODY: 6 }, lugares, itens: [
+    linha('agent', 'core_gear:agent', { lugar: 'bolsos', x: 0, y: 0 }), linha('pc', 'core_gear:computer', { lugar: 'mochila', x: 0, y: 0 }),
+    linha('balas', 'core_ammo:heavy-pistol-basic', { lugar: 'cinto', x: 0, y: 0 }, 20), { id: 'velho', nome: 'Sem regra', qtd: 1 }
+  ] };
+  assert.equal((await servidor.pedir(`${url}/mesa`, { method: 'PUT', cookie: mestre, body: ficha })).status, 200);
+  // Outro jogador da campanha não mexe; o visitante nem fica sabendo.
+  assert.equal((await pedir({ tipo: 'mover', item: 'agent', para: { lugar: 'bolsos', x: 2, y: 0 } }, outro.cookie)).status, 403);
+  assert.equal((await servidor.pedir(ops, { cookie: outro.cookie })).status, 403);
+  assert.notEqual((await servidor.pedir(ops)).status, 200);
+  // O dono pede: na fila, com o seq, o autor e o rev que a wiki via.
+  r = await pedir({ tipo: 'mover', item: 'agent', para: { lugar: 'esconderijo', x: 0, y: 0, girado: false }, extra: 'fora' });
+  assert.equal(r.status, 201, r.text);
+  const primeira = r.json.op;
+  assert.deepEqual({ ...primeira, id: '', quando: '' }, { id: '', quando: '', seq: 1, autor: 'Ana', tipo: 'mover', item: 'agent', para: { lugar: 'esconderijo', x: 0, y: 0, girado: false }, estado: 'pendente', base: 3 });
+  // Contra o estado projetado: o mesmo quadrado já está pedido; fora da regra, o motivo; o que a wiki não faz, também.
+  r = await pedir({ tipo: 'mover', item: 'pc', para: { lugar: 'esconderijo', x: 0, y: 0 } });
+  assert.deepEqual([r.status, r.json.erro], [409, 'Esconderijo: Agent já está ali.']);
+  r = await pedir({ tipo: 'mover', item: 'velho', para: { lugar: 'bolsos', x: 0, y: 0 } });
+  assert.deepEqual([r.status, r.json.erro], [409, 'Esse item não está mais na ficha da mesa.']);
+  r = await pedir({ tipo: 'apagar', item: 'agent' });
+  assert.deepEqual([r.status, r.json.erro], [409, 'A wiki só move, divide e junta: o resto é na mesa.']);
+  // O mestre também pede; dividir e juntar entram.
+  r = await pedir({ tipo: 'dividir', item: 'balas', qtd: 5, para: { lugar: 'cinto', x: 1, y: 0 } }, mestre);
+  assert.deepEqual([r.status, r.json.op.seq, r.json.op.autor, r.json.op.qtd], [201, 2, 'mestre', 5]);
+  const divisao = r.json.op;
+  r = await pedir({ tipo: 'juntar', item: divisao.id, alvo: 'balas' });
+  assert.equal(r.status, 201, r.text);
+  // O dono lê a fila e o estado projetado.
+  r = await servidor.pedir(ops, { cookie: jogador.cookie });
+  const projetado = Object.fromEntries(r.json.projetado.map(item => [item.id, [item.grade && item.grade.lugar, item.qtd]]));
+  assert.deepEqual([r.json.seq, r.json.ops.map(op => op.estado), projetado.agent, projetado.balas, projetado[divisao.id], projetado.velho], [3, ['pendente', 'pendente', 'pendente'], ['esconderijo', 1], ['cinto', 20], undefined, undefined]);
+  // O Foundry do mestre: as pendentes da campanha (com o vínculo); o jogador não lê; a campanha que não existe, 404.
+  r = await servidor.pedir('/api/inventario/pendentes', { cookie: mestre });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json.personagens.map(item => [item.id, item.foundry14.ator, item.ops.map(op => op.seq)]), [[id, 'ator14', [1, 2, 3]]]);
+  const campanha = criado.json.personagem.campanha;
+  assert.equal((await servidor.pedir(`/api/inventario/pendentes?campanha=${campanha}`, { cookie: mestre })).json.personagens.length, 1);
+  assert.equal((await servidor.pedir('/api/inventario/pendentes?campanha=nao-existe', { cookie: mestre })).status, 404);
+  const outraMesa = await servidor.pedir('/api/campanhas', { method: 'POST', cookie: mestre, body: { nome: 'Outra mesa' } });
+  assert.deepEqual((await servidor.pedir(`/api/inventario/pendentes?campanha=${outraMesa.json.campanha.id}`, { cookie: mestre })).json.personagens, []);
+  assert.equal((await servidor.pedir('/api/inventario/pendentes', { cookie: jogador.cookie })).status, 403);
+  assert.equal((await servidor.pedir('/api/inventario/eventos', { cookie: jogador.cookie })).status, 403);
+  // A resposta do Foundry: só o mestre, só do ator ligado; a mesma resposta de novo não muda nada; outra, não.
+  const responder = (op, estado, body = { ator: 'ator14' }, cookie = mestre) => servidor.pedir(`${ops}/${op}/${estado}`, { method: 'POST', cookie, body });
+  assert.equal((await responder(primeira.id, 'aplicada', { ator: 'ator14' }, jogador.cookie)).status, 403);
+  assert.equal((await responder(primeira.id, 'aplicada', { ator: 'velho' })).status, 409);
+  assert.equal((await responder(primeira.id, 'perdida')).status, 404);
+  assert.equal((await responder('nao-existe', 'aplicada')).status, 404);
+  assert.equal((await servidor.pedir(`${ops}/${primeira.id}/aplicada`, { cookie: mestre })).status, 405);
+  r = await responder(primeira.id, 'aplicada');
+  assert.deepEqual([r.status, r.json.op.estado, typeof r.json.op.decidido], [200, 'aplicada', 'string']);
+  assert.equal((await responder(primeira.id, 'aplicada')).status, 200);
+  assert.equal((await responder(primeira.id, 'recusada', { ator: 'ator14', motivo: 'x' })).status, 409);
+  r = await responder(divisao.id, 'recusada', { ator: 'ator14', motivo: 'Cinto: Heavy Pistol (Basic) já está ali.' });
+  assert.deepEqual([r.json.op.estado, r.json.op.motivo], ['recusada', 'Cinto: Heavy Pistol (Basic) já está ali.']);
+  assert.deepEqual((await servidor.pedir('/api/inventario/pendentes', { cookie: mestre })).json.personagens[0].ops.map(op => op.seq), [3]);
+  // O teto: 200 esperando a mesa, e a seguinte recusa. As decididas há mais de 24 h saem da fila.
+  const arquivo = path.join(servidor.dados, 'personagens', 'inventario', `${id}.json`);
+  const guardado = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
+  const velha = { ...primeira, id: 'velha', seq: 0, estado: 'aplicada', decidido: new Date(Date.now() - 25 * 3600 * 1000).toISOString() };
+  const espera = Array.from({ length: 199 }, (_, i) => ({ ...guardado.ops[2], id: `e${i}`, seq: 4 + i }));
+  fs.writeFileSync(arquivo, JSON.stringify({ seq: 202, ops: [velha, ...guardado.ops, ...espera] }));
+  r = await servidor.pedir(ops, { cookie: jogador.cookie });
+  assert.deepEqual([r.json.ops.length, r.json.ops.some(op => op.id === 'velha')], [202, false]);
+  r = await pedir({ tipo: 'mover', item: 'pc', para: { lugar: 'esconderijo', x: 4, y: 0 } });
+  assert.deepEqual([r.status, r.json.erro], [429, 'Já há 200 mudanças esperando a mesa: espere o Foundry aplicar.']);
+});

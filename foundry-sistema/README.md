@@ -916,7 +916,10 @@ E a do navegador de cada um:
   item, os lugares do personagem e se ele está num combate que já começou; o inventário vai também sozinho, meio segundo
   depois de cada mudança (`PUT /api/personagens/:id/inventario/estado`), e a ficha aberta na wiki se redesenha na hora
   (`/api/personagens/:id/eventos`): em menos de 1 s nos testes. A aba **Inventário** da ficha da wiki mostra a grade, só
-  de leitura por enquanto (mexer pela wiki é o C111 e o C112). O `scripts/compartilhado/regras-grade.mjs`, sem import (o
+  de leitura por enquanto (mexer pela página é o C112). **Da wiki para a mesa** (ciclo 236): o pedido de mover, dividir ou
+  juntar que chega na fila da wiki (`/api/personagens/:id/inventario/ops`, conferido com a mesma regra contra o estado
+  projetado) o mestre ativo aplica na hora (com "Mandar a ficha para a wiki" ligado; o SSE `/api/inventario/eventos`, ou a
+  cada 15 s), no ator ligado, e confirma ou recusa com o motivo. Pela macro: `game.system.api.inventario.aplicarDaWiki()`. O `scripts/compartilhado/regras-grade.mjs`, sem import (o
   Foundry, o servidor e a página da wiki vão usar o mesmo arquivo), dá o tamanho de cada item (as armas pelo tipo, a
   munição e a pilha por tipo, a armadura guardada pelo peso, o equipamento pelo catálogo), os lugares do personagem (as
   mãos, a cabeça, o tronco, o deck e a mochila no corpo, o coldre, as costas, os bolsos 4×2, o cinto 6×1, a mochila P/M/G,

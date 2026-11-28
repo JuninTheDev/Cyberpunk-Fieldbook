@@ -11110,6 +11110,51 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   "ficha sem os lugares" caiu por um erro de fora (`reading 'OBJECTS'`, uma vez só); de novo, caiu pela conferência. Os
   arquivos voltaram iguais (md5).
 
+### Ciclo 236 (2026-11-28): C111, da wiki para o Foundry (sessão KouArt)
+
+- **Pedido do usuário (2026-11-28):** "Yes, go ahead", perguntado se podia mexer de novo na wiki para o C111. O C111 fica
+  `[x]`.
+- **Entrega:**
+  - **a regra (`compartilhado/regras-grade.mjs`):** as operações da wiki (`mover`, que também equipa, guarda e gira;
+    `dividir`; `juntar`): `conferirOperacao` (o motivo em português), `aplicarOperacao`, `projetar` (a ficha da mesa
+    com as pendentes por cima, na ordem do seq; a que não cabe mais fica de fora), `podeJuntar` (o `mesmaPilha` do CORE,
+    sem importar nada) e `regraDoItem` (os campos do item que a regra lê: o tamanho, os encaixes, as listas, a pilha, o uso
+    e os upgrades da pilha). O teto: 200 pendentes por personagem. Apagar, dar, usar e recarregar continuam só na mesa;
+  - **a ficha da mesa (`wiki.mjs`, `regras-grade-ator.mjs`):** cada linha de item leva a `regra` (o `regraDoItem`), para o
+    servidor conferir com o item igual ao do Foundry;
+  - **o servidor da wiki:** `api-inventario.js` (novo): a fila em `personagens/inventario/<id>.json` ({ seq, ops }), a
+    conferência com a regra do sistema (`import()` do `regras-grade.mjs`) contra o estado projetado, as decididas que saem
+    depois de 24 h e o SSE do Foundry. As rotas (`api-personagens.js`): `GET|POST /api/personagens/:id/inventario/ops` (o
+    dono e o mestre; 409 com o motivo, 429 no teto, 409 sem a ficha da mesa do Foundry 14), `POST
+    .../ops/:op/aplicada|recusada` (o mestre, do ator ligado; a mesma resposta de novo não muda nada),
+    `GET /api/inventario/pendentes?campanha=` e `/api/inventario/eventos` (o mestre). O `servidor/atualizar.sh` reinicia a
+    wiki também quando muda o `regras-grade.mjs` (a fila o guarda na memória);
+  - **o Foundry (`wiki-inventario.mjs`, novo):** o mestre ativo, com "Mandar a ficha para a wiki" ligado, ouve o SSE e
+    pergunta a cada 15 s; aplica cada pendente no ator ligado, na ordem do seq, conferindo de novo com o item de verdade, e
+    confirma ou recusa com o motivo ("<o item> mudou na mesa." na frente, quando o rev não é o que o jogador viu). Cada
+    resposta fica no ator (a flag `inventario`: o último seq e as 50 últimas respostas): a confirmação que se perde volta
+    igual, sem aplicar de novo. `moverNaGrade` ganhou o `{ avisar: false }`, e o `juntarNaGrade` (novo) junta até o teto da
+    grade, sem soltar upgrades. `game.system.api.inventario.aplicarDaWiki()` para as macros e os testes.
+- **Achado:** a munição do Nomad importado vem numa pilha só, de 92, acima do teto da grade (30): juntar nela recusa
+  ("já está cheia"). A importação que divide a pilha pelo teto é do C113.
+- **Fora deste ciclo:** a grade que se mexe na página (o C112: a página ainda não manda operações) e as travas do combate e
+  do esconderijo durante a sessão (o C114).
+- **Testes de referência:**
+  - **G3:** `grade-wiki.test.mjs` (novo, 4): o item resumido dá a mesma regra que o inteiro em cada item do catálogo (com
+    o equipada, o uso, o instalado e o montado; e lido do JSON); o juntar é o `mesmaPilha`; a conferência de mover,
+    dividir e juntar, com os motivos; o estado depois de cada operação e o projetado (a ordem do seq, a que não cabe de
+    fora, sem mexer na entrada).
+  - **As regressões da wiki:** `api.test.js`: a fila inteira (sem a ficha do 14, com a do 12; quem pede; o projetado; as
+    pendentes do mestre por campanha; a resposta do Foundry; o teto e as 24 h); `servidor-sistema.test.js`: a regra da
+    grade reinicia a wiki, e o resto do sistema, não.
+  - **G4:** o passo do C111: o Nomad importado; o pedido de mover entra e o Foundry aplica na hora (o SSE), confirma, e a
+    ficha da mesa mostra; dividir uma pilha de 10 (a nova, de 1, no quadrado pedido) e juntar de volta; com a configuração
+    desligada, dois pedidos esperam, e na mesa outros itens ocupam os quadrados e o primeiro muda de lugar: ligada de novo,
+    as duas recusadas, com o motivo certo (a primeira, "mudou na mesa"), nada mudou, e a marca no ator; a confirmação
+    perdida (a operação de novo pendente na wiki) volta recusada igual, sem mexer no item.
+- **Portões:** G1 0; G2 limpo; G3 930/930; G4 359/359 (659 s). Antes, uma rodada com 357/359, só as duas instáveis conhecidas (`estados (C26)` e `C26: chaves do Fluxo`, "A nonpersisted Document cannot be updated"); a seguinte passou inteira. As regressões da wiki (`node tests/validar.js`) e o teste dos scripts do servidor (`servidor-sistema.test.js`, 10/10) passaram.
+- **Mutações:** 37 de 37 morreram (`scratchpad/mutacoes-c111.mjs g3|sh|g4 [filtro]`). No G3 e nas regressões da wiki, 26: o resumo sem o escudo, sem o corpo e sem os upgrades; o juntar sem a condição dos upgrades; qualquer operação; mover para o mesmo lugar; dividir tudo; juntar com upgrades e na pilha cheia; dividir sem tirar da origem; juntar sem tirar a origem vazia; projetar fora da ordem e com a que não cabe; aplicar mexendo na entrada; no servidor, sem a mesa do 14, sem o teto, contra a mesa sem as pendentes, as decididas que ficam, decidir de novo, o pedido com o que vier, sem a base, a fila de qualquer jogador, o jogador que responde, a resposta de qualquer ator, as pendentes para o jogador e as de toda campanha. No script do servidor, 1: a regra que não reinicia a wiki. No G4 focado, 10: sem o aviso na hora, aplicar com a configuração desligada, sem a conferência antes, sem a marca no ator, sem a resposta guardada, sem dizer que mudou, a pilha nova onde nasceu, juntar sem apagar a vazia e sem encher o destino, fora da ordem. Viveram na primeira rodada e pediram teste: a ficha do Foundry 12 e a campanha de outro mundo (as regressões da wiki); a pilha nova onde nasceu (o passo pedia o primeiro quadrado livre, onde o Foundry já põe o item que chega: agora, o fim do esconderijo). A "marca no ator" pareceu viver porque o executor contava o passo que não rodou como vivo: agora ele exige o ✓ ou o ✗ do passo. Os arquivos voltaram iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

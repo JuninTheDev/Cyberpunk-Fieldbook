@@ -399,3 +399,95 @@ export function reconciliar(itens, lugares, { body = 0 } = {}) {
   }
   return mudam;
 }
+
+// ---------------- As operações da wiki ----------------
+// O C111 (o plano, 4 e 5.2): o jogador mexe na wiki, e o servidor confere com este arquivo antes de pôr a operação na
+// fila; o Foundry confere de novo, com o item de verdade, e aplica. A wiki move (equipar, guardar e girar são mover para
+// outro lugar), divide e junta pilhas. Apagar, dar, usar e recarregar ficam no Foundry (decisão do usuário, 2026-11-28).
+export const TIPOS_DE_OPERACAO = ['mover', 'dividir', 'juntar'];
+// O teto de operações esperando o Foundry, por personagem (o plano, 5.3).
+export const MAXIMO_PENDENTE = 200;
+
+// Os campos do item que esta regra lê (o tamanho, os encaixes, as listas, a pilha e o uso), que a ficha da mesa leva para a
+// wiki na linha do item: o servidor confere a operação com o item igual ao do Foundry, sem a ficha inteira. O G3 confere,
+// em cada item do catálogo, que o item resumido dá a mesma regra que o inteiro. upgrades: quantos upgrades estão na
+// pilha (o juntar do CORE olha isso).
+export function regraDoItem(item = {}, { upgrades = 0 } = {}) {
+  const s = item.system ?? {};
+  const sp = lado => ({ max: Number(s.sp?.[lado]?.max) || 0 });
+  return {
+    type: item.type ?? '', catalogo: item.catalogo ?? '', montada: Boolean(item.montada), upgrades: Number(upgrades) || 0,
+    system: {
+      tipo: s.tipo ?? '', maos: s.maos ?? null, aDistancia: s.aDistancia ?? null, escudo: Boolean(s.escudo), sp: { cabeca: sp('cabeca'), corpo: sp('corpo') },
+      penalidade: Number(s.penalidade) || 0, instalado: Boolean(s.instalado), fundacional: Boolean(s.fundacional), alvo: s.alvo ?? '',
+      equipada: Boolean(s.equipada), ...(s.uso === undefined ? {} : { uso: s.uso })
+    }
+  };
+}
+
+// O juntar do CORE (o mesmaPilha do regras-inventario.mjs; o G3 confere que é igual): o mesmo tipo empilhável e o mesmo
+// nome; o equipamento e a roupa só juntam numa pilha que já tem upgrades (a condição invertida do CORE, decisão do C17).
+export const podeJuntar = (origem, destino) => EMPILHAVEIS.includes(origem.type) && origem.type === destino.type && origem.name === destino.name
+  && (!['equipamento', 'roupa'].includes(origem.type) || destino.upgrades > 0);
+
+const lugarDoPedido = para => (para && typeof para === 'object'
+  ? { lugar: String(para.lugar ?? ''), x: Number(para.x) || 0, y: Number(para.y) || 0, girado: Boolean(para.girado) } : null);
+const noMesmoLugar = (a, b) => Boolean(a && b) && a.lugar === b.lugar && a.x === b.x && a.y === b.y && Boolean(a.girado) === Boolean(b.girado);
+const estadoDosItens = itens => itens.filter(item => item.grade && tamanhoDoItem(item)).map(item => ({ item, grade: item.grade }));
+
+// Pode fazer a operação no estado (os itens como a regra os lê, com o qtd e o grade)? Null quando pode; senão o motivo,
+// em português. op: { tipo, item, para: { lugar, x, y, girado }, qtd, alvo }.
+export function conferirOperacao(itens, lugares, op, { body = 0 } = {}) {
+  if (!TIPOS_DE_OPERACAO.includes(op?.tipo)) return 'A wiki só move, divide e junta: o resto é na mesa.';
+  const item = itens.find(outro => outro.id === op.item);
+  if (!item) return 'Esse item não está mais na ficha da mesa.';
+  if (!tamanhoDoItem(item)) return `${item.name} não ocupa lugar no inventário.`;
+  const quantidade = Number(item.qtd) || 1;
+  if (op.tipo === 'mover') {
+    const para = lugarDoPedido(op.para);
+    if (!para) return 'Para onde?';
+    if (noMesmoLugar(item.grade, para)) return `${item.name} já está aí.`;
+    return conferirLugar(lugares, estadoDosItens(itens), item, para, { body });
+  }
+  if (op.tipo === 'dividir') {
+    if (!EMPILHAVEIS.includes(item.type) || quantidade < 2) return `${item.name} não se divide.`;
+    if (!Number.isSafeInteger(op.qtd) || op.qtd < 1 || op.qtd >= quantidade) return `Escolha de 1 a ${quantidade - 1} para a pilha nova.`;
+    const para = lugarDoPedido(op.para);
+    if (!para) return 'Para onde vai a pilha nova?';
+    return conferirLugar(lugares, estadoDosItens(itens), { ...item, id: '#nova', qtd: op.qtd }, para, { body });
+  }
+  const alvo = itens.find(outro => outro.id === op.alvo);
+  if (!alvo || alvo.id === item.id) return 'Juntar com qual pilha?';
+  if (item.upgrades > 0) return `Retire os upgrades de ${item.name} antes de juntar.`;
+  if (!podeJuntar(item, alvo)) return `${item.name} não junta com ${alvo.name}.`;
+  return juntarPilhas(quantidade, Number(alvo.qtd) || 1, limiteDaPilha(alvo)) ? null : `${alvo.name} já está cheia.`;
+}
+
+// O estado depois da operação (já conferida): a cópia dos itens, com o lugar, a quantidade e a pilha nova (o id dela é o da
+// operação, até o Foundry criar a de verdade).
+export function aplicarOperacao(itens, op) {
+  const copia = itens.map(item => ({ ...item }));
+  const item = copia.find(outro => outro.id === op.item);
+  if (!item) return copia;
+  if (op.tipo === 'mover') item.grade = { ...item.grade, ...lugarDoPedido(op.para) };
+  else if (op.tipo === 'dividir') {
+    item.qtd = (Number(item.qtd) || 1) - op.qtd;
+    copia.push({ ...item, id: op.id, qtd: op.qtd, grade: lugarDoPedido(op.para) });
+  } else if (op.tipo === 'juntar') {
+    const alvo = copia.find(outro => outro.id === op.alvo);
+    const juntou = alvo && juntarPilhas(Number(item.qtd) || 1, Number(alvo.qtd) || 1, limiteDaPilha(alvo));
+    if (juntou) {
+      alvo.qtd = juntou.destino;
+      item.qtd = juntou.origem;
+      if (!item.qtd) copia.splice(copia.indexOf(item), 1);
+    }
+  }
+  return copia;
+}
+
+// O estado projetado (o plano, 5.2): a ficha da mesa com as operações pendentes por cima, na ordem do seq. A que não vale
+// mais no estado de agora (a mesa mudou embaixo dela) fica de fora: o Foundry vai recusá-la.
+export function projetar(itens, ops, lugares, { body = 0 } = {}) {
+  return [...ops].sort((x, y) => x.seq - y.seq)
+    .reduce((estado, op) => (conferirOperacao(estado, lugares, op, { body }) ? estado : aplicarOperacao(estado, op)), itens);
+}

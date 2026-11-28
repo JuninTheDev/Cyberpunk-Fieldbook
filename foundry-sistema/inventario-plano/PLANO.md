@@ -4,7 +4,7 @@ Pedido do usuário (2026-11-28): um inventário de quadrados, como os de jogo, e
 itens do personagem aparecem iguais na wiki e no Foundry, e o que se mexe num lado muda no outro.
 
 Base lida: `origin/master` b69a9c6c (a pasta do usuário estava 86 commits atrás). O usuário aprovou em
-2026-11-28 ("Sim, comece"), e os itens C107 a C114 estão no ROADMAP. O C107 foi feito no ciclo 231, o C108 no 232, o C109 nos 233 e 234 e o C110 no 235.
+2026-11-28 ("Sim, comece"), e os itens C107 a C114 estão no ROADMAP. O C107 foi feito no ciclo 231, o C108 no 232, o C109 nos 233 e 234, o C110 no 235 e o C111 no 236.
 
 ## 1. O resumo
 

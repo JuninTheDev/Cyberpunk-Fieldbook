@@ -55,6 +55,11 @@ junto com o registro do ciclo (o G3 confere).
   sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
 - O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
 
+**A lição do ciclo 236:** numa fila com estado projetado, a wiki já conta o que está pendente: o quadrado que um pedido
+esvazia está livre para o pedido seguinte antes de a mesa aplicar. O teste que monta uma recusa (a mesa diferente da wiki)
+tem de mexer na mesa sabendo disso; e as duas mutações que viveram no G3 (a ficha do Foundry 12, a campanha de outro
+mundo) pediam casos que o teste não tinha, não código novo.
+
 **A lição do ciclo 235:** alguns testes do G3 rodam uma função tirada do texto do arquivo (o `funcaoDaFonte`; o do C46
 roda o `agendarVolta` do `wiki.mjs` sozinho). Um ajudante novo fora da função quebra esse teste sem que nada esteja
 errado na mesa: a guarda fica dentro de cada função. E um passo do G4 que mede um aviso precisa separar os avisos: o

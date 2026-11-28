@@ -23771,6 +23771,133 @@ module.exports = async ({ edge, servidores, r }) => {
       }
     });
 
+    await r.passo('C111: da wiki para o Foundry: o pedido de mover, de dividir e de juntar entra na fila da wiki (conferido com a regra), e o mestre ativo o aplica na hora (o SSE) no ator ligado do Nomad e confirma; o que mudou na mesa antes de chegar volta recusado, com o motivo, e não muda nada', async () => {
+      const atorId = await edge.evaluate(`(async () => (await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '')).ator.id)()`);
+      try {
+        // Uma pilha pequena para dividir e juntar (a munição do Nomad vem numa pilha só, acima do teto da grade).
+        await edge.evaluate(`(async () => {
+          const ator = game.actors.get(${JSON.stringify(atorId)});
+          const cat = await game.system.api.wiki.carregarCatalogo();
+          const balas = foundry.utils.deepClone(cat['core_ammo:heavy-pistol-basic']);
+          balas.system.quantidade = 10;
+          await ator.createEmbeddedDocuments('Item', [balas]);
+          await game.system.api.wiki.mandarFicha(ator);
+          return true;
+        })()`);
+        const ops = `/api/personagens/${nomad.id}/inventario/ops`;
+        const pedir = async corpo => { const resposta = await fetch(`${wiki}${ops}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }); return { status: resposta.status, ...(await resposta.json()) }; };
+        const mesa = async () => (await api(`/api/personagens/${nomad.id}`)).personagem.mesa;
+        const noFoundry = id => edge.evaluate(`(() => { const i = game.actors.get(${JSON.stringify(atorId)}).items.get(${JSON.stringify(id)}); return i ? { grade: i.getFlag('${S}', 'grade'), qtd: i.system.quantidade ?? 1 } : null; })()`);
+        const esperar = async (teste, ms = 8000) => { const fim = Date.now() + ms; let valor; while (Date.now() < fim && !(valor = await teste())) await edge.sleep(100); return valor; };
+        const estadoDa = async id => (await api(ops)).ops.find(op => op.id === id)?.estado;
+        // O primeiro quadrado livre (para a wiki) de uma grade que não é a do item: tenta até o pedido entrar. doFim: o último;
+        // so: só aquele lugar (a pilha nova vai para o fim do esconderijo, longe de onde o Foundry põe o item que chega).
+        const linhas = (await mesa()).itens.filter(l => l.regra && l.grade);
+        const grades = (await mesa()).lugares.filter(l => l.tipo === 'grade');
+        const pedirNoLivre = async (base, item, fora = '', doFim = false, so = '') => {
+          const ordem = (n, i) => (doFim ? n - 1 - i : i);
+          for (const lugar of grades.filter(l => l.id !== fora && (!so || l.id === so))) for (let j = 0; j < lugar.a; j++) for (let i = 0; i < lugar.l; i++) {
+            const x = ordem(lugar.l, i), y = ordem(lugar.a, j);
+            const feito = await pedir({ ...base, item, para: { lugar: lugar.id, x, y, girado: false } });
+            if (feito.status === 201) return feito.op;
+          }
+          return null;
+        };
+        // Mover: o primeiro item de uma grade vai para outra.
+        const movel = linhas.find(l => grades.some(g => g.id === l.grade.lugar));
+        const antes = Date.now();
+        const mover = await pedirNoLivre({ tipo: 'mover' }, movel.id, movel.grade.lugar);
+        const moveu = await esperar(async () => { const f = await noFoundry(movel.id); return f?.grade?.lugar === mover.para.lugar && f.grade.x === mover.para.x && f.grade.y === mover.para.y && f.grade.rev === movel.grade.rev + 1; });
+        const tempoMover = Date.now() - antes;
+        const aplicada = await esperar(async () => (await estadoDa(mover.id)) === 'aplicada');
+        const naMesa = await esperar(async () => (await mesa()).itens.find(l => l.id === movel.id)?.grade?.lugar === mover.para.lugar);
+        // Dividir uma pilha (a munição com 2 ou mais, abaixo do teto da grade; a de 10, sem lugar nos bolsos e no cinto, em
+        // "Para organizar") e juntar de volta.
+        const pilha = linhas.find(l => l.regra.type === 'municao' && l.qtd >= 2 && l.qtd < l.tamanho.pilha);
+        const dividir = pilha ? await pedirNoLivre({ tipo: 'dividir', qtd: 1 }, pilha.id, '', true, 'esconderijo') : null;
+        const nova = dividir && await esperar(() => edge.evaluate(`(() => { const a = game.actors.get(${JSON.stringify(atorId)}); const i = a.items.find(x => x.id !== ${JSON.stringify(pilha.id)} && x.name === ${JSON.stringify(pilha.nome)} && x.getFlag('${S}', 'grade')?.lugar === ${JSON.stringify(dividir.para.lugar)} && x.getFlag('${S}', 'grade')?.x === ${dividir.para.x} && x.getFlag('${S}', 'grade')?.y === ${dividir.para.y}); return i ? { id: i.id, qtd: i.system.quantidade } : null; })()`));
+        const restou = pilha ? (await noFoundry(pilha.id))?.qtd : null;
+        // Juntar: a wiki só conhece a pilha nova pela ficha da mesa (a volta rápida).
+        await esperar(async () => (await mesa()).itens.some(l => l.id === nova?.id));
+        const juntar = nova ? await pedir({ tipo: 'juntar', item: nova.id, alvo: pilha.id }) : null;
+        const juntou = juntar?.op && await esperar(async () => !(await noFoundry(nova.id)) && (await noFoundry(pilha.id))?.qtd === pilha.qtd);
+        // As recusas: com o "Mandar a ficha para a wiki" desligado (nem manda nem aplica), a wiki aceita mover o primeiro item
+        // para um quadrado livre e dividir a pilha para outro; na mesa, outros dois itens vão para esses quadrados, e o
+        // primeiro muda de lugar. Ligado de novo, a mesa recusa as duas, com o motivo (o primeiro, "mudou na mesa"), e nada
+        // muda. Depois, a confirmação que se perdeu (a operação de novo pendente na wiki): a mesa responde o mesmo, sem
+        // aplicar de novo.
+        const pequenos = linhas.filter(l => l.id !== movel.id && l.id !== pilha?.id && grades.some(g => g.id === l.grade.lugar) && l.tamanho.l === 1 && l.tamanho.a === 1);
+        const [outro, outro2] = pequenos;
+        const nomeDe = lugar => grades.find(g => g.id === lugar)?.nome;
+        await edge.evaluate(`game.settings.set('${S}', 'wikiMesa', false).then(() => true)`);
+        let recusa = null;
+        try {
+          const op1 = await pedirNoLivre({ tipo: 'mover' }, movel.id, mover.para.lugar);
+          const op2 = pilha ? await pedirNoLivre({ tipo: 'dividir', qtd: 1 }, pilha.id) : null;
+          const naMesa = await edge.evaluate(`(async () => {
+            const a = game.actors.get(${JSON.stringify(atorId)});
+            const inv = game.system.api.inventario;
+            const mover = (id, destino) => inv.moverNaGrade(a.items.get(id), destino, { avisar: false }).then(r => r.ok || r.motivo);
+            // O primeiro item muda de lugar na mesa (o rev sobe), fora dos dois quadrados pedidos; depois, os outros vão para eles.
+            const pedidos = [${JSON.stringify(op1?.para)}, ${JSON.stringify(op2?.para)}].filter(Boolean);
+            let mudou = null;
+            for (const lugar of inv.lugaresDe(a).filter(l => l.tipo === 'grade')) for (let y = 0; y < lugar.a && !mudou; y++) for (let x = 0; x < lugar.l && !mudou; x++) {
+              if (pedidos.some(p => p.lugar === lugar.id && p.x === x && p.y === y)) continue;
+              if ((await mover(${JSON.stringify(movel.id)}, { lugar: lugar.id, x, y, girado: false })) === true) mudou = a.items.get(${JSON.stringify(movel.id)}).getFlag('${S}', 'grade');
+            }
+            const ocupou = [await mover(${JSON.stringify(outro.id)}, ${JSON.stringify(op1?.para)}), await mover(${JSON.stringify(outro2?.id)}, ${JSON.stringify(op2?.para)})];
+            return { ocupou, mudou, pilhas: a.items.filter(i => i.name === ${JSON.stringify(pilha?.nome ?? '')}).length };
+          })()`);
+          await edge.sleep(300);
+          const esperando = [await estadoDa(op1?.id), await estadoDa(op2?.id)];
+          await edge.evaluate(`game.settings.set('${S}', 'wikiMesa', true).then(() => true)`);
+          await edge.evaluate(`game.system.api.inventario.aplicarDaWiki().then(() => true)`);
+          await esperar(async () => (await estadoDa(op1?.id)) === 'recusada' && (await estadoDa(op2?.id)) === 'recusada');
+          const lidas = (await api(ops)).ops;
+          const motivos = [op1, op2].map(op => lidas.find(o => o.id === op?.id)?.motivo);
+          const depois = await noFoundry(movel.id);
+          const pilhas = await edge.evaluate(`game.actors.get(${JSON.stringify(atorId)}).items.filter(i => i.name === ${JSON.stringify(pilha?.nome ?? '')}).length`);
+          const marca = await edge.evaluate(`game.actors.get(${JSON.stringify(atorId)}).getFlag('${S}', 'inventario')`);
+          // A confirmação perdida: a primeira volta a esperar na wiki (no arquivo da fila).
+          const arquivo = path.join(servidores.dados, 'personagens', 'inventario', `${nomad.id}.json`);
+          const fila = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
+          const perdida = fila.ops.find(o => o.id === op1?.id);
+          perdida.estado = 'pendente';
+          delete perdida.decidido;
+          delete perdida.motivo;
+          fs.writeFileSync(arquivo, JSON.stringify(fila));
+          await edge.evaluate(`game.system.api.inventario.aplicarDaWiki().then(() => true)`);
+          await esperar(async () => (await estadoDa(op1?.id)) === 'recusada');
+          const deNovo = (await api(ops)).ops.find(o => o.id === op1?.id)?.motivo;
+          const aindaLa = await noFoundry(movel.id);
+          recusa = {
+            entraram: [Boolean(op1), Boolean(op2)], ocupou: naMesa.ocupou, mudou: Boolean(naMesa.mudou), esperando, motivos,
+            nadaMudou: JSON.stringify(depois?.grade) === JSON.stringify(naMesa.mudou) && pilhas === naMesa.pilhas,
+            marca: marca?.seq === op2?.seq && [op1, op2].every(op => marca.respostas.some(([id, resposta]) => id === op?.id && resposta.estado === 'recusada')),
+            perdida: deNovo === motivos[0] && JSON.stringify(aindaLa?.grade) === JSON.stringify(naMesa.mudou),
+            esperado: [`${movel.nome} mudou na mesa. ${nomeDe(op1?.para.lugar)}: ${outro.nome} já está ali.`, `${nomeDe(op2?.para.lugar)}: ${outro2?.nome} já está ali.`]
+          };
+        } finally {
+          await edge.evaluate(`game.settings.set('${S}', 'wikiMesa', true).then(() => true)`);
+        }
+        const resultado = {
+          mover: { moveu: Boolean(moveu), aplicada: Boolean(aplicada), naMesa: Boolean(naMesa), rapido: tempoMover < 5000 },
+          dividir: pilha ? { nova: nova?.qtd ?? null, restou: restou === pilha.qtd - 1 } : 'sem pilha',
+          juntar: juntar ? { status: juntar.status, juntou: Boolean(juntou), aplicada: (await estadoDa(juntar.op?.id)) === 'aplicada' } : null,
+          recusa
+        };
+        const esperado = {
+          mover: { moveu: true, aplicada: true, naMesa: true, rapido: true },
+          dividir: { nova: 1, restou: true },
+          juntar: { status: 201, juntou: true, aplicada: true },
+          recusa: recusa && { ...recusa, entraram: [true, true], ocupou: [true, true], mudou: true, esperando: ['pendente', 'pendente'], motivos: recusa.esperado, nadaMudou: true, marca: true, perdida: true }
+        };
+        return [JSON.stringify(resultado) === JSON.stringify(esperado), JSON.stringify({ resultado, tempoMover })];
+      } finally {
+        await edge.evaluate(`(async () => { await game.actors.get(${JSON.stringify(atorId)})?.delete(); return true; })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

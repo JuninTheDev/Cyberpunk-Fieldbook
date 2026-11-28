@@ -271,6 +271,11 @@ test('a wiki reinicia quando muda o que o servidor carrega: o server.js, a API, 
   assert.equal(mudar('server.js'), 4);
   assert.equal(mudar('jogadores.html'), 4);
   assert.equal(s.ler('dados/atualizacoes.log').match(/wiki reiniciada/g).length, 4);
+  // A regra da grade do inventário (o C111): a fila da wiki a carrega com import(), e ela fica na memória. O resto do
+  // sistema do Foundry 14, não.
+  assert.equal(mudar('foundry-sistema/scripts/compartilhado/regras-grade.mjs'), 5);
+  assert.equal(mudar('foundry-sistema/scripts/wiki.mjs'), 5);
+  assert.equal(s.ler('dados/atualizacoes.log').match(/wiki reiniciada/g).length, 5);
 });
 
 test('a fase 2 da auditoria: o server.js com erro de sintaxe não reinicia a wiki; o atualizar.sh volta para a versão de antes e não tenta de novo a mesma', { skip: !BASH && 'sem o bash', timeout: 120000 }, t => {

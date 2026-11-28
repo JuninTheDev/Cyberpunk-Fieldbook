@@ -3,7 +3,8 @@
 # da mesa, o dono da pasta e dos dados (desde a auditoria de 2026-11-16; antes, como root). Para o systemctl, o sudo
 # libera só os comandos que ele usa (servidor/servicos.sh). Rodado à mão com sudo, também funciona.
 # - Páginas, regras, lore e estilos: valem na hora (o servidor lê os arquivos a cada pedido).
-# - server.js, a API e o que ela carrega (campanha-base.js e wiki-nomes.js): reinicia a wiki (2 segundos fora do ar).
+# - server.js, a API e o que ela carrega (campanha-base.js, wiki-nomes.js e a regra da grade do inventário, que a fila
+#   do C111 confere): reinicia a wiki (2 segundos fora do ar).
 #   Antes, confere a sintaxe; depois, que a wiki respondeu. Se não, volta para a versão de antes e não tenta de novo a
 #   mesma (a marca .commit-recusado): a wiki não fica fora do ar por uma publicação quebrada. A próxima publicação tenta.
 # - Módulos do Foundry (foundry-2077/ e os outros foundry-*/, e o que o build do cpr-2077 lê da wiki: as fichas de NPC,
@@ -30,7 +31,7 @@ registrar() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 # Os arquivos que o servidor carrega com erro de sintaxe (vazio: nenhum).
 com_erro() {
   local ruins=() arquivo
-  for arquivo in server.js revertidos.js campanha-base.js wiki-nomes.js $(cd "$WIKI" && ls api-*.js 2>/dev/null); do
+  for arquivo in server.js revertidos.js campanha-base.js wiki-nomes.js foundry-sistema/scripts/compartilhado/regras-grade.mjs $(cd "$WIKI" && ls api-*.js 2>/dev/null); do
     [ -f "$WIKI/$arquivo" ] || continue
     como_mesa node --check "$WIKI/$arquivo" >/dev/null 2>&1 || ruins+=("$arquivo")
   done
@@ -60,7 +61,7 @@ if [ "$antes" != "$depois" ] && [ "$depois" != "$(cat "$RECUSADO" 2>/dev/null ||
   # O servidor nunca edita a pasta: o GitHub manda (até o loja-catalogo.js que o build do módulo regrava).
   git_mesa reset -q --hard "$depois"
   registrar "no ar: $(git_mesa log -1 --format='%h %s')"
-  if grep -qE '^(server\.js|api-[^/]+\.js|revertidos\.js|campanha-base\.js|wiki-nomes\.js)$' <<<"$mudou"; then
+  if grep -qE '^(server\.js|api-[^/]+\.js|revertidos\.js|campanha-base\.js|wiki-nomes\.js|foundry-sistema/scripts/compartilhado/regras-grade\.mjs)$' <<<"$mudou"; then
     ruins=$(com_erro)
     if [ -n "$ruins" ]; then
       voltar "erro de sintaxe em $ruins (a wiki não reiniciou)"

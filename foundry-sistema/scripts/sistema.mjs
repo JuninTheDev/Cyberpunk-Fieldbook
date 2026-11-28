@@ -65,6 +65,7 @@ import * as cryo from './cryo.mjs';
 import * as tokenDinamico from './token-dinamico.mjs';
 import { aoMudarTurno, redesenharFichas } from './turnos.mjs';
 import * as wiki from './wiki.mjs';
+import * as filaDaWiki from './wiki-inventario.mjs';
 import * as vinculoVeiculo from './vinculo-veiculo.mjs';
 import * as tripulacao from './tripulacao.mjs';
 import { registrarAvisosDaWiki } from './wiki-avisos.mjs';
@@ -128,6 +129,7 @@ Hooks.once('init', () => {
   DocumentSheetConfig.registerSheet(Item, SISTEMA, FichaArquitetura, { types: ['arquitetura'], makeDefault: true, label: 'Arquitetura da NET do RED' });
 
   wiki.registrarWiki();
+  filaDaWiki.registrarFilaDaWiki();
   registrarAvisosDaWiki({ listar: wiki.personagensDaWiki, abrir: abrirJanelaDaWiki });
   // O Black ICE próprio do netrunner: o token que o programa ativo põe na cena (no mestre ativo).
   registrarIceRezzado();
@@ -181,7 +183,7 @@ Hooks.once('init', () => {
   game.system.api.montagem = montagem.API;
   // Os efeitos na mesa (o C79): o diretor, que toca o evento do cartão do resultado em cada navegador.
   game.system.api.efeitos = coreografia.API;
-  game.system.api.inventario = inventarioGrade.API;
+  game.system.api.inventario = { ...inventarioGrade.API, aplicarDaWiki: filaDaWiki.aplicarDaWiki };
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);
