@@ -912,7 +912,11 @@ E a do navegador de cada um:
   de cada lado), acima da lista de sempre; tudo nele está guardado (ciclo 234). Com a ficha do personagem ao lado, arrastar
   de uma grade para a outra leva o item para o quadrado escolhido, pelo caminho de sempre: do contêiner, o "Pegar" (que
   cobra o que for de cobrar); para o contêiner, com "Criar e pôr itens"; entre personagens, como arrastar entre as fichas.
-  A loja continua como lista. O `scripts/compartilhado/regras-grade.mjs`, sem import (o
+  A loja continua como lista. **Na wiki** (ciclo 235): a ficha da mesa leva o lugar, o tamanho e os encaixes de cada
+  item, os lugares do personagem e se ele está num combate que já começou; o inventário vai também sozinho, meio segundo
+  depois de cada mudança (`PUT /api/personagens/:id/inventario/estado`), e a ficha aberta na wiki se redesenha na hora
+  (`/api/personagens/:id/eventos`): em menos de 1 s nos testes. A aba **Inventário** da ficha da wiki mostra a grade, só
+  de leitura por enquanto (mexer pela wiki é o C111 e o C112). O `scripts/compartilhado/regras-grade.mjs`, sem import (o
   Foundry, o servidor e a página da wiki vão usar o mesmo arquivo), dá o tamanho de cada item (as armas pelo tipo, a
   munição e a pilha por tipo, a armadura guardada pelo peso, o equipamento pelo catálogo), os lugares do personagem (as
   mãos, a cabeça, o tronco, o deck e a mochila no corpo, o coldre, as costas, os bolsos 4×2, o cinto 6×1, a mochila P/M/G,

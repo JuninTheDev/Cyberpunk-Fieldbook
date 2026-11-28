@@ -13,29 +13,41 @@ const esc = texto => String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 
 // O que a tela desenha: os encaixes (com quem os ocupa, o par de mãos inclusive), as listas e as grades, cada uma com os
 // itens e o lugar deles. itens: [{ id, name, img, qtd, grade, ...os campos da regra }]. Os sem lugar ou sem tamanho ficam
-// de fora (o veículo é um lugar; o que está dentro de outro vai com ele).
+// de fora (o veículo é um lugar; o que está dentro de outro vai com ele). O item que já traz o tamanho e os encaixes que
+// ocupa (a linha da ficha da mesa na wiki, que não tem os dados do item; o C110) vale por eles.
+const tamanhoDe = item => item.tamanho ?? tamanhoDoItem(item);
 export function modeloDaGrade(lugares, itens, { body = 0 } = {}) {
-  const comLugar = itens.filter(item => item.grade && tamanhoDoItem(item));
+  const comLugar = itens.filter(item => item.grade && tamanhoDe(item));
   const noLugar = id => comLugar.filter(item => item.grade.lugar === id);
   return lugares.map(lugar => {
     if (lugar.tipo === 'encaixe') {
-      const dono = comLugar.find(item => ENCAIXES[item.grade.lugar] && (encaixesDoItem(item, item.grade.lugar, body) ?? [item.grade.lugar]).includes(lugar.id));
+      const dono = comLugar.find(item => ENCAIXES[item.grade.lugar] && (item.ocupa ?? encaixesDoItem(item, item.grade.lugar, body) ?? [item.grade.lugar]).includes(lugar.id));
       return { ...lugar, item: dono ?? null, deOutro: Boolean(dono && dono.grade.lugar !== lugar.id) };
     }
     if (lugar.tipo === 'lista') return { ...lugar, itens: noLugar(lugar.id) };
     return {
       ...lugar,
-      itens: noLugar(lugar.id).map(item => ({ ...item, ...dimensoes(tamanhoDoItem(item), item.grade.girado) }))
+      itens: noLugar(lugar.id).map(item => ({ ...item, ...dimensoes(tamanhoDe(item), item.grade.girado) }))
     };
   });
 }
 
+// A grade da ficha que o Foundry mandou para a wiki (o "Na mesa", o C110): os lugares do personagem e os itens com o
+// lugar, o tamanho e os encaixes que o Foundry contou. Sem os lugares (o Foundry 12, ou o 14 de antes do C110), null.
+export function gradeDaMesa(mesa) {
+  if (!Array.isArray(mesa?.lugares) || !mesa.lugares.length) return null;
+  const itens = (Array.isArray(mesa.itens) ? mesa.itens : []).filter(linha => linha?.grade?.lugar && linha.tamanho)
+    .map(linha => ({ id: String(linha.id ?? ''), name: String(linha.nome ?? ''), qtd: Number(linha.qtd) || 1, grade: linha.grade, tamanho: linha.tamanho, ...(Array.isArray(linha.ocupa) ? { ocupa: linha.ocupa } : {}) }));
+  return { lugares: mesa.lugares, itens, organizar: itens.filter(item => item.grade.lugar === 'organizar').length, emCombate: Boolean(mesa.emCombate) };
+}
+
 const rotuloDoItem = item => `${item.name}${Number(item.qtd) > 1 ? ` (${item.qtd})` : ''}`;
-const botaoDoItem = (item, { editavel, selecionado }, estilo = '') => `<button type="button" class="grade-item${item.l >= 2 ? ' largo' : ''}${item.id === selecionado ? ' selecionado' : ''}" data-item-id="${esc(item.id)}"${estilo ? ` style="${estilo}"` : ''} aria-label="${esc(rotuloDoItem(item))}" aria-pressed="${item.id === selecionado}"${editavel ? '' : ' aria-disabled="true"'} data-tooltip="${esc(rotuloDoItem(item))}">${item.img ? `<img src="${esc(item.img)}" alt="" draggable="false">` : ''}<span class="nome">${esc(item.name)}</span>${Number(item.qtd) > 1 ? `<span class="qtd">${esc(item.qtd)}</span>` : ''}</button>`;
+// titulo: a dica do navegador (a wiki; o Foundry tem a dele, pelo data-tooltip).
+const botaoDoItem = (item, { editavel, selecionado, titulo }, estilo = '') => `<button type="button" class="grade-item${item.l >= 2 ? ' largo' : ''}${item.id === selecionado ? ' selecionado' : ''}" data-item-id="${esc(item.id)}"${estilo ? ` style="${estilo}"` : ''} aria-label="${esc(rotuloDoItem(item))}" aria-pressed="${item.id === selecionado}"${editavel ? '' : ' aria-disabled="true"'} data-tooltip="${esc(rotuloDoItem(item))}"${titulo ? ` title="${esc(rotuloDoItem(item))}"` : ''}>${item.img ? `<img src="${esc(item.img)}" alt="" draggable="false">` : ''}<span class="nome">${esc(item.name)}</span>${Number(item.qtd) > 1 ? `<span class="qtd">${esc(item.qtd)}</span>` : ''}</button>`;
 
 // O HTML da tela, a partir do modelo. Os nomes e as imagens são escapados (o nome vem do jogador).
-export function htmlDaGrade(modelo, { editavel = true, selecionado = '', organizar = 0 } = {}) {
-  const opcoes = { editavel, selecionado };
+export function htmlDaGrade(modelo, { editavel = true, selecionado = '', organizar = 0, titulo = false } = {}) {
+  const opcoes = { editavel, selecionado, titulo };
   const encaixes = modelo.filter(lugar => lugar.tipo === 'encaixe');
   const listas = modelo.filter(lugar => lugar.tipo === 'lista' && lugar.id !== 'organizar');
   const grades = modelo.filter(lugar => lugar.tipo === 'grade');

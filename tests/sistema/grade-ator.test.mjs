@@ -6,8 +6,9 @@ import {
   usoDoItem, usoDoLugar
 } from '../../foundry-sistema/scripts/compartilhado/regras-grade.mjs';
 import {
-  arrumarConteiner, arrumarDadosDoAtor, arrumarPersonagem, bodyDoAtor, estadoDe, itemNaRegra, lugaresDoAtor, temGrade, usoNoAtor
+  arrumarConteiner, arrumarDadosDoAtor, arrumarPersonagem, bodyDoAtor, estadoDe, gradeParaAWiki, itemNaRegra, lugaresDoAtor, temGrade, usoNoAtor
 } from '../../foundry-sistema/scripts/regras-grade-ator.mjs';
+import { gradeDaMesa, modeloDaGrade } from '../../foundry-sistema/scripts/compartilhado/grade-ui.mjs';
 import { migrarDados, PASSOS, VERSAO_DOS_DADOS } from '../../foundry-sistema/scripts/migracao.mjs';
 
 const catalogo = JSON.parse(fs.readFileSync(new URL('../../foundry-sistema/dados/catalogo.json', import.meta.url), 'utf8')).itens;
@@ -263,4 +264,50 @@ test('C109: a migração 12 arruma o contêiner (tudo guardado, no Conteúdo) e 
   assert.deepEqual(depois.items.find(item => item._id === 'a1').flags['cpr-fieldbook'].grade, { ...noLugar('conteudo', 4, 0), rev: 1 });
   // O personagem não passa pelo passo 12.
   assert.deepEqual(migrarDados(personagemDeHoje(), { documento: 'Actor', passos: [passo], catalogo }), personagemDeHoje());
+});
+
+// O modelo da tela resumido: quem está em cada encaixe (e se é o par), e onde e de que tamanho está cada item.
+const resumoDoModelo = modelo => modelo.map(lugar => (lugar.tipo === 'encaixe'
+  ? [lugar.id, lugar.item?.id ?? null, lugar.deOutro]
+  : [lugar.id, (lugar.itens ?? []).map(item => [item.id, item.grade.x, item.grade.y, item.l ?? null, item.a ?? null])]));
+
+test('C110: a linha do item para a wiki leva o lugar, o tamanho e os encaixes; com ela, a wiki desenha a mesma grade do Foundry, sem os dados do item', () => {
+  const comLugar = (_id, id, grade, extra = {}) => dado(_id, id, { ...extra, flags: { ...(extra.flags ?? {}), grade: { ...grade, rev: 2 } } });
+  const itens = [
+    comLugar('rifle', 'core_weapons:assault-rifle', noLugar('corpo:maoPrincipal')),
+    comLugar('espada', 'core_weapons:sword', noLugar('costas')),
+    comLugar('traje', 'core_armor:bodyweight-suit', noLugar('corpo:tronco')),
+    comLugar('carry', 'core_gear:carryall', noLugar('corpo:mochila')),
+    comLugar('pc', 'core_gear:computer', noLugar('mochila', 1, 2, true)),
+    comLugar('balas', 'core_ammo:rifle-basic', noLugar('cinto', 3, 0), { system: { quantidade: 30 } }),
+    comLugar('perdida', 'core_gear:tech-bag', { ...noLugar('organizar'), uso: 'guardado' }),
+    dado('prog', 'core_programs:armor', { system: { instaladoEm: 'deck1' } })
+  ];
+  const ator = { _id: 'a1', type: 'personagem', system: { moradia: { descricao: 'Quitinete' }, atributos: { body: { valor: 6 } } }, items: itens };
+  const naRegra = itens.map(itemNaRegra);
+  const lugares = lugaresDoAtor(ator, naRegra);
+  const linhas = itens.map((item, i) => ({ id: item._id, nome: item.name, qtd: item.system.quantidade ?? 1, ...(gradeParaAWiki(naRegra[i], bodyDoAtor(ator)) ?? {}) }));
+  const linha = id => linhas.find(item => item.id === id);
+  // O fuzil ocupa as duas mãos; a armadura inteira, a cabeça e o tronco; nas grades, sem encaixes; o programa no deck, nada.
+  assert.deepEqual(linha('rifle').ocupa, ['corpo:maoPrincipal', 'corpo:maoSecundaria']);
+  assert.deepEqual(linha('rifle').grade, { ...noLugar('corpo:maoPrincipal'), rev: 2 });
+  assert.notEqual(linha('rifle').grade, naRegra[0].grade);
+  assert.deepEqual(linha('traje').ocupa, ['corpo:cabeca', 'corpo:tronco']);
+  assert.deepEqual(linha('espada').ocupa, ['costas']);
+  assert.deepEqual([linha('pc').tamanho, 'ocupa' in linha('pc')], [{ l: 2, a: 2, pilha: 1 }, false]);
+  assert.deepEqual(linha('balas').tamanho.pilha > 1, true);
+  assert.deepEqual(Object.keys(linha('prog')), ['id', 'nome', 'qtd']);
+  // Com BODY 8, a espada de duas mãos na mão vai numa só (maosDaArma).
+  const espadaNaMao = itemNaRegra(comLugar('e2', 'core_weapons:sword', noLugar('corpo:maoPrincipal')));
+  assert.deepEqual(gradeParaAWiki(espadaNaMao, 8).ocupa, ['corpo:maoPrincipal']);
+  assert.deepEqual(gradeParaAWiki(espadaNaMao, 6).ocupa, ['corpo:maoPrincipal', 'corpo:maoSecundaria']);
+  // A wiki: a mesma tela, pela linha da ficha da mesa.
+  const daMesa = gradeDaMesa({ lugares, itens: linhas, emCombate: true });
+  assert.deepEqual(resumoDoModelo(modeloDaGrade(daMesa.lugares, daMesa.itens)), resumoDoModelo(modeloDaGrade(lugares, naRegra, { body: 6 })));
+  assert.deepEqual(daMesa.itens.find(item => item.id === 'balas'), { id: 'balas', name: 'Rifle (Basic)', qtd: 30, grade: { ...noLugar('cinto', 3, 0), rev: 2 }, tamanho: linha('balas').tamanho });
+  assert.deepEqual([daMesa.organizar, daMesa.emCombate], [1, true]);
+  assert.deepEqual(daMesa.itens.map(item => item.id).sort(), ['balas', 'carry', 'espada', 'pc', 'perdida', 'rifle', 'traje']);
+  // Sem os lugares (o Foundry 12, ou o 14 de antes do C110), a wiki não desenha a grade.
+  for (const mesa of [null, {}, { itens: linhas }, { lugares: [], itens: linhas }]) assert.equal(gradeDaMesa(mesa), null);
+  assert.equal(gradeDaMesa({ lugares }).itens.length, 0);
 });

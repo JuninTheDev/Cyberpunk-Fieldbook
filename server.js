@@ -37,6 +37,8 @@ const contentTypes = {
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.md': 'text/markdown; charset=utf-8',
+  // Os módulos do sistema que a página usa (a grade do inventário, o C110).
+  '.mjs': 'text/javascript; charset=utf-8',
   '.otf': 'font/otf',
   '.pdf': 'application/pdf',
   '.png': 'image/png',

@@ -63,6 +63,9 @@ test('C109: o HTML da tela: cada lugar com o data-lugar, o item na grade pela co
   assert.match(html, /class="grade-item selecionado" data-item-id="balas"/);
   assert.match(html, /aria-label="Balas \(20\)"/);
   assert.match(html, /<span class="qtd">20<\/span>/);
+  // A dica do navegador só a pedido (a wiki, o C110; o Foundry tem a dele).
+  assert.doesNotMatch(html, / title=/);
+  assert.match(htmlDaGrade(modeloDaGrade(LUGARES, itens), { editavel: false, titulo: true }), /data-item-id="balas"[^>]* title="Balas \(20\)"/);
   // A mão secundária mostra o par (não é outro botão do mesmo item).
   assert.equal(html.match(/data-item-id="rifle"/g).length, 2);
   assert.match(html, /<span class="par" data-item-id="rifle">Rifle<\/span>/);
@@ -121,4 +124,27 @@ test('C109: a tela não usa o Foundry nem o DOM no carregamento (a wiki usa o me
   const sistema = JSON.parse(fs.readFileSync(new URL('../../foundry-sistema/system.json', import.meta.url), 'utf8'));
   assert.ok(sistema.styles.some(estilo => estilo.src === 'styles/grade.css'));
   assert.ok(fs.existsSync(new URL('../../foundry-sistema/templates/personagem/inventario.hbs', import.meta.url)));
+});
+
+test('C110: a wiki serve ao jogador a tela e a regra da grade (o módulo e o que ele importa) e o CSS dela, como JavaScript', async () => {
+  const { createRequire } = await import('node:module');
+  const publicos = createRequire(import.meta.url)('../../arquivos-publicos.js');
+  const raiz = new URL('../../', import.meta.url);
+  const modulos = ['foundry-sistema/scripts/compartilhado/grade-ui.mjs'];
+  // Cada import relativo de um módulo da lista entra na lista também: sem ele, a página do jogador não carrega a grade.
+  for (let i = 0; i < modulos.length; i++) {
+    const texto = fs.readFileSync(new URL(modulos[i], raiz), 'utf8');
+    for (const [, de] of texto.matchAll(/^import [^;]*? from '(\.[^']+)';/gm)) {
+      const caminho = new URL(de, new URL(modulos[i], raiz)).href.slice(raiz.href.length);
+      if (!modulos.includes(caminho)) modulos.push(caminho);
+    }
+  }
+  assert.deepEqual(modulos, ['foundry-sistema/scripts/compartilhado/grade-ui.mjs', 'foundry-sistema/scripts/compartilhado/regras-grade.mjs']);
+  for (const arquivo of [...modulos, 'foundry-sistema/styles/grade.css']) assert.ok(publicos.guardados.includes(`/${arquivo}`), arquivo);
+  assert.match(fs.readFileSync(new URL('server.js', raiz), 'utf8'), /'\.mjs': 'text\/javascript; charset=utf-8'/);
+  // A ficha da wiki carrega o mesmo módulo e o CSS, e tem a aba.
+  const criador = fs.readFileSync(new URL('criador.js', raiz), 'utf8');
+  assert.match(criador, /import\(new URL\('foundry-sistema\/scripts\/compartilhado\/grade-ui\.mjs'/);
+  assert.match(criador, /href: 'foundry-sistema\/styles\/grade\.css'/);
+  assert.match(criador, /\['inventario', 'Inventário'\]/);
 });

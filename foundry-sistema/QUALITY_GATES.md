@@ -55,6 +55,11 @@ junto com o registro do ciclo (o G3 confere).
   sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
 - O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
 
+**A lição do ciclo 235:** alguns testes do G3 rodam uma função tirada do texto do arquivo (o `funcaoDaFonte`; o do C46
+roda o `agendarVolta` do `wiki.mjs` sozinho). Um ajudante novo fora da função quebra esse teste sem que nada esteja
+errado na mesa: a guarda fica dentro de cada função. E um passo do G4 que mede um aviso precisa separar os avisos: o
+combatente que entra e o combate que começa no mesmo meio segundo saem num envio só, e o aviso do começo não era testado.
+
 **A lição do ciclo 234:** no G4, o ponteiro de mentira acha o que está desenhado naquele ponto da tela de teste
 (1374×873), como o de verdade. Três vezes o passo novo soltou "no nada": o ponto abaixo da tela (a ficha mais alta que a
 tela), a coluna vazia que cortava a grade e a outra ficha que veio para a frente no pointerdown (o Foundry). Antes de

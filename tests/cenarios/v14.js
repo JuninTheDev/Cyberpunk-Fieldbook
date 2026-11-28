@@ -23659,6 +23659,118 @@ module.exports = async ({ edge, servidores, r }) => {
       return [JSON.stringify(c109b) === JSON.stringify(esperado), JSON.stringify(c109b)];
     });
 
+    await r.passo('C110: a volta rápida para a wiki: com a ficha do Nomad aberta na wiki (a aba Inventário, só de leitura), mexer na grade do Foundry aparece nela em menos de 2 s, e o combate também; a ficha da mesa leva o lugar, o tamanho e os encaixes de cada item, e os lugares do personagem (os porta-malas dos veículos)', async () => {
+      // O Nomad importado de novo (o passo da importação apaga o ator dele), com a ficha inteira de agora (com os lugares), e o
+      // que a grade do Foundry tem: os lugares e os itens com lugar e tamanho.
+      const atorId = await edge.evaluate(`(async () => (await game.system.api.wiki.importarPersonagem(${JSON.stringify(nomad.id)}, '')).ator.id)()`);
+      const foundry = await edge.evaluate(`(async () => {
+        const S = game.system.id;
+        const ator = game.actors.get(${JSON.stringify(atorId)});
+        if (!ator) return { erro: 'sem o ator do Nomad' };
+        await game.system.api.wiki.mandarFicha(ator);
+        const inv = game.system.api.inventario;
+        const naGrade = ator.items.filter(i => i.getFlag(S, 'grade') && inv.lugaresDe(ator).some(l => l.id === i.getFlag(S, 'grade').lugar));
+        const arma = ator.items.find(i => i.type === 'arma' && String(i.getFlag(S, 'grade')?.lugar).startsWith('corpo:mao'));
+        return { lugares: inv.lugaresDe(ator).map(l => l.id), naGrade: naGrade.map(i => i.id).sort(), arma: arma ? { id: arma.id, maos: arma.system.maos } : null };
+      })()`);
+      if (foundry.erro) return [false, foundry.erro];
+      const mesa = (await api(`/api/personagens/${nomad.id}`)).personagem.mesa || {};
+      const linhaDaArma = (mesa.itens || []).find(i => i.id === foundry.arma?.id);
+      const daFicha = {
+        lugares: JSON.stringify((mesa.lugares || []).map(l => l.id)) === JSON.stringify(foundry.lugares),
+        portaMalas: foundry.lugares.filter(id => id.startsWith('veiculo:')).length,
+        // Na grade da wiki, os mesmos itens do Foundry (o que tem lugar e tamanho).
+        itens: JSON.stringify((mesa.itens || []).filter(i => i.grade && i.tamanho).map(i => i.id).sort()) === JSON.stringify(foundry.naGrade),
+        arma: linhaDaArma ? { ocupa: linhaDaArma.ocupa?.length, maos: foundry.arma.maos, tamanho: Boolean(linhaDaArma.tamanho?.l) } : null,
+        emCombate: mesa.emCombate
+      };
+      let cliente;
+      try {
+        cliente = await abrirEdge({ porta: 9476, saida: path.join(servidores.raiz, 'tests', '.saida'), prefixo: 'v14-c110-' });
+        await cliente.ir(`${wiki}/#ficha/${nomad.id}`, 1500);
+        const esperarNaPagina = async (expressao, ms = 10000) => { const fim = Date.now() + ms; let valor; while (Date.now() < fim && !(valor = await cliente.evaluate(expressao))) await cliente.sleep(50); return valor; };
+        await esperarNaPagina(`!!document.querySelector('[data-cc-tab="inventario"]')`);
+        await cliente.evaluate(`document.querySelector('[data-cc-tab="inventario"]').click(), true`);
+        await esperarNaPagina(`!!document.querySelector('[data-cc-grade] .grade-inventario')`);
+        const pagina = await cliente.evaluate(`(() => {
+          const raiz = document.querySelector('[data-cc-grade] .grade-inventario');
+          return { editavel: raiz.classList.contains('editavel'), lugares: [...raiz.querySelectorAll('[data-lugar]')].map(l => l.dataset.lugar).sort().join(),
+            soLeitura: [...raiz.querySelectorAll('.grade-item')].every(b => b.getAttribute('aria-disabled') === 'true'), itens: raiz.querySelectorAll('.grade-item').length,
+            visivel: !document.querySelector('[data-cc-panel="inventario"]').hidden };
+        })()`);
+        // Mexer no Foundry: o primeiro item de uma grade vai para o primeiro quadrado livre de outro lugar (os avisos de onde
+        // não cabe ficam de fora).
+        const movido = await edge.evaluate(`(async () => {
+          const S = game.system.id;
+          const ator = game.actors.get(${JSON.stringify(atorId)});
+          const inv = game.system.api.inventario;
+          const grades = inv.lugaresDe(ator).filter(l => l.tipo === 'grade');
+          const item = ator.items.find(i => grades.some(l => l.id === i.getFlag(S, 'grade')?.lugar));
+          const antes = item.getFlag(S, 'grade');
+          const avisar = ui.notifications.warn;
+          ui.notifications.warn = () => {};
+          try {
+            for (const lugar of grades.filter(l => l.id !== antes.lugar)) for (let y = 0; y < lugar.a; y++) for (let x = 0; x < lugar.l; x++) {
+              const destino = { lugar: lugar.id, x, y, girado: false };
+              if ((await inv.moverNaGrade(item, destino)).ok) return { id: item.id, antes, destino, feito: Date.now() };
+            }
+          } finally { ui.notifications.warn = avisar; }
+          return null;
+        })()`);
+        if (!movido) return [false, JSON.stringify({ daFicha, pagina, movido })];
+        const noLugar = `[data-cc-grade] .grade-lugar[data-lugar="${movido.destino.lugar}"] [data-item-id="${movido.id}"]`;
+        const chegou = await esperarNaPagina(`(() => { const b = document.querySelector(${JSON.stringify(noLugar)}); return b && b.style.gridColumn.startsWith('${movido.destino.x + 1} ') && b.style.gridRow.startsWith('${movido.destino.y + 1} ') ? Date.now() : 0; })()`, 6000);
+        const movimento = chegou ? chegou - movido.feito : null;
+        // O combate: o token do Nomad entra num combate que começa, e a wiki diz "Em combate na mesa"; o combate apagado tira.
+        const emCombate = () => esperarNaPagina(`/Em combate na mesa/.test(document.querySelector('[data-cc-grade-status]')?.textContent || '') ? Date.now() : 0`, 6000);
+        const semCombate = () => esperarNaPagina(`document.querySelector('[data-cc-grade-status]') && !/Em combate na mesa/.test(document.querySelector('[data-cc-grade-status]').textContent) ? Date.now() : 0`, 6000);
+        await edge.evaluate(`(async () => {
+          const ator = game.actors.get(${JSON.stringify(atorId)});
+          // A cena aberta (ou uma de passagem, sem nenhuma aberta, como no G4 só com estes passos).
+          const nova = canvas.scene ? null : await Scene.implementation.create({ name: 'C110 Cena', width: 3000, height: 3000 });
+          const cena = canvas.scene ?? nova;
+          const [token] = await cena.createEmbeddedDocuments('Token', [(await ator.getTokenDocument({ x: 1500, y: 1500 })).toObject()]);
+          const combate = await Combat.implementation.create({ scene: cena.id, active: true });
+          await combate.createEmbeddedDocuments('Combatant', [{ tokenId: token.id, sceneId: cena.id, actorId: ator.id }]);
+          window.__c110 = { token: token.id, combate: combate.id, cena: cena.id, nova: nova?.id ?? null };
+          return true;
+        })()`);
+        // Com o Nomad no combate que ainda não começou, o inventário vai (o combatente que entra) e diz que não está em
+        // combate; o combate que começa, depois, é que muda.
+        const recebidoAntes = (await api(`/api/personagens/${nomad.id}`)).personagem.mesa?.recebido;
+        let foraAinda = null;
+        for (let i = 0; i < 60 && !foraAinda; i++) {
+          await edge.sleep(100);
+          const agora = (await api(`/api/personagens/${nomad.id}`)).personagem.mesa;
+          if (agora?.recebido !== recebidoAntes) foraAinda = agora.emCombate === false;
+        }
+        const comecou = await edge.evaluate(`(async () => { await game.combats.get(window.__c110.combate).startCombat(); return Date.now(); })()`);
+        const entrou = await emCombate();
+        const acabou = await edge.evaluate(`(async () => {
+          await game.combats.get(window.__c110.combate)?.delete();
+          await game.scenes.get(window.__c110.cena)?.tokens.get(window.__c110.token)?.delete();
+          if (window.__c110.nova) await game.scenes.get(window.__c110.nova)?.delete();
+          return Date.now();
+        })()`);
+        const saiu = await semCombate();
+        // O item volta para onde estava.
+        const voltou = await edge.evaluate(`(async () => {
+          const ator = game.actors.get(${JSON.stringify(atorId)});
+          return (await game.system.api.inventario.moverNaGrade(ator.items.get(${JSON.stringify(movido.id)}), ${JSON.stringify(movido.antes)})).ok;
+        })()`);
+        const tempos = { movimento, combate: entrou ? entrou - comecou : null, fimDoCombate: saiu ? saiu - acabou : null };
+        const erros = [...cliente.erros];
+        const ok = daFicha.lugares && daFicha.portaMalas >= 1 && daFicha.itens && foundry.naGrade.length > 3 && daFicha.emCombate === false
+          && (!daFicha.arma || (daFicha.arma.ocupa === (daFicha.arma.maos >= 2 ? 2 : 1) && daFicha.arma.tamanho))
+          && pagina.visivel && !pagina.editavel && pagina.soLeitura && pagina.itens === foundry.naGrade.length && pagina.lugares.split(',').length === foundry.lugares.length
+          && foraAinda === true && Object.values(tempos).every(ms => ms !== null && ms < 2000) && voltou && !erros.length;
+        return [ok, JSON.stringify({ daFicha, pagina, foraAinda, tempos, voltou, erros })];
+      } finally {
+        await cliente?.fechar();
+        await edge.evaluate(`(async () => { await game.actors.get(${JSON.stringify(atorId)})?.delete(); return true; })()`);
+      }
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

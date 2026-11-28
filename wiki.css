@@ -2139,3 +2139,9 @@ body.map-immersive.sidebar-open aside .side-status { justify-items: stretch; mar
 @media (prefers-reduced-motion: reduce) { .narrar * { transition: none !important; } }
 /* Na tela estreita, a frase de apresentação da página sai na aba Narrar: sobra espaço para a cena. */
 @media (max-width: 820px) { .content:has(.narrar) > .lede { display: none; } }
+
+/* A aba Inventário da ficha (o C110): a grade do sistema do Foundry 14 (foundry-sistema/styles/grade.css) com as cores da
+   wiki. */
+.cc-inventario { --cp-poco: var(--w); --cp-linha: var(--l); --cp-texto: var(--tx); --cp-fraco: var(--mu); --cp-ciano: var(--c); --cp-vermelho: var(--r); --cp-painel: var(--p); --cp-dados: var(--lbl); overflow-x: auto; }
+/* Na wiki, o item não tem a imagem do Foundry: o nome aparece em todos (cortado no de um quadrado; inteiro na dica). */
+.cc-inventario .grade-lugar .grade-item .nome { display: block; font-size: 9px; }

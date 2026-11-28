@@ -11054,6 +11054,62 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   mutação: o "Pegar" no lugar do levarItem (o saque de graça pelo mestre dá o mesmo; a diferença é a loja paga e o
   jogador, fora deste passo). Os arquivos voltaram iguais (md5).
 
+### Ciclo 235 (2026-11-28): C110, a volta rápida para a wiki e a grade só de leitura nela (sessão KouArt)
+
+- **Pedido do usuário (2026-11-28):** "Pode", depois de perguntado se podia mexer na wiki para o C110 (as páginas e o
+  servidor da wiki são dele). O C110 fica `[x]`.
+- **Entrega:**
+  - **o Foundry (`wiki.mjs`):** cada linha de item da ficha da mesa leva o lugar na grade (`grade`), o tamanho (`tamanho`)
+    e, no corpo, os encaixes que ocupa (`ocupa`; a arma de duas mãos, as duas mãos), pelo `gradeParaAWiki` do
+    `regras-grade-ator.mjs`; a ficha leva os `lugares` do personagem e o `emCombate` (num combate que já começou). Fora a
+    ficha inteira (4 s depois, como sempre), o inventário vai sozinho meio segundo depois de cada mudança de item, de
+    combate ou de quem está nele (`PUT /api/personagens/:id/inventario/estado`: os itens, os lugares e o combate);
+  - **o servidor da wiki (`api-personagens.js`, `server.js`, `arquivos-publicos.js`):** a rota do inventário (só o mestre)
+    entra por cima da ficha da mesa que já está lá, a do mesmo Foundry e do mesmo ator, e deixa o resto dela; sem ela, ou
+    atrasada (mais velha que a guardada), não grava (responde 200 com `guardado: false`, para o Foundry não avisar
+    nada). O aviso na hora: `GET /api/personagens/:id/eventos` (SSE, do dono e do mestre; o pulso de 20 s fecha quem não
+    pode mais), que a ficha da mesa e o inventário disparam. O `.mjs` sai como JavaScript, e o jogador baixa (e o celular
+    guarda) o `grade-ui.mjs`, o `regras-grade.mjs` e o `grade.css`;
+  - **a página (`criador.js`, `wiki.css`):** a aba **Inventário** da ficha, depois do Cyberware, com a grade do Foundry
+    (o mesmo `compartilhado/grade-ui.mjs`, pelo `gradeDaMesa`, e o `grade.css` com as cores da wiki), só de leitura, com a
+    hora, "Em combate na mesa" e quantos itens estão "Para organizar"; sem a grade (o Foundry 12, ou antes da
+    importação), o aviso de onde ela vai aparecer. A ficha aberta ouve o `/eventos` e se redesenha na hora (a conferência
+    de 30 s continua). Na wiki, o item não tem a imagem do Foundry: o nome aparece em todos, e a dica (`title`) diz o nome
+    inteiro e a quantidade;
+  - **o `grade-ui.mjs`:** o item que já traz o `tamanho` e o `ocupa` (a linha da wiki) vale por eles; o `titulo` põe a
+    dica do navegador.
+- **Achado no G3:** o teste do C46 (`veiculo-iniciativa-guardas.test.mjs`) roda o `agendarVolta` tirado do texto do
+  `wiki.mjs`; um ajudante novo fora dele quebrava o teste. A guarda ficou dentro de cada função.
+- **Visto na foto (passo temporário, `tests/.saida/v14-c110-inventario.png`):** o Nomad importado de novo tem 5 itens
+  "Para organizar": sem o Carryall, o que ele carrega não cabe nos bolsos e no cinto (a regra do C108; nada a mudar aqui).
+- **Fora deste ciclo:** mexer pela wiki (o C111 e o C112), as abas no celular (o C112) e o selo "Na mesa agora / A mesa
+  está fechada / Pendente" (o C112).
+- **Testes de referência:**
+  - **G3:** `grade-ator.test.mjs`: a linha do item (o lugar, o tamanho, os encaixes; a espada de duas mãos numa só com o
+    BODY 8), e a wiki desenha a mesma grade do Foundry pela linha (o modelo igual), o "Para organizar", o combate e a
+    grade sem os lugares; `grade-ui.test.mjs`: a dica só a pedido, e a wiki serve ao jogador o módulo e o que ele importa
+    (o grafo dos imports relativos), o CSS e o tipo do `.mjs`.
+  - **As regressões da wiki** (`tests/isolados/api.test.js`): o inventário por cima da ficha da mesa, sem ela, atrasado,
+    de outro ator ou de outro Foundry; só o mestre manda; o `/eventos` só do dono e do mestre.
+  - **G4:** o passo do C110: o Nomad importado, a ficha da mesa com os lugares (os dois porta-malas) e os mesmos itens da
+    grade do Foundry; a ficha dele aberta na wiki noutro navegador, na aba Inventário (só de leitura, os mesmos lugares e
+    itens); um item mexido no Foundry aparece no quadrado novo na wiki, e o combate que começa e o que acaba também, cada
+    um em menos de 2 s (na rodada inteira: o item em 0,57 s, o combate que começa em 0,54 s e o que acaba em 0,55 s; antes de começar, com o Nomad já no combate, o inventário que chega diz que ele não está em combate); sem erro no navegador da wiki.
+  - **A suíte da wiki:** o `tests/cenarios/arsenal.js` confere as abas da ficha: agora com o Inventário, depois do
+    Cyberware (o Arsenal continua entre o Equipamento e o Cyberware).
+- **Portões:** G1 0; G2 limpo; G3 926/926; G4 358/358 (652 s), de primeira. As regressões da wiki (`node tests/validar.js`) passaram inteiras, e a suíte de navegador da wiki nos cenários que mexem nas abas da ficha: o arsenal (9/9) e o cyberware (16/16).
+- **Mutações:** 27 de 27 morreram (`scratchpad/mutacoes-c110.mjs g3|g4`). No G3 e nas regressões da wiki, 16: a linha sem os
+  encaixes, o encaixe só pelo lugar, a grade sem cópia, a tela que ignora o tamanho e os encaixes da linha, a grade sem os
+  lugares, nada para organizar, sem a dica, o jogador sem a regra, o `.mjs` sem o tipo; no servidor, o inventário de
+  qualquer ator, o atrasado que grava, o jogador que manda, o inventário que apaga o resto da ficha, o combate de qualquer
+  valor e o `/eventos` de qualquer um. No G4 focado, 11: sem a volta rápida, a espera de 4 s, sem o aviso do inventário,
+  a página que não ouve, a aba que não se redesenha, nunca em combate, o combate que começa sem avisar, a grade editável na
+  wiki, a ficha sem os lugares, a linha sem a grade, o inventário sem os itens. O "combate que começa sem avisar" viveu na
+  primeira rodada (o combatente entrava e o combate começava no mesmo meio segundo, e o aviso de quem entrou já levava
+  tudo): o passo agora espera o inventário do combatente que entrou, fora de combate, antes de começar. Numa rodada, a
+  "ficha sem os lugares" caiu por um erro de fora (`reading 'OBJECTS'`, uma vez só); de novo, caiu pela conferência. Os
+  arquivos voltaram iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

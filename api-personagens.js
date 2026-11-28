@@ -534,6 +534,46 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
     return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true', Vary: 'Origin', 'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' };
   }
 
+  // ---------------- Na hora: /api/personagens/:id/eventos (SSE) ----------------
+  // A ficha aberta (do dono ou do mestre) ouve o personagem: quando a ficha da mesa chega do Foundry (a inteira ou só o
+  // inventário, o C110), o aviso diz "mudou" (com a hora), e a página pede o personagem de novo, com o filtro de sempre (o
+  // aviso não leva a ficha). A cada 20 s, um pulso e a conferência de quem ouve (saiu da conta, ou não edita mais este
+  // personagem: a conexão fecha).
+  const MAX_SHEET_STREAMS = 300;
+  const sheetStreams = new Set(); // { id, request, response, account }
+  let sheetPulse = null;
+  function closeSheetStream(stream) {
+    if (!sheetStreams.delete(stream)) return;
+    try { stream.response.end(); } catch { /* já fechada */ }
+    if (!sheetStreams.size && sheetPulse) { clearInterval(sheetPulse); sheetPulse = null; }
+  }
+  const writeSheetStream = (stream, text) => { try { stream.response.write(text); } catch { closeSheetStream(stream); } };
+  function notifySheet(id, recebido) {
+    for (const stream of [...sheetStreams]) if (stream.id === id) writeSheetStream(stream, `event: mesa\ndata: ${JSON.stringify({ recebido })}\n\n`);
+  }
+  function openSheetStream(request, response, id, identity, headers) {
+    const account = identity.conta ? identity.conta.id : 'mestre';
+    if (sheetStreams.size >= MAX_SHEET_STREAMS || [...sheetStreams].filter(item => item.account === account).length >= 6) {
+      response.writeHead(503, { ...headers, 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '30' });
+      return response.end('Conexões demais.');
+    }
+    response.writeHead(200, { ...headers, 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'private, no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+    response.write('retry: 3000\n\n');
+    const stream = { id, request, response, account };
+    sheetStreams.add(stream);
+    request.on('close', () => closeSheetStream(stream));
+    if (!sheetPulse) {
+      sheetPulse = setInterval(() => {
+        for (const item of [...sheetStreams]) {
+          const doc = readCharacter(item.id);
+          if (!doc || !canEdit(who(item.request), doc)) { closeSheetStream(item); continue; }
+          writeSheetStream(item, ': pulso\n\n');
+        }
+      }, 20000);
+      if (sheetPulse.unref) sheetPulse.unref();
+    }
+  }
+
   // ---------------- Rotas ----------------
   async function route(request, response, pathname) {
     const method = request.method;
@@ -1029,7 +1069,36 @@ module.exports = function createCharacterApi({ dataDir, legacyDir = dataDir, doc
           doc.mesa = { ...input, recebido: new Date().toISOString() };
           return null;
         });
-        return answer(done, doc => reply(200, { recebido: doc.mesa.recebido }));
+        return answer(done, doc => { notifySheet(id, doc.mesa.recebido); return reply(200, { recebido: doc.mesa.recebido }); });
+      }
+      // A volta rápida do inventário (o C110): só os itens (com o lugar na grade), os lugares e o combate, meio segundo
+      // depois de mexer no Foundry 14. Entra por cima da ficha da mesa que já está aqui, a do mesmo Foundry e do mesmo ator;
+      // sem ela, não grava (a inteira vem 4 s depois). O que chega atrasado, mais velho que a ficha guardada, também não.
+      if (extra === 'inventario') {
+        const [, , sub] = pathname.slice('/api/personagens/'.length).split('/');
+        if (sub !== 'estado') return reply(404, { erro: 'Rota desconhecida.' });
+        if (method !== 'PUT') return reply(405, { erro: 'Use PUT.' });
+        if (identity.papel !== 'mestre') return gmOnly();
+        const input = cleanValue(await readJson(request));
+        const done = await update(doc => {
+          if (input.campanha && realId(input.campanha) !== campaignOf(doc)) return { status: 409, data: { erro: `${doc.nome || 'Este personagem'} agora é de outra campanha na wiki.`, campanha: campaignOf(doc) } };
+          const stale = staleActor(doc, input.ator);
+          if (stale) return stale;
+          const mesa = doc.mesa;
+          const quando = typeof input.quando === 'string' ? input.quando : '';
+          const daMesma = mesa && Number(mesa.geracao || 12) === Number(input.geracao || 12) && String(mesa.ator || '') === String(input.ator || '');
+          if (!daMesma || (quando && [mesa.quando, mesa.inventarioQuando].some(antes => typeof antes === 'string' && antes > quando))) return { status: 200, data: { guardado: false } };
+          const agora = new Date().toISOString();
+          doc.mesa = { ...mesa, itens: Array.isArray(input.itens) ? input.itens : [], lugares: Array.isArray(input.lugares) ? input.lugares : [], emCombate: input.emCombate === true, inventarioQuando: quando || agora, recebido: agora };
+          return null;
+        });
+        return answer(done, doc => { notifySheet(id, doc.mesa.recebido); return reply(200, { guardado: true, recebido: doc.mesa.recebido }); });
+      }
+      // A ficha aberta ouve o personagem (o C110): o aviso chega quando a ficha da mesa muda.
+      if (extra === 'eventos') {
+        if (method !== 'GET') return reply(405, { erro: 'Use GET.' });
+        if (!canEdit(identity, stored)) return reply(403, { erro: 'Este personagem é de outro jogador.' });
+        return openSheetStream(request, response, id, identity, headers);
       }
       // A ficha do ator para o crossover: o mundo antigo manda (PUT, depois que o personagem mudou de campanha) e o mundo
       // novo lê (GET) para criar o ator como estava. Só o mestre; o que vem é o ator do Foundry inteiro (até 4 MB).

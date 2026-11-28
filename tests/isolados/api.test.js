@@ -398,3 +398,50 @@ test('a fase 3 da auditoria: as páginas saem com a CSP só avisando (os scripts
   await new Promise(r => setTimeout(r, 200));
   assert.equal(linhasDoLog(), 59, 'o limite por IP');
 });
+
+test('C110: a volta rápida do inventário entra por cima da ficha da mesa do mesmo Foundry e do mesmo ator; sem ela, atrasada ou de outro ator, não grava; só o mestre manda', async t => {
+  const servidor = criarServidorIsolado(t);
+  const mestre = await servidor.entrarComoMestre();
+  const jogador = await criarJogador(servidor, mestre, 'Ana');
+  const outro = await criarJogador(servidor, mestre, 'Bia');
+  const criado = await servidor.pedir('/api/personagens', { method: 'POST', cookie: jogador.cookie, body: { nome: 'Ricky' } });
+  assert.equal(criado.status, 201, criado.text);
+  const id = criado.json.personagem.id;
+  const rota = `/api/personagens/${id}/inventario/estado`;
+  const grade = { lugar: 'coldre', x: 0, y: 0, girado: false, rev: 2 };
+  const inventario = (quando, extra = {}) => ({ ator: 'ator14', geracao: 14, quando, itens: [{ id: 'pistola', nome: 'Heavy Pistol', tipo: 'weapon', uso: 'carried', grade, tamanho: { l: 2, a: 1, pilha: 1 }, ocupa: ['coldre'] }], lugares: [{ id: 'coldre', nome: 'Coldre', tipo: 'encaixe', uso: 'carregando' }], emCombate: true, ...extra });
+  const mesa = async () => (await servidor.pedir(`/api/personagens/${id}`, { cookie: jogador.cookie })).json.personagem.mesa;
+  const mandar = (body, cookie = mestre) => servidor.pedir(rota, { method: 'PUT', cookie, body });
+  // Sem a ficha da mesa, não grava: a inteira vem logo depois.
+  let r = await mandar(inventario('2026-11-28T10:00:01.000Z'));
+  assert.deepEqual([r.status, r.json.guardado], [200, false]);
+  assert.equal(await mesa(), undefined);
+  // Só o mestre manda.
+  assert.equal((await mandar(inventario('2026-11-28T10:00:01.000Z'), jogador.cookie)).status, 403);
+  // A ficha inteira do Foundry 14, e o inventário por cima dela: o resto da ficha fica.
+  const ficha = { ator: 'ator14', geracao: 14, quando: '2026-11-28T10:00:00.000Z', hp: { atual: 30, max: 40 }, itens: [{ id: 'pistola', nome: 'Heavy Pistol', tipo: 'weapon', uso: 'carried' }] };
+  assert.equal((await servidor.pedir(`/api/personagens/${id}/mesa`, { method: 'PUT', cookie: mestre, body: ficha })).status, 200);
+  r = await mandar(inventario('2026-11-28T10:00:01.000Z'));
+  assert.deepEqual([r.status, r.json.guardado], [200, true]);
+  let agora = await mesa();
+  assert.deepEqual(agora.itens[0].grade, grade);
+  assert.deepEqual(agora.itens[0].ocupa, ['coldre']);
+  assert.deepEqual([agora.lugares.map(lugar => lugar.id), agora.emCombate, agora.hp.atual, agora.quando, agora.inventarioQuando], [['coldre'], true, 30, ficha.quando, '2026-11-28T10:00:01.000Z']);
+  assert.equal(agora.recebido, r.json.recebido);
+  // Atrasado (mais velho que o guardado), de outro ator ou de outro Foundry: não grava.
+  for (const corpo of [inventario('2026-11-28T10:00:00.500Z', { emCombate: false }), inventario('2026-11-28T10:00:02.000Z', { ator: 'outro', emCombate: false }), inventario('2026-11-28T10:00:02.000Z', { geracao: 12, emCombate: false })]) {
+    r = await mandar(corpo);
+    assert.deepEqual([r.status, r.json.guardado], [200, false]);
+  }
+  assert.equal((await mesa()).emCombate, true);
+  // O seguinte, mais novo, grava; a ficha inteira depois troca tudo, como sempre.
+  assert.equal((await mandar(inventario('2026-11-28T10:00:03.000Z', { emCombate: false }))).json.guardado, true);
+  assert.equal((await mesa()).emCombate, false);
+  // Só o PUT, e só o "estado".
+  assert.equal((await servidor.pedir(rota, { cookie: mestre })).status, 405);
+  assert.equal((await servidor.pedir(`/api/personagens/${id}/inventario/outra`, { method: 'PUT', cookie: mestre, body: {} })).status, 404);
+  // O aviso na hora (o SSE) é do dono e do mestre: outro jogador não ouve, e o visitante nem fica sabendo.
+  assert.equal((await servidor.pedir(`/api/personagens/${id}/eventos`, { cookie: outro.cookie })).status, 403);
+  assert.equal((await servidor.pedir(`/api/personagens/${id}/eventos`, { method: 'POST', cookie: jogador.cookie, body: {} })).status, 405);
+  assert.notEqual((await servidor.pedir(`/api/personagens/${id}/eventos`)).status, 200);
+});

@@ -3,7 +3,7 @@
 // _source) e aos dados do toObject, sem o game.
 import { ehArmaMontadaEmItem } from './armas-cyberware.mjs';
 import { SISTEMA } from './config.mjs';
-import { arrumar, conteinerTemGrade, lugaresDoConteiner, lugaresDoPersonagem, tamanhoDoItem, usoDoItem } from './compartilhado/regras-grade.mjs';
+import { arrumar, conteinerTemGrade, ENCAIXES, encaixesDoItem, lugaresDoConteiner, lugaresDoPersonagem, tamanhoDoItem, usoDoItem } from './compartilhado/regras-grade.mjs';
 
 // A grade do item: flags.cpr-fieldbook.grade = { lugar, x, y, girado, rev } (e o uso, em "Para organizar"). O tamanho da
 // mochila no Carryall: flags.cpr-fieldbook.mochila ('P', 'M' ou 'G'; sem nada, a P).
@@ -44,6 +44,17 @@ export function lugaresDoAtor(ator, itens, { previsto = false } = {}) {
   return lugaresDoPersonagem({ moradia: fonte.system?.moradia ?? {}, veiculos, mochila });
 }
 export const bodyDoAtor = ator => Number((ator?._source ?? ator)?.system?.atributos?.body?.valor) || 0;
+
+// O que a linha do item leva para a wiki (o "Na mesa", o C110): o lugar, o tamanho e, no corpo, os encaixes que ele ocupa
+// (a arma de duas mãos, as duas mãos). A wiki desenha a grade com isso, sem os dados do item. Sem tamanho (o montado, o
+// cyberware instalado, o veículo), null.
+export function gradeParaAWiki(item, body = 0) {
+  const tamanho = tamanhoDoItem(item);
+  if (!tamanho) return null;
+  const grade = item.grade ? { ...item.grade } : null;
+  const ocupa = grade && ENCAIXES[grade.lugar] ? encaixesDoItem(item, grade.lugar, body) ?? [grade.lugar] : null;
+  return { grade, tamanho, ...(ocupa ? { ocupa } : {}) };
+}
 
 // Os outros itens do personagem como o estado da regra: [{ item, grade }].
 export const estadoDe = (itens, menos = '') => itens.filter(item => item.id !== menos && item.grade && tamanhoDoItem(item)).map(item => ({ item, grade: item.grade }));

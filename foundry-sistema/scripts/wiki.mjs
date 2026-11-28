@@ -3,7 +3,8 @@
 //   Humanidade, dinheiro e o equipamento montado (armas carregadas, armaduras vestidas, cyberware instalado, programas
 //   no deck, acessórios na arma, veículos da família). Os itens vêm de dados/catalogo.json pelo mesmo id da loja da wiki
 //   ("core_weapons:assault-rifle"); o que não existir vira um aviso, e o resto entra.
-// - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra.
+// - Na mesa: a cada mudança num ator importado, o mestre ativo manda a ficha de volta, e a wiki a mostra. O inventário (os
+//   itens com o lugar na grade, os lugares e o combate) vai também sozinho, meio segundo depois (o C110).
 // - O vínculo deste Foundry: a importação, a ficha da mesa e o ator apagado vão para a wiki com geracao: 14 (o vínculo do
 //   Foundry 14, ao lado do vínculo do 12, que o módulo cpr-2077 grava). Um não derruba o outro.
 import { ehArmaMontadaEmItem } from './armas-cyberware.mjs';
@@ -20,6 +21,7 @@ import { FAMILIAS, PERICIAS } from './gerado.mjs';
 import { ehBaseNatural, ladoValido, linhaDoExtrato, moradiaDaMesa, moradiaDaWiki, moradiaParaAWiki, periciaPropria } from './regras.mjs';
 import { mudouDeCampanha, pertenceACampanha, prepararAtorTransferido, resolverCampanha, vinculoDaGeracao14 } from './wiki-campanha.mjs';
 import { umaEntregaPorVez } from './wiki-pedidos.mjs';
+import { bodyDoAtor, gradeParaAWiki, itemNaRegra, lugaresDoAtor } from './regras-grade-ator.mjs';
 
 // O Foundry deste sistema, para o vínculo na wiki (o do 12 é o do módulo cpr-2077).
 const GERACAO = 14;
@@ -540,13 +542,14 @@ function bancadaParaAWiki(arma) {
   };
 }
 
-export function fichaParaAWiki(ator) {
-  if (ator?.type !== 'personagem') return null;
+// As linhas dos itens na ficha da mesa. Cada uma leva também o lugar na grade, o tamanho e os encaixes (o C110).
+function itensParaAWiki(ator) {
   const s = ator.system;
+  const body = bodyDoAtor(ator);
   const usoDe = item => (['arma', 'armadura'].includes(item.type) ? (item.system.equipada ? 'equipped' : 'carried') : USO_NA_WIKI[item.system.uso] || '');
   // A arma do cyberware e a do acessório (o C11) não vão: a wiki conhece o item, e a arma volta dele quando ele está
   // instalado.
-  const itens = ator.items.filter(item => TIPO_NA_WIKI[item.type] && !ehArmaMontadaEmItem(item)).map(item => {
+  return ator.items.filter(item => TIPO_NA_WIKI[item.type] && !ehArmaMontadaEmItem(item)).map(item => {
     const x = item.system;
     // O id do Foundry distingue as cópias de mesmo nome e uid. A montagem volta por ele, não pela ordem da lista.
     const linha = { id: item.id, nome: item.name, tipo: TIPO_NA_WIKI[item.type], qtd: 'quantidade' in x ? x.quantidade : 1, uso: usoDe(item), uid: item.getFlag(SISTEMA, 'wikiUid') || '' };
@@ -554,6 +557,8 @@ export function fichaParaAWiki(ator) {
     if (catalogo) linha.catalogo = catalogo;
     // Vazio também é informação: uma cópia solta não deve ser instalada pelo fallback de nomes do Foundry 12.
     if ('instaladoEm' in x) linha.instaladoEm = x.instaladoEm || '';
+    const naGrade = gradeParaAWiki(itemNaRegra(item), body);
+    if (naGrade) Object.assign(linha, naGrade);
     if (item.type === 'arma') {
       Object.assign(linha, {
         dano: item.danoDaArma, cdt: x.cdt, pericia: PERICIAS.find(p => p.id === x.pericia)?.en ?? x.pericia, distancia: x.aDistancia, maos: x.maos,
@@ -589,6 +594,20 @@ export function fichaParaAWiki(ator) {
     if (item.instalados.length) Object.assign(linha, { dentro: item.instalados.map(dentro => dentro.name), dentroIds: item.instalados.map(dentro => dentro.id) });
     return linha;
   });
+}
+// O combate que já começou com o personagem nele: a wiki vai travar as mudanças de uso (o C114).
+const emCombate = ator => Boolean(game.combats?.some(combate => combate.started && combate.combatants.some(dele => dele.actorId === ator.id)));
+const lugaresParaAWiki = ator => lugaresDoAtor(ator, ator.items.map(itemNaRegra));
+
+// Só o inventário (a volta rápida, o C110): os itens, os lugares do personagem e o combate.
+export function inventarioParaAWiki(ator) {
+  if (ator?.type !== 'personagem') return null;
+  return { ator: ator.id, quando: new Date().toISOString(), geracao: GERACAO, itens: itensParaAWiki(ator), lugares: lugaresParaAWiki(ator), emCombate: emCombate(ator) };
+}
+
+export function fichaParaAWiki(ator) {
+  if (ator?.type !== 'personagem') return null;
+  const s = ator.system;
   return {
     ator: ator.id, nomeAtor: ator.name, quando: new Date().toISOString(), geracao: GERACAO,
     stats: Object.fromEntries(Object.entries(s.atributos).map(([chave, atributo]) => [chave.toUpperCase(), chave === 'emp' ? s.empAtual : atributo.valor])),
@@ -600,33 +619,38 @@ export function fichaParaAWiki(ator) {
       .map(([id, propria]) => ({ nome: nomeDaPericia(id, propria), nivel: propria.nivel, stat: s.pericia(id).atributo.toUpperCase() })),
     lesoes: ator.items.filter(item => item.type === 'lesao').map(item => item.name),
     moradia: moradiaParaAWiki(s),
-    itens
+    itens: itensParaAWiki(ator), lugares: lugaresParaAWiki(ator), emCombate: emCombate(ator)
   };
 }
 
-// Manda a ficha de um ator importado da wiki (o "wiki" na flag do sistema).
-export async function mandarFicha(ator) {
+// Manda a ficha de um ator importado da wiki (o "wiki" na flag do sistema). inventario: só o inventário, pela rota da
+// volta rápida (o C110).
+export async function mandarFicha(ator, { inventario = false } = {}) {
   if (ator?.type !== 'personagem') return null;
   const vinculo = ator?.getFlag(SISTEMA, 'wiki');
   if (!vinculo?.id || ator.getFlag(SISTEMA, 'saiu')) return null;
   const campanha = await campanhaDoMundo();
   if (campanha?.erro) return null;
-  return wikiFetch(`/api/personagens/${vinculo.id}/mesa`, { method: 'PUT', body: { ...fichaParaAWiki(ator), ...(campanha?.id ? { campanha: campanha.id } : {}) } });
+  const rota = `/api/personagens/${vinculo.id}/${inventario ? 'inventario/estado' : 'mesa'}`;
+  return wikiFetch(rota, { method: 'PUT', body: { ...(inventario ? inventarioParaAWiki(ator) : fichaParaAWiki(ator)), ...(campanha?.id ? { campanha: campanha.id } : {}) } });
 }
 
 // Quem manda: o mestre ativo, com a configuração ligada. Espera 4 s depois da última mudança (um ataque muda HP, SP e
-// munição de uma vez). Um erro avisa no console uma vez, até a próxima volta dar certo.
+// munição de uma vez). Um erro avisa no console uma vez, até a próxima volta dar certo. O inventário vai antes, meio
+// segundo depois da última mudança de item ou de combate (o C110: mexer na grade aparece na wiki em menos de 2 s).
 const ESPERA_DA_VOLTA = 4000;
+const ESPERA_DO_INVENTARIO = 500;
 const esperando = new Map();
+const esperandoInventario = new Map();
 let avisouFalha = false;
 // Atores que a wiki recusou por não serem mais os ligados ao personagem (ele foi importado de novo noutro ator, como no
 // "Importar da mesa"): param de mandar, sem aviso. Só o ator ligado grava a ficha da mesa.
 const atoresAntigos = new Set();
 const souQuemManda = () => game.user.isGM && (!game.users.activeGM || game.users.activeGM.id === game.user.id) && game.settings.get(SISTEMA, 'wikiMesa');
-async function mandarAgora(id) {
+async function mandarAgora(id, { inventario = false } = {}) {
   const ator = game.actors.get(id);
   if (!ator || atoresAntigos.has(id)) return;
-  await mandarFicha(ator).then(() => { avisouFalha = false; }).catch(erro => {
+  await mandarFicha(ator, { inventario }).then(() => { avisouFalha = false; }).catch(erro => {
     if (/ator antigo|outra campanha/.test(erro.message)) { atoresAntigos.add(id); return; }
     if (!avisouFalha) { avisouFalha = true; console.warn(`${SISTEMA} | Na mesa (wiki):`, erro.message); }
   });
@@ -636,18 +660,32 @@ function agendarVolta(ator) {
   clearTimeout(esperando.get(ator.id));
   esperando.set(ator.id, setTimeout(() => { esperando.delete(ator.id); mandarAgora(ator.id); }, ESPERA_DA_VOLTA));
 }
+// O mesmo, para a volta rápida do inventário (o C110).
+function agendarInventario(ator) {
+  if (!ator || ator.type !== 'personagem' || ator.documentName !== 'Actor' || ator.isToken || !ator.getFlag(SISTEMA, 'wiki') || !souQuemManda()) return;
+  clearTimeout(esperandoInventario.get(ator.id));
+  esperandoInventario.set(ator.id, setTimeout(() => { esperandoInventario.delete(ator.id); mandarAgora(ator.id, { inventario: true }); }, ESPERA_DO_INVENTARIO));
+}
 
-// Manda já o que está esperando (macros e testes).
+// Manda já o que está esperando (macros e testes). A ficha inteira leva o inventário também.
 export async function mandarPendentes() {
   const ids = [...esperando.keys()];
+  const soInventario = [...esperandoInventario.keys()].filter(id => !ids.includes(id));
   for (const id of ids) clearTimeout(esperando.get(id));
+  for (const id of esperandoInventario.keys()) clearTimeout(esperandoInventario.get(id));
   esperando.clear();
-  await Promise.all(ids.map(mandarAgora));
+  esperandoInventario.clear();
+  await Promise.all([...ids.map(id => mandarAgora(id)), ...soInventario.map(id => mandarAgora(id, { inventario: true }))]);
 }
 
 function registrarVoltaParaWiki() {
   Hooks.on('updateActor', ator => agendarVolta(ator));
-  for (const gancho of ['createItem', 'updateItem', 'deleteItem']) Hooks.on(gancho, item => agendarVolta(item.parent));
+  for (const gancho of ['createItem', 'updateItem', 'deleteItem']) Hooks.on(gancho, item => { agendarVolta(item.parent); agendarInventario(item.parent); });
+  // O combate que começa ou acaba e quem entra ou sai dele mudam o emCombate do inventário.
+  const doCombate = combate => { for (const dele of combate?.combatants ?? []) agendarInventario(game.actors.get(dele.actorId)); };
+  Hooks.on('updateCombat', doCombate);
+  Hooks.on('deleteCombat', doCombate);
+  for (const gancho of ['createCombatant', 'deleteCombatant']) Hooks.on(gancho, dele => agendarInventario(game.actors.get(dele.actorId)));
   // A cada minuto (e logo depois de entrar), o mestre ativo entrega os pedidos aprovados na wiki. Sem falar com a wiki
   // (fora do ar, endereço errado), não avisa nada: o mestre vê o erro quando entregar pela macro.
   Hooks.once('ready', () => {

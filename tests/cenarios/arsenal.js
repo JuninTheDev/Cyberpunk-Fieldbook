@@ -76,7 +76,7 @@ module.exports = async ({ edge, servidores, r }) => {
   await r.passo('aba Arsenal da ficha da mesa: entre Equipamento e Cyberware; a arma com o nome próprio, os números (acessórios, modificações, defeito e o teto) e o dono', async () => {
     const abas = await edge.evaluate(`[...document.querySelectorAll('[data-cc-tab]')].map(b => b.dataset.ccTab).join()`);
     const b = await bancada();
-    const ok = abas === 'resumo,pericias,equipamento,arsenal,cyberware,compras,anotacoes'
+    const ok = abas === 'resumo,pericias,equipamento,arsenal,cyberware,inventario,compras,anotacoes'
       // A Briga (sem bancada) fica de fora; a faca, sem catálogo, entra pelo que o Foundry mandou.
       && b.armas.join('|') === 'Velha Senhora · Very Heavy Pistol|Assault Rifle|Knife' && b.quebra === ''
       && b.numeros.join('|') === 'Arma:4d6 · CDT 1|Acessórios:3 / 3|Modificações:2 / 3|Defeito:1 / 1|Teto na rolagem:+2 / +3'

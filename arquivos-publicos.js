@@ -15,6 +15,8 @@
     '/system-catalog.js', '/system-rules.js', '/system-net.js', '/system-2077.js', '/system-blackchrome.js', '/system-modificacoes.js', '/system-glossario.js',
     '/system-criacao.js', '/personagem-roles.js', '/personagem-cyberware.js', '/personagem-bancada.js', '/loja-vitrine.js', '/personagem-jogo.js', '/loja-catalogo.js', '/popup.js', '/criador.js', '/conta.js',
     '/cyberpunk-css-main/cyberpunk-css-main/cyberpunk.css',
+    // A grade do inventário na ficha (o C110): a mesma tela e a mesma regra do sistema do Foundry 14.
+    '/foundry-sistema/scripts/compartilhado/grade-ui.mjs', '/foundry-sistema/scripts/compartilhado/regras-grade.mjs', '/foundry-sistema/styles/grade.css',
     // A wiki instalada no celular: o manifesto e os ícones.
     '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'
   ],

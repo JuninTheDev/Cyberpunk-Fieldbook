@@ -1842,7 +1842,8 @@
       pericias: skills,
       equipamento: `${decks}${equipment}`,
       cyberware: cyberScreen(doc, model),
-      arsenal: arsenalScreen(doc)
+      arsenal: arsenalScreen(doc),
+      inventario: inventoryBox(doc)
     };
   }
 
@@ -1860,8 +1861,38 @@
       <div class="cc-sheet"><div class="cc-sheet-side">${parts.lado}</div><div class="cc-sheet-main">${parts.resumo}${parts.pericias}${parts.equipamento}${parts.cyberware}</div></div>`;
   }
 
+  // A grade do inventário (o C110): a mesma tela do Foundry 14 (foundry-sistema/scripts/compartilhado/grade-ui.mjs, com a
+  // regra de regras-grade.mjs) e o CSS dela, carregados na primeira ficha aberta. Aqui, só de leitura: mexer pela wiki é o
+  // C112.
+  let gradeUi = null;
+  let gradeCarregando = null;
+  function loadGrade() {
+    if (!document.querySelector('link[data-cc-grade-css]')) {
+      const link = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'foundry-sistema/styles/grade.css' });
+      link.dataset.ccGradeCss = '';
+      document.head.append(link);
+    }
+    if (!gradeCarregando) {
+      gradeCarregando = import(new URL('foundry-sistema/scripts/compartilhado/grade-ui.mjs', document.baseURI).href)
+        .then(mod => { gradeUi = mod; return mod; }, () => { gradeCarregando = null; return null; });
+    }
+    return gradeCarregando;
+  }
+  // A aba Inventário: a grade como está na mesa do Foundry 14 (o que ele mandou por último).
+  function inventoryBox(doc) {
+    const grade = gradeUi && doc.mesa ? gradeUi.gradeDaMesa(doc.mesa) : null;
+    if (!grade) {
+      const why = doc.mesa && Array.isArray(doc.mesa.lugares) && doc.mesa.lugares.length
+        ? 'Não consegui carregar a grade nesta página. Recarregue para tentar de novo.'
+        : 'A grade aparece aqui quando o personagem estiver na mesa do Foundry 14 (depois de o mestre importar). Até lá, o equipamento fica na aba Equipamento.';
+      return box('Inventário', `<p class="note-status">${why}</p>`, ' data-toc="Inventário"');
+    }
+    const status = `Como está na mesa do Foundry${doc.mesa.recebido ? `, atualizada em ${when(doc.mesa.recebido)}` : ''}. Para mexer, use a ficha do Foundry: mexer por aqui vem depois.${grade.emCombate ? ' <b class="cc-bad">Em combate na mesa.</b>' : ''}${grade.organizar ? ` <b class="cc-bad">${grade.organizar} para organizar.</b>` : ''}`;
+    return box('Inventário', `<p class="note-status" data-cc-grade-status>${status}</p><div class="cc-inventario" data-cc-grade>${gradeUi.htmlDaGrade(gradeUi.modeloDaGrade(grade.lugares, grade.itens), { editavel: false, organizar: grade.organizar, titulo: true })}</div>`, ' data-toc="Inventário"');
+  }
+
   // As abas da coluna principal da ficha (a última escolhida fica lembrada neste aparelho).
-  const SHEET_TABS = [['resumo', 'Resumo'], ['pericias', 'Perícias'], ['equipamento', 'Equipamento'], ['arsenal', 'Arsenal'], ['cyberware', 'Cyberware'], ['compras', 'Compras'], ['anotacoes', 'Anotações']];
+  const SHEET_TABS = [['resumo', 'Resumo'], ['pericias', 'Perícias'], ['equipamento', 'Equipamento'], ['arsenal', 'Arsenal'], ['cyberware', 'Cyberware'], ['inventario', 'Inventário'], ['compras', 'Compras'], ['anotacoes', 'Anotações']];
 
   // O quadro de anotações da ficha: só o dono e o mestre leem (pistas, contatos, dívidas, o que o NPC prometeu).
   const notesBox = (doc, papel) => box('Anotações', `<p class="note-status">Pistas, contatos, dívidas, o que o NPC prometeu. ${papel === 'mestre' ? 'O jogador escreve aqui; você também pode.' : 'Só você e o mestre leem.'} Fica salvo sozinho, em qualquer aparelho.</p><textarea class="note-area cc-notes" data-cc-notes rows="8" placeholder="Ex.: Brakk quer 500eb até sexta. A senha do depósito é 4471.">${esc((doc.anotacoes || {}).texto || '')}</textarea><p class="note-status" data-cc-notes-status>${doc.anotacoes && doc.anotacoes.atualizado ? `Salvo em ${when(doc.anotacoes.atualizado)}${doc.anotacoes.por ? ` (${esc(doc.anotacoes.por)})` : ''}.` : ''}</p>`, ' data-cc-notes-box data-toc="Anotações"');
@@ -1900,7 +1931,9 @@
     if (SV) await loadShopRules(doc.campanha);
     if (token !== renderToken) return;
     // Como no exemplo da Ficha: o título da página vira o nome (o apelido em ciano), a linha de cima diz a campanha, e a
-    // ficha tem duas colunas: o retrato, os STATs e os vitais do lado; o resto em abas.
+    // ficha tem duas colunas: o retrato, os STATs e os vitais do lado; o resto em abas. A grade do inventário carrega antes.
+    await loadGrade();
+    if (token !== renderToken) return;
     const parts = sheetHtml(doc);
     const head = content.querySelector('.page-head h2');
     if (head) head.innerHTML = `${esc(doc.nome || 'Sem nome')}${doc.apelido ? ` <span class="cc-handle">"${esc(doc.apelido)}"</span>` : ''}`;
@@ -1921,6 +1954,7 @@
           ${panel('equipamento', `<div data-cc-part="equipamento">${parts.equipamento}</div>`)}
           ${panel('arsenal', `<div data-cc-part="arsenal">${parts.arsenal}</div>`)}
           ${panel('cyberware', `<div data-cc-part="cyberware">${parts.cyberware}</div>`)}
+          ${panel('inventario', `<div data-cc-part="inventario">${parts.inventario}</div>`)}
           ${panel('compras', purchasesBox(doc))}
           ${panel('anotacoes', `${notesBox(doc, papel)}${papel === 'mestre' ? historyBox() : ''}`)}
         </div>
@@ -1943,12 +1977,14 @@
       };
     }
     // A ficha muda durante a sessão (a mesa da wiki grava doc.jogo; o Foundry, doc.mesa): confere a cada 30 segundos
-    // enquanto a página estiver aberta.
+    // enquanto a página estiver aberta, e na hora em que o servidor avisa que a ficha da mesa chegou (o C110: o inventário
+    // mexido no Foundry aparece aqui em menos de 2 s).
     {
       const stamp = item => `${(item.mesa || {}).recebido || ''}|${(item.jogo || {}).quando || ''}`;
       let seen = stamp(doc);
-      const refresh = setInterval(async () => {
-        if (token !== renderToken || !document.body.contains(root)) return clearInterval(refresh);
+      let events = null;
+      const refresh = async () => {
+        if (token !== renderToken || !document.body.contains(root)) { clearInterval(timer); if (events) events.close(); return; }
         const fresh = await api(`api/personagens/${id}`);
         const next = fresh.status === 200 && fresh.data.personagem;
         if (!next || stamp(next) === seen) return;
@@ -1956,13 +1992,18 @@
         Object.assign(doc, next);
         // Só as partes que a mesa muda: as anotações (que alguém pode estar escrevendo) e a aba aberta ficam.
         const redrawn = sheetHtml(doc);
-        for (const key of ['lado', 'resumo', 'pericias', 'equipamento', 'arsenal', 'cyberware']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
+        for (const key of ['lado', 'resumo', 'pericias', 'equipamento', 'inventario', 'arsenal', 'cyberware']) { const part = root.querySelector(`[data-cc-part="${key}"]`); if (part) part.innerHTML = redrawn[key]; }
         wireCyber(root);
         const buying = root.querySelector('[data-cc-panel="compras"]');
         if (buying) buying.innerHTML = purchasesBox(doc);
         const top = content.querySelector('.lede');
         if (top) top.innerHTML = redrawn.lede;
-      }, 30000);
+      };
+      const timer = setInterval(refresh, 30000);
+      if (window.EventSource) {
+        events = new EventSource(`api/personagens/${encodeURIComponent(id)}/eventos`);
+        events.addEventListener('mesa', refresh);
+      }
     }
     root.onclick = async event => {
       const tab = event.target.closest('[data-cc-tab]');
