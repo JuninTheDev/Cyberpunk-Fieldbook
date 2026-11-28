@@ -897,7 +897,13 @@ E a do navegador de cada um:
 ## Ainda não faz
 
 - **O inventário em grade, o mesmo na wiki e no Foundry** (o plano em `inventario-plano/PLANO.md`, do C107 ao C114):
-  só a regra existe, sem nada na ficha ainda (ciclo 231). O `scripts/compartilhado/regras-grade.mjs`, sem import (o
+  sem nada na ficha ainda. A regra existe desde o ciclo 231, e a grade no ator desde o 232: cada item do personagem tem um
+  lugar (a flag `grade`), que acompanha o uso que o sistema já dá (equipar e desequipar pela ficha, pelo Painel Tático ou
+  por macro mudam o lugar; o item que chega da importação, da loja ou do saque ganha o primeiro lugar livre do uso dele), e
+  a mochila tirada, o veículo que sai e a moradia nova mandam o que não cabe mais para "Para organizar". A migração 11 dá
+  um lugar a cada item dos personagens de antes, sem mudar o uso. Mover pela grade (`game.system.api.inventario.moverNaGrade`)
+  confere o lugar, recusa com o motivo e muda o uso pelo lugar (o corpo equipa, com a conferência das mãos de sempre; o
+  esconderijo e o porta-malas guardam). Até o C109, só pela API. O `scripts/compartilhado/regras-grade.mjs`, sem import (o
   Foundry, o servidor e a página da wiki vão usar o mesmo arquivo), dá o tamanho de cada item (as armas pelo tipo, a
   munição e a pilha por tipo, a armadura guardada pelo peso, o equipamento pelo catálogo), os lugares do personagem (as
   mãos, a cabeça, o tronco, o deck e a mochila no corpo, o coldre, as costas, os bolsos 4×2, o cinto 6×1, a mochila P/M/G,

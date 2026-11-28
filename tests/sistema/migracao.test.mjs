@@ -148,11 +148,15 @@ test('Migração no ator: os itens dele passam por todos os passos; o plano tem 
   assert.deepEqual(Object.keys(plano.colecoes), ['Item']);
   const { apagar, criar, mudar } = plano.colecoes.Item;
   assert.deepEqual([apagar, criar], [[], []]);
-  assert.deepEqual(mudar.map(m => m._id).sort(), [teleoptics._id, audio._id].sort());
+  // O passo 11 (o C108): o fuzil e os dois implantes soltos ganham um lugar, sem mais nada: o fuzil (carregando) nas costas;
+  // os implantes (1×1), nos bolsos, pelo nome (o Amplified Hearing antes do TeleOptics).
+  assert.deepEqual(mudar.map(m => m._id).sort(), [teleoptics._id, audio._id, rifle._id].sort());
+  const noLugar = (x, y, lugar = 'bolsos') => ({ flags: { 'cpr-fieldbook': { grade: { lugar, x, y, girado: false, rev: 1 } } } });
   const doTeleOptics = mudar.find(m => m._id === teleoptics._id).plano;
-  assert.deepEqual(doTeleOptics.campos, {});
+  assert.deepEqual(doTeleOptics.campos, noLugar(1, 0));
   assert.deepEqual(doTeleOptics.colecoes.ActiveEffect, { apagar: ['efeitoantigo0004'], criar: [], mudar: [] });
-  assert.deepEqual(mudar.find(m => m._id === audio._id).plano, { campos: { system: { tipo: 'cyberAudioSuite' } }, colecoes: {} });
+  assert.deepEqual(mudar.find(m => m._id === audio._id).plano, { campos: { system: { tipo: 'cyberAudioSuite' }, ...noLugar(0, 0) }, colecoes: {} });
+  assert.deepEqual(mudar.find(m => m._id === rifle._id).plano, { campos: noLugar(0, 0, 'costas'), colecoes: {} });
   // De novo, nos dados já migrados: nada.
   assert.ok(planoVazio(planoDeMudanca(depois, migrarDados(depois, { documento: 'Actor', catalogo }))));
 });

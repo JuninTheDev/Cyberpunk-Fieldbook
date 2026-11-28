@@ -10916,6 +10916,60 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
   pelo nome no arrumar. O arquivo voltou igual (md5). No G4, a falha das arquiteturas mostrou que o passo pega o item
   sem tamanho nos compêndios.
 
+### Ciclo 232 (2026-11-28): C108, a grade no ator (sessão KouArt)
+
+- **Pedido do usuário (2026-11-28):** "Sim, siga", depois do C107 (o plano em `inventario-plano/PLANO.md`).
+- **A ideia:** a grade acompanha o que o sistema já faz, sem barrar nada de antes. Só o caminho novo (mover pela grade)
+  confere o lugar e recusa; o resto (a ficha, o Painel Tático, as macros, a importação, os pedidos, o saque) segue como
+  era, e a grade vai atrás.
+- **Entrega:**
+  - a regra pura (`compartilhado/regras-grade.mjs`): `usoDoItem` (o campo uso, o equipada ou o lugar: a arma e a
+    armadura guardadas só existem pelo lugar), `mudancasDoUso` (o equipada ou o uso que o lugar pede), `gradeParaUso`
+    (fica onde está se ainda vale e dá o uso; senão, o primeiro lugar livre do uso, sem mexer nos outros), `reconciliar`
+    (o que não cabe mais vai para "Para organizar"; o de rev maior fica) e o `arrumar` com os `fixos`; o "Para
+    organizar" guarda o uso; o `tamanhoDoItem` deixa de fora tudo o que está dentro de outro item (o `montada`);
+  - `regras-grade-ator.mjs` (puro): o item e o ator do Foundry como a regra os lê (`itemNaRegra`, `lugaresDoAtor`: a
+    moradia, um porta-malas por veículo, a mochila do Carryall nas costas com o tamanho da flag `mochila`) e a arrumação
+    dos dados (`arrumarDadosDoAtor`);
+  - `inventario-grade.mjs` (o Foundry): os ganchos e a API `game.system.api.inventario` (`moverNaGrade`, `arrumarAtor`,
+    `reconciliarAtor`, `lugaresDe`, `itemNaRegra`):
+    - o item que chega ganha um lugar do uso dele no `preCreateItem` (os que nascem juntos reservam o lugar; no
+      preCreate ainda não têm id, e cada um ganha um provisório);
+    - o ator criado com os itens dentro (o crossover, as macros) ganha os lugares no `preCreateActor`;
+    - o item que muda de uso por outro caminho muda de lugar junto, no `preUpdateItem` (que roda depois do `_preUpdate`
+      e da conferência das mãos); o que entra noutro item perde o lugar;
+    - mover pela grade confere o lugar, muda o uso pelo lugar e sobe o rev; a arma e o escudo que a conferência das mãos
+      não deixa equipar não vão para a mão (a recusa de sempre, com o aviso de sempre);
+    - a mochila tirada (o Carryall fora das costas), o veículo apagado e a moradia nova reconciliam o ator;
+    - quem mexe é quem faz (o `userId`), e o ator apagado no meio da fila não avisa nada;
+  - a migração 11: cada item do personagem ganha um lugar do uso que já tem, e nenhum muda de uso.
+- **Achado:** o guardado da arma e da armadura existe só pelo lugar: a arma no esconderijo é `equipada: false`, como a
+  do coldre. O Painel Tático só oferece para o ataque as armas equipadas (`painel.mjs`), e a do esconderijo nunca está
+  equipada; nenhuma regra lê o guardado em si. O C114 trava as mudanças de uso em combate.
+- **Fora deste item:** a aba Inventário (o C109); a escolha do tamanho da mochila na loja e o preço da M e da G; a 3ª mão
+  (o `bonus.maos`) não tem encaixe na grade: a arma equipada nela fica em "Para organizar", com o uso.
+- **Testes de referência:**
+  - **G3:** `grade-ator.test.mjs` (10): o uso de cada tipo, o que muda para cada uso, o lugar que acompanha o uso, a
+    reconciliação, o arrumar com os fixos, o item e os lugares do ator, a migração 11 (sem mudar o uso, sem mexer no que
+    tem lugar, de novo sem mudar nada, só o personagem) e o item sem _id; `migracao.test.mjs`: o ator antigo agora ganha
+    os lugares no passo 11, conferidos um a um.
+  - **G4:** o passo do C108: o personagem que nasce com os itens, três de uma vez, equipar e desequipar pela ficha, a
+    recusa pela grade, guardar, a mochila, a conferência das mãos, a mochila tirada, o veículo apagado e a migração 11 no
+    mundo (só o ator do passo muda).
+- **Portões:** G1 0; G2 limpo; G3 915/915; G4 355/355 (643 s; a rodada final, depois da limpeza do A7, em
+  355/355, 634 s). A primeira rodada com o passo deu 353/355: os três itens criados de uma vez no mesmo quadrado (no preCreate,
+  sem o id, a reserva de um parecia o próprio outro) e o aviso da reconciliação do ator que o passo do C107 apaga no
+  fim; os dois se corrigiram (o id provisório e o ator que não existe mais).
+- **Mutações:** 34 de 34 morreram (`scratchpad/mutacoes-c108.mjs`). No G3, 22: o uso de cada tipo, o que muda, o lugar que
+  fica ou acompanha, o rev da reconciliação, o "Para organizar" com o uso, o fixo, o montado, o veículo, a mochila, o
+  previsto, só o personagem, o que já tem lugar, o rev 1, o id da posição, o passo 11, o BODY. Na primeira rodada, duas
+  sobreviveram: a A7 (tirar o próprio item dos fixos) era equivalente (o `conferirLugar` já o ignora), e o filtro saiu do
+  código; a A9 (o uso padrão de "Para organizar") mostrou o caso que faltava no teste. No G4 focado (a abertura e o
+  passo, pelo `SO_PASSOS`, 46 s por rodada), 12: sem as reservas, o item que nasce sem lugar, o uso que muda sem o
+  lugar, a mão que a conferência recusou, o veículo apagado, a mochila tirada, mover sem conferir, mover sem o uso, o
+  ator com os itens dentro, o rev que não sobe, o id provisório, o "Para organizar" sem o uso. Os arquivos voltaram
+  iguais (md5).
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

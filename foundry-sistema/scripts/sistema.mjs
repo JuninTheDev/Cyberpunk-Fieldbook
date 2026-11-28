@@ -14,6 +14,7 @@ import { registrarArmasDoCyberware, sincronizarArmaMontada } from './armas-cyber
 import * as neuroport from './neuroport.mjs';
 import * as combate from './combate.mjs';
 import { levarItem, pegarDoConteiner, registrarConteiner } from './conteiner.mjs';
+import * as inventarioGrade from './inventario-grade.mjs';
 import * as drogas from './drogas.mjs';
 import * as estados from './estados.mjs';
 import * as estabilizacao from './estabilizar.mjs';
@@ -135,6 +136,7 @@ Hooks.once('init', () => {
   tripulacao.registrarTripulacao();
   // A trava do contêiner: o jogador só move o token dele com a permissão "Mover o contêiner".
   registrarConteiner();
+  inventarioGrade.registrarInventarioGrade();
   estados.registrarEstados();
   // "Mostrar aos jogadores" no clique direito da imagem das fichas (o C33; o modo do chat nos cartões fica nas rolagens).
   registrarMesa();
@@ -179,6 +181,7 @@ Hooks.once('init', () => {
   game.system.api.montagem = montagem.API;
   // Os efeitos na mesa (o C79): o diretor, que toca o evento do cartão do resultado em cada navegador.
   game.system.api.efeitos = coreografia.API;
+  game.system.api.inventario = inventarioGrade.API;
 });
 
 Hooks.once('setup', aplicarIconesDosEstados);

@@ -55,6 +55,10 @@ junto com o registro do ciclo (o G3 confere).
   sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
 - O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
 
+**A lição do ciclo 232:** o item no `preCreateItem` ainda não tem id. Quem compara itens pelo id (o `conferirLugar`, que
+não colide o item com ele mesmo) vê todos os que nascem juntos como o mesmo: no G4, três Agents criados de uma vez
+caíram no mesmo quadrado. Os que nascem juntos ganham um id provisório; o passo do G4 cria vários de uma vez.
+
 **A lição do ciclo 231:** o catálogo da wiki (`dados/catalogo.json`) não é tudo o que o Foundry tem. Os compêndios
 do sistema levam também o que a wiki não vende (as arquiteturas da NET). Uma regra que precisa valer para "todo item"
 confere no G3 pelo catálogo e no G4 pelos índices dos compêndios: foi o G4 que achou as arquiteturas sem tamanho.

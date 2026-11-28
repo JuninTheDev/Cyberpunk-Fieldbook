@@ -1019,7 +1019,7 @@ pede, por uma fila no servidor; no conflito, a mesa ganha; nada some ("Para orga
   `scripts/compartilhado/regras-grade.mjs` (o Foundry, o servidor e a página da wiki usam o mesmo): os tamanhos por
   categoria, os lugares do personagem (pela moradia, pelos veículos e pela mochila), cabe, colide, girar, o uso de cada
   lugar, as pilhas e o arrumar. Ninguém chama ainda.
-- [ ] **C108. A grade no ator:** a flag `grade` com o `rev`, o uso que segue o lugar, "Para organizar" e a migração que
+- [x] **C108. A grade no ator:** feito no ciclo 232 (sessão KouArt, 2026-11-28; o usuário disse "Sim, siga"): a flag `grade` com o `rev`, o uso que segue o lugar, "Para organizar" e a migração que
   arruma os atores de hoje sem mudar o uso.
 - [ ] **C109. A aba Inventário no Foundry:** o `grade-ui.mjs` (arrastar, girar, dividir, teclado), o contêiner e o saque com
   a grade.

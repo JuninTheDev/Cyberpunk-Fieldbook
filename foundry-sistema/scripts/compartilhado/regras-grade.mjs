@@ -66,13 +66,15 @@ const ROUPA_PEQUENA = ['glasses', 'mirrorshades', 'contactLenses', 'jewelry'];
 const tam = ([l, a, pilha = 1]) => ({ l, a, pilha });
 
 // O tamanho de um item (o do Foundry ou a linha da wiki com os mesmos campos): { type, name, catalogo, system, montada }.
-// montada: a arma do cyberware, do acessório ou do veículo, que o chamador conhece (ehArmaMontadaEmItem, armaVeicular).
+// montada: o que está dentro de outro item e vai com ele (a arma do cyberware, do acessório ou do veículo; o programa no
+// deck; o acessório na arma; a opção na fundação), que o chamador conhece (o instaladoEm, o ehArmaMontadaEmItem).
 export function tamanhoDoItem(item = {}) {
   const s = item.system ?? {};
   const doCatalogo = item.catalogo && TAMANHO_DO_CATALOGO[item.catalogo];
+  if (item.montada) return null;
   switch (item.type) {
     case 'arma':
-      if (item.montada || ARMAS_NATURAIS.includes(s.tipo)) return null;
+      if (ARMAS_NATURAIS.includes(s.tipo)) return null;
       return tam(TAMANHO_DA_ARMA[s.tipo] ?? [2, 2]);
     case 'municao': return tam(MUNICAO[s.tipo] ?? MUNICAO.custom);
     case 'droga': return tam([1, 1, 10]);
@@ -290,14 +292,15 @@ export function conferirLugar(lugares, estado, item, destino, { body = 0 } = {})
 // para o menor; o que não cabe vai para "Para organizar", com o mesmo uso. O resultado depende só da entrada (a ordem dos
 // itens não importa), para a migração dar o mesmo em qualquer navegador: a ordem não usa o localeCompare.
 // itens: [{ id, name, type, catalogo, system, montada, uso }]. Devolve { [id]: { lugar, x, y, girado } }, sem os itens que
-// não ocupam lugar.
+// não ocupam lugar; o de "Para organizar" guarda também o uso (a arma e a armadura não têm o campo: é por ele que a guardada
+// continua guardada). fixos: os que ficam onde estão, [{ item, grade }] (o C108: o item novo chega sem mexer nos outros).
 const ordem = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
-export function arrumar(itens, lugares, { body = 0 } = {}) {
+export function arrumar(itens, lugares, { body = 0, fixos = [] } = {}) {
   const existe = id => lugares.some(lugar => lugar.id === id);
   const grades = ids => ids.filter(existe);
   const comTamanho = itens.map(item => ({ item, tamanho: tamanhoDoItem(item) })).filter(({ tamanho }) => tamanho)
     .sort((x, y) => (y.tamanho.l * y.tamanho.a - x.tamanho.l * x.tamanho.a) || ordem(String(x.item.name), String(y.item.name)) || ordem(String(x.item.id), String(y.item.id)));
-  const estado = [];
+  const estado = fixos.filter(fixo => fixo.grade);
   const resultado = {};
   const tentar = destino => {
     if (!existe(destino.lugar)) return false;
@@ -324,8 +327,61 @@ export function arrumar(itens, lugares, { body = 0 } = {}) {
     } else {
       feito = ['coldre', 'costas'].some(lugar => tentar({ lugar, x: 0, y: 0, girado: false })) || grades(['bolsos', 'cinto', 'mochila']).some(naGrade);
     }
-    if (!feito) estado.at(-1).grade = { lugar: 'organizar', x: 0, y: 0, girado: false };
+    if (!feito) estado.at(-1).grade = paraOrganizar(uso);
     resultado[item.id] = estado.at(-1).grade;
   }
   return resultado;
+}
+const paraOrganizar = uso => ({ lugar: 'organizar', x: 0, y: 0, girado: false, uso: USOS.includes(uso) ? uso : 'carregando' });
+
+// ---------------- O uso e a grade juntos (o C108) ----------------
+// Os usos do sistema (o USOS do config.mjs) e os tipos que têm o campo uso. A arma e a armadura têm só o equipada; o resto
+// (a munição, o cyberware, o programa e o acessório soltos) não tem nenhum: para eles, o guardado é só o lugar.
+export const USOS = ['equipado', 'carregando', 'guardado'];
+export const TIPOS_COM_USO = ['equipamento', 'roupa', 'droga', 'cyberdeck'];
+export const TIPOS_COM_EQUIPADA = ['arma', 'armadura'];
+
+// O uso de um item agora: o campo dele, o equipada, ou o lugar onde está (item.grade). Sem nada, carregando (o padrão do
+// sistema).
+export function usoDoItem(item = {}) {
+  const s = item.system ?? {};
+  const doLugar = item.grade ? usoDoLugar(item.grade.lugar, item.grade.uso) : null;
+  if (TIPOS_COM_EQUIPADA.includes(item.type)) return s.equipada ? 'equipado' : doLugar === 'guardado' ? 'guardado' : 'carregando';
+  if (TIPOS_COM_USO.includes(item.type) && USOS.includes(s.uso)) return s.uso;
+  return USOS.includes(doLugar) ? doLugar : 'carregando';
+}
+
+// O que muda no item para ele ter o uso: o system.uso, o equipada (a arma e a armadura fora do corpo não ficam equipadas),
+// ou nada (os sem campo). Os caminhos do system, para o update do Foundry.
+export function mudancasDoUso(item, uso) {
+  if (TIPOS_COM_EQUIPADA.includes(item.type)) return { 'system.equipada': uso === 'equipado' };
+  if (TIPOS_COM_USO.includes(item.type)) return { 'system.uso': uso };
+  return {};
+}
+
+// O lugar de um item que mudou de uso por outro caminho (a ficha, o Painel Tático, uma macro) ou que acabou de chegar:
+// fica onde está se o lugar ainda vale e dá esse uso; senão, o primeiro lugar livre do uso, sem mexer nos outros; sem
+// nenhum, "Para organizar". outros: [{ item, grade }], os outros itens do personagem. Devolve a grade nova, ou null quando
+// o item fica onde está (ou não ocupa lugar).
+export function gradeParaUso(item, uso, lugares, outros, { body = 0 } = {}) {
+  if (!tamanhoDoItem(item)) return null;
+  const atual = item.grade;
+  if (atual && usoDoLugar(atual.lugar, atual.uso) === uso && !conferirLugar(lugares, outros, item, atual, { body })) return null;
+  // O próprio item nos outros não atrapalha: o conferirLugar o ignora pelo id.
+  return arrumar([{ ...item, uso }], lugares, { body, fixos: outros })[item.id];
+}
+
+// Depois que um lugar some ou encolhe (a mochila tirada, o veículo que saiu, a moradia nova): o que não cabe mais onde
+// estava vai para "Para organizar", com o uso que tinha. Os que ficam são conferidos na ordem do rev (o mexido por
+// último ganha o lugar), e depois pelo id. Devolve { [id]: grade } só dos que mudam.
+export function reconciliar(itens, lugares, { body = 0 } = {}) {
+  const comGrade = itens.filter(item => item.grade && item.grade.lugar !== 'organizar' && tamanhoDoItem(item))
+    .sort((x, y) => (Number(y.grade.rev) || 0) - (Number(x.grade.rev) || 0) || ordem(String(x.id), String(y.id)));
+  const estado = [];
+  const mudam = {};
+  for (const item of comGrade) {
+    if (conferirLugar(lugares, estado, item, item.grade, { body })) mudam[item.id] = paraOrganizar(usoDoItem(item));
+    else estado.push({ item, grade: item.grade });
+  }
+  return mudam;
 }

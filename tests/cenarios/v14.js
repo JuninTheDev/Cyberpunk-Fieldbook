@@ -23353,6 +23353,113 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(c107)];
     });
 
+    await r.passo('C108: a grade no ator: o personagem que nasce com os itens dentro já tem o lugar de cada um; três itens de uma vez ganham três lugares; equipar e desequipar pela ficha mudam o lugar; mover pela grade muda o uso (guardar, a mochila) e recusa com o motivo; a conferência das mãos ainda vale; a mochila tirada e o veículo apagado mandam o que estava neles para "Para organizar"; a migração 11 devolve o lugar a quem não tem', async () => {
+      const c108 = await edge.evaluate(`(async () => {
+        const S = game.system.id;
+        const api = game.system.api.inventario;
+        const grade = await import('/systems/' + S + '/scripts/compartilhado/regras-grade.mjs');
+        const esperar = async (teste, vezes = 80) => { for (let i = 0; i < vezes && !teste(); i++) await new Promise(r => setTimeout(r, 100)); return teste(); };
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const pegar = (id, mudar = {}) => foundry.utils.mergeObject(foundry.utils.deepClone(cat[id]), mudar);
+        // Os avisos esperados ficam aqui (não contam no passo "nenhum aviso").
+        const avisar = ui.notifications.warn;
+        const avisos = [];
+        ui.notifications.warn = mensagem => { avisos.push(String(mensagem)); };
+        let ator, mensagem;
+        try {
+          ator = await Actor.implementation.create({ name: 'C108 Grade', type: 'personagem', ownership: { default: 0 }, items: [
+            pegar('core_weapons:assault-rifle', { system: { equipada: true } }), pegar('core_weapons:heavy-pistol'), pegar('core_weapons:medium-pistol'),
+            pegar('core_gear:carryall', { system: { uso: 'equipado' }, flags: { [S]: { mochila: 'M' } } }), pegar('core_gear:computer'), pegar('core_vehicles:roadbike')] });
+          const por = id => ator.items.find(item => item.getFlag(S, 'catalogo') === id);
+          const g = item => { const x = item?.getFlag(S, 'grade'); return x ? [x.lugar, x.x, x.y, x.rev] : null; };
+          const ids = { rifle: 'core_weapons:assault-rifle', pesada: 'core_weapons:heavy-pistol', media: 'core_weapons:medium-pistol', mochila: 'core_gear:carryall', pc: 'core_gear:computer', moto: 'core_vehicles:roadbike' };
+          const naCriacao = Object.fromEntries(Object.entries(ids).map(([nome, id]) => [nome, g(por(id))]));
+          // Três de uma vez: cada um passa pelo preCreate antes de o primeiro existir (as reservas).
+          const tres = await ator.createEmbeddedDocuments('Item', [pegar('core_gear:agent'), pegar('core_gear:agent'), pegar('core_gear:agent')]);
+          const dosTres = tres.map(item => g(item).slice(0, 3).join(':')).sort();
+          // Pela ficha (o update de sempre): o fuzil desequipado vai às costas; a pistola pesada equipada, à mão principal.
+          const rifle = por(ids.rifle), pesada = por(ids.pesada), media = por(ids.media);
+          await rifle.update({ 'system.equipada': false });
+          const desequipou = g(rifle);
+          await pesada.update({ 'system.equipada': true });
+          const equipou = g(pesada);
+          // Pela grade: o fuzil (duas mãos) não cabe com a pistola na principal: recusa, e nada muda.
+          const recusa = await api.moverNaGrade(rifle, { lugar: 'corpo:maoSecundaria' });
+          const depoisDaRecusa = [g(rifle), rifle.system.equipada];
+          // Guardar pela grade: o fuzil no esconderijo (o contêiner, 10×6); o computador na mochila M.
+          const guardar = await api.moverNaGrade(rifle, { lugar: 'esconderijo', x: 2, y: 1 });
+          const fuzilGuardado = [g(rifle), rifle.system.equipada, grade.usoDoItem(api.itemNaRegra(rifle))];
+          const naMochila = await api.moverNaGrade(por(ids.pc), { lugar: 'mochila', x: 0, y: 0 });
+          const pcNaMochila = g(por(ids.pc));
+          // As mãos do Foundry contam mais que as da grade: a pistola média equipada e posta em "Para organizar" continua
+          // segurando uma mão. A grade deixa a faca na mão secundária, a conferência das mãos não: a faca fica no coldre.
+          const mediaNaMao = await api.moverNaGrade(media, { lugar: 'corpo:maoSecundaria' });
+          const mediaOrganizar = await api.moverNaGrade(media, { lugar: 'organizar' });
+          const mediaDepois = [g(media), media.getFlag(S, 'grade')?.uso, media.system.equipada];
+          const [faca] = await ator.createEmbeddedDocuments('Item', [pegar('core_weapons:light-melee')]);
+          const facaAntes = g(faca);
+          const facaNaMao = await api.moverNaGrade(faca, { lugar: 'corpo:maoSecundaria' });
+          const facaDepois = [g(ator.items.get(faca.id)), ator.items.get(faca.id).system.equipada];
+          // A mochila tirada: o Carryall vai ao esconderijo, e o computador que estava nela, a "Para organizar".
+          const tirar = await api.moverNaGrade(por(ids.mochila), { lugar: 'esconderijo', x: 0, y: 0 });
+          await esperar(() => por(ids.pc).getFlag(S, 'grade')?.lugar === 'organizar');
+          const semMochila = [g(por(ids.pc)), por(ids.pc).getFlag(S, 'grade')?.uso, por(ids.mochila).system.uso];
+          // O veículo que sai: o Agent no porta-malas vai a "Para organizar", guardado.
+          const moto = por(ids.moto);
+          const agent = ator.items.get(tres[0].id);
+          const noPortaMalas = await api.moverNaGrade(agent, { lugar: 'veiculo:' + moto.id, x: 0, y: 0 });
+          const agentGuardado = [g(ator.items.get(agent.id)), ator.items.get(agent.id).system.uso];
+          await moto.delete();
+          await esperar(() => ator.items.get(agent.id).getFlag(S, 'grade')?.lugar === 'organizar');
+          const semMoto = [ator.items.get(agent.id).getFlag(S, 'grade')?.lugar, ator.items.get(agent.id).getFlag(S, 'grade')?.uso, ator.items.get(agent.id).system.uso];
+          // A migração 11 no mundo: o ator sem as grades as ganha de novo (da versão 10 para a 11), sem mudar o uso que os
+          // campos dão; só ele muda no mundo.
+          await ator.updateEmbeddedDocuments('Item', ator.items.map(item => ({ _id: item.id, flags: { [S]: { grade: _del } } })));
+          const semGrade = ator.items.filter(item => item.getFlag(S, 'grade')).length;
+          const usoDosCampos = Object.fromEntries(ator.items.map(item => [item.id, grade.usoDoItem({ ...api.itemNaRegra(item), grade: null })]));
+          const migracao = await game.system.api.migracao.migrarMundo({ desde: 10, perguntar: false });
+          mensagem = game.messages.contents.findLast(m => m.getFlag(S, 'migracao'));
+          const itens = ator.items.map(api.itemNaRegra);
+          const lugares = api.lugaresDe(ator);
+          const estado = [];
+          const erros = [];
+          for (const item of itens) {
+            if (!grade.tamanhoDoItem(item)) { if (item.grade) erros.push(item.name + ': ganhou lugar sem ocupar'); continue; }
+            if (!item.grade) { erros.push(item.name + ': sem lugar'); continue; }
+            const motivo = grade.conferirLugar(lugares, estado, item, item.grade);
+            if (motivo) erros.push(motivo);
+            if (grade.usoDoItem(item) !== usoDosCampos[item.id]) erros.push(item.name + ': o uso mudou');
+            estado.push({ item, grade: item.grade });
+          }
+          return { naCriacao, dosTres, desequipou, equipou, recusa, depoisDaRecusa, guardar, fuzilGuardado, naMochila, pcNaMochila, mediaNaMao, mediaOrganizar, mediaDepois,
+            facaAntes, facaNaMao: { ok: facaNaMao.ok, motivo: facaNaMao.motivo.includes('não foi para lá') }, facaDepois, tirar: tirar.ok, semMochila, noPortaMalas: noPortaMalas.ok, agentGuardado: [agentGuardado[0]?.[0], agentGuardado[1]], semMoto,
+            semGrade, migracao: { versao: migracao.versao, mudados: mensagem?.getFlag(S, 'migracao')?.mudados ?? null }, erros, avisos };
+        } finally {
+          ui.notifications.warn = avisar;
+          if (mensagem) await mensagem.delete();
+          if (ator) await ator.delete();
+        }
+      })()`);
+      const esperado = {
+        naCriacao: { rifle: ['corpo:maoPrincipal', 0, 0, 1], pesada: ['coldre', 0, 0, 1], media: ['bolsos', 2, 0, 1], mochila: ['corpo:mochila', 0, 0, 1], pc: ['bolsos', 0, 0, 1], moto: null },
+        dosTres: ['bolsos:2:1', 'bolsos:3:1', 'cinto:0:0'],
+        desequipou: ['costas', 0, 0, 2], equipou: ['corpo:maoPrincipal', 0, 0, 2],
+        recusa: { ok: false, motivo: 'Mão principal: já tem Heavy Pistol.' }, depoisDaRecusa: [['costas', 0, 0, 2], false],
+        guardar: { ok: true, motivo: '' }, fuzilGuardado: [['esconderijo', 2, 1, 3], false, 'guardado'],
+        naMochila: { ok: true, motivo: '' }, pcNaMochila: ['mochila', 0, 0, 2],
+        mediaNaMao: { ok: true, motivo: '' }, mediaOrganizar: { ok: true, motivo: '' }, mediaDepois: [['organizar', 0, 0, 3], 'equipado', true],
+        facaAntes: ['coldre', 0, 0, 1], facaNaMao: { ok: false, motivo: true }, facaDepois: [['coldre', 0, 0, 1], false],
+        tirar: true, semMochila: [['organizar', 0, 0, 3], 'carregando', 'guardado'],
+        noPortaMalas: true, agentGuardado: ['veiculo:' + 'moto', 'guardado'], semMoto: ['organizar', 'guardado', 'guardado'],
+        semGrade: 0, migracao: { versao: 11, mudados: ['C108 Grade'] }, erros: []
+      };
+      // O porta-malas leva o id da moto, que muda a cada rodada: confere o começo.
+      const info = { ...c108, agentGuardado: [String(c108.agentGuardado?.[0]).startsWith('veiculo:') ? 'veiculo:moto' : c108.agentGuardado?.[0], c108.agentGuardado?.[1]] };
+      const { avisos, ...semAvisos } = info;
+      const avisosCertos = avisos.length === 2 && avisos[0] === 'Mão principal: já tem Heavy Pistol.' && /não tem mãos livres para equipar/.test(avisos[1]);
+      return [JSON.stringify(semAvisos) === JSON.stringify(esperado) && avisosCertos, JSON.stringify(c108)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];
