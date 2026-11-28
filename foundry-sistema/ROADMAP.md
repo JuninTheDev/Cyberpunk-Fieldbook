@@ -1000,6 +1000,9 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   o contêiner criado sem permissão ganha o "dono: todos" pelo `updateSource` do `_preCreate` (o documentos.mjs), que
   mudava o valor inicial do campo do Foundry; daí em diante, até recarregar a página, todo ator criado sem permissão (o
   personagem, o capanga, o alvo do ataque) nascia com todos os jogadores como donos.
+- [~] **C106. A suíte inteira da wiki sem as falhas que um cenário deixa para o outro:** em andamento (sessão KouArt,
+  2026-11-27). O usuário disse "Pode investigar". Com todos os cenários juntos (`node tests/rodar.js`), o `criador`, os
+  `jogadores`, a `base`, a `reversao` e 17 passos do v14 caíam; sozinhos, só a `reversao` caía.
 
 ## Fora do plano: o que só existe no CORE 0.93
 
