@@ -1006,6 +1006,33 @@ o teto de 10 MB no git. Os números a partir do C78 são do plano e se reservam 
   2026-11-27): só as duas falhas conhecidas deste PC ficam. O usuário disse "Pode investigar". Com todos os cenários juntos (`node tests/rodar.js`), o `criador`, os
   `jogadores`, a `base`, a `reversao` e 17 passos do v14 caíam; sozinhos, só a `reversao` caía.
 
+## O inventário em grade, o mesmo na wiki e no Foundry (C107 a C114)
+
+Pedido do usuário (2026-11-28): um inventário de quadrados, os itens iguais na wiki e no Foundry, e o que se mexe num lado
+muda no outro. O plano inteiro está em `foundry-sistema/inventario-plano/PLANO.md`, com as 10 decisões aceitas pelo
+usuário ("Aceito todas"): a grade é o limite, sem peso nem penalidade; o lugar decide o uso (o corpo é o equipado; os
+bolsos, o cinto e a mochila, o carregando; o esconderijo da moradia e o porta-malas, o guardado); a mesa manda e a wiki
+pede, por uma fila no servidor; no conflito, a mesa ganha; nada some ("Para organizar"). As partes da wiki (as páginas, o
+`server.js`, os `api-*.js`) se confirmam com o usuário antes de cada fase.
+
+- [~] **C107. As regras da grade, puras:** em andamento (sessão KouArt, 2026-11-28). O usuário disse "Sim, comece". O
+  `scripts/compartilhado/regras-grade.mjs` (o Foundry, o servidor e a página da wiki usam o mesmo): os tamanhos por
+  categoria, os lugares do personagem (pela moradia, pelos veículos e pela mochila), cabe, colide, girar, o uso de cada
+  lugar, as pilhas e o arrumar. Ninguém chama ainda.
+- [ ] **C108. A grade no ator:** a flag `grade` com o `rev`, o uso que segue o lugar, "Para organizar" e a migração que
+  arruma os atores de hoje sem mudar o uso.
+- [ ] **C109. A aba Inventário no Foundry:** o `grade-ui.mjs` (arrastar, girar, dividir, teclado), o contêiner e o saque com
+  a grade.
+- [ ] **C110. A volta rápida para a wiki:** o inventário em menos de 2 s, a grade e os lugares no "Na mesa", e a grade só de
+  leitura na wiki.
+- [ ] **C111. Da wiki para o Foundry:** o `api-inventario.js` (a fila de operações, a conferência no servidor, o SSE); o
+  Foundry aplica, confirma ou recusa.
+- [ ] **C112. A grade que se mexe na wiki:** o estado projetado, o "pendente", a recusa com o motivo, o celular e o teclado.
+- [ ] **C113. O Foundry fechado e a importação:** a fila que esvazia ao abrir o mundo, a grade da montagem que vai na
+  importação, o pedido da loja que chega em "Para organizar".
+- [ ] **C114. Sem o mestre e em combate:** o jogador dono aplica sem o mestre; a trava das mudanças de uso em combate e a do
+  esconderijo durante a sessão.
+
 ## Fora do plano: o que só existe no CORE 0.93
 
 A pasta `fvtt-cyberpunk-red-core-dev/` é a 0.93, de desenvolvimento; a mesa usa a 0.92.4. Pelo CHANGELOG, isto entrou
