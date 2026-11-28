@@ -463,9 +463,11 @@
       const scripts = (item.roteiros || []).map((script, index) => {
         const base = `roteiro-${item.id}-${slug(script.nome)}`;
         const temHandouts = (script.handouts || []).length > 0;
-        // As abas, nesta ordem: Roteiro, Narrar (com momentos marcados) e Handouts (com "### H-xx · Título").
+        // As abas, nesta ordem: Roteiro, Narrar (com momentos marcados), NPCs (com o "<nome>--npcs.md" no servidor) e
+        // Handouts (com "### H-xx · Título").
         const defs = [{ kind: 'roteiro', id: base, tab: 'Roteiro', roteiro: script.nome, title: escapeHtml(script.titulo), eyebrow: `${escapeHtml(item.nome)} / roteiro, só você vê` }];
         if (script.narrar) defs.push({ kind: 'narrar', id: `${base}--narrar`, tab: 'Narrar', roteiro: script.nome, roteiroDoc: base, handoutsDoc: temHandouts ? `${base}-handouts` : '', title: escapeHtml(script.titulo), eyebrow: `${escapeHtml(item.nome)} / narrar, só você vê` });
+        if (script.npcs) defs.push({ kind: 'roteiro', id: `${base}--npcs`, tab: 'NPCs', roteiro: `${script.nome}--npcs`, title: 'NPCs da sessão', eyebrow: `${escapeHtml(item.nome)} / NPCs, só você vê`, lede: 'Quem está na sessão: os principais com a ficha completa, os secundários e os figurantes, com a origem de cada apelido. Fica só no servidor.' });
         if (temHandouts) defs.push({ kind: 'handouts', id: `${base}-handouts`, tab: 'Handouts', roteiro: script.nome, title: 'Handouts', eyebrow: `${escapeHtml(item.nome)} / handouts`, handouts: script.handouts });
         const extra = extraPages(item.id, defs);
         Object.assign(pages, extra.pages);

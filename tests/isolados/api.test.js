@@ -156,6 +156,15 @@ test('o roteiro da sessão fica na pasta de dados e só o mestre lê', async t =
   fs.writeFileSync(path.join(pasta, 'sessao-04.md'), '# Sessão 4\n\n## A abertura\n\n- **Momento:** abertura\n\n> A chuva cai.\n');
   const comNarrar = (await servidor.pedir('/api/campanhas', { cookie: mestre })).json.campanhas.find(item => item.id === 'morana').roteiros.find(item => item.nome === 'sessao-04');
   assert.deepEqual(comNarrar, { nome: 'sessao-04', titulo: 'Sessão 4', handouts: [], narrar: true });
+  // "<nome>--npcs.md" é a página dos NPCs da sessão (a aba NPCs): a lista não a mostra como roteiro, e o roteiro dela
+  // traz npcs: true. Sem o roteiro, ela continua na lista (não some).
+  fs.writeFileSync(path.join(pasta, 'sessao-04--npcs.md'), '# Sessão 4: os NPCs\n\nO bartender.\n');
+  fs.writeFileSync(path.join(pasta, 'sessao-09--npcs.md'), '# Sem roteiro\n');
+  const roteiros = (await servidor.pedir('/api/campanhas', { cookie: mestre })).json.campanhas.find(item => item.id === 'morana').roteiros;
+  assert.deepEqual(roteiros.find(item => item.nome === 'sessao-04'), { nome: 'sessao-04', titulo: 'Sessão 4', handouts: [], narrar: true, npcs: true });
+  assert.ok(!roteiros.some(item => item.nome === 'sessao-04--npcs'));
+  assert.ok(roteiros.some(item => item.nome === 'sessao-09--npcs'));
+  assert.equal((await servidor.pedir('/api/campanhas/morana/roteiros/sessao-04--npcs', { cookie: mestre })).text, '# Sessão 4: os NPCs\n\nO bartender.\n');
 });
 
 test('o resumo do personagem traz a Humanidade (EMP × 10 sem ficha da mesa), para o cartão do Início', async t => {

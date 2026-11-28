@@ -105,6 +105,8 @@ module.exports = async ({ edge, r }) => {
     await api(`/api/campanhas/${campanha.id}/roteiros/01-sessao`, { method: 'PUT', body: { texto: ROTEIRO } });
     // Um roteiro sem marcação: sem a aba Narrar.
     await api(`/api/campanhas/${campanha.id}/roteiros/02-sem-marcas`, { method: 'PUT', body: { texto: '# Sessão 02: Simples\n\nSó texto.\n\n### H-02 · Um papel\n\n> Oi.\n' } });
+    // A página dos NPCs da sessão 01 (a aba NPCs).
+    await api(`/api/campanhas/${campanha.id}/roteiros/01-sessao--npcs`, { method: 'PUT', body: { texto: '# Sessão 01: os NPCs\n\n## Velho Jonas\n\nO caseiro da casa velha.\n' } });
     const roteiro = `roteiro-${campanha.id}-01-sessao`;
     const narrarId = `${roteiro}--narrar`;
     const tela = () => edge.evaluate(`(() => {
@@ -127,14 +129,18 @@ module.exports = async ({ edge, r }) => {
     await edge.evaluate(`(() => { const s = document.getElementById('campaign-picker'); s.value = ${JSON.stringify(campanha.id)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
     await edge.sleep(900);
 
-    await r.passo('o menu: a sessão marcada tem Roteiro, Narrar e Handouts; a sem marcação, só Roteiro e Handouts', async () => {
+    await r.passo('o menu: a sessão marcada tem Roteiro, Narrar, NPCs e Handouts; a sem marcação, só Roteiro e Handouts; a aba NPCs mostra a página', async () => {
       await edge.evaluate(`wikiApp.openPage(${JSON.stringify(roteiro)})`);
       await edge.sleep(600);
       const abas = await edge.evaluate(`[...document.querySelectorAll('.page-tabs .page-tab')].map(b => b.textContent).join()`);
+      const noMenu = await edge.evaluate(`[...document.querySelectorAll('#navigation .nav-item')].map(b => b.dataset.page).filter(id => id.includes('--npcs')).length`);
+      await edge.evaluate(`wikiApp.openPage(${JSON.stringify(`${roteiro}--npcs`)})`);
+      let npcs = '';
+      for (let i = 0; i < 25 && !/Velho Jonas/.test(npcs); i++) { await edge.sleep(200); npcs = (await edge.evaluate(`document.getElementById('md-doc')?.textContent || ''`)).replace(/\s+/g, ' '); }
       await edge.evaluate(`wikiApp.openPage(${JSON.stringify(`roteiro-${campanha.id}-02-sem-marcas`)})`);
       await edge.sleep(600);
       const simples = await edge.evaluate(`[...document.querySelectorAll('.page-tabs .page-tab')].map(b => b.textContent).join()`);
-      return [abas === 'Roteiro,Narrar,Handouts' && simples === 'Roteiro,Handouts', `${abas} · ${simples}`];
+      return [abas === 'Roteiro,Narrar,NPCs,Handouts' && noMenu === 0 && /Velho Jonas\s*O caseiro da casa velha/.test(npcs) && simples === 'Roteiro,Handouts', `${abas} · no menu ${noMenu} · NPCs: ${npcs.slice(0, 80)} · ${simples}`];
     });
 
     await r.passo('a aba Narrar abre no primeiro momento: o texto para ler com o rótulo, o botão para a entrada e o aviso do link quebrado', async () => {

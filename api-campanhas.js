@@ -274,13 +274,17 @@ function createCampaigns({ dataDir, legacyDir = dataDir, writeJsonAtomic, docsDi
   function listScripts(id) {
     let files = [];
     try { files = fs.readdirSync(path.join(folder(id), 'roteiros')).filter(file => file.endsWith('.md') && SCRIPT_RE.test(file.slice(0, -3))).sort(); } catch { return []; }
-    return files.map(file => {
-      const name = file.slice(0, -3);
+    // "<nome>--npcs.md" é a página dos NPCs do roteiro <nome> (a aba NPCs da sessão), não um roteiro à parte. Sem o
+    // roteiro dela, aparece como roteiro, para não sumir.
+    const names = files.map(file => file.slice(0, -3));
+    const attached = name => name.endsWith('--npcs') && names.includes(name.slice(0, -'--npcs'.length));
+    return names.filter(name => !attached(name)).map(name => {
       const text = readScript(id, name) || '';
       const title = ((text.match(/^﻿?#\s+(.+)$/m) || [])[1] || name).trim().slice(0, 120);
       const handouts = [...new Set([...text.matchAll(/^###\s+(H-\d+)\s+·/gm)].map(match => match[1]))];
       // narrar: o roteiro tem momentos marcados ("- **Momento:** id"), e a sessão ganha a aba Narrar (narrar.js).
-      return { nome: name, titulo: title, handouts, ...(narrar.temNarrar(text) ? { narrar: true } : {}) };
+      // npcs: a sessão tem a página dos NPCs ("<nome>--npcs.md"), a aba NPCs.
+      return { nome: name, titulo: title, handouts, ...(narrar.temNarrar(text) ? { narrar: true } : {}), ...(names.includes(`${name}--npcs`) ? { npcs: true } : {}) };
     });
   }
   function writeScript(id, name, text) {
