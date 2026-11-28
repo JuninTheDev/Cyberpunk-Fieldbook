@@ -896,6 +896,14 @@ E a do navegador de cada um:
 
 ## Ainda não faz
 
+- **O inventário em grade, o mesmo na wiki e no Foundry** (o plano em `inventario-plano/PLANO.md`, do C107 ao C114):
+  só a regra existe, sem nada na ficha ainda (ciclo 231). O `scripts/compartilhado/regras-grade.mjs`, sem import (o
+  Foundry, o servidor e a página da wiki vão usar o mesmo arquivo), dá o tamanho de cada item (as armas pelo tipo, a
+  munição e a pilha por tipo, a armadura guardada pelo peso, o equipamento pelo catálogo), os lugares do personagem (as
+  mãos, a cabeça, o tronco, o deck e a mochila no corpo, o coldre, as costas, os bolsos 4×2, o cinto 6×1, a mochila P/M/G,
+  o esconderijo pela moradia, um porta-malas por veículo e o "Para organizar"), o uso que cada lugar dá, se o item cabe
+  (a borda, o quadrado ocupado, girar, as duas mãos, a armadura inteira) e o "Arrumar" (do maior para o menor, sem mudar
+  o uso; o que não cabe vai para "Para organizar").
 - **Os NPCs prontos do CORE** (o capanga se faz à mão, com a ficha de capanga).
 - **O que do Black Chrome fica com a mesa:** dos veículos (a parte 4), o "não aceita alguns upgrades" do EconoCompact, do Destination e do Molly (as páginas faltam no PDF), as armas e os equipamentos do "Vem com" (a metralhadora, o lança-foguetes, o NOS, o arado, a habitação: instale o upgrade, se houver), o modo corrida da Artemis e as manobras do JetBoy por Atletismo; do cromo (a parte 3), o laser de quatro ou oito cyberdedos, as armas do Fūma Kotarō, o escalar, o nadar e o saltar dos quadros e o Skate Foot do Vermilion. Das armas (a parte 2): o CDT 2 do arremesso, a munição de caça pequena, a teia da Arachnid (o agarrão), a cobertura que a granada KTech não fura, os fluidos da Weeping Reaver e as regras de cada arma que são texto (a chave biométrica das monolâminas, a segunda lesão, os sons). O efeito que não é automático fica no texto do item.
 - **As regras de 2077 do Mission Kit:** as três classes seguem o Kit (a Smart desde o ciclo 110, a munição Smart

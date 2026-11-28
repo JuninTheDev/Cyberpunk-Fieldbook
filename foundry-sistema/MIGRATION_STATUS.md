@@ -10864,6 +10864,58 @@ Commit anterior: `63f011ca` (a reserva do C42; o usuário confirmou em 2026-10-2
 - **Portões:** G1, G2 e G3 (887/887) passam. A suíte inteira (`node tests/rodar.js`): só as duas falhas conhecidas deste PC (o `fluxo` e o `sistema`); o `criador` 65/65, os `jogadores` 25/25, a `base` 24/24, a `reversao` 7/7 e o v14 353/353 (666 s), com os servidores de novo antes dele.
 - **Mutações:** G3: S1 a S4 morreram (o rodar.js sem subir os servidores de novo; o v14 sem pedir a wiki só dele; o limite do contas pela rede; a reversao sem a marca). Os cenários: o W1 (a reversao sem a marca) morreu na reversao sozinha; o W2 (o limite pela rede) derrubou o criador depois do contas (4 de 65); o W3 (o v14 sem a wiki só dele) derrubou 17 passos do v14 na suíte inteira, com o "Este mundo não está ligado" de volta. Antes, o W3 sobreviveu com só o `campanhas` ou só o `agenda` antes do v14: a campanha a mais vem de uma combinação dos cenários, que não ficou isolada; a rodada inteira é a conferência. Uma rodada do W3 passou dos 25 min do mutador e deixou o rodar.js rodando até sair sozinho (nada ficou).
 
+### Ciclo 231 (2026-11-28): C107, as regras puras do inventário em grade (sessão KouArt)
+
+- **Pedido do usuário (2026-11-28):** um inventário de quadrados, os itens iguais na wiki e no Foundry, e o que se mexe
+  num lado muda no outro. Pediu o plano ("Você poderia fazer um planejamento completo"), aceitou as 10 recomendações
+  ("Aceito todas") e mandou começar ("Sim, comece"). O plano está em `inventario-plano/PLANO.md`; a reserva do C107 ao
+  C114, no dac2f054.
+- **Entrega:** o `scripts/compartilhado/regras-grade.mjs`, puro e sem import (o Foundry, o servidor da wiki e a página da
+  wiki vão usar o mesmo arquivo). Ninguém chama ainda:
+  - `tamanhoDoItem`: a tabela do plano (as armas pelo tipo do CORE, a munição e a pilha por tipo, a armadura guardada
+    pela penalidade, o escudo, a de cabeça, a roupa, o cyberware solto, o deck, o programa e o acessório soltos); o
+    equipamento, que não tem categoria no catálogo, pelo id (`TAMANHO_DO_CATALOGO`, os maiores e os consumíveis que
+    empilham). Não ocupam lugar: a lesão, o veículo (é um lugar), a arma natural, a montada e o cyberware instalado;
+  - os lugares (`lugaresDoPersonagem`): os encaixes do corpo (as duas mãos, a cabeça, o tronco, o deck, a mochila nas
+    costas), o coldre e as costas, as listas (a roupa, o "Em uso" e o "Para organizar"), os bolsos 4×2, o cinto 6×1, a
+    mochila P/M/G, o esconderijo pela moradia (`moradiaDoPersonagem`: o nome, o id ou o aluguel) e um porta-malas por
+    veículo (`classeDoVeiculo`: os 45 do catálogo, e o de fora pelo tipo);
+  - `usoDoLugar`: o corpo é o equipado; o coldre, as costas, os bolsos, o cinto e a mochila, o carregando; o esconderijo
+    e o porta-malas, o guardado; "Para organizar" fica com o uso que o item tinha;
+  - `encaixesDoItem` e `conferirLugar`: a borda, o quadrado ocupado, girar, a arma de duas mãos que pega as duas (pelo
+    BODY, como o `maosDaArma`), a armadura inteira que pega a cabeça e o tronco, o coldre só com arma de uma mão (a
+    granada, não), as costas com a longa e a pesada; o motivo da recusa em português, para a ficha e a wiki mostrarem;
+  - as pilhas: o teto por item da grade (`limiteDaPilha`, `pilhasNecessarias`, `juntarPilhas`); o mesmaPilha e o
+    divisaoDaPilha do `regras-inventario.mjs` continuam decidindo se junta e como divide;
+  - `arrumar`: o botão "Arrumar" e a migração do C108. Cada item vai para um lugar do uso que já tem, do maior para o
+    menor, e o que não cabe vai para "Para organizar"; o resultado não depende da ordem da entrada.
+- **Leituras minhas (fora da tabela do plano, para o usuário ajustar depois da primeira sessão):** a flecha, a bateria e a
+  munição própria a 10 por item, e o paintball como a de pistola; os óculos, as lentes e as joias a 1×1; a base de
+  borgware a 3×4; o acessório de veículo a 3×3; o tamanho de cada equipamento grande e os consumíveis que empilham (10); a
+  classe de cada veículo e os porta-malas do compacto (6×4) e do enorme (12×10); o conapt corporativo do Exec (10×8) e o
+  clã do Nomad (8×4), as duas moradias sem aluguel que a wiki tem além das 7 do plano; sem moradia preenchida, o
+  contêiner; o nome que não é da lista vale pelo aluguel.
+- **Achado para o C108:** a arma e a armadura não têm `uso` no modelo (só o `equipada`), e a munição, o cyberware, o
+  programa e o acessório também não. O guardado da arma e da armadura vai existir só pelo lugar da grade: o C108 decide
+  como o resto do sistema lê isso.
+- **Testes de referência:**
+  - **G3:** `grade.test.mjs` (17): os tamanhos da tabela; todo item do catálogo com tamanho, menos a lesão, o veículo e
+    as 2 armas naturais; as tabelas só citam ids que existem, e todo veículo do catálogo tem a classe; as moradias da wiki
+    (`system-criacao.js`) iguais às da tabela; o `EMPILHAVEIS` e o `maosDaArma` iguais aos do `regras.mjs`; os lugares,
+    o uso de cada um, os encaixes, a borda, a colisão, o girar, as pilhas e o arrumar (sem colisão, sem mudar o uso, na
+    mesma ordem para qualquer entrada).
+  - **G4:** o passo do C107: a regra chega instalada (a subpasta) e roda no navegador; os itens dos compêndios do sistema
+    com tamanho (889 itens; a arquitetura da NET, que só os compêndios têm, não ocupa lugar: o G4 achou, e o G3 confere);
+    um personagem com o equipamento do catálogo arruma igual ao G3, sem mudar o uso.
+- **Portões:** G1 0; G2 limpo; G3 905/905; G4 354/354 (660 s). Antes do passo novo, o G4 deu 353/353 (679 s); a primeira rodada com
+  o passo deu 353/354: as 3 arquiteturas da NET dos compêndios sem tamanho (o passo esperava só a lesão, o veículo e a
+  arma natural).
+- **Mutações:** 45 de 45 morreram no G3 (`scratchpad/mutacoes-c107.mjs`: os tamanhos, as pilhas, as moradias, os porta-malas, o
+  uso de cada lugar, os encaixes, a borda, a colisão, o girar e o arrumar). Na primeira rodada, 3 sobreviveram, e o teste
+  ganhou o que faltava: a armadura de penalidade 3 (nenhuma do catálogo tem), a borda de cima (y negativo) e o desempate
+  pelo nome no arrumar. O arquivo voltou igual (md5). No G4, a falha das arquiteturas mostrou que o passo pega o item
+  sem tamanho nos compêndios.
+
 ## Procedimento da migração da campanha (a fazer numa pausa entre arcos, com o usuário)
 
 O mundo antigo não abre no Foundry 14: o Cyberpunk RED - CORE 0.92.4 só vai até o Foundry 12. Por isso a campanha

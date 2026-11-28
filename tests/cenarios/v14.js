@@ -23290,6 +23290,69 @@ module.exports = async ({ edge, servidores, r }) => {
       return [ok, JSON.stringify(c98)];
     });
 
+    await r.passo('C107: a regra pura da grade chega instalada no Foundry (a subpasta compartilhado/) e roda no navegador: todo item dos compêndios do sistema tem tamanho (menos a lesão, o veículo, a arquitetura da NET e a arma natural), e um personagem de verdade se arruma sem mudar o uso de nenhum item, sem dois itens no mesmo lugar', async () => {
+      const c107 = await edge.evaluate(`(async () => {
+        const S = game.system.id;
+        const grade = await import('/systems/' + S + '/scripts/compartilhado/regras-grade.mjs');
+        // Os compêndios: o tamanho de cada item pelos campos que a regra lê.
+        const semTamanho = {};
+        let itens = 0;
+        for (const pack of game.packs.filter(p => p.metadata.system === S && p.documentName === 'Item')) {
+          const indice = await pack.getIndex({ fields: ['type', 'system.tipo', 'system.escudo', 'system.sp', 'system.penalidade', 'system.fundacional', 'system.instalado', 'system.alvo', 'flags.' + S + '.catalogo'] });
+          for (const item of indice) {
+            itens++;
+            const tamanho = grade.tamanhoDoItem({ type: item.type, name: item.name, catalogo: item.flags?.[S]?.catalogo ?? '', system: item.system ?? {} });
+            if (!tamanho && !['lesao', 'veiculo', 'arquitetura'].includes(item.type) && !(item.type === 'arma' && grade.ARMAS_NATURAIS.includes(item.system?.tipo))) semTamanho[item.type] = [...(semTamanho[item.type] ?? []), item.name].slice(0, 5);
+          }
+        }
+        // Um personagem com o equipamento do catálogo da wiki, como a importação cria.
+        const cat = await game.system.api.wiki.carregarCatalogo();
+        const ids = ['core_weapons:assault-rifle', 'core_weapons:heavy-pistol', 'core_weapons:combat-knife', 'core_armor:light-armorjack-body', 'core_armor:kevlar-head',
+          'core_gear:agent', 'core_gear:carryall', 'core_gear:computer', 'core_ammo:heavy-pistol-basic', 'core_gear:cyberdeck'];
+        const dados = ids.map(id => foundry.utils.deepClone(cat[id]));
+        dados[0].system.equipada = true;
+        dados[3].system.equipada = true;
+        const ator = await Actor.implementation.create({ name: 'C107 Grade', type: 'personagem', ownership: { default: 0 } });
+        try {
+          const criados = await ator.createEmbeddedDocuments('Item', dados);
+          const por = id => criados.find(item => item.getFlag(S, 'catalogo') === id);
+          await por('core_gear:carryall').update({ 'system.uso': 'equipado' });
+          // O uso de hoje: a arma e a armadura pelo equipada; o resto pelo uso (a munição não tem: carregando).
+          const usoDe = item => (['arma', 'armadura'].includes(item.type) ? (item.system.equipada ? 'equipado' : 'carregando') : item.system.uso ?? 'carregando');
+          const comoNaRegra = item => ({ id: item.id, name: item.name, type: item.type, catalogo: item.getFlag(S, 'catalogo') ?? '', system: item.toObject().system, uso: usoDe(item) });
+          const lista = ator.items.map(comoNaRegra);
+          const lugares = grade.lugaresDoPersonagem({ moradia: ator.system.moradia, mochila: 'P' });
+          const resultado = grade.arrumar(lista, lugares, { body: ator.system.atributos?.body?.valor ?? 0 });
+          const estado = [];
+          const erros = [];
+          for (const item of lista) {
+            const destino = resultado[item.id];
+            if (!destino) { erros.push(item.name + ': sem lugar'); continue; }
+            const motivo = grade.conferirLugar(lugares, estado, item, destino);
+            if (motivo) erros.push(motivo);
+            if (grade.usoDoLugar(destino.lugar, item.uso) !== item.uso) erros.push(item.name + ': o uso mudou');
+            estado.push({ item, grade: destino });
+          }
+          const onde = Object.fromEntries(ids.map(id => [id.split(':')[1], resultado[por(id).id]?.lugar ?? null]));
+          // A ordem da lista não muda o resultado (a migração dá o mesmo em qualquer navegador).
+          const mesmo = JSON.stringify(grade.arrumar([...lista].reverse(), lugares, { body: ator.system.atributos?.body?.valor ?? 0 })) === JSON.stringify(resultado);
+          return { itens, semTamanho, erros, onde, mesmo, esconderijo: lugares.find(lugar => lugar.id === 'esconderijo') ? [lugares.find(lugar => lugar.id === 'esconderijo').l, lugares.find(lugar => lugar.id === 'esconderijo').a] : null };
+        } finally {
+          await ator.delete();
+        }
+      })()`);
+      const esperado = {
+        // O fuzil equipado nas mãos, a pistola no coldre, o computador e o deck enchem os bolsos, o capacete vai à mochila e a
+        // faca deitada, o Agent e as balas, ao cinto: o mesmo que o G3 dá com o catálogo.
+        'assault-rifle': 'corpo:maoPrincipal', 'heavy-pistol': 'coldre', 'combat-knife': 'cinto', 'light-armorjack-body': 'corpo:tronco', 'kevlar-head': 'mochila',
+        agent: 'cinto', carryall: 'corpo:mochila', computer: 'bolsos', 'heavy-pistol-basic': 'cinto', cyberdeck: 'bolsos'
+      };
+      // O personagem novo não tem moradia: o esconderijo do contêiner, a moradia padrão da criação (10×6).
+      const ok = c107.itens >= 800 && JSON.stringify(c107.semTamanho) === '{}' && c107.erros.length === 0 && JSON.stringify(c107.onde) === JSON.stringify(esperado)
+        && c107.mesmo && JSON.stringify(c107.esconderijo) === '[10,6]';
+      return [ok, JSON.stringify(c107)];
+    });
+
     await r.passo('nenhum aviso de compatibilidade nem erro vindo do sistema, no navegador do mestre e no do jogador', async () => {
       const doMestre = await foundry14.avisosDoSistema(edge);
       const doJogador = jogador ? await foundry14.avisosDoSistema(jogador) : ['sem o navegador do jogador'];

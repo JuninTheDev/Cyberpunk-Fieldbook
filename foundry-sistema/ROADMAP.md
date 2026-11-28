@@ -1015,7 +1015,7 @@ bolsos, o cinto e a mochila, o carregando; o esconderijo da moradia e o porta-ma
 pede, por uma fila no servidor; no conflito, a mesa ganha; nada some ("Para organizar"). As partes da wiki (as páginas, o
 `server.js`, os `api-*.js`) se confirmam com o usuário antes de cada fase.
 
-- [~] **C107. As regras da grade, puras:** em andamento (sessão KouArt, 2026-11-28). O usuário disse "Sim, comece". O
+- [x] **C107. As regras da grade, puras:** feito no ciclo 231 (sessão KouArt, 2026-11-28). O usuário disse "Sim, comece". O
   `scripts/compartilhado/regras-grade.mjs` (o Foundry, o servidor e a página da wiki usam o mesmo): os tamanhos por
   categoria, os lugares do personagem (pela moradia, pelos veículos e pela mochila), cabe, colide, girar, o uso de cada
   lugar, as pilhas e o arrumar. Ninguém chama ainda.

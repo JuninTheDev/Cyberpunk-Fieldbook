@@ -55,6 +55,10 @@ junto com o registro do ciclo (o G3 confere).
   sem janela não solta o `transitionend`, e cada janela fechada esperava o 1 s inteiro do prazo do Foundry.
 - O G1 roda o `node --check` de vários arquivos ao mesmo tempo (um por núcleo); a lista é a mesma.
 
+**A lição do ciclo 231:** o catálogo da wiki (`dados/catalogo.json`) não é tudo o que o Foundry tem. Os compêndios
+do sistema levam também o que a wiki não vende (as arquiteturas da NET). Uma regra que precisa valer para "todo item"
+confere no G3 pelo catálogo e no G4 pelos índices dos compêndios: foi o G4 que achou as arquiteturas sem tamanho.
+
 **A lição do ciclo 214:** o que o jogador vê no mapa depende da visão do token que ele controla. Os tokens dos passos
 nascem com a visão ligada e o alcance 0, e as cenas do G4 não têm luz: o jogador está no escuro. Um passo que confere o
 que o jogador vê (o marcador da NET, desde o ciclo 214) dá alcance à visão do token dele e o seleciona antes de ler,
